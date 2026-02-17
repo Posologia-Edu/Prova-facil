@@ -74,6 +74,12 @@ const Index = () => {
             <span className="text-xl font-bold text-foreground">ProvaFácil</span>
           </div>
           <div className="flex items-center gap-3">
+            <Link to="/student/auth">
+              <Button variant="outline" size="sm">
+                <GraduationCap className="h-4 w-4 mr-1.5" />
+                Sou Aluno
+              </Button>
+            </Link>
             <Link to="/auth">
               <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
                 Entrar
