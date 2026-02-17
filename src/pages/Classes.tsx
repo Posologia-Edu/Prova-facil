@@ -31,10 +31,10 @@ interface ClassItem {
 }
 
 const mockClasses: ClassItem[] = [
-  { id: "1", name: "Pharmacology 101", semester: "Spring 2026", description: "Introduction to drug mechanisms and therapeutic applications.", studentCount: 45, examCount: 3 },
-  { id: "2", name: "Biochemistry II", semester: "Spring 2026", description: "Advanced biochemistry covering metabolism and molecular biology.", studentCount: 38, examCount: 2 },
-  { id: "3", name: "Human Anatomy", semester: "Spring 2026", description: "Comprehensive study of human body systems.", studentCount: 52, examCount: 4 },
-  { id: "4", name: "Pathophysiology", semester: "Fall 2025", description: "Mechanisms of disease and clinical correlations.", studentCount: 40, examCount: 5 },
+  { id: "1", name: "Farmacologia 101", semester: "1º Sem. 2026", description: "Introdução aos mecanismos de ação dos fármacos e aplicações terapêuticas.", studentCount: 45, examCount: 3 },
+  { id: "2", name: "Bioquímica II", semester: "1º Sem. 2026", description: "Bioquímica avançada abrangendo metabolismo e biologia molecular.", studentCount: 38, examCount: 2 },
+  { id: "3", name: "Anatomia Humana", semester: "1º Sem. 2026", description: "Estudo abrangente dos sistemas do corpo humano.", studentCount: 52, examCount: 4 },
+  { id: "4", name: "Fisiopatologia", semester: "2º Sem. 2025", description: "Mecanismos de doenças e correlações clínicas.", studentCount: 40, examCount: 5 },
 ];
 
 export default function ClassesPage() {
@@ -44,37 +44,37 @@ export default function ClassesPage() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Classes</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage your classes and student rosters.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Minhas Turmas</h1>
+          <p className="text-muted-foreground text-sm mt-1">Gerencie suas turmas e listas de alunos.</p>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              New Class
+              Nova Turma
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New Class</DialogTitle>
+              <DialogTitle>Criar Nova Turma</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label>Class Name</Label>
-                <Input placeholder="e.g. Pharmacology 101" />
+                <Label>Nome da Turma</Label>
+                <Input placeholder="Ex: Farmacologia 101" />
               </div>
               <div className="space-y-2">
-                <Label>Semester</Label>
-                <Input placeholder="e.g. Spring 2026" />
+                <Label>Semestre</Label>
+                <Input placeholder="Ex: 1º Sem. 2026" />
               </div>
               <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea placeholder="Brief description..." rows={2} />
+                <Label>Descrição</Label>
+                <Textarea placeholder="Breve descrição..." rows={2} />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-              <Button onClick={() => setCreateOpen(false)}>Create Class</Button>
+              <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+              <Button onClick={() => setCreateOpen(false)}>Criar Turma</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -98,11 +98,11 @@ export default function ClassesPage() {
               <div className="flex items-center gap-4 mt-4 pt-3 border-t">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Users className="h-3.5 w-3.5" />
-                  {cls.studentCount} students
+                  {cls.studentCount} alunos
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <BookOpen className="h-3.5 w-3.5" />
-                  {cls.examCount} exams
+                  {cls.examCount} provas
                 </div>
               </div>
             </CardContent>

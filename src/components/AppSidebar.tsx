@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   LayoutDashboard,
   Library,
@@ -6,7 +6,6 @@ import {
   GraduationCap,
   BarChart3,
   Settings,
-  LogOut,
   BookOpen,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -24,11 +23,11 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainNav = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Question Bank", url: "/questions", icon: Library },
-  { title: "Exam Composer", url: "/composer", icon: FileEdit },
-  { title: "My Classes", url: "/classes", icon: GraduationCap },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Painel", url: "/", icon: LayoutDashboard },
+  { title: "Banco de Questões", url: "/questions", icon: Library },
+  { title: "Compositor de Provas", url: "/composer", icon: FileEdit },
+  { title: "Minhas Turmas", url: "/classes", icon: GraduationCap },
+  { title: "Análises", url: "/analytics", icon: BarChart3 },
 ];
 
 export function AppSidebar() {
@@ -41,7 +40,7 @@ export function AppSidebar() {
           </div>
           <div>
             <h1 className="text-base font-bold text-sidebar-primary-foreground tracking-tight">ExamForge</h1>
-            <p className="text-xs text-sidebar-foreground/60">Exam Builder</p>
+            <p className="text-xs text-sidebar-foreground/60">Criador de Provas</p>
           </div>
         </Link>
       </SidebarHeader>
@@ -49,7 +48,7 @@ export function AppSidebar() {
       <SidebarContent className="px-3 py-4">
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/40 text-[11px] font-semibold uppercase tracking-wider px-3 mb-1">
-            Main
+            Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -83,7 +82,7 @@ export function AppSidebar() {
                 activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
               >
                 <Settings className="h-4 w-4" />
-                <span>Settings</span>
+                <span>Configurações</span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>

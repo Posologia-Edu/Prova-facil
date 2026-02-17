@@ -50,13 +50,19 @@ interface Section {
   collapsed: boolean;
 }
 
+const difficultyLabels: Record<string, string> = {
+  easy: "fácil",
+  medium: "média",
+  hard: "difícil",
+};
+
 const bankQuestions: BankQuestion[] = [
-  { id: "1", type: "multiple_choice", title: "What is the primary mechanism of action of ACE inhibitors?", difficulty: "medium", tags: ["Pharmacology"] },
-  { id: "2", type: "true_false", title: "Aspirin irreversibly inhibits COX-1 and COX-2.", difficulty: "easy", tags: ["NSAIDs"] },
-  { id: "3", type: "open_ended", title: "Explain pharmacokinetic differences between warfarin and heparin.", difficulty: "hard", tags: ["Anticoagulants"] },
-  { id: "4", type: "matching", title: "Match drug classes with their side effects.", difficulty: "medium", tags: ["Side Effects"] },
-  { id: "5", type: "multiple_choice", title: "Which neurotransmitter is primarily affected by SSRIs?", difficulty: "easy", tags: ["CNS"] },
-  { id: "6", type: "open_ended", title: "Discuss the P450 enzyme system in drug metabolism.", difficulty: "hard", tags: ["Metabolism"] },
+  { id: "1", type: "multiple_choice", title: "Qual é o principal mecanismo de ação dos inibidores da ECA?", difficulty: "medium", tags: ["Farmacologia"] },
+  { id: "2", type: "true_false", title: "A aspirina inibe irreversivelmente as enzimas COX-1 e COX-2.", difficulty: "easy", tags: ["AINEs"] },
+  { id: "3", type: "open_ended", title: "Explique as diferenças farmacocinéticas entre varfarina e heparina.", difficulty: "hard", tags: ["Anticoagulantes"] },
+  { id: "4", type: "matching", title: "Associe as classes de medicamentos aos seus efeitos colaterais.", difficulty: "medium", tags: ["Efeitos Colaterais"] },
+  { id: "5", type: "multiple_choice", title: "Qual neurotransmissor é principalmente afetado pelos ISRSs?", difficulty: "easy", tags: ["SNC"] },
+  { id: "6", type: "open_ended", title: "Discuta o papel do sistema enzimático P450 no metabolismo de fármacos.", difficulty: "hard", tags: ["Metabolismo"] },
 ];
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -67,31 +73,31 @@ const typeIcons: Record<string, React.ReactNode> = {
 };
 
 export default function ComposerPage() {
-  const [examTitle, setExamTitle] = useState("Pharmacology 101 - Midterm Exam");
+  const [examTitle, setExamTitle] = useState("Farmacologia 101 - Prova Parcial");
   const [sections, setSections] = useState<Section[]>([
     {
       id: "s1",
-      name: "Part I: Multiple Choice",
+      name: "Parte I: Múltipla Escolha",
       collapsed: false,
       questions: [
-        { id: "eq1", questionId: "1", title: "What is the primary mechanism of action of ACE inhibitors?", type: "multiple_choice", points: 2 },
-        { id: "eq2", questionId: "5", title: "Which neurotransmitter is primarily affected by SSRIs?", type: "multiple_choice", points: 2 },
+        { id: "eq1", questionId: "1", title: "Qual é o principal mecanismo de ação dos inibidores da ECA?", type: "multiple_choice", points: 2 },
+        { id: "eq2", questionId: "5", title: "Qual neurotransmissor é principalmente afetado pelos ISRSs?", type: "multiple_choice", points: 2 },
       ],
     },
     {
       id: "s2",
-      name: "Part II: Case Studies",
+      name: "Parte II: Estudos de Caso",
       collapsed: false,
       questions: [
-        { id: "eq3", questionId: "3", title: "Explain pharmacokinetic differences between warfarin and heparin.", type: "open_ended", points: 5 },
+        { id: "eq3", questionId: "3", title: "Explique as diferenças farmacocinéticas entre varfarina e heparina.", type: "open_ended", points: 5 },
       ],
     },
   ]);
   const [headerOpen, setHeaderOpen] = useState(false);
-  const [institutionName, setInstitutionName] = useState("University of Health Sciences");
+  const [institutionName, setInstitutionName] = useState("Universidade de Ciências da Saúde");
   const [teacherName, setTeacherName] = useState("Dr. Maria Santos");
   const [examDate, setExamDate] = useState("2026-03-15");
-  const [instructions, setInstructions] = useState("Answer all questions. Show your work for partial credit. Time allowed: 90 minutes.");
+  const [instructions, setInstructions] = useState("Responda todas as questões. Mostre seu raciocínio para crédito parcial. Tempo permitido: 90 minutos.");
 
   const addQuestionToSection = (sectionId: string, question: BankQuestion) => {
     setSections((prev) =>
@@ -128,7 +134,7 @@ export default function ComposerPage() {
   const addSection = () => {
     setSections((prev) => [
       ...prev,
-      { id: `s-${Date.now()}`, name: `Part ${prev.length + 1}`, collapsed: false, questions: [] },
+      { id: `s-${Date.now()}`, name: `Parte ${prev.length + 1}`, collapsed: false, questions: [] },
     ]);
   };
 
@@ -146,11 +152,11 @@ export default function ComposerPage() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
-      {/* Left: Question Bank Sidebar */}
+      {/* Sidebar: Banco de Questões */}
       <div className="w-80 border-r bg-card flex flex-col shrink-0">
         <div className="p-4 border-b">
-          <h2 className="font-semibold text-sm">Question Bank</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Click to add to exam</p>
+          <h2 className="font-semibold text-sm">Banco de Questões</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Clique para adicionar à prova</p>
         </div>
         <div className="flex-1 overflow-auto p-3 space-y-2">
           {bankQuestions.map((q) => (
@@ -167,7 +173,7 @@ export default function ComposerPage() {
                   <p className="text-xs font-medium leading-snug line-clamp-2">{q.title}</p>
                   <div className="flex items-center gap-1.5 mt-1.5">
                     <Badge variant={q.difficulty} className="text-[10px] px-1.5 py-0">
-                      {q.difficulty}
+                      {difficultyLabels[q.difficulty]}
                     </Badge>
                     {q.tags.map((t) => (
                       <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0">
@@ -183,9 +189,9 @@ export default function ComposerPage() {
         </div>
       </div>
 
-      {/* Right: Exam Canvas */}
+      {/* Canvas da Prova */}
       <div className="flex-1 flex flex-col bg-muted/50 overflow-auto">
-        {/* Toolbar */}
+        {/* Barra de Ferramentas */}
         <div className="px-6 py-3 border-b bg-card flex items-center gap-3 shrink-0">
           <div className="flex-1">
             <Input
@@ -194,43 +200,43 @@ export default function ComposerPage() {
               className="text-lg font-bold border-0 bg-transparent px-0 h-auto focus-visible:ring-0 shadow-none"
             />
             <p className="text-xs text-muted-foreground mt-0.5">
-              {totalQuestions} questions · {totalPoints} points total
+              {totalQuestions} questões · {totalPoints} pontos no total
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={addSection}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Section
+            Seção
           </Button>
           <Button variant="outline" size="sm">
             <Shuffle className="h-3.5 w-3.5 mr-1.5" />
-            Shuffle
+            Embaralhar
           </Button>
           <Sheet open={headerOpen} onOpenChange={setHeaderOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" size="sm">
                 <Settings2 className="h-3.5 w-3.5 mr-1.5" />
-                Header
+                Cabeçalho
               </Button>
             </SheetTrigger>
             <SheetContent>
               <SheetHeader>
-                <SheetTitle>Exam Header Configuration</SheetTitle>
+                <SheetTitle>Configuração do Cabeçalho</SheetTitle>
               </SheetHeader>
               <div className="space-y-4 mt-6">
                 <div className="space-y-2">
-                  <Label>Institution Name</Label>
+                  <Label>Nome da Instituição</Label>
                   <Input value={institutionName} onChange={(e) => setInstitutionName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Teacher Name</Label>
+                  <Label>Nome do Professor(a)</Label>
                   <Input value={teacherName} onChange={(e) => setTeacherName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Exam Date</Label>
+                  <Label>Data da Prova</Label>
                   <Input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Instructions</Label>
+                  <Label>Instruções</Label>
                   <Input value={instructions} onChange={(e) => setInstructions(e.target.value)} />
                 </div>
               </div>
@@ -238,34 +244,34 @@ export default function ComposerPage() {
           </Sheet>
           <Button size="sm">
             <FileDown className="h-3.5 w-3.5 mr-1.5" />
-            Export
+            Exportar
           </Button>
         </div>
 
-        {/* A4 Paper Preview */}
+        {/* Prévia A4 */}
         <div className="flex-1 overflow-auto p-8 flex justify-center">
           <div className="w-[210mm] min-h-[297mm] exam-paper-bg shadow-xl rounded-sm border p-12 font-exam text-sm leading-relaxed">
-            {/* Header */}
+            {/* Cabeçalho */}
             <div className="text-center mb-6">
               <h2 className="text-base font-bold uppercase tracking-wide">{institutionName}</h2>
               <Separator className="my-3 bg-foreground/20" />
               <h3 className="text-lg font-bold mt-2">{examTitle}</h3>
               <div className="flex justify-between text-xs mt-3 text-muted-foreground">
-                <span>Professor: {teacherName}</span>
-                <span>Date: {new Date(examDate).toLocaleDateString()}</span>
+                <span>Professor(a): {teacherName}</span>
+                <span>Data: {new Date(examDate).toLocaleDateString("pt-BR")}</span>
               </div>
               <div className="mt-3 border-b border-dashed pb-2">
-                <p className="text-xs">Student Name: ________________________________________ ID: _______________</p>
+                <p className="text-xs">Nome do Aluno: ________________________________________ RA: _______________</p>
               </div>
               {instructions && (
                 <p className="text-xs italic mt-3 text-muted-foreground text-left">
-                  <strong>Instructions:</strong> {instructions}
+                  <strong>Instruções:</strong> {instructions}
                 </p>
               )}
             </div>
 
-            {/* Sections */}
-            {sections.map((section, si) => (
+            {/* Seções */}
+            {sections.map((section) => (
               <div key={section.id} className="mb-6">
                 <div
                   className="flex items-center gap-2 cursor-pointer select-none mb-3"
@@ -298,7 +304,7 @@ export default function ComposerPage() {
                             </div>
                           )}
                           {q.type === "true_false" && (
-                            <p className="mt-2 pl-4 text-xs text-muted-foreground">( ) True &nbsp;&nbsp; ( ) False</p>
+                            <p className="mt-2 pl-4 text-xs text-muted-foreground">( ) Verdadeiro &nbsp;&nbsp; ( ) Falso</p>
                           )}
                           {q.type === "open_ended" && (
                             <div className="mt-2 border-b border-dashed" style={{ height: "60px" }} />
@@ -317,7 +323,7 @@ export default function ComposerPage() {
                     ))}
                     {section.questions.length === 0 && (
                       <p className="text-xs text-muted-foreground italic py-4 text-center">
-                        Click questions from the bank to add them here
+                        Clique nas questões do banco para adicioná-las aqui
                       </p>
                     )}
                   </div>
@@ -327,8 +333,8 @@ export default function ComposerPage() {
 
             {sections.length === 0 && (
               <div className="text-center py-16 text-muted-foreground">
-                <p className="font-medium">No sections yet</p>
-                <p className="text-xs mt-1">Add a section to start building your exam.</p>
+                <p className="font-medium">Nenhuma seção ainda</p>
+                <p className="text-xs mt-1">Adicione uma seção para começar a montar sua prova.</p>
               </div>
             )}
           </div>

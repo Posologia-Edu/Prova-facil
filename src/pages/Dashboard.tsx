@@ -14,36 +14,34 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 
 const stats = [
-  { label: "Total Questions", value: "247", icon: Library, change: "+12 this week" },
-  { label: "Exams Created", value: "18", icon: FileEdit, change: "+3 this month" },
-  { label: "Active Classes", value: "5", icon: GraduationCap, change: "Spring 2026" },
-  { label: "Avg. Difficulty", value: "2.4", icon: BarChart3, change: "Balanced" },
+  { label: "Total de Questões", value: "247", icon: Library, change: "+12 esta semana" },
+  { label: "Provas Criadas", value: "18", icon: FileEdit, change: "+3 este mês" },
+  { label: "Turmas Ativas", value: "5", icon: GraduationCap, change: "1º Sem. 2026" },
+  { label: "Dific. Média", value: "2.4", icon: BarChart3, change: "Equilibrado" },
 ];
 
 const recentExams = [
-  { title: "Pharmacology 101 - Midterm", date: "Mar 15, 2026", status: "draft", questions: 25 },
-  { title: "Biochemistry Final", date: "Mar 10, 2026", status: "published", questions: 40 },
-  { title: "Anatomy Quiz #3", date: "Feb 28, 2026", status: "archived", questions: 15 },
+  { title: "Farmacologia 101 - Prova Parcial", date: "15 Mar 2026", status: "rascunho", questions: 25 },
+  { title: "Bioquímica - Prova Final", date: "10 Mar 2026", status: "publicada", questions: 40 },
+  { title: "Anatomia - Quiz #3", date: "28 Fev 2026", status: "arquivada", questions: 15 },
 ];
 
 const statusVariant: Record<string, "default" | "success" | "secondary"> = {
-  draft: "secondary",
-  published: "success",
-  archived: "default",
+  rascunho: "secondary",
+  publicada: "success",
+  arquivada: "default",
 };
 
 export default function DashboardPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
-      {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Welcome back, Doctor</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Bem-vindo(a) de volta, Professor(a)</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Here's an overview of your exam workspace.
+          Aqui está uma visão geral do seu espaço de provas.
         </p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <Card key={stat.label} className="hover:shadow-md transition-shadow">
@@ -62,42 +60,39 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Quick Actions + Recent Exams */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Actions */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">Quick Actions</CardTitle>
+            <CardTitle className="text-base">Ações Rápidas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <Button asChild className="w-full justify-start" variant="outline">
               <Link to="/composer">
                 <Plus className="h-4 w-4 mr-2" />
-                Create New Exam
+                Criar Nova Prova
               </Link>
             </Button>
             <Button asChild className="w-full justify-start" variant="outline">
               <Link to="/questions">
                 <Library className="h-4 w-4 mr-2" />
-                Add Questions
+                Adicionar Questões
               </Link>
             </Button>
             <Button asChild className="w-full justify-start" variant="outline">
               <Link to="/classes">
                 <GraduationCap className="h-4 w-4 mr-2" />
-                Manage Classes
+                Gerenciar Turmas
               </Link>
             </Button>
           </CardContent>
         </Card>
 
-        {/* Recent Exams */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Recent Exams</CardTitle>
+            <CardTitle className="text-base">Provas Recentes</CardTitle>
             <Button variant="ghost" size="sm" asChild>
               <Link to="/composer">
-                View all <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                Ver todas <ArrowRight className="h-3.5 w-3.5 ml-1" />
               </Link>
             </Button>
           </CardHeader>
@@ -117,7 +112,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-2 mt-0.5">
                         <Clock className="h-3 w-3 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground">{exam.date}</span>
-                        <span className="text-xs text-muted-foreground">· {exam.questions} questions</span>
+                        <span className="text-xs text-muted-foreground">· {exam.questions} questões</span>
                       </div>
                     </div>
                   </div>

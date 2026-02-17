@@ -15,42 +15,47 @@ import {
 } from "recharts";
 
 const topicData = [
-  { topic: "Pharmacology", count: 68 },
-  { topic: "Biochemistry", count: 45 },
-  { topic: "Anatomy", count: 52 },
-  { topic: "Pathology", count: 38 },
-  { topic: "Physiology", count: 44 },
+  { topic: "Farmacologia", count: 68 },
+  { topic: "Bioquímica", count: 45 },
+  { topic: "Anatomia", count: 52 },
+  { topic: "Patologia", count: 38 },
+  { topic: "Fisiologia", count: 44 },
 ];
 
 const difficultyData = [
-  { name: "Easy", value: 95, color: "hsl(152, 60%, 40%)" },
-  { name: "Medium", value: 102, color: "hsl(38, 92%, 50%)" },
-  { name: "Hard", value: 50, color: "hsl(0, 72%, 51%)" },
+  { name: "Fácil", value: 95, color: "hsl(152, 60%, 40%)" },
+  { name: "Média", value: 102, color: "hsl(38, 92%, 50%)" },
+  { name: "Difícil", value: 50, color: "hsl(0, 72%, 51%)" },
 ];
 
 const examHistory = [
-  { title: "Pharmacology 101 - Midterm", date: "Mar 15, 2026", questions: 25, status: "draft" },
-  { title: "Biochemistry Final", date: "Mar 10, 2026", questions: 40, status: "published" },
-  { title: "Anatomy Quiz #3", date: "Feb 28, 2026", questions: 15, status: "archived" },
-  { title: "Pathophysiology Exam 2", date: "Feb 20, 2026", questions: 30, status: "published" },
-  { title: "Pharmacology Quiz #5", date: "Feb 10, 2026", questions: 10, status: "archived" },
+  { title: "Farmacologia 101 - Prova Parcial", date: "15 Mar 2026", questions: 25, status: "rascunho" },
+  { title: "Bioquímica - Prova Final", date: "10 Mar 2026", questions: 40, status: "publicada" },
+  { title: "Anatomia - Quiz #3", date: "28 Fev 2026", questions: 15, status: "arquivada" },
+  { title: "Fisiopatologia - Prova 2", date: "20 Fev 2026", questions: 30, status: "publicada" },
+  { title: "Farmacologia - Quiz #5", date: "10 Fev 2026", questions: 10, status: "arquivada" },
 ];
+
+const statusVariant = (status: string) => {
+  if (status === "publicada") return "success" as const;
+  if (status === "rascunho") return "secondary" as const;
+  return "default" as const;
+};
 
 export default function AnalyticsPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
-        <p className="text-muted-foreground text-sm mt-1">Insights into your question bank and exam history.</p>
+        <h1 className="text-2xl font-bold tracking-tight">Análises</h1>
+        <p className="text-muted-foreground text-sm mt-1">Insights sobre seu banco de questões e histórico de provas.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Questions by Topic */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Questions by Topic
+              Questões por Tópico
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -66,12 +71,11 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Difficulty Distribution */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <PieChart className="h-4 w-4" />
-              Difficulty Distribution
+              Distribuição por Dificuldade
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -108,12 +112,11 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Exam History */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            Exam History
+            Histórico de Provas
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -122,9 +125,9 @@ export default function AnalyticsPage() {
               <div key={exam.title} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
                 <div>
                   <p className="text-sm font-medium">{exam.title}</p>
-                  <p className="text-xs text-muted-foreground">{exam.date} · {exam.questions} questions</p>
+                  <p className="text-xs text-muted-foreground">{exam.date} · {exam.questions} questões</p>
                 </div>
-                <Badge variant={exam.status === "published" ? "success" : exam.status === "draft" ? "secondary" : "default"}>
+                <Badge variant={statusVariant(exam.status)}>
                   {exam.status}
                 </Badge>
               </div>
