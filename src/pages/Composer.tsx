@@ -1,11 +1,13 @@
 import { useState } from "react";
 import ExamPDFExporter from "@/components/ExamPDFExporter";
+import PublishExamDialog from "@/components/PublishExamDialog";
 import {
   Plus,
   GripVertical,
   Settings2,
   FileDown,
   Shuffle,
+  Share2,
   Trash2,
   CheckCircle2,
   HelpCircle,
@@ -96,6 +98,7 @@ export default function ComposerPage() {
   ]);
   const [headerOpen, setHeaderOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
   const [institutionName, setInstitutionName] = useState("Universidade de Ciências da Saúde");
   const [teacherName, setTeacherName] = useState("Dr. Maria Santos");
   const [examDate, setExamDate] = useState("2026-03-15");
@@ -248,6 +251,10 @@ export default function ComposerPage() {
             <FileDown className="h-3.5 w-3.5 mr-1.5" />
             Exportar
           </Button>
+          <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}>
+            <Share2 className="h-3.5 w-3.5 mr-1.5" />
+            Publicar Online
+          </Button>
         </div>
 
         <ExamPDFExporter
@@ -259,6 +266,13 @@ export default function ComposerPage() {
           teacherName={teacherName}
           examDate={examDate}
           instructions={instructions}
+        />
+
+        <PublishExamDialog
+          open={publishOpen}
+          onOpenChange={setPublishOpen}
+          examId={null}
+          examTitle={examTitle}
         />
 
         {/* Prévia A4 */}

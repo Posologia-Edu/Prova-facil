@@ -13,6 +13,11 @@ import Composer from "./pages/Composer";
 import Classes from "./pages/Classes";
 import Analytics from "./pages/Analytics";
 import Admin from "./pages/Admin";
+import StudentAuth from "./pages/StudentAuth";
+import StudentDashboard from "./pages/StudentDashboard";
+import StudentExam from "./pages/StudentExam";
+import StudentResults from "./pages/StudentResults";
+import ExamMonitoring from "./pages/ExamMonitoring";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +31,14 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+
+          {/* Student routes */}
+          <Route path="/student/auth" element={<StudentAuth />} />
+          <Route path="/student/dashboard" element={<StudentDashboard />} />
+          <Route path="/student/exam/:sessionId" element={<StudentExam />} />
+          <Route path="/student/results/:sessionId" element={<StudentResults />} />
+
+          {/* Teacher routes */}
           <Route
             path="/admin"
             element={
@@ -82,6 +95,16 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <Analytics />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/monitoring/:publicationId"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ExamMonitoring />
                 </AppLayout>
               </ProtectedRoute>
             }

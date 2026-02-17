@@ -47,6 +47,53 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_publications: {
+        Row: {
+          access_code: string
+          created_at: string
+          end_at: string | null
+          exam_id: string
+          id: string
+          is_active: boolean
+          start_at: string | null
+          time_limit_minutes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          created_at?: string
+          end_at?: string | null
+          exam_id: string
+          id?: string
+          is_active?: boolean
+          start_at?: string | null
+          time_limit_minutes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          end_at?: string | null
+          exam_id?: string
+          id?: string
+          is_active?: boolean
+          start_at?: string | null
+          time_limit_minutes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_publications_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_questions: {
         Row: {
           created_at: string
@@ -88,6 +135,50 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "question_bank"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_sessions: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          id: string
+          max_score: number | null
+          publication_id: string
+          started_at: string
+          status: string
+          student_id: string
+          total_score: number | null
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          max_score?: number | null
+          publication_id: string
+          started_at?: string
+          status?: string
+          student_id: string
+          total_score?: number | null
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          max_score?: number | null
+          publication_id?: string
+          started_at?: string
+          status?: string
+          student_id?: string
+          total_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_sessions_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "exam_publications"
             referencedColumns: ["id"]
           },
         ]
@@ -210,6 +301,75 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      student_answers: {
+        Row: {
+          ai_feedback: string | null
+          ai_score: number | null
+          answer_json: Json
+          answer_text: string | null
+          created_at: string
+          grading_status: string
+          id: string
+          is_correct: boolean | null
+          max_points: number | null
+          points_earned: number | null
+          question_id: string
+          session_id: string
+          teacher_feedback: string | null
+          teacher_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          ai_feedback?: string | null
+          ai_score?: number | null
+          answer_json?: Json
+          answer_text?: string | null
+          created_at?: string
+          grading_status?: string
+          id?: string
+          is_correct?: boolean | null
+          max_points?: number | null
+          points_earned?: number | null
+          question_id: string
+          session_id: string
+          teacher_feedback?: string | null
+          teacher_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ai_feedback?: string | null
+          ai_score?: number | null
+          answer_json?: Json
+          answer_text?: string | null
+          created_at?: string
+          grading_status?: string
+          id?: string
+          is_correct?: boolean | null
+          max_points?: number | null
+          points_earned?: number | null
+          question_id?: string
+          session_id?: string
+          teacher_feedback?: string | null
+          teacher_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "question_bank"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_answers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
