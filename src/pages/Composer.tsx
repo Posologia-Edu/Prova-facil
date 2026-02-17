@@ -1,12 +1,14 @@
 import { useState } from "react";
 import ExamPDFExporter from "@/components/ExamPDFExporter";
 import PublishExamDialog from "@/components/PublishExamDialog";
+import ExamTemplatesDialog, { type ExamTemplate } from "@/components/ExamTemplatesDialog";
 import {
   Plus,
   GripVertical,
   Settings2,
   FileDown,
   Shuffle,
+  LayoutTemplate,
   Share2,
   Trash2,
   CheckCircle2,
@@ -99,6 +101,26 @@ export default function ComposerPage() {
   const [headerOpen, setHeaderOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+
+  const applyTemplate = (template: ExamTemplate) => {
+    setExamTitle(template.name);
+    setSections(
+      template.sections.map((sec, i) => ({
+        id: `s-tpl-${i}-${Date.now()}`,
+        name: sec.name,
+        collapsed: false,
+        questions: sec.questions.map((q, j) => ({
+          id: `eq-tpl-${i}-${j}-${Date.now()}`,
+          questionId: `tpl-${i}-${j}`,
+          title: q.title,
+          type: q.type,
+          points: q.points,
+        })),
+      }))
+    );
+    setInstructions(`Tempo permitido: ${template.duration}. Responda todas as questões.`);
+  };
   const [institutionName, setInstitutionName] = useState("Universidade de Ciências da Saúde");
   const [teacherName, setTeacherName] = useState("Dr. Maria Santos");
   const [examDate, setExamDate] = useState("2026-03-15");
@@ -208,6 +230,10 @@ export default function ComposerPage() {
               {totalQuestions} questões · {totalPoints} pontos no total
             </p>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setTemplatesOpen(true)}>
+            <LayoutTemplate className="h-3.5 w-3.5 mr-1.5" />
+            Templates
+          </Button>
           <Button variant="outline" size="sm" onClick={addSection}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Seção
@@ -266,6 +292,12 @@ export default function ComposerPage() {
           teacherName={teacherName}
           examDate={examDate}
           instructions={instructions}
+        />
+
+        <ExamTemplatesDialog
+          open={templatesOpen}
+          onOpenChange={setTemplatesOpen}
+          onSelectTemplate={applyTemplate}
         />
 
         <PublishExamDialog
