@@ -14,17 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 
 const stats = [
-  { label: "Total de Questões", value: "247", icon: Library, change: "+12 esta semana" },
-  { label: "Provas Criadas", value: "18", icon: FileEdit, change: "+3 este mês" },
-  { label: "Turmas Ativas", value: "5", icon: GraduationCap, change: "1º Sem. 2026" },
-  { label: "Dific. Média", value: "2.4", icon: BarChart3, change: "Equilibrado" },
+  { label: "Total de Questões", value: "0", icon: Library, change: "" },
+  { label: "Provas Criadas", value: "0", icon: FileEdit, change: "" },
+  { label: "Turmas Ativas", value: "0", icon: GraduationCap, change: "" },
+  { label: "Dific. Média", value: "—", icon: BarChart3, change: "" },
 ];
 
-const recentExams = [
-  { title: "Farmacologia 101 - Prova Parcial", date: "15 Mar 2026", status: "rascunho", questions: 25 },
-  { title: "Bioquímica - Prova Final", date: "10 Mar 2026", status: "publicada", questions: 40 },
-  { title: "Anatomia - Quiz #3", date: "28 Fev 2026", status: "arquivada", questions: 15 },
-];
+const recentExams: { title: string; date: string; status: string; questions: number }[] = [];
 
 const statusVariant: Record<string, "default" | "success" | "secondary"> = {
   rascunho: "secondary",
@@ -50,11 +46,10 @@ export default function DashboardPage() {
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                   <stat.icon className="h-5 w-5 text-primary" />
                 </div>
-                <TrendingUp className="h-4 w-4 text-success" />
               </div>
               <p className="text-2xl font-bold mt-3">{stat.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
-              <p className="text-xs text-success mt-1">{stat.change}</p>
+              {stat.change && <p className="text-xs text-success mt-1">{stat.change}</p>}
             </CardContent>
           </Card>
         ))}
@@ -98,29 +93,35 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentExams.map((exam) => (
-                <div
-                  key={exam.title}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-md bg-accent flex items-center justify-center">
-                      <FileEdit className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{exam.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">{exam.date}</span>
-                        <span className="text-xs text-muted-foreground">· {exam.questions} questões</span>
+              {recentExams.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Nenhuma prova criada ainda.
+                </p>
+              ) : (
+                recentExams.map((exam) => (
+                  <div
+                    key={exam.title}
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-md bg-accent flex items-center justify-center">
+                        <FileEdit className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{exam.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">{exam.date}</span>
+                          <span className="text-xs text-muted-foreground">· {exam.questions} questões</span>
+                        </div>
                       </div>
                     </div>
+                    <Badge variant={statusVariant[exam.status]}>
+                      {exam.status}
+                    </Badge>
                   </div>
-                  <Badge variant={statusVariant[exam.status]}>
-                    {exam.status}
-                  </Badge>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
