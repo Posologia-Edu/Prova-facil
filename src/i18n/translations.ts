@@ -230,6 +230,49 @@ type TranslationKeys = {
   landing_stats_time: string;
   landing_stats_rating: string;
 
+  // Docs
+  docs_title: string;
+  docs_subtitle: string;
+  docs_badge: string;
+  docs_back_home: string;
+  docs_getting_started: string;
+  docs_getting_started_content: string;
+  docs_question_bank: string;
+  docs_question_bank_content: string;
+  docs_ai_generation: string;
+  docs_ai_generation_content: string;
+  docs_composer: string;
+  docs_composer_content: string;
+  docs_templates: string;
+  docs_templates_content: string;
+  docs_export_pdf: string;
+  docs_export_pdf_content: string;
+  docs_online_exams: string;
+  docs_online_exams_content: string;
+  docs_classes: string;
+  docs_classes_content: string;
+  docs_analytics: string;
+  docs_analytics_content: string;
+  docs_calendar: string;
+  docs_calendar_content: string;
+  docs_student_portal: string;
+  docs_student_portal_content: string;
+  docs_plans: string;
+  docs_plans_content: string;
+  docs_security: string;
+  docs_security_content: string;
+  docs_faq_title: string;
+  docs_faq_q1: string;
+  docs_faq_a1: string;
+  docs_faq_q2: string;
+  docs_faq_a2: string;
+  docs_faq_q3: string;
+  docs_faq_a3: string;
+  docs_faq_q4: string;
+  docs_faq_a4: string;
+  docs_faq_q5: string;
+  docs_faq_a5: string;
+
   // Common
   cancel: string;
   save: string;
@@ -446,6 +489,48 @@ const pt: TranslationKeys = {
   landing_stats_time: "Menos tempo gasto",
   landing_stats_rating: "Avaliação média",
 
+  docs_title: "Documentação",
+  docs_subtitle: "Aprenda a usar todas as funcionalidades do ProvaFácil e tire o máximo da plataforma.",
+  docs_badge: "Guia Completo",
+  docs_back_home: "Voltar ao início",
+  docs_getting_started: "Primeiros Passos",
+  docs_getting_started_content: "1. Crie sua conta gratuita clicando em \"Criar conta grátis\" na página inicial.\n2. Confirme seu e-mail e aguarde a aprovação do administrador.\n3. Após aprovado, faça login e acesse o Painel principal.\n4. Comece criando questões no Banco de Questões ou gere automaticamente com IA.\n5. Monte sua prova no Compositor e exporte em PDF ou publique online.",
+  docs_question_bank: "Banco de Questões",
+  docs_question_bank_content: "O Banco de Questões é o repositório central de todas as suas questões.\n\n• Tipos suportados: Múltipla Escolha, Verdadeiro/Falso, Dissertativa e Associação.\n• Classificação: organize por dificuldade (Fácil, Média, Difícil) e Taxonomia de Bloom.\n• Tags: adicione tags personalizadas para facilitar a busca e filtragem.\n• Importação: importe questões em lote via arquivos CSV ou JSON.\n• Embed: incorpore conteúdo externo via URL de embed (iframes) na versão digital.\n• Busca: pesquise por texto, tags ou filtros combinados.",
+  docs_ai_generation: "Geração de Questões com IA",
+  docs_ai_generation_content: "Gere questões automaticamente usando inteligência artificial.\n\n• Informe o tema/assunto desejado e o tipo de questão.\n• Selecione a dificuldade e o nível da Taxonomia de Bloom.\n• A IA cria questões com alternativas e gabarito automaticamente.\n• Revise e edite as questões geradas antes de salvar no banco.\n• Funcionalidade disponível nos planos que incluem créditos de IA.",
+  docs_composer: "Compositor de Provas",
+  docs_composer_content: "O Compositor é o editor visual para montar suas provas.\n\n• Seções: organize a prova em seções temáticas (ex: Parte 1 - Objetivas).\n• Arraste questões do Banco de Questões para as seções desejadas.\n• Pontuação: defina a pontuação de cada questão individualmente.\n• Cabeçalho: configure instituição, professor, data e instruções.\n• Embaralhar: reordene questões aleatoriamente com um clique.\n• Visualização: veja a prova em formato A4 em tempo real.",
+  docs_templates: "Templates de Prova",
+  docs_templates_content: "Templates são modelos prontos de provas organizados por disciplina.\n\n• Áreas disponíveis: Medicina, Direito, Engenharia, Ciências, Pedagogia, Exatas, Psicologia e Computação.\n• Cada template inclui seções pré-configuradas com tipos de questão e pontuação.\n• Aplique um template e personalize conforme sua necessidade.\n• Ideal para novos usuários que querem começar rapidamente.\n• Busque e filtre templates por nome ou área.",
+  docs_export_pdf: "Exportação em PDF",
+  docs_export_pdf_content: "Exporte suas provas em PDF profissional pronto para impressão.\n\n• Formato A4 com cabeçalho completo (instituição, professor, data, instruções).\n• Gabarito automático: gere a chave de correção com as respostas corretas.\n• Cartão-resposta: inclua uma folha de respostas (bolhas) para facilitar a correção.\n• As opções de gabarito e cartão-resposta são configuráveis no diálogo de exportação.",
+  docs_online_exams: "Provas Online",
+  docs_online_exams_content: "Publique provas para aplicação digital com monitoramento em tempo real.\n\n• Defina um código de acesso para os alunos entrarem na prova.\n• Configure limite de tempo e período de disponibilidade (início e fim).\n• Os alunos acessam pelo Portal do Aluno usando o código.\n• Monitoramento: acompanhe em tempo real quem está fazendo a prova.\n• Correção automática para questões objetivas.\n• Correção por IA disponível para questões dissertativas (plano Premium).",
+  docs_classes: "Gerenciamento de Turmas",
+  docs_classes_content: "Organize seus alunos em turmas para facilitar a aplicação de provas.\n\n• Crie turmas com nome, semestre e descrição.\n• Gerencie a lista de alunos de cada turma.\n• Vincule provas às turmas para aplicação direcionada.\n• Duplique turmas para reutilizar a estrutura em novos semestres.",
+  docs_analytics: "Análises e Relatórios",
+  docs_analytics_content: "Visualize insights sobre seu banco de questões e desempenho das turmas.\n\n• Distribuição de questões por tópico e dificuldade.\n• Histórico de provas aplicadas.\n• Gráficos visuais para identificar padrões e pontos de melhoria.\n• Dados atualizados em tempo real conforme você usa a plataforma.",
+  docs_calendar: "Calendário de Provas",
+  docs_calendar_content: "Visualize todas as suas provas agendadas em um calendário interativo.\n\n• Veja provas publicadas organizadas por data.\n• Identifique rapidamente provas ativas e inativas.\n• Acesse o monitoramento diretamente pelo calendário.\n• Receba lembretes sobre provas próximas.",
+  docs_student_portal: "Portal do Aluno",
+  docs_student_portal_content: "Os alunos têm um portal dedicado para realizar provas online.\n\n• Acesso: os alunos entram com nome e código da prova.\n• Realização: respondem a prova dentro do tempo limite configurado.\n• Envio: ao finalizar, as respostas são enviadas automaticamente.\n• Resultados: após correção, os alunos podem consultar suas notas e feedback.",
+  docs_plans: "Planos e Assinatura",
+  docs_plans_content: "O ProvaFácil oferece planos para atender diferentes necessidades.\n\n• Gratuito: crie até 5 provas/mês, 10 questões com IA/mês, exportação PDF básica.\n• Premium (R$ 29,90/mês): provas ilimitadas, questões com IA ilimitadas, provas online com monitoramento, correção por IA, até 200 alunos por prova e suporte prioritário.\n• Gerencie sua assinatura a qualquer momento na página de Planos.",
+  docs_security: "Segurança e Privacidade",
+  docs_security_content: "Seus dados são protegidos com as melhores práticas de segurança.\n\n• Cada professor só tem acesso às suas próprias questões e provas.\n• Autenticação segura com verificação de e-mail.\n• Dados criptografados em trânsito e em repouso.\n• Controle de acesso baseado em papéis (professor, aluno, administrador).\n• Backups automáticos para garantir a integridade dos dados.",
+  docs_faq_title: "Perguntas Frequentes",
+  docs_faq_q1: "Posso usar o ProvaFácil gratuitamente?",
+  docs_faq_a1: "Sim! O plano gratuito permite criar até 5 provas por mês e gerar até 10 questões com IA. Para funcionalidades avançadas como provas online e correção por IA, assine o plano Premium.",
+  docs_faq_q2: "Como importo questões de outros sistemas?",
+  docs_faq_a2: "Vá ao Banco de Questões, clique em 'Nova Questão' e selecione 'Importar CSV/JSON'. O arquivo deve conter os campos: question_text, type, difficulty e tags.",
+  docs_faq_q3: "Os alunos precisam criar conta para fazer provas online?",
+  docs_faq_a3: "Não! Os alunos acessam pelo Portal do Aluno informando apenas seu nome e o código de acesso da prova fornecido pelo professor.",
+  docs_faq_q4: "Posso personalizar o cabeçalho da prova em PDF?",
+  docs_faq_a4: "Sim. No Compositor de Provas, clique em 'Cabeçalho' para configurar nome da instituição, professor, data da prova e instruções personalizadas.",
+  docs_faq_q5: "A correção por IA funciona para questões dissertativas?",
+  docs_faq_a5: "Sim! No plano Premium, a IA analisa as respostas dissertativas e atribui nota e feedback automaticamente. O professor pode revisar e ajustar a nota se necessário.",
+
   cancel: "Cancelar",
   save: "Salvar",
   create: "Criar",
@@ -661,6 +746,48 @@ const en: TranslationKeys = {
   landing_stats_time: "Less time spent",
   landing_stats_rating: "Average rating",
 
+  docs_title: "Documentation",
+  docs_subtitle: "Learn how to use all ProvaFácil features and get the most out of the platform.",
+  docs_badge: "Complete Guide",
+  docs_back_home: "Back to home",
+  docs_getting_started: "Getting Started",
+  docs_getting_started_content: "1. Create your free account by clicking \"Create free account\" on the home page.\n2. Confirm your email and wait for admin approval.\n3. Once approved, log in and access the main Dashboard.\n4. Start by creating questions in the Question Bank or generate them automatically with AI.\n5. Build your exam in the Composer and export as PDF or publish online.",
+  docs_question_bank: "Question Bank",
+  docs_question_bank_content: "The Question Bank is the central repository for all your questions.\n\n• Supported types: Multiple Choice, True/False, Essay, and Matching.\n• Classification: organize by difficulty (Easy, Medium, Hard) and Bloom's Taxonomy.\n• Tags: add custom tags for easy searching and filtering.\n• Import: bulk import questions via CSV or JSON files.\n• Embed: embed external content via URL (iframes) in the digital version.\n• Search: search by text, tags, or combined filters.",
+  docs_ai_generation: "AI Question Generation",
+  docs_ai_generation_content: "Generate questions automatically using artificial intelligence.\n\n• Enter the desired topic/subject and question type.\n• Select difficulty and Bloom's Taxonomy level.\n• AI creates questions with alternatives and answer key automatically.\n• Review and edit generated questions before saving to the bank.\n• Available on plans that include AI credits.",
+  docs_composer: "Exam Composer",
+  docs_composer_content: "The Composer is the visual editor to build your exams.\n\n• Sections: organize the exam into thematic sections (e.g., Part 1 - Objectives).\n• Drag questions from the Question Bank to the desired sections.\n• Scoring: set individual scoring for each question.\n• Header: configure institution, teacher, date, and instructions.\n• Shuffle: randomly reorder questions with one click.\n• Preview: see the exam in A4 format in real time.",
+  docs_templates: "Exam Templates",
+  docs_templates_content: "Templates are ready-made exam models organized by discipline.\n\n• Available areas: Medicine, Law, Engineering, Sciences, Pedagogy, Exact Sciences, Psychology, and Computer Science.\n• Each template includes pre-configured sections with question types and scoring.\n• Apply a template and customize as needed.\n• Ideal for new users who want to start quickly.\n• Search and filter templates by name or area.",
+  docs_export_pdf: "PDF Export",
+  docs_export_pdf_content: "Export your exams as professional PDF ready for printing.\n\n• A4 format with complete header (institution, teacher, date, instructions).\n• Automatic answer key: generate the correction key with correct answers.\n• Answer sheet: include a bubble sheet to facilitate correction.\n• Answer key and answer sheet options are configurable in the export dialog.",
+  docs_online_exams: "Online Exams",
+  docs_online_exams_content: "Publish exams for digital application with real-time monitoring.\n\n• Set an access code for students to enter the exam.\n• Configure time limit and availability period (start and end).\n• Students access through the Student Portal using the code.\n• Monitoring: track in real time who is taking the exam.\n• Automatic grading for objective questions.\n• AI grading available for essay questions (Premium plan).",
+  docs_classes: "Class Management",
+  docs_classes_content: "Organize your students into classes to facilitate exam application.\n\n• Create classes with name, semester, and description.\n• Manage the student list for each class.\n• Link exams to classes for targeted application.\n• Duplicate classes to reuse the structure in new semesters.",
+  docs_analytics: "Analytics & Reports",
+  docs_analytics_content: "View insights about your question bank and class performance.\n\n• Question distribution by topic and difficulty.\n• History of applied exams.\n• Visual charts to identify patterns and improvement areas.\n• Data updated in real time as you use the platform.",
+  docs_calendar: "Exam Calendar",
+  docs_calendar_content: "View all your scheduled exams in an interactive calendar.\n\n• See published exams organized by date.\n• Quickly identify active and inactive exams.\n• Access monitoring directly from the calendar.\n• Receive reminders about upcoming exams.",
+  docs_student_portal: "Student Portal",
+  docs_student_portal_content: "Students have a dedicated portal to take online exams.\n\n• Access: students enter with their name and exam access code.\n• Taking: they answer the exam within the configured time limit.\n• Submission: upon completion, answers are submitted automatically.\n• Results: after grading, students can check their grades and feedback.",
+  docs_plans: "Plans & Subscription",
+  docs_plans_content: "ProvaFácil offers plans to meet different needs.\n\n• Free: create up to 5 exams/month, 10 AI questions/month, basic PDF export.\n• Premium ($29.90/month): unlimited exams, unlimited AI questions, online exams with monitoring, AI grading, up to 200 students per exam, and priority support.\n• Manage your subscription anytime on the Plans page.",
+  docs_security: "Security & Privacy",
+  docs_security_content: "Your data is protected with industry-best security practices.\n\n• Each teacher only has access to their own questions and exams.\n• Secure authentication with email verification.\n• Data encrypted in transit and at rest.\n• Role-based access control (teacher, student, administrator).\n• Automatic backups to ensure data integrity.",
+  docs_faq_title: "Frequently Asked Questions",
+  docs_faq_q1: "Can I use ProvaFácil for free?",
+  docs_faq_a1: "Yes! The free plan allows you to create up to 5 exams per month and generate up to 10 AI questions. For advanced features like online exams and AI grading, subscribe to the Premium plan.",
+  docs_faq_q2: "How do I import questions from other systems?",
+  docs_faq_a2: "Go to the Question Bank, click 'New Question' and select 'Import CSV/JSON'. The file must contain the fields: question_text, type, difficulty, and tags.",
+  docs_faq_q3: "Do students need to create an account to take online exams?",
+  docs_faq_a3: "No! Students access through the Student Portal by entering only their name and the exam access code provided by the teacher.",
+  docs_faq_q4: "Can I customize the PDF exam header?",
+  docs_faq_a4: "Yes. In the Exam Composer, click 'Header' to configure institution name, teacher, exam date, and custom instructions.",
+  docs_faq_q5: "Does AI grading work for essay questions?",
+  docs_faq_a5: "Yes! On the Premium plan, AI analyzes essay answers and assigns grades and feedback automatically. The teacher can review and adjust the grade if needed.",
+
   cancel: "Cancel",
   save: "Save",
   create: "Create",
@@ -875,6 +1002,48 @@ const es: TranslationKeys = {
   landing_stats_teachers: "Profesores activos",
   landing_stats_time: "Menos tiempo invertido",
   landing_stats_rating: "Calificación promedio",
+
+  docs_title: "Documentación",
+  docs_subtitle: "Aprenda a usar todas las funcionalidades de ProvaFácil y aproveche al máximo la plataforma.",
+  docs_badge: "Guía Completa",
+  docs_back_home: "Volver al inicio",
+  docs_getting_started: "Primeros Pasos",
+  docs_getting_started_content: "1. Cree su cuenta gratuita haciendo clic en \"Crear cuenta gratis\" en la página inicial.\n2. Confirme su correo y espere la aprobación del administrador.\n3. Una vez aprobado, inicie sesión y acceda al Panel principal.\n4. Comience creando preguntas en el Banco de Preguntas o genérelas automáticamente con IA.\n5. Arme su examen en el Compositor y exporte en PDF o publique en línea.",
+  docs_question_bank: "Banco de Preguntas",
+  docs_question_bank_content: "El Banco de Preguntas es el repositorio central de todas sus preguntas.\n\n• Tipos soportados: Opción Múltiple, Verdadero/Falso, Ensayo y Asociación.\n• Clasificación: organice por dificultad (Fácil, Media, Difícil) y Taxonomía de Bloom.\n• Etiquetas: agregue etiquetas personalizadas para facilitar la búsqueda.\n• Importación: importe preguntas en lote vía archivos CSV o JSON.\n• Embed: incorpore contenido externo vía URL (iframes) en la versión digital.\n• Búsqueda: busque por texto, etiquetas o filtros combinados.",
+  docs_ai_generation: "Generación de Preguntas con IA",
+  docs_ai_generation_content: "Genere preguntas automáticamente usando inteligencia artificial.\n\n• Informe el tema deseado y el tipo de pregunta.\n• Seleccione la dificultad y el nivel de Taxonomía de Bloom.\n• La IA crea preguntas con alternativas y clave de respuestas automáticamente.\n• Revise y edite las preguntas generadas antes de guardarlas.\n• Disponible en planes que incluyen créditos de IA.",
+  docs_composer: "Compositor de Exámenes",
+  docs_composer_content: "El Compositor es el editor visual para armar sus exámenes.\n\n• Secciones: organice el examen en secciones temáticas.\n• Arrastre preguntas del Banco a las secciones deseadas.\n• Puntuación: defina la puntuación de cada pregunta individualmente.\n• Encabezado: configure institución, profesor, fecha e instrucciones.\n• Mezclar: reordene preguntas aleatoriamente con un clic.\n• Vista previa: vea el examen en formato A4 en tiempo real.",
+  docs_templates: "Plantillas de Examen",
+  docs_templates_content: "Las plantillas son modelos listos de exámenes organizados por disciplina.\n\n• Áreas disponibles: Medicina, Derecho, Ingeniería, Ciencias, Pedagogía, Exactas, Psicología y Computación.\n• Cada plantilla incluye secciones preconfiguradas con tipos de pregunta y puntuación.\n• Aplique una plantilla y personalice según su necesidad.\n• Ideal para nuevos usuarios que quieren empezar rápidamente.\n• Busque y filtre plantillas por nombre o área.",
+  docs_export_pdf: "Exportación en PDF",
+  docs_export_pdf_content: "Exporte sus exámenes en PDF profesional listo para imprimir.\n\n• Formato A4 con encabezado completo (institución, profesor, fecha, instrucciones).\n• Clave de respuestas automática: genere la clave de corrección con las respuestas correctas.\n• Hoja de respuestas: incluya una hoja de burbujas para facilitar la corrección.\n• Las opciones son configurables en el diálogo de exportación.",
+  docs_online_exams: "Exámenes en Línea",
+  docs_online_exams_content: "Publique exámenes para aplicación digital con monitoreo en tiempo real.\n\n• Defina un código de acceso para que los alumnos ingresen al examen.\n• Configure límite de tiempo y período de disponibilidad.\n• Los alumnos acceden por el Portal del Alumno usando el código.\n• Monitoreo: acompañe en tiempo real quién está haciendo el examen.\n• Corrección automática para preguntas objetivas.\n• Corrección por IA disponible para preguntas de ensayo (plan Premium).",
+  docs_classes: "Gestión de Clases",
+  docs_classes_content: "Organice sus alumnos en clases para facilitar la aplicación de exámenes.\n\n• Cree clases con nombre, semestre y descripción.\n• Gestione la lista de alumnos de cada clase.\n• Vincule exámenes a las clases para aplicación dirigida.\n• Duplique clases para reutilizar la estructura en nuevos semestres.",
+  docs_analytics: "Análisis e Informes",
+  docs_analytics_content: "Visualice información sobre su banco de preguntas y desempeño de las clases.\n\n• Distribución de preguntas por tema y dificultad.\n• Historial de exámenes aplicados.\n• Gráficos visuales para identificar patrones y áreas de mejora.\n• Datos actualizados en tiempo real conforme usa la plataforma.",
+  docs_calendar: "Calendario de Exámenes",
+  docs_calendar_content: "Visualice todos sus exámenes programados en un calendario interactivo.\n\n• Vea exámenes publicados organizados por fecha.\n• Identifique rápidamente exámenes activos e inactivos.\n• Acceda al monitoreo directamente desde el calendario.\n• Reciba recordatorios sobre exámenes próximos.",
+  docs_student_portal: "Portal del Alumno",
+  docs_student_portal_content: "Los alumnos tienen un portal dedicado para realizar exámenes en línea.\n\n• Acceso: los alumnos ingresan con su nombre y código del examen.\n• Realización: responden el examen dentro del tiempo límite configurado.\n• Envío: al finalizar, las respuestas se envían automáticamente.\n• Resultados: después de la corrección, los alumnos pueden consultar sus notas y retroalimentación.",
+  docs_plans: "Planes y Suscripción",
+  docs_plans_content: "ProvaFácil ofrece planes para atender diferentes necesidades.\n\n• Gratuito: cree hasta 5 exámenes/mes, 10 preguntas con IA/mes, exportación PDF básica.\n• Premium ($29.90/mes): exámenes ilimitados, preguntas con IA ilimitadas, exámenes en línea con monitoreo, corrección por IA, hasta 200 alumnos por examen y soporte prioritario.\n• Gestione su suscripción en cualquier momento en la página de Planes.",
+  docs_security: "Seguridad y Privacidad",
+  docs_security_content: "Sus datos están protegidos con las mejores prácticas de seguridad.\n\n• Cada profesor solo tiene acceso a sus propias preguntas y exámenes.\n• Autenticación segura con verificación de correo.\n• Datos cifrados en tránsito y en reposo.\n• Control de acceso basado en roles (profesor, alumno, administrador).\n• Copias de seguridad automáticas para garantizar la integridad de los datos.",
+  docs_faq_title: "Preguntas Frecuentes",
+  docs_faq_q1: "¿Puedo usar ProvaFácil gratuitamente?",
+  docs_faq_a1: "¡Sí! El plan gratuito permite crear hasta 5 exámenes por mes y generar hasta 10 preguntas con IA. Para funcionalidades avanzadas como exámenes en línea y corrección por IA, suscríbase al plan Premium.",
+  docs_faq_q2: "¿Cómo importo preguntas de otros sistemas?",
+  docs_faq_a2: "Vaya al Banco de Preguntas, haga clic en 'Nueva Pregunta' y seleccione 'Importar CSV/JSON'. El archivo debe contener los campos: question_text, type, difficulty y tags.",
+  docs_faq_q3: "¿Los alumnos necesitan crear cuenta para hacer exámenes en línea?",
+  docs_faq_a3: "¡No! Los alumnos acceden por el Portal del Alumno informando solo su nombre y el código de acceso del examen proporcionado por el profesor.",
+  docs_faq_q4: "¿Puedo personalizar el encabezado del examen en PDF?",
+  docs_faq_a4: "Sí. En el Compositor de Exámenes, haga clic en 'Encabezado' para configurar nombre de la institución, profesor, fecha del examen e instrucciones personalizadas.",
+  docs_faq_q5: "¿La corrección por IA funciona para preguntas de ensayo?",
+  docs_faq_a5: "¡Sí! En el plan Premium, la IA analiza las respuestas de ensayo y asigna nota y retroalimentación automáticamente. El profesor puede revisar y ajustar la nota si es necesario.",
 
   cancel: "Cancelar",
   save: "Guardar",
