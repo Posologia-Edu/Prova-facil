@@ -5,7 +5,7 @@ import {
   FileEdit,
   GraduationCap,
   BarChart3,
-  Settings,
+  Crown,
   BookOpen,
   LogOut,
   ShieldCheck,
@@ -32,6 +32,7 @@ const mainNav = [
   { title: "Compositor de Provas", url: "/composer", icon: FileEdit },
   { title: "Minhas Turmas", url: "/classes", icon: GraduationCap },
   { title: "Análises", url: "/analytics", icon: BarChart3 },
+  { title: "Planos", url: "/pricing", icon: Crown },
 ];
 
 export function AppSidebar() {
