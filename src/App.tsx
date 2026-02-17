@@ -20,6 +20,7 @@ import StudentDashboard from "./pages/StudentDashboard";
 import StudentExam from "./pages/StudentExam";
 import StudentResults from "./pages/StudentResults";
 import ExamMonitoring from "./pages/ExamMonitoring";
+import ExamCalendar from "./pages/ExamCalendar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -87,6 +88,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><Analytics /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><ExamCalendar /></AppLayout>
                 </ProtectedRoute>
               }
             />
