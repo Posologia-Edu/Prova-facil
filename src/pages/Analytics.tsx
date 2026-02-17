@@ -14,27 +14,11 @@ import {
   Cell,
 } from "recharts";
 
-const topicData = [
-  { topic: "Farmacologia", count: 68 },
-  { topic: "Bioquímica", count: 45 },
-  { topic: "Anatomia", count: 52 },
-  { topic: "Patologia", count: 38 },
-  { topic: "Fisiologia", count: 44 },
-];
+const topicData: { topic: string; count: number }[] = [];
 
-const difficultyData = [
-  { name: "Fácil", value: 95, color: "hsl(152, 60%, 40%)" },
-  { name: "Média", value: 102, color: "hsl(38, 92%, 50%)" },
-  { name: "Difícil", value: 50, color: "hsl(0, 72%, 51%)" },
-];
+const difficultyData: { name: string; value: number; color: string }[] = [];
 
-const examHistory = [
-  { title: "Farmacologia 101 - Prova Parcial", date: "15 Mar 2026", questions: 25, status: "rascunho" },
-  { title: "Bioquímica - Prova Final", date: "10 Mar 2026", questions: 40, status: "publicada" },
-  { title: "Anatomia - Quiz #3", date: "28 Fev 2026", questions: 15, status: "arquivada" },
-  { title: "Fisiopatologia - Prova 2", date: "20 Fev 2026", questions: 30, status: "publicada" },
-  { title: "Farmacologia - Quiz #5", date: "10 Fev 2026", questions: 10, status: "arquivada" },
-];
+const examHistory: { title: string; date: string; questions: number; status: string }[] = [];
 
 const statusVariant = (status: string) => {
   if (status === "publicada") return "success" as const;
@@ -59,15 +43,19 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={topicData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="topic" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="count" fill="hsl(220, 60%, 20%)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {topicData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-12">Nenhum dado disponível ainda.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={topicData}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis dataKey="topic" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="hsl(220, 60%, 20%)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -79,35 +67,39 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-8">
-              <ResponsiveContainer width={180} height={180}>
-                <RechartsPie>
-                  <Pie
-                    data={difficultyData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    dataKey="value"
-                    strokeWidth={2}
-                  >
-                    {difficultyData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPie>
-              </ResponsiveContainer>
-              <div className="space-y-3">
-                {difficultyData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-3">
-                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: d.color }} />
-                    <span className="text-sm">{d.name}</span>
-                    <span className="text-sm font-semibold ml-auto">{d.value}</span>
-                  </div>
-                ))}
+            {difficultyData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-12">Nenhum dado disponível ainda.</p>
+            ) : (
+              <div className="flex items-center gap-8">
+                <ResponsiveContainer width={180} height={180}>
+                  <RechartsPie>
+                    <Pie
+                      data={difficultyData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      dataKey="value"
+                      strokeWidth={2}
+                    >
+                      {difficultyData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartsPie>
+                </ResponsiveContainer>
+                <div className="space-y-3">
+                  {difficultyData.map((d) => (
+                    <div key={d.name} className="flex items-center gap-3">
+                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: d.color }} />
+                      <span className="text-sm">{d.name}</span>
+                      <span className="text-sm font-semibold ml-auto">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -121,17 +113,21 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {examHistory.map((exam) => (
-              <div key={exam.title} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                <div>
-                  <p className="text-sm font-medium">{exam.title}</p>
-                  <p className="text-xs text-muted-foreground">{exam.date} · {exam.questions} questões</p>
+            {examHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhuma prova no histórico ainda.</p>
+            ) : (
+              examHistory.map((exam) => (
+                <div key={exam.title} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div>
+                    <p className="text-sm font-medium">{exam.title}</p>
+                    <p className="text-xs text-muted-foreground">{exam.date} · {exam.questions} questões</p>
+                  </div>
+                  <Badge variant={statusVariant(exam.status)}>
+                    {exam.status}
+                  </Badge>
                 </div>
-                <Badge variant={statusVariant(exam.status)}>
-                  {exam.status}
-                </Badge>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
