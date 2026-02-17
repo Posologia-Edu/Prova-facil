@@ -24,6 +24,7 @@ import ExamMonitoring from "./pages/ExamMonitoring";
 import ExamCalendar from "./pages/ExamCalendar";
 import NotFound from "./pages/NotFound";
 import Documentation from "./pages/Documentation";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +116,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><ExamMonitoring /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><Settings /></AppLayout>
                 </ProtectedRoute>
               }
             />

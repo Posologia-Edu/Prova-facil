@@ -24,6 +24,7 @@ type TranslationKeys = {
   nav_admin: string;
   nav_logout: string;
   nav_menu: string;
+  nav_settings: string;
   app_subtitle: string;
 
   // Dashboard
@@ -273,6 +274,25 @@ type TranslationKeys = {
   docs_faq_q5: string;
   docs_faq_a5: string;
 
+  // Settings
+  settings_title: string;
+  settings_subtitle: string;
+  settings_change_email: string;
+  settings_change_email_desc: string;
+  settings_new_email: string;
+  settings_update_email: string;
+  settings_email_success_title: string;
+  settings_email_success_desc: string;
+  settings_change_password: string;
+  settings_change_password_desc: string;
+  settings_new_password: string;
+  settings_confirm_password: string;
+  settings_update_password: string;
+  settings_password_success_title: string;
+  settings_password_success_desc: string;
+  settings_password_mismatch: string;
+  settings_error: string;
+
   // Common
   cancel: string;
   save: string;
@@ -292,6 +312,7 @@ const pt: TranslationKeys = {
   nav_admin: "Administração",
   nav_logout: "Sair",
   nav_menu: "Menu",
+  nav_settings: "Configurações",
   app_subtitle: "Criador de Provas",
 
   dash_welcome: "Bem-vindo(a) de volta, Professor(a)",
@@ -531,6 +552,24 @@ const pt: TranslationKeys = {
   docs_faq_q5: "A correção por IA funciona para questões dissertativas?",
   docs_faq_a5: "Sim! No plano Premium, a IA analisa as respostas dissertativas e atribui nota e feedback automaticamente. O professor pode revisar e ajustar a nota se necessário.",
 
+  settings_title: "Configurações",
+  settings_subtitle: "Gerencie suas credenciais de acesso.",
+  settings_change_email: "Alterar E-mail",
+  settings_change_email_desc: "Um e-mail de confirmação será enviado para o novo endereço.",
+  settings_new_email: "Novo e-mail",
+  settings_update_email: "Atualizar e-mail",
+  settings_email_success_title: "Solicitação enviada!",
+  settings_email_success_desc: "Verifique seu novo e-mail para confirmar a alteração.",
+  settings_change_password: "Alterar Senha",
+  settings_change_password_desc: "Defina uma nova senha para sua conta.",
+  settings_new_password: "Nova senha",
+  settings_confirm_password: "Confirmar nova senha",
+  settings_update_password: "Atualizar senha",
+  settings_password_success_title: "Senha alterada!",
+  settings_password_success_desc: "Sua senha foi atualizada com sucesso.",
+  settings_password_mismatch: "As senhas não coincidem.",
+  settings_error: "Erro",
+
   cancel: "Cancelar",
   save: "Salvar",
   create: "Criar",
@@ -549,6 +588,7 @@ const en: TranslationKeys = {
   nav_admin: "Admin",
   nav_logout: "Log out",
   nav_menu: "Menu",
+  nav_settings: "Settings",
   app_subtitle: "Exam Creator",
 
   dash_welcome: "Welcome back, Professor",
@@ -788,6 +828,24 @@ const en: TranslationKeys = {
   docs_faq_q5: "Does AI grading work for essay questions?",
   docs_faq_a5: "Yes! On the Premium plan, AI analyzes essay answers and assigns grades and feedback automatically. The teacher can review and adjust the grade if needed.",
 
+  settings_title: "Settings",
+  settings_subtitle: "Manage your access credentials.",
+  settings_change_email: "Change Email",
+  settings_change_email_desc: "A confirmation email will be sent to the new address.",
+  settings_new_email: "New email",
+  settings_update_email: "Update email",
+  settings_email_success_title: "Request sent!",
+  settings_email_success_desc: "Check your new email to confirm the change.",
+  settings_change_password: "Change Password",
+  settings_change_password_desc: "Set a new password for your account.",
+  settings_new_password: "New password",
+  settings_confirm_password: "Confirm new password",
+  settings_update_password: "Update password",
+  settings_password_success_title: "Password changed!",
+  settings_password_success_desc: "Your password has been updated successfully.",
+  settings_password_mismatch: "Passwords do not match.",
+  settings_error: "Error",
+
   cancel: "Cancel",
   save: "Save",
   create: "Create",
@@ -806,6 +864,7 @@ const es: TranslationKeys = {
   nav_admin: "Administración",
   nav_logout: "Salir",
   nav_menu: "Menú",
+  nav_settings: "Configuración",
   app_subtitle: "Creador de Exámenes",
 
   dash_welcome: "Bienvenido(a) de vuelta, Profesor(a)",
@@ -1044,6 +1103,24 @@ const es: TranslationKeys = {
   docs_faq_a4: "Sí. En el Compositor de Exámenes, haga clic en 'Encabezado' para configurar nombre de la institución, profesor, fecha del examen e instrucciones personalizadas.",
   docs_faq_q5: "¿La corrección por IA funciona para preguntas de ensayo?",
   docs_faq_a5: "¡Sí! En el plan Premium, la IA analiza las respuestas de ensayo y asigna nota y retroalimentación automáticamente. El profesor puede revisar y ajustar la nota si es necesario.",
+
+  settings_title: "Configuración",
+  settings_subtitle: "Gestione sus credenciales de acceso.",
+  settings_change_email: "Cambiar Correo",
+  settings_change_email_desc: "Se enviará un correo de confirmación a la nueva dirección.",
+  settings_new_email: "Nuevo correo",
+  settings_update_email: "Actualizar correo",
+  settings_email_success_title: "¡Solicitud enviada!",
+  settings_email_success_desc: "Revise su nuevo correo para confirmar el cambio.",
+  settings_change_password: "Cambiar Contraseña",
+  settings_change_password_desc: "Defina una nueva contraseña para su cuenta.",
+  settings_new_password: "Nueva contraseña",
+  settings_confirm_password: "Confirmar nueva contraseña",
+  settings_update_password: "Actualizar contraseña",
+  settings_password_success_title: "¡Contraseña cambiada!",
+  settings_password_success_desc: "Su contraseña ha sido actualizada con éxito.",
+  settings_password_mismatch: "Las contraseñas no coinciden.",
+  settings_error: "Error",
 
   cancel: "Cancelar",
   save: "Guardar",
