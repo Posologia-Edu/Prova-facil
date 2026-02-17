@@ -23,6 +23,7 @@ import StudentResults from "./pages/StudentResults";
 import ExamMonitoring from "./pages/ExamMonitoring";
 import ExamCalendar from "./pages/ExamCalendar";
 import NotFound from "./pages/NotFound";
+import Documentation from "./pages/Documentation";
 
 const queryClient = new QueryClient();
 
@@ -117,6 +118,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/docs" element={<Documentation />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
