@@ -5,6 +5,10 @@ import {
   Users,
   MoreHorizontal,
   BookOpen,
+  Pencil,
+  Copy,
+  Trash2,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +24,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ClassItem {
   id: string;
@@ -39,6 +60,22 @@ const mockClasses: ClassItem[] = [
 
 export default function ClassesPage() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [classes, setClasses] = useState<ClassItem[]>(mockClasses);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const handleDeleteClass = (id: string) => {
+    setClasses((prev) => prev.filter((c) => c.id !== id));
+    setDeleteId(null);
+  };
+
+  const handleDuplicateClass = (cls: ClassItem) => {
+    const duplicate: ClassItem = {
+      ...cls,
+      id: `dup-${Date.now()}`,
+      name: `${cls.name} (cópia)`,
+    };
+    setClasses((prev) => [...prev, duplicate]);
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -81,16 +118,39 @@ export default function ClassesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockClasses.map((cls) => (
+        {classes.map((cls) => (
           <Card key={cls.id} className="hover:shadow-md transition-shadow cursor-pointer group">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                   <GraduationCap className="h-5 w-5 text-primary" />
                 </div>
-                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <UserCog className="h-4 w-4 mr-2" />
+                      Gerenciar Alunos
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDuplicateClass(cls)}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Duplicar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteId(cls.id)}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <h3 className="font-semibold mt-3">{cls.name}</h3>
               <Badge variant="outline" className="mt-1 text-[11px]">{cls.semester}</Badge>
@@ -109,6 +169,23 @@ export default function ClassesPage() {
           </Card>
         ))}
       </div>
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir turma?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A turma será removida permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteId && handleDeleteClass(deleteId)}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
