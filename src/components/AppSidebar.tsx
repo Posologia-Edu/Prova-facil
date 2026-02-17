@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Library,
@@ -7,8 +7,10 @@ import {
   BarChart3,
   Settings,
   BookOpen,
+  LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
   SidebarContent,
@@ -23,7 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainNav = [
-  { title: "Painel", url: "/", icon: LayoutDashboard },
+  { title: "Painel", url: "/dashboard", icon: LayoutDashboard },
   { title: "Banco de Questões", url: "/questions", icon: Library },
   { title: "Compositor de Provas", url: "/composer", icon: FileEdit },
   { title: "Minhas Turmas", url: "/classes", icon: GraduationCap },
@@ -31,6 +33,11 @@ const mainNav = [
 ];
 
 export function AppSidebar() {
+  const navigate = useNavigate();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
   return (
     <Sidebar className="w-64 gradient-sidebar border-r-0">
       <SidebarHeader className="p-5 border-b border-sidebar-border">
@@ -57,7 +64,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      end={item.url === "/"}
+                      end={item.url === "/dashboard"}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
@@ -84,6 +91,12 @@ export function AppSidebar() {
                 <Settings className="h-4 w-4" />
                 <span>Configurações</span>
               </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer">
+              <LogOut className="h-4 w-4" />
+              <span>Sair</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
