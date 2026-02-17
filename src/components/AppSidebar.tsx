@@ -9,6 +9,7 @@ import {
   BookOpen,
   LogOut,
   ShieldCheck,
+  CalendarDays,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +33,7 @@ const mainNav = [
   { title: "Compositor de Provas", url: "/composer", icon: FileEdit },
   { title: "Minhas Turmas", url: "/classes", icon: GraduationCap },
   { title: "Análises", url: "/analytics", icon: BarChart3 },
+  { title: "Calendário", url: "/calendar", icon: CalendarDays },
   { title: "Planos", url: "/pricing", icon: Crown },
 ];
 
