@@ -60,7 +60,7 @@ const Auth = () => {
     } else {
       toast({
         title: "Cadastro realizado!",
-        description: "Verifique seu e-mail para confirmar a conta.",
+        description: "Verifique seu e-mail para confirmar a conta. Após confirmação, seu acesso será analisado pelo administrador.",
       });
     }
   };

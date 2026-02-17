@@ -8,9 +8,11 @@ import {
   Settings,
   BookOpen,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdmin } from "@/hooks/use-admin";
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +36,7 @@ const mainNav = [
 
 export function AppSidebar() {
   const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
@@ -81,18 +84,20 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink
-                to="/settings"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-              >
-                <Settings className="h-4 w-4" />
-                <span>Configurações</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {isAdmin && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <NavLink
+                  to="/admin"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                  activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Administração</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer">
               <LogOut className="h-4 w-4" />
