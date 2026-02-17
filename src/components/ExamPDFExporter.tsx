@@ -24,15 +24,16 @@ import { Separator } from "@/components/ui/separator";
 import { FileDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-interface ExamQuestion {
+export interface ExamQuestion {
   id: string;
   questionId: string;
   title: string;
   type: string;
   points: number;
+  contentJson?: Record<string, any>;
 }
 
-interface Section {
+export interface Section {
   id: string;
   name: string;
   questions: ExamQuestion[];
@@ -68,6 +69,54 @@ function shuffleSections(sections: Section[]): Section[] {
   }));
 }
 
+function getCorrectAnswer(q: ExamQuestion): string {
+  const c = q.contentJson;
+  if (!c) return "—";
+
+  if (q.type === "multiple_choice") {
+    const options = c.options as { text: string; isCorrect?: boolean }[] | undefined;
+    if (options) {
+      const idx = options.findIndex((o) => o.isCorrect);
+      if (idx >= 0) {
+        const letter = String.fromCharCode(97 + idx); // a, b, c, d...
+        return `${letter}) ${options[idx].text}`;
+      }
+    }
+    return c.correct_answer || c.correctAnswer || "—";
+  }
+
+  if (q.type === "true_false") {
+    const answer = c.correct_answer ?? c.correctAnswer ?? c.isTrue;
+    if (answer === true || answer === "true" || answer === "Verdadeiro") return "Verdadeiro";
+    if (answer === false || answer === "false" || answer === "Falso") return "Falso";
+    return String(answer ?? "—");
+  }
+
+  if (q.type === "matching") {
+    const pairs = c.pairs as { left: string; right: string }[] | undefined;
+    if (pairs) return pairs.map((p) => `${p.left} → ${p.right}`).join("; ");
+    return c.correct_answer || "—";
+  }
+
+  if (q.type === "open_ended") {
+    return c.expected_answer || c.expectedAnswer || c.correct_answer || "Resposta dissertativa";
+  }
+
+  return "—";
+}
+
+function getCorrectLetterOnly(q: ExamQuestion): string | null {
+  if (q.type !== "multiple_choice") return null;
+  const c = q.contentJson;
+  if (!c) return null;
+  const options = c.options as { text: string; isCorrect?: boolean }[] | undefined;
+  if (options) {
+    const idx = options.findIndex((o) => o.isCorrect);
+    if (idx >= 0) return String.fromCharCode(65 + idx); // A, B, C, D
+  }
+  return null;
+}
+
 export default function ExamPDFExporter({
   open,
   onOpenChange,
@@ -81,6 +130,7 @@ export default function ExamPDFExporter({
   const [watermarkEnabled, setWatermarkEnabled] = useState(false);
   const [watermarkText, setWatermarkText] = useState("CONFIDENCIAL");
   const [includeAnswerKey, setIncludeAnswerKey] = useState(true);
+  const [includeAnswerSheet, setIncludeAnswerSheet] = useState(false);
   const [versionCount, setVersionCount] = useState("1");
   const [isGenerating, setIsGenerating] = useState(false);
   const renderRef = useRef<HTMLDivElement>(null);
@@ -115,9 +165,10 @@ export default function ExamPDFExporter({
       const pageWidth = pdf.internal.pageSize.getWidth();
       let y = 20;
 
+      // Header
       pdf.setFontSize(14);
       pdf.setFont("helvetica", "bold");
-      pdf.text("GABARITO", pageWidth / 2, y, { align: "center" });
+      pdf.text("GABARITO — CHAVE DE CORREÇÃO", pageWidth / 2, y, { align: "center" });
       y += 8;
 
       pdf.setFontSize(10);
@@ -127,40 +178,69 @@ export default function ExamPDFExporter({
       pdf.text(`${institutionName} | Prof. ${teacherName} | ${formattedDate}`, pageWidth / 2, y, { align: "center" });
       y += 10;
 
-      pdf.setDrawColor(200, 200, 200);
+      pdf.setDrawColor(180, 180, 180);
       pdf.setLineWidth(0.3);
 
       // Table header
-      const col1 = 30;
-      const col2 = 60;
-      const col3 = 100;
-      const col4 = 150;
-      const rowH = 7;
+      const col1 = 15;
+      const col2 = 30;
+      const col3 = 65;
+      const col4 = 90;
+      const col5 = 110;
+      const rowH = 8;
 
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(9);
+      pdf.setFontSize(8);
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(col1 - 2, y - 4, 185, rowH, "F");
       pdf.text("Nº", col1, y);
       pdf.text("Seção", col2, y);
       pdf.text("Tipo", col3, y);
-      pdf.text("Pontos", col4, y);
+      pdf.text("Pts", col4, y);
+      pdf.text("Resposta Correta", col5, y);
       y += 2;
-      pdf.line(25, y, 180, y);
+      pdf.line(col1 - 2, y, 198, y);
       y += 5;
 
       pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
       let questionNum = 1;
       for (const section of versionSections) {
         for (const q of section.questions) {
           const typeLabel =
-            q.type === "multiple_choice" ? "Múltipla Escolha" :
+            q.type === "multiple_choice" ? "Múlt. Escolha" :
             q.type === "true_false" ? "V ou F" :
             q.type === "open_ended" ? "Dissertativa" :
             q.type === "matching" ? "Associação" : q.type;
 
-          pdf.text(String(questionNum), col1, y);
-          pdf.text(section.name.substring(0, 25), col2, y);
+          const answer = getCorrectAnswer(q);
+
+          // Alternating row bg
+          if (questionNum % 2 === 0) {
+            pdf.setFillColor(248, 248, 248);
+            pdf.rect(col1 - 2, y - 4, 185, rowH, "F");
+          }
+
+          pdf.setFont("helvetica", "bold");
+          pdf.text(String(questionNum).padStart(2, "0"), col1, y);
+          pdf.setFont("helvetica", "normal");
+          pdf.text(section.name.substring(0, 20), col2, y);
           pdf.text(typeLabel, col3, y);
-          pdf.text(`${q.points} pts`, col4, y);
+          pdf.text(`${q.points}`, col4, y);
+
+          // Truncate long answers
+          const maxAnswerWidth = 85;
+          let answerText = answer;
+          if (pdf.getTextWidth(answerText) > maxAnswerWidth) {
+            while (pdf.getTextWidth(answerText + "...") > maxAnswerWidth && answerText.length > 0) {
+              answerText = answerText.slice(0, -1);
+            }
+            answerText += "...";
+          }
+          pdf.setFont("helvetica", "bold");
+          pdf.text(answerText, col5, y);
+          pdf.setFont("helvetica", "normal");
+
           y += rowH;
           questionNum++;
 
@@ -171,6 +251,17 @@ export default function ExamPDFExporter({
         }
       }
 
+      // Summary
+      y += 5;
+      pdf.setLineWidth(0.5);
+      pdf.line(col1 - 2, y, 198, y);
+      y += 7;
+      const totalPts = versionSections.reduce((s, sec) => s + sec.questions.reduce((qs, q) => qs + q.points, 0), 0);
+      const totalQ = versionSections.reduce((s, sec) => s + sec.questions.length, 0);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9);
+      pdf.text(`Total: ${totalQ} questões — ${totalPts} pontos`, col1, y);
+
       if (watermarkEnabled && watermarkText) {
         addWatermark(pdf, watermarkText);
       }
@@ -178,10 +269,133 @@ export default function ExamPDFExporter({
     [examTitle, institutionName, teacherName, formattedDate, watermarkEnabled, watermarkText, addWatermark]
   );
 
+  const addAnswerSheetPage = useCallback(
+    (pdf: jsPDF, versionSections: Section[], versionLetter: string) => {
+      pdf.addPage();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      let y = 20;
+
+      // Header
+      pdf.setFontSize(14);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("CARTÃO-RESPOSTA", pageWidth / 2, y, { align: "center" });
+      y += 7;
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`${examTitle} — Versão ${versionLetter}`, pageWidth / 2, y, { align: "center" });
+      y += 6;
+      pdf.text(`${institutionName} | ${formattedDate}`, pageWidth / 2, y, { align: "center" });
+      y += 10;
+
+      // Student info fields
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.text("Nome: ______________________________________________", 15, y);
+      pdf.text("RA: ________________", 145, y);
+      y += 10;
+
+      pdf.setDrawColor(150, 150, 150);
+      pdf.setLineWidth(0.3);
+      pdf.line(15, y, 195, y);
+      y += 8;
+
+      // Bubble grid
+      const options = ["A", "B", "C", "D", "E"];
+      const colStart = 20;
+      const bubbleR = 3;
+      const colSpacing = 12;
+      const rowSpacing = 9;
+      const numColStart = colStart;
+      const optStart = colStart + 15;
+
+      // Column headers
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Nº", numColStart, y);
+      options.forEach((opt, i) => {
+        pdf.text(opt, optStart + i * colSpacing, y);
+      });
+
+      // Second column headers (for >25 questions)
+      const col2Offset = 105;
+      const allQuestions: { num: number; type: string }[] = [];
+      let num = 1;
+      for (const section of versionSections) {
+        for (const q of section.questions) {
+          allQuestions.push({ num, type: q.type });
+          num++;
+        }
+      }
+
+      const hasCol2 = allQuestions.length > 25;
+      if (hasCol2) {
+        pdf.text("Nº", numColStart + col2Offset, y);
+        options.forEach((opt, i) => {
+          pdf.text(opt, optStart + col2Offset + i * colSpacing, y);
+        });
+      }
+      y += 6;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+
+      const startY = y;
+      allQuestions.forEach((q, idx) => {
+        const inCol2 = idx >= 25;
+        const row = inCol2 ? idx - 25 : idx;
+        const xOffset = inCol2 ? col2Offset : 0;
+        const currentY = startY + row * rowSpacing;
+
+        if (currentY > 275) return; // safety
+
+        // Question number
+        pdf.setFont("helvetica", "bold");
+        pdf.text(String(q.num).padStart(2, "0"), numColStart + xOffset, currentY + 1);
+        pdf.setFont("helvetica", "normal");
+
+        if (q.type === "multiple_choice") {
+          // Draw bubbles
+          options.forEach((_, i) => {
+            const cx = optStart + xOffset + i * colSpacing;
+            pdf.circle(cx, currentY - 0.5, bubbleR);
+          });
+        } else if (q.type === "true_false") {
+          // V / F bubbles
+          pdf.setFontSize(7);
+          pdf.text("V", optStart + xOffset - 1, currentY + 1);
+          pdf.circle(optStart + xOffset, currentY - 0.5, bubbleR);
+          pdf.text("F", optStart + xOffset + colSpacing - 1, currentY + 1);
+          pdf.circle(optStart + xOffset + colSpacing, currentY - 0.5, bubbleR);
+          pdf.setFontSize(8);
+        } else {
+          // For open_ended / matching - show "Ver prova"
+          pdf.setFontSize(7);
+          pdf.setTextColor(150, 150, 150);
+          pdf.text("(ver prova)", optStart + xOffset, currentY + 1);
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFontSize(8);
+        }
+      });
+
+      // Footer instructions
+      const footerY = 280;
+      pdf.setFontSize(7);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text("Preencha completamente o círculo correspondente à alternativa escolhida. Use caneta preta ou azul.", 15, footerY);
+      pdf.text("Não rasure nem amasse este cartão.", 15, footerY + 4);
+      pdf.setTextColor(0, 0, 0);
+
+      if (watermarkEnabled && watermarkText) {
+        addWatermark(pdf, watermarkText);
+      }
+    },
+    [examTitle, institutionName, formattedDate, watermarkEnabled, watermarkText, addWatermark]
+  );
+
   const renderExamHTML = useCallback(
     (versionLetter: string, versionSections: Section[]) => {
       const container = document.createElement("div");
-      container.style.width = "794px"; // A4 at 96dpi
+      container.style.width = "794px";
       container.style.minHeight = "1123px";
       container.style.padding = "60px";
       container.style.backgroundColor = "#ffffff";
@@ -224,22 +438,41 @@ export default function ExamPDFExporter({
             <p style="margin:0"><strong style="font-size:12px">${questionNum}.</strong> ${q.title} <span style="font-size:9px;color:#999">[${q.points} pts]</span></p>`;
 
           if (q.type === "multiple_choice") {
-            html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#666">
-              <p style="margin:2px 0">a) ________________________</p>
-              <p style="margin:2px 0">b) ________________________</p>
-              <p style="margin:2px 0">c) ________________________</p>
-              <p style="margin:2px 0">d) ________________________</p>
-            </div>`;
+            const options = q.contentJson?.options as { text: string }[] | undefined;
+            if (options && options.length > 0) {
+              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333">`;
+              options.forEach((opt, i) => {
+                const letter = String.fromCharCode(97 + i);
+                html += `<p style="margin:2px 0">${letter}) ${opt.text}</p>`;
+              });
+              html += `</div>`;
+            } else {
+              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#666">
+                <p style="margin:2px 0">a) ________________________</p>
+                <p style="margin:2px 0">b) ________________________</p>
+                <p style="margin:2px 0">c) ________________________</p>
+                <p style="margin:2px 0">d) ________________________</p>
+              </div>`;
+            }
           } else if (q.type === "true_false") {
             html += `<p style="margin-top:6px;padding-left:20px;font-size:11px;color:#666">( ) Verdadeiro &nbsp;&nbsp; ( ) Falso</p>`;
           } else if (q.type === "open_ended") {
             html += `<div style="margin-top:6px;border-bottom:1px dashed #ccc;height:50px"></div>`;
           } else if (q.type === "matching") {
-            html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#666">
-              <p style="margin:2px 0">( ) Item A &mdash; ________________________</p>
-              <p style="margin:2px 0">( ) Item B &mdash; ________________________</p>
-              <p style="margin:2px 0">( ) Item C &mdash; ________________________</p>
-            </div>`;
+            const pairs = q.contentJson?.pairs as { left: string }[] | undefined;
+            if (pairs && pairs.length > 0) {
+              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333">`;
+              pairs.forEach((p) => {
+                html += `<p style="margin:2px 0">( ) ${p.left} — ________________________</p>`;
+              });
+              html += `</div>`;
+            } else {
+              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#666">
+                <p style="margin:2px 0">( ) Item A — ________________________</p>
+                <p style="margin:2px 0">( ) Item B — ________________________</p>
+                <p style="margin:2px 0">( ) Item C — ________________________</p>
+              </div>`;
+            }
           }
 
           html += `</div>`;
@@ -295,6 +528,10 @@ export default function ExamPDFExporter({
           addWatermark(pdf, watermarkText);
         }
 
+        if (includeAnswerSheet) {
+          addAnswerSheetPage(pdf, versionSections, versionLetter);
+        }
+
         if (includeAnswerKey) {
           addAnswerKeyPage(pdf, versionSections, versionLetter);
         }
@@ -310,7 +547,7 @@ export default function ExamPDFExporter({
     } finally {
       setIsGenerating(false);
     }
-  }, [sections, versionCount, renderExamHTML, watermarkEnabled, watermarkText, addWatermark, includeAnswerKey, addAnswerKeyPage, examTitle, onOpenChange]);
+  }, [sections, versionCount, renderExamHTML, watermarkEnabled, watermarkText, addWatermark, includeAnswerKey, includeAnswerSheet, addAnswerKeyPage, addAnswerSheetPage, examTitle, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -347,15 +584,38 @@ export default function ExamPDFExporter({
           <Separator />
 
           {/* Gabarito */}
-          <div className="flex items-center gap-3">
-            <Checkbox
-              id="answer-key"
-              checked={includeAnswerKey}
-              onCheckedChange={(checked) => setIncludeAnswerKey(checked === true)}
-            />
-            <Label htmlFor="answer-key" className="text-sm">
-              Incluir gabarito separado ao final
-            </Label>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="answer-key"
+                checked={includeAnswerKey}
+                onCheckedChange={(checked) => setIncludeAnswerKey(checked === true)}
+              />
+              <div>
+                <Label htmlFor="answer-key" className="text-sm font-medium">
+                  Gabarito com chave de correção
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Página com todas as respostas corretas para o professor
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="answer-sheet"
+                checked={includeAnswerSheet}
+                onCheckedChange={(checked) => setIncludeAnswerSheet(checked === true)}
+              />
+              <div>
+                <Label htmlFor="answer-sheet" className="text-sm font-medium">
+                  Cartão-resposta (folha de respostas)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Folha com bolhas para o aluno marcar as respostas
+                </p>
+              </div>
+            </div>
           </div>
 
           <Separator />
