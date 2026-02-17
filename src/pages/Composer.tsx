@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ExamPDFExporter from "@/components/ExamPDFExporter";
 import {
   Plus,
   GripVertical,
@@ -94,6 +95,7 @@ export default function ComposerPage() {
     },
   ]);
   const [headerOpen, setHeaderOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [institutionName, setInstitutionName] = useState("Universidade de Ciências da Saúde");
   const [teacherName, setTeacherName] = useState("Dr. Maria Santos");
   const [examDate, setExamDate] = useState("2026-03-15");
@@ -242,11 +244,22 @@ export default function ComposerPage() {
               </div>
             </SheetContent>
           </Sheet>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setExportOpen(true)}>
             <FileDown className="h-3.5 w-3.5 mr-1.5" />
             Exportar
           </Button>
         </div>
+
+        <ExamPDFExporter
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          examTitle={examTitle}
+          sections={sections}
+          institutionName={institutionName}
+          teacherName={teacherName}
+          examDate={examDate}
+          instructions={instructions}
+        />
 
         {/* Prévia A4 */}
         <div className="flex-1 overflow-auto p-8 flex justify-center">
