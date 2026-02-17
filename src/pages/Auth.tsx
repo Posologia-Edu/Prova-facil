@@ -9,8 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GraduationCap, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const Auth = () => {
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "login";
   const [tab, setTab] = useState(defaultTab);
@@ -23,9 +25,7 @@ const Auth = () => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate("/dashboard");
-      }
+      if (session) navigate("/dashboard");
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) navigate("/dashboard");
@@ -39,7 +39,7 @@ const Auth = () => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
+      toast({ title: t("auth_error_login"), description: error.message, variant: "destructive" });
     }
   };
 
@@ -56,12 +56,9 @@ const Auth = () => {
     });
     setLoading(false);
     if (error) {
-      toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
+      toast({ title: t("auth_error_signup"), description: error.message, variant: "destructive" });
     } else {
-      toast({
-        title: "Cadastro realizado!",
-        description: "Verifique seu e-mail para confirmar a conta. Após confirmação, seu acesso será analisado pelo administrador.",
-      });
+      toast({ title: t("auth_signup_success_title"), description: t("auth_signup_success_desc") });
     }
   };
 
@@ -75,7 +72,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4" />
-          Voltar ao início
+          {t("auth_back")}
         </Link>
 
         <Card className="border shadow-lg">
@@ -85,43 +82,29 @@ const Auth = () => {
             </div>
             <CardTitle className="text-2xl font-bold">ProvaFácil</CardTitle>
             <CardDescription>
-              {tab === "login" ? "Entre na sua conta para continuar" : "Crie sua conta gratuita"}
+              {tab === "login" ? t("auth_login_desc") : t("auth_signup_desc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Cadastrar</TabsTrigger>
+                <TabsTrigger value="login">{t("auth_login")}</TabsTrigger>
+                <TabsTrigger value="signup">{t("auth_signup")}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">E-mail</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="professor@universidade.br"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
+                    <Label htmlFor="login-email">{t("auth_email")}</Label>
+                    <Input id="login-email" type="email" placeholder="professor@universidade.br" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Senha</Label>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
+                    <Label htmlFor="login-password">{t("auth_password")}</Label>
+                    <Input id="login-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
                   </div>
                   <Button type="submit" className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Entrar
+                    {t("auth_login")}
                   </Button>
                 </form>
               </TabsContent>
@@ -129,42 +112,20 @@ const Auth = () => {
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nome completo</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Prof. João Silva"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
+                    <Label htmlFor="signup-name">{t("auth_full_name")}</Label>
+                    <Input id="signup-name" type="text" placeholder="Prof. João Silva" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">E-mail</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="professor@universidade.br"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
+                    <Label htmlFor="signup-email">{t("auth_email")}</Label>
+                    <Input id="signup-email" type="email" placeholder="professor@universidade.br" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Senha</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Mínimo 6 caracteres"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                    />
+                    <Label htmlFor="signup-password">{t("auth_password")}</Label>
+                    <Input id="signup-password" type="password" placeholder={t("auth_min_chars")} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                   </div>
                   <Button type="submit" className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Criar conta
+                    {t("auth_create_account")}
                   </Button>
                 </form>
               </TabsContent>

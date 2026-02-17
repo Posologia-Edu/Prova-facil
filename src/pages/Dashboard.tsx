@@ -12,13 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-
-const stats = [
-  { label: "Total de Questões", value: "0", icon: Library, change: "" },
-  { label: "Provas Criadas", value: "0", icon: FileEdit, change: "" },
-  { label: "Turmas Ativas", value: "0", icon: GraduationCap, change: "" },
-  { label: "Dific. Média", value: "—", icon: BarChart3, change: "" },
-];
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const recentExams: { title: string; date: string; status: string; questions: number }[] = [];
 
@@ -29,13 +23,20 @@ const statusVariant: Record<string, "default" | "success" | "secondary"> = {
 };
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
+
+  const stats = [
+    { label: t("dash_total_questions"), value: "0", icon: Library, change: "" },
+    { label: t("dash_exams_created"), value: "0", icon: FileEdit, change: "" },
+    { label: t("dash_active_classes"), value: "0", icon: GraduationCap, change: "" },
+    { label: t("dash_avg_difficulty"), value: "—", icon: BarChart3, change: "" },
+  ];
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Bem-vindo(a) de volta, Professor(a)</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Aqui está uma visão geral do seu espaço de provas.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("dash_welcome")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{t("dash_subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -58,25 +59,25 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">Ações Rápidas</CardTitle>
+            <CardTitle className="text-base">{t("dash_quick_actions")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <Button asChild className="w-full justify-start" variant="outline">
               <Link to="/composer">
                 <Plus className="h-4 w-4 mr-2" />
-                Criar Nova Prova
+                {t("dash_create_exam")}
               </Link>
             </Button>
             <Button asChild className="w-full justify-start" variant="outline">
               <Link to="/questions">
                 <Library className="h-4 w-4 mr-2" />
-                Adicionar Questões
+                {t("dash_add_questions")}
               </Link>
             </Button>
             <Button asChild className="w-full justify-start" variant="outline">
               <Link to="/classes">
                 <GraduationCap className="h-4 w-4 mr-2" />
-                Gerenciar Turmas
+                {t("dash_manage_classes")}
               </Link>
             </Button>
           </CardContent>
@@ -84,10 +85,10 @@ export default function DashboardPage() {
 
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Provas Recentes</CardTitle>
+            <CardTitle className="text-base">{t("dash_recent_exams")}</CardTitle>
             <Button variant="ghost" size="sm" asChild>
               <Link to="/composer">
-                Ver todas <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                {t("dash_view_all")} <ArrowRight className="h-3.5 w-3.5 ml-1" />
               </Link>
             </Button>
           </CardHeader>
@@ -95,7 +96,7 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {recentExams.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">
-                  Nenhuma prova criada ainda.
+                  {t("dash_no_exams")}
                 </p>
               ) : (
                 recentExams.map((exam) => (
@@ -112,7 +113,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2 mt-0.5">
                           <Clock className="h-3 w-3 text-muted-foreground" />
                           <span className="text-xs text-muted-foreground">{exam.date}</span>
-                          <span className="text-xs text-muted-foreground">· {exam.questions} questões</span>
+                          <span className="text-xs text-muted-foreground">· {exam.questions} {t("composer_total_questions")}</span>
                         </div>
                       </div>
                     </div>

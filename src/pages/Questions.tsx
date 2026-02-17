@@ -56,6 +56,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface Question {
   id: string;
@@ -91,6 +92,7 @@ const initialQuestions: Question[] = [
 ];
 
 export default function QuestionsPage() {
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
@@ -141,26 +143,26 @@ export default function QuestionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Banco de Questões</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("questions_title")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {questions.length} questões no seu repositório
+            {questions.length} {t("questions_subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setAiOpen(true)}>
             <Sparkles className="h-4 w-4 mr-2 text-secondary" />
-            Gerar com IA
+            {t("questions_generate_ai")}
           </Button>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Nova Questão
+                {t("questions_new")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Criar Nova Questão</DialogTitle>
+                <DialogTitle>{t("questions_create_title")}</DialogTitle>
               </DialogHeader>
               <Tabs defaultValue="manual" className="mt-2">
                 <TabsList className="w-full">
@@ -240,8 +242,8 @@ export default function QuestionsPage() {
                 </TabsContent>
               </Tabs>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-                <Button onClick={() => setCreateOpen(false)}>Criar Questão</Button>
+                <Button variant="outline" onClick={() => setCreateOpen(false)}>{t("cancel")}</Button>
+                <Button onClick={() => setCreateOpen(false)}>{t("questions_new")}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -253,7 +255,7 @@ export default function QuestionsPage() {
         <div className="relative flex-1 min-w-[240px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar questões ou tags..."
+            placeholder={t("questions_search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -265,11 +267,11 @@ export default function QuestionsPage() {
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os Tipos</SelectItem>
-            <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
-            <SelectItem value="true_false">Verdadeiro/Falso</SelectItem>
-            <SelectItem value="open_ended">Dissertativa</SelectItem>
-            <SelectItem value="matching">Associação</SelectItem>
+            <SelectItem value="all">{t("questions_all_types")}</SelectItem>
+            <SelectItem value="multiple_choice">{t("questions_multiple_choice")}</SelectItem>
+            <SelectItem value="true_false">{t("questions_true_false")}</SelectItem>
+            <SelectItem value="open_ended">{t("questions_open_ended")}</SelectItem>
+            <SelectItem value="matching">{t("questions_matching")}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
@@ -277,10 +279,10 @@ export default function QuestionsPage() {
             <SelectValue placeholder="Dificuldade" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            <SelectItem value="easy">Fácil</SelectItem>
-            <SelectItem value="medium">Média</SelectItem>
-            <SelectItem value="hard">Difícil</SelectItem>
+            <SelectItem value="all">{t("questions_all_difficulties")}</SelectItem>
+            <SelectItem value="easy">{t("questions_easy")}</SelectItem>
+            <SelectItem value="medium">{t("questions_medium")}</SelectItem>
+            <SelectItem value="hard">{t("questions_hard")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -319,16 +321,16 @@ export default function QuestionsPage() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem>
                     <Pencil className="h-4 w-4 mr-2" />
-                    Editar
+                    {t("questions_edit")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleDuplicateQuestion(q)}>
                     <Copy className="h-4 w-4 mr-2" />
-                    Duplicar
+                    {t("questions_duplicate")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteId(q.id)}>
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir
+                    {t("questions_delete")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -338,8 +340,8 @@ export default function QuestionsPage() {
         {filtered.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             <Library className="h-12 w-12 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">Nenhuma questão encontrada</p>
-            <p className="text-sm mt-1">Ajuste os filtros ou crie uma nova questão.</p>
+            <p className="font-medium">{t("questions_none_found")}</p>
+            <p className="text-sm mt-1">{t("questions_adjust_filters")}</p>
           </div>
         )}
       </div>
@@ -351,15 +353,13 @@ export default function QuestionsPage() {
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir questão?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A questão será removida permanentemente do seu banco.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("questions_delete_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("questions_delete_desc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteId && handleDeleteQuestion(deleteId)}>
-              Excluir
+              {t("questions_delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
