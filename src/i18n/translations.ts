@@ -129,7 +129,21 @@ type TranslationKeys = {
   analytics_by_difficulty: string;
   analytics_exam_history: string;
   analytics_no_data: string;
+  analytics_no_data_hint: string;
   analytics_no_history: string;
+  analytics_all_classes: string;
+  analytics_all_exams: string;
+  analytics_total_students: string;
+  analytics_avg_score: string;
+  analytics_pass_rate: string;
+  analytics_total_submissions: string;
+  analytics_score_distribution: string;
+  analytics_students: string;
+  analytics_correct_rate: string;
+  analytics_most_missed: string;
+  analytics_errors: string;
+  analytics_error_rate: string;
+  analytics_untagged: string;
 
   // Calendar
   calendar_title: string;
@@ -412,7 +426,21 @@ const pt: TranslationKeys = {
   analytics_by_difficulty: "Distribuição por Dificuldade",
   analytics_exam_history: "Histórico de Provas",
   analytics_no_data: "Nenhum dado disponível ainda.",
+  analytics_no_data_hint: "Publique e aplique provas para ver os relatórios de desempenho aqui.",
   analytics_no_history: "Nenhuma prova no histórico ainda.",
+  analytics_all_classes: "Todas as turmas",
+  analytics_all_exams: "Todas as provas",
+  analytics_total_students: "Alunos avaliados",
+  analytics_avg_score: "Nota média",
+  analytics_pass_rate: "Taxa de aprovação (≥60%)",
+  analytics_total_submissions: "Provas realizadas",
+  analytics_score_distribution: "Distribuição de Notas",
+  analytics_students: "Alunos",
+  analytics_correct_rate: "Taxa de acerto",
+  analytics_most_missed: "Questões Mais Erradas",
+  analytics_errors: "erros",
+  analytics_error_rate: "erro",
+  analytics_untagged: "Sem tag",
 
   calendar_title: "Calendário de Provas",
   calendar_subtitle: "Visualize suas provas agendadas e receba lembretes importantes.",
@@ -688,7 +716,21 @@ const en: TranslationKeys = {
   analytics_by_difficulty: "Distribution by Difficulty",
   analytics_exam_history: "Exam History",
   analytics_no_data: "No data available yet.",
+  analytics_no_data_hint: "Publish and apply exams to see performance reports here.",
   analytics_no_history: "No exams in history yet.",
+  analytics_all_classes: "All classes",
+  analytics_all_exams: "All exams",
+  analytics_total_students: "Students assessed",
+  analytics_avg_score: "Average score",
+  analytics_pass_rate: "Pass rate (≥60%)",
+  analytics_total_submissions: "Exams taken",
+  analytics_score_distribution: "Score Distribution",
+  analytics_students: "Students",
+  analytics_correct_rate: "Correct rate",
+  analytics_most_missed: "Most Missed Questions",
+  analytics_errors: "errors",
+  analytics_error_rate: "error",
+  analytics_untagged: "Untagged",
 
   calendar_title: "Exam Calendar",
   calendar_subtitle: "View your scheduled exams and receive important reminders.",
@@ -964,7 +1006,21 @@ const es: TranslationKeys = {
   analytics_by_difficulty: "Distribución por Dificultad",
   analytics_exam_history: "Historial de Exámenes",
   analytics_no_data: "No hay datos disponibles aún.",
+  analytics_no_data_hint: "Publique y aplique exámenes para ver los informes de desempeño aquí.",
   analytics_no_history: "No hay exámenes en el historial aún.",
+  analytics_all_classes: "Todas las clases",
+  analytics_all_exams: "Todos los exámenes",
+  analytics_total_students: "Alumnos evaluados",
+  analytics_avg_score: "Nota promedio",
+  analytics_pass_rate: "Tasa de aprobación (≥60%)",
+  analytics_total_submissions: "Exámenes realizados",
+  analytics_score_distribution: "Distribución de Notas",
+  analytics_students: "Alumnos",
+  analytics_correct_rate: "Tasa de acierto",
+  analytics_most_missed: "Preguntas Más Falladas",
+  analytics_errors: "errores",
+  analytics_error_rate: "error",
+  analytics_untagged: "Sin etiqueta",
 
   calendar_title: "Calendario de Exámenes",
   calendar_subtitle: "Visualice sus exámenes programados y reciba recordatorios importantes.",
