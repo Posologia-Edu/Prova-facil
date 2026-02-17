@@ -216,11 +216,12 @@ const Index = () => {
             <GraduationCap className="h-5 w-5 text-secondary" />
             <span className="font-semibold text-foreground">ProvaFácil</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center gap-1 md:flex-row md:gap-4">
             <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               {t("docs_title")}
             </Link>
             <p className="text-sm text-muted-foreground">{t("landing_footer")}</p>
+            <p className="text-sm text-muted-foreground">Desenvolvido por Sérgio Araújo — Posologia Produções</p>
           </div>
         </div>
       </footer>
