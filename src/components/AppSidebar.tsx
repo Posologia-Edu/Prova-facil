@@ -6,13 +6,13 @@ import {
   GraduationCap,
   BarChart3,
   Crown,
+  BookOpen,
   LogOut,
   ShieldCheck,
   CalendarDays,
   Globe,
   Settings,
 } from "lucide-react";
-import logoImg from "@/assets/logo.png";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/use-admin";
@@ -72,7 +72,9 @@ export function AppSidebar() {
     <Sidebar className="w-64 gradient-sidebar border-r-0">
       <SidebarHeader className="p-5 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3">
-          <img src={logoImg} alt="ProvaFácil" className="h-9 w-9 rounded-lg" />
+          <div className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center">
+            <BookOpen className="h-5 w-5 text-secondary-foreground" />
+          </div>
           <div>
             <h1 className="text-base font-bold text-sidebar-primary-foreground tracking-tight">ProvaFácil</h1>
             <p className="text-xs text-sidebar-foreground/60">{t("app_subtitle")}</p>
