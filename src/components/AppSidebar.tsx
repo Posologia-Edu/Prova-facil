@@ -76,7 +76,7 @@ export function AppSidebar() {
             <BookOpen className="h-5 w-5 text-secondary-foreground" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-sidebar-primary-foreground tracking-tight">ExamForge</h1>
+            <h1 className="text-base font-bold text-sidebar-primary-foreground tracking-tight">ProvaFácil</h1>
             <p className="text-xs text-sidebar-foreground/60">{t("app_subtitle")}</p>
           </div>
         </Link>
