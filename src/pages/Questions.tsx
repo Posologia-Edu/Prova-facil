@@ -15,6 +15,8 @@ import {
   Pencil,
   Copy,
   Trash2,
+  X,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +59,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { Separator } from "@/components/ui/separator";
+
+interface QuestionOption {
+  text: string;
+  isCorrect: boolean;
+}
 
 interface Question {
   id: string;
@@ -66,6 +74,10 @@ interface Question {
   difficulty: "easy" | "medium" | "hard";
   bloom_level: string;
   created_at: string;
+  options?: QuestionOption[];
+  explanation?: string;
+  matchingPairs?: { left: string; right: string }[];
+  expectedAnswer?: string;
 }
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -82,14 +94,181 @@ const typeLabels: Record<string, string> = {
   matching: "Associação",
 };
 
+const difficultyColors: Record<string, string> = {
+  easy: "text-success",
+  medium: "text-warning",
+  hard: "text-destructive",
+};
+
 const initialQuestions: Question[] = [
-  { id: "1", type: "multiple_choice", title: "What is the primary mechanism of action of ACE inhibitors?", tags: ["Pharmacology", "Cardiovascular"], difficulty: "medium", bloom_level: "Understanding", created_at: "2026-02-15" },
-  { id: "2", type: "true_false", title: "Aspirin irreversibly inhibits COX-1 and COX-2 enzymes.", tags: ["Pharmacology", "NSAIDs"], difficulty: "easy", bloom_level: "Remembering", created_at: "2026-02-14" },
-  { id: "3", type: "open_ended", title: "Explain the pharmacokinetic differences between warfarin and heparin.", tags: ["Pharmacology", "Anticoagulants"], difficulty: "hard", bloom_level: "Analyzing", created_at: "2026-02-13" },
-  { id: "4", type: "matching", title: "Match the following drug classes with their side effects.", tags: ["Pharmacology", "Side Effects"], difficulty: "medium", bloom_level: "Applying", created_at: "2026-02-12" },
-  { id: "5", type: "multiple_choice", title: "Which neurotransmitter is primarily affected by SSRIs?", tags: ["Pharmacology", "CNS"], difficulty: "easy", bloom_level: "Remembering", created_at: "2026-02-11" },
-  { id: "6", type: "open_ended", title: "Discuss the role of the P450 enzyme system in drug metabolism.", tags: ["Pharmacology", "Metabolism"], difficulty: "hard", bloom_level: "Evaluating", created_at: "2026-02-10" },
+  {
+    id: "1", type: "multiple_choice",
+    title: "What is the primary mechanism of action of ACE inhibitors?",
+    tags: ["Pharmacology", "Cardiovascular"], difficulty: "medium", bloom_level: "Understanding", created_at: "2026-02-15",
+    options: [
+      { text: "Bloqueiam a conversão de angiotensina I em angiotensina II", isCorrect: true },
+      { text: "Bloqueiam os receptores beta-adrenérgicos", isCorrect: false },
+      { text: "Inibem a bomba de sódio-potássio", isCorrect: false },
+      { text: "Ativam os canais de cálcio", isCorrect: false },
+    ],
+    explanation: "Os inibidores da ECA bloqueiam a enzima conversora de angiotensina, impedindo a conversão de angiotensina I em angiotensina II, resultando em vasodilatação e redução da pressão arterial.",
+  },
+  {
+    id: "2", type: "true_false",
+    title: "Aspirin irreversibly inhibits COX-1 and COX-2 enzymes.",
+    tags: ["Pharmacology", "NSAIDs"], difficulty: "easy", bloom_level: "Remembering", created_at: "2026-02-14",
+    options: [
+      { text: "Verdadeiro", isCorrect: true },
+      { text: "Falso", isCorrect: false },
+    ],
+    explanation: "A aspirina acetila irreversivelmente as enzimas COX-1 e COX-2, diferentemente de outros AINEs que são inibidores reversíveis.",
+  },
+  {
+    id: "3", type: "open_ended",
+    title: "Explain the pharmacokinetic differences between warfarin and heparin.",
+    tags: ["Pharmacology", "Anticoagulants"], difficulty: "hard", bloom_level: "Analyzing", created_at: "2026-02-13",
+    expectedAnswer: "A warfarina é administrada por via oral, tem início de ação lento (2-5 dias), longa duração e atua inibindo fatores dependentes de vitamina K. A heparina é administrada por via parenteral, tem início de ação rápido, curta duração e atua potencializando a antitrombina III.",
+    explanation: "A comparação entre warfarina e heparina é fundamental para entender as estratégias de anticoagulação em diferentes contextos clínicos.",
+  },
+  {
+    id: "4", type: "matching",
+    title: "Match the following drug classes with their side effects.",
+    tags: ["Pharmacology", "Side Effects"], difficulty: "medium", bloom_level: "Applying", created_at: "2026-02-12",
+    matchingPairs: [
+      { left: "Inibidores da ECA", right: "Tosse seca" },
+      { left: "Beta-bloqueadores", right: "Bradicardia" },
+      { left: "Diuréticos tiazídicos", right: "Hipocalemia" },
+      { left: "Bloqueadores de Ca²⁺", right: "Edema periférico" },
+    ],
+    explanation: "Conhecer os efeitos colaterais característicos de cada classe é essencial para a prática clínica segura.",
+  },
+  {
+    id: "5", type: "multiple_choice",
+    title: "Which neurotransmitter is primarily affected by SSRIs?",
+    tags: ["Pharmacology", "CNS"], difficulty: "easy", bloom_level: "Remembering", created_at: "2026-02-11",
+    options: [
+      { text: "Dopamina", isCorrect: false },
+      { text: "Serotonina", isCorrect: true },
+      { text: "Noradrenalina", isCorrect: false },
+      { text: "GABA", isCorrect: false },
+    ],
+    explanation: "Os ISRS (Inibidores Seletivos da Recaptação de Serotonina) atuam especificamente bloqueando a recaptação de serotonina na fenda sináptica.",
+  },
+  {
+    id: "6", type: "open_ended",
+    title: "Discuss the role of the P450 enzyme system in drug metabolism.",
+    tags: ["Pharmacology", "Metabolism"], difficulty: "hard", bloom_level: "Evaluating", created_at: "2026-02-10",
+    expectedAnswer: "O sistema citocromo P450 é uma superfamília de enzimas hepáticas responsáveis pela fase I do metabolismo de fármacos. As principais isoformas (CYP3A4, CYP2D6, CYP2C9) catalisam reações de oxidação, redução e hidrólise.",
+    explanation: "O entendimento do sistema P450 é crucial para prever interações medicamentosas e ajustar doses terapêuticas.",
+  },
 ];
+
+function QuestionDetailContent({ question }: { question: Question }) {
+  const letterLabels = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
+  return (
+    <div className="space-y-5">
+      {/* Header metadata */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={question.difficulty} className="text-xs">
+          {question.difficulty === "easy" ? "Fácil" : question.difficulty === "medium" ? "Média" : "Difícil"}
+        </Badge>
+        <Badge variant="outline" className="text-xs gap-1">
+          {typeIcons[question.type]}
+          {typeLabels[question.type]}
+        </Badge>
+        <Badge variant="secondary" className="text-xs">{question.bloom_level}</Badge>
+        {question.tags.map((tag) => (
+          <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+        ))}
+      </div>
+
+      <Separator />
+
+      {/* Question text */}
+      <div>
+        <Label className="text-xs text-muted-foreground uppercase tracking-wider">Enunciado</Label>
+        <p className="mt-1.5 text-sm leading-relaxed font-medium">{question.title}</p>
+      </div>
+
+      {/* Options for multiple choice / true-false */}
+      {question.options && question.options.length > 0 && (
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Alternativas</Label>
+          <div className="mt-2 space-y-2">
+            {question.options.map((opt, i) => (
+              <div
+                key={i}
+                className={`flex items-start gap-3 p-3 rounded-lg border text-sm ${
+                  opt.isCorrect
+                    ? "border-success/50 bg-success/5"
+                    : "border-border bg-muted/30"
+                }`}
+              >
+                <span className={`font-semibold shrink-0 ${opt.isCorrect ? "text-success" : "text-muted-foreground"}`}>
+                  {letterLabels[i]})
+                </span>
+                <span className="flex-1">{opt.text}</span>
+                {opt.isCorrect && (
+                  <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Matching pairs */}
+      {question.matchingPairs && question.matchingPairs.length > 0 && (
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Pares de Associação</Label>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="text-xs font-semibold text-muted-foreground uppercase px-3 py-1">Coluna A</div>
+            <div className="text-xs font-semibold text-muted-foreground uppercase px-3 py-1">Coluna B</div>
+            {question.matchingPairs.map((pair, i) => (
+              <>
+                <div key={`l-${i}`} className="p-3 rounded-lg border bg-muted/30 text-sm">
+                  {i + 1}. {pair.left}
+                </div>
+                <div key={`r-${i}`} className="p-3 rounded-lg border border-success/30 bg-success/5 text-sm flex items-center gap-2">
+                  <ArrowLeftRight className="h-3.5 w-3.5 text-success shrink-0" />
+                  {pair.right}
+                </div>
+              </>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Expected answer for open-ended */}
+      {question.expectedAnswer && (
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Resposta Esperada</Label>
+          <div className="mt-1.5 p-3 rounded-lg border bg-muted/30 text-sm leading-relaxed">
+            {question.expectedAnswer}
+          </div>
+        </div>
+      )}
+
+      {/* Explanation */}
+      {question.explanation && (
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Explicação / Justificativa</Label>
+          <div className="mt-1.5 p-3 rounded-lg border border-primary/20 bg-primary/5 text-sm leading-relaxed">
+            {question.explanation}
+          </div>
+        </div>
+      )}
+
+      {/* Footer info */}
+      <Separator />
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>Criada em: {question.created_at}</span>
+        <span>ID: {question.id}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function QuestionsPage() {
   const { t } = useLanguage();
@@ -100,6 +279,7 @@ export default function QuestionsPage() {
   const [aiOpen, setAiOpen] = useState(false);
   const [questions, setQuestions] = useState<Question[]>(initialQuestions);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
 
   const handleDeleteQuestion = (id: string) => {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
@@ -290,7 +470,11 @@ export default function QuestionsPage() {
       {/* Question List */}
       <div className="space-y-3">
         {filtered.map((q) => (
-          <Card key={q.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer group">
+          <Card
+            key={q.id}
+            className="p-4 hover:shadow-md transition-shadow cursor-pointer group"
+            onClick={() => setSelectedQuestion(q)}
+          >
             <div className="flex items-start gap-3">
               <div className="mt-0.5 text-muted-foreground group-hover:text-primary transition-colors">
                 <GripVertical className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
@@ -314,21 +498,30 @@ export default function QuestionsPage() {
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedQuestion(q); }}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Ver Detalhes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
                     <Pencil className="h-4 w-4 mr-2" />
                     {t("questions_edit")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleDuplicateQuestion(q)}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicateQuestion(q); }}>
                     <Copy className="h-4 w-4 mr-2" />
                     {t("questions_duplicate")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteId(q.id)}>
+                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(q.id); }}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     {t("questions_delete")}
                   </DropdownMenuItem>
@@ -345,6 +538,19 @@ export default function QuestionsPage() {
           </div>
         )}
       </div>
+
+      {/* Question Detail Dialog */}
+      <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && setSelectedQuestion(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-primary" />
+              Detalhes da Questão
+            </DialogTitle>
+          </DialogHeader>
+          {selectedQuestion && <QuestionDetailContent question={selectedQuestion} />}
+        </DialogContent>
+      </Dialog>
 
       {/* AI Generator Dialog */}
       <AIQuestionGenerator open={aiOpen} onOpenChange={setAiOpen} onSaveQuestions={handleAISave} />
