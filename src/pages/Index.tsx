@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   BookOpen, Brain, FileText, BarChart3, Shield, Zap, 
@@ -12,8 +13,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) navigate("/dashboard");
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) navigate("/dashboard");
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
   const { t, language, setLanguage } = useLanguage();
   const languages: Language[] = ["pt", "en", "es"];
 
