@@ -4,6 +4,7 @@ import {
   BookOpen, Brain, FileText, BarChart3, Shield, Zap, 
   CheckCircle, ArrowRight, Star, Users, GraduationCap, Globe
 } from "lucide-react";
+import FloatingAuth from "@/components/FloatingAuth";
 import { useLanguage, LANGUAGE_FLAGS, LANGUAGE_LABELS, type Language } from "@/i18n/LanguageContext";
 import {
   DropdownMenu,
@@ -64,16 +65,7 @@ const Index = () => {
                 {t("auth_student")}
               </Button>
             </Link>
-            <Link to="/auth">
-              <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
-                {t("landing_enter")}
-              </Button>
-            </Link>
-            <Link to="/auth?tab=signup">
-              <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                {t("landing_create_free")}
-              </Button>
-            </Link>
+            <FloatingAuth />
           </div>
         </div>
       </nav>
