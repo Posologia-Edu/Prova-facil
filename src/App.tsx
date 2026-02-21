@@ -25,6 +25,7 @@ import ExamCalendar from "./pages/ExamCalendar";
 import NotFound from "./pages/NotFound";
 import Documentation from "./pages/Documentation";
 import Settings from "./pages/Settings";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -128,6 +129,7 @@ const App = () => (
               }
             />
             <Route path="/docs" element={<Documentation />} />
+            <Route path="/contato" element={<Contact />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
