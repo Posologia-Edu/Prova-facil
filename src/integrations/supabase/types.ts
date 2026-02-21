@@ -17,6 +17,7 @@ export type Database = {
       classes: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
           name: string
@@ -27,6 +28,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           name: string
@@ -37,6 +39,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           name?: string
@@ -187,6 +190,7 @@ export type Database = {
         Row: {
           class_id: string | null
           created_at: string
+          deleted_at: string | null
           header_config_json: Json
           id: string
           layout_config_json: Json
@@ -198,6 +202,7 @@ export type Database = {
         Insert: {
           class_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           header_config_json?: Json
           id?: string
           layout_config_json?: Json
@@ -209,6 +214,7 @@ export type Database = {
         Update: {
           class_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           header_config_json?: Json
           id?: string
           layout_config_json?: Json
@@ -265,6 +271,7 @@ export type Database = {
           bloom_level: string | null
           content_json: Json
           created_at: string
+          deleted_at: string | null
           difficulty: string
           embed_url: string | null
           id: string
@@ -278,6 +285,7 @@ export type Database = {
           bloom_level?: string | null
           content_json?: Json
           created_at?: string
+          deleted_at?: string | null
           difficulty?: string
           embed_url?: string | null
           id?: string
@@ -291,6 +299,7 @@ export type Database = {
           bloom_level?: string | null
           content_json?: Json
           created_at?: string
+          deleted_at?: string | null
           difficulty?: string
           embed_url?: string | null
           id?: string
