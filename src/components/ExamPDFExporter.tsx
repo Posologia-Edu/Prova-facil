@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
+import QRCode from "qrcode";
 import {
   Dialog,
   DialogContent,
@@ -393,7 +394,7 @@ export default function ExamPDFExporter({
   );
 
   const renderExamHTML = useCallback(
-    (versionLetter: string, versionSections: Section[]) => {
+    async (versionLetter: string, versionSections: Section[]) => {
       const container = document.createElement("div");
       container.style.width = "794px";
       container.style.minHeight = "1123px";
@@ -410,11 +411,21 @@ export default function ExamPDFExporter({
       const numVersions = parseInt(versionCount);
       const versionTag = numVersions > 1 ? ` — Versão ${versionLetter}` : "";
 
+      // Generate unique exam ID for QR code
+      const examUniqueId = `PF-${Date.now().toString(36).toUpperCase()}-${versionLetter}`;
+
       let html = `
         <div style="text-align:center;margin-bottom:24px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px;font-weight:bold;color:#1a1a2e;">🎓 ProvaFácil</span>
+            </div>
+            <div id="qr-placeholder" style="width:80px;height:80px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:8px;color:#999;">QR</div>
+          </div>
           <h2 style="font-size:14px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:0">${institutionName}</h2>
           <hr style="border:none;border-top:1px solid #ccc;margin:12px 0"/>
           <h3 style="font-size:17px;font-weight:bold;margin:8px 0">${examTitle}${versionTag}</h3>
+          <p style="font-size:8px;color:#aaa;margin:2px 0">ID: ${examUniqueId}</p>
           <div style="display:flex;justify-content:space-between;font-size:11px;color:#666;margin-top:10px">
             <span>Professor(a): ${teacherName}</span>
             <span>Data: ${formattedDate}</span>
@@ -481,7 +492,28 @@ export default function ExamPDFExporter({
         html += `</div>`;
       }
 
+      // Footer with ProvaFácil branding
+      html += `<div style="margin-top:30px;padding-top:10px;border-top:1px solid #ddd;text-align:center;font-size:9px;color:#aaa;">
+        Gerado por <strong>ProvaFácil</strong> — provafacil.com
+      </div>`;
+
       container.innerHTML = html;
+
+      // Replace QR placeholder with actual QR code
+      const qrPlaceholder = container.querySelector('#qr-placeholder');
+      if (qrPlaceholder) {
+        try {
+          const qrDataUrl = await QRCode.toDataURL(examUniqueId, {
+            width: 80,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+          });
+          qrPlaceholder.innerHTML = `<img src="${qrDataUrl}" style="width:80px;height:80px;" />`;
+        } catch (e) {
+          console.error('QR code generation failed:', e);
+        }
+      }
+
       return container;
     },
     [versionCount, institutionName, examTitle, teacherName, formattedDate, instructions]
@@ -507,7 +539,7 @@ export default function ExamPDFExporter({
         const versionLetter = VERSION_LETTERS[v];
         const versionSections = numVersions > 1 ? shuffleSections(sections) : sections;
 
-        const container = renderExamHTML(versionLetter, versionSections);
+        const container = await renderExamHTML(versionLetter, versionSections);
         // Add data-pdf-section to each major block
         container.querySelectorAll(':scope > div').forEach((el) => {
           (el as HTMLElement).setAttribute('data-pdf-section', 'true');

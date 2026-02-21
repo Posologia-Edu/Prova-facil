@@ -17,6 +17,7 @@ import {
   ArrowLeftRight,
   ChevronDown,
   ChevronRight,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -444,6 +445,15 @@ export default function ComposerPage() {
           <div className="w-[210mm] min-h-[297mm] exam-paper-bg shadow-xl rounded-sm border p-12 font-exam text-sm leading-relaxed">
             {/* Cabeçalho */}
             <div className="text-center mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="h-5 w-5 text-secondary" />
+                  <span className="text-sm font-bold text-foreground">ProvaFácil</span>
+                </div>
+                <div className="w-16 h-16 border border-dashed border-muted-foreground/30 rounded flex items-center justify-center">
+                  <span className="text-[8px] text-muted-foreground">QR Code</span>
+                </div>
+              </div>
               <h2 className="text-base font-bold uppercase tracking-wide">{institutionName}</h2>
               <Separator className="my-3 bg-foreground/20" />
               <h3 className="text-lg font-bold mt-2">{examTitle}</h3>
@@ -560,6 +570,11 @@ export default function ComposerPage() {
                 <p className="text-xs mt-1">Adicione uma seção para começar a montar sua prova.</p>
               </div>
             )}
+
+            {/* Footer branding */}
+            <div className="mt-8 pt-3 border-t border-muted-foreground/20 text-center">
+              <p className="text-[9px] text-muted-foreground/50">Gerado por <strong>ProvaFácil</strong> — provafacil.com</p>
+            </div>
           </div>
         </div>
       </div>
