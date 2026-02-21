@@ -402,158 +402,165 @@ export default function ExamPDFExporter({
     [examTitle, institutionName, formattedDate, watermarkEnabled, watermarkText, addWatermark]
   );
 
-  const renderExamHTML = useCallback(
-    async (versionLetter: string, versionSections: Section[]) => {
-      const container = document.createElement("div");
-      container.style.width = "794px";
-      container.style.minHeight = "1123px";
-      container.style.padding = "60px";
-      container.style.backgroundColor = "#ffffff";
-      container.style.fontFamily = "'Georgia', 'Times New Roman', serif";
-      container.style.fontSize = "13px";
-      container.style.lineHeight = "1.6";
-      container.style.color = "#1a1a1a";
-      container.style.position = "fixed";
-      container.style.left = "-9999px";
-      container.style.top = "0";
-      container.style.zIndex = "-1";
+  // Render a single block (header, question, section title, footer) as an off-screen element and capture it as a canvas
+  const renderBlock = useCallback(async (html: string, width = 794): Promise<HTMLCanvasElement> => {
+    const el = document.createElement("div");
+    el.style.width = `${width}px`;
+    el.style.backgroundColor = "#ffffff";
+    el.style.fontFamily = "'Georgia', 'Times New Roman', serif";
+    el.style.fontSize = "12px";
+    el.style.lineHeight = "1.55";
+    el.style.color = "#1a1a1a";
+    el.style.position = "fixed";
+    el.style.left = "-9999px";
+    el.style.top = "0";
+    el.style.zIndex = "-1";
+    el.style.padding = "0 60px";
+    el.innerHTML = html;
+    document.body.appendChild(el);
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
+    document.body.removeChild(el);
+    return canvas;
+  }, []);
 
-      const numVersions = parseInt(versionCount);
-      const versionTag = numVersions > 1 ? ` — Versão ${versionLetter}` : "";
+  const buildHeaderHTML = useCallback(async (versionLetter: string, examUniqueId: string) => {
+    const numVersions = parseInt(versionCount);
+    const versionTag = numVersions > 1 ? ` — Versão ${versionLetter}` : "";
 
-      // Generate unique exam ID for QR code
-      const examUniqueId = `PF-${Date.now().toString(36).toUpperCase()}-${versionLetter}`;
+    let qrImgTag = `<div style="width:70px;height:70px;border:1px dashed #ccc;text-align:center;line-height:70px;font-size:7px;color:#999;display:inline-block;">QR</div>`;
+    try {
+      const qrDataUrl = await QRCode.toDataURL(examUniqueId, { width: 70, margin: 1, errorCorrectionLevel: 'M' });
+      qrImgTag = `<img src="${qrDataUrl}" style="width:70px;height:70px;" />`;
+    } catch {}
 
-      let html = `
-        <div style="text-align:center;margin-bottom:24px">
-          <table style="width:100%;margin-bottom:8px"><tr>
-            <td style="text-align:left;vertical-align:middle">
-              <span style="font-size:16px;font-weight:bold;color:#1a1a2e;">🎓 ProvaFácil</span>
-            </td>
-            <td style="text-align:right;vertical-align:middle">
-              <div id="qr-placeholder" style="width:80px;height:80px;border:1px dashed #ccc;text-align:center;line-height:80px;font-size:8px;color:#999;display:inline-block;">QR</div>
-            </td>
-          </tr></table>
-          <h2 style="font-size:14px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:0">${institutionName}</h2>
-          <hr style="border:none;border-top:1px solid #ccc;margin:12px 0"/>
-          <h3 style="font-size:17px;font-weight:bold;margin:8px 0">${examTitle}${versionTag}</h3>
-          <p style="font-size:8px;color:#aaa;margin:2px 0">ID: ${examUniqueId}</p>
-          <table style="width:100%;font-size:11px;color:#666;margin-top:10px"><tr>
-            <td style="text-align:left">Professor(a): ${teacherName}</td>
-            <td style="text-align:right">Data: ${formattedDate}</td>
-          </tr></table>
-          <div style="margin-top:12px;border-bottom:1px dashed #999;padding-bottom:8px">
-            <p style="font-size:11px;margin:0">Nome do Aluno: ________________________________________ RA: _______________</p>
-          </div>
-          ${instructions ? `<p style="font-size:11px;font-style:italic;color:#666;text-align:left;margin-top:12px"><strong>Instruções:</strong> ${instructions}</p>` : ""}
+    return `
+      <div style="padding-top:40px;padding-bottom:12px">
+        <table style="width:100%;margin-bottom:6px;border-collapse:collapse"><tr>
+          <td style="text-align:left;vertical-align:middle;padding:0">
+            <span style="font-size:13px;font-weight:bold;color:#1a1a2e;letter-spacing:0.5px">🎓 ProvaFácil</span>
+          </td>
+          <td style="text-align:right;vertical-align:middle;padding:0">
+            ${qrImgTag}
+          </td>
+        </tr></table>
+
+        <div style="border-top:2px solid #1a1a2e;border-bottom:2px solid #1a1a2e;padding:10px 0;margin:8px 0;text-align:center">
+          <p style="font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:3px;margin:0 0 2px 0">${institutionName || ""}</p>
+          <p style="font-size:15px;font-weight:bold;margin:4px 0 0 0">${examTitle}${versionTag}</p>
         </div>
-      `;
 
-      let questionNum = 1;
-      for (const section of versionSections) {
-        html += `<div style="margin-bottom:20px">
-          <h4 style="font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${section.name}
-            <span style="font-size:10px;color:#888;font-weight:normal;float:right">${section.questions.reduce((s, q) => s + q.points, 0)} pts</span>
-          </h4>`;
+        <table style="width:100%;font-size:10px;color:#444;margin:6px 0;border-collapse:collapse"><tr>
+          <td style="text-align:left;padding:0">Professor(a): <strong>${teacherName}</strong></td>
+          <td style="text-align:right;padding:0">Data: <strong>${formattedDate}</strong></td>
+        </tr></table>
 
-        for (const q of section.questions) {
-          html += `<div style="margin-bottom:14px;padding-left:8px">
-            <p style="margin:0"><strong style="font-size:12px">${questionNum}.</strong> ${q.title} <span style="font-size:9px;color:#999">[${q.points} pts]</span></p>`;
+        <div style="margin:10px 0;padding:8px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd">
+          <table style="width:100%;font-size:10px;border-collapse:collapse"><tr>
+            <td style="padding:0;width:70%">Nome: _________________________________________________</td>
+            <td style="padding:0;width:30%;text-align:right">RA: ___________________</td>
+          </tr></table>
+        </div>
 
-          if (q.type === "multiple_choice") {
-            const opts = q.contentJson?.options;
-            if (opts && typeof opts === "object" && !Array.isArray(opts)) {
-              // Object format: {a: "...", b: "..."}
-              const entries = Object.entries(opts as Record<string, string>).sort(([a], [b]) => a.localeCompare(b));
-              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333">`;
-              entries.forEach(([letter, text]) => {
-                html += `<p style="margin:2px 0">${letter}) ${text}</p>`;
-              });
-              html += `</div>`;
-            } else if (Array.isArray(opts) && opts.length > 0) {
-              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333">`;
-              opts.forEach((opt: any, i: number) => {
-                const letter = String.fromCharCode(97 + i);
-                const text = typeof opt === "string" ? opt : opt.text;
-                html += `<p style="margin:2px 0">${letter}) ${text}</p>`;
-              });
-              html += `</div>`;
-            } else {
-              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#666">
-                <p style="margin:2px 0">a) ________________________</p>
-                <p style="margin:2px 0">b) ________________________</p>
-                <p style="margin:2px 0">c) ________________________</p>
-                <p style="margin:2px 0">d) ________________________</p>
-              </div>`;
-            }
-          } else if (q.type === "true_false") {
-            html += `<p style="margin-top:6px;padding-left:20px;font-size:11px;color:#666">( ) Verdadeiro &nbsp;&nbsp; ( ) Falso</p>`;
-          } else if (q.type === "open_ended") {
-            html += `<div style="margin-top:6px;border-bottom:1px dashed #ccc;height:50px"></div>`;
-          } else if (q.type === "matching") {
-            const colA = q.contentJson?.column_a as string[] | undefined;
-            const colB = q.contentJson?.column_b as string[] | undefined;
-            if (colA && colB && colA.length > 0) {
-              html += `<table style="margin-top:6px;padding-left:20px;font-size:11px;color:#333;width:100%"><tr><td style="vertical-align:top;width:50%">`;
-              html += `<p style="font-weight:bold;margin-bottom:4px">Coluna A</p>`;
-              colA.forEach((item, i) => {
-                html += `<p style="margin:2px 0">${i + 1}. ${item}</p>`;
-              });
-              html += `</td><td style="vertical-align:top;width:50%"><p style="font-weight:bold;margin-bottom:4px">Coluna B</p>`;
-              colB.forEach((item, i) => {
-                html += `<p style="margin:2px 0">${String.fromCharCode(97 + i)}) ${item}</p>`;
-              });
-              html += `</td></tr></table>`;
-            } else {
-              // fallback for pairs format
-              const pairs = q.contentJson?.pairs as { left: string }[] | undefined;
-              if (pairs && pairs.length > 0) {
-                html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333">`;
-                pairs.forEach((p) => {
-                  html += `<p style="margin:2px 0">( ) ${p.left} — ________________________</p>`;
-                });
-                html += `</div>`;
-              } else {
-                html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#666">
-                  <p style="margin:2px 0">( ) Item A — ________________________</p>
-                  <p style="margin:2px 0">( ) Item B — ________________________</p>
-                </div>`;
-              }
-            }
-          }
+        ${instructions ? `
+        <div style="margin:8px 0;padding:8px 10px;background:#f8f8f8;border-left:3px solid #1a1a2e;font-size:10px;color:#444">
+          <p style="margin:0 0 4px 0;font-weight:bold;text-transform:uppercase;font-size:9px;letter-spacing:1px;color:#1a1a2e">Instruções</p>
+          <p style="margin:0;line-height:1.5">${instructions}</p>
+        </div>` : ""}
 
-          html += `</div>`;
-          questionNum++;
-        }
+        <p style="font-size:7px;color:#bbb;margin:4px 0 0 0;text-align:right">ID: ${examUniqueId}</p>
+      </div>
+    `;
+  }, [versionCount, institutionName, examTitle, teacherName, formattedDate, instructions]);
+
+  const buildSectionTitleHTML = useCallback((sectionName: string, totalPts: number) => {
+    return `
+      <div style="padding:12px 0 6px 0;border-bottom:1.5px solid #1a1a2e;margin-bottom:4px">
+        <table style="width:100%;border-collapse:collapse"><tr>
+          <td style="padding:0;text-align:left">
+            <span style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;color:#1a1a2e">${sectionName}</span>
+          </td>
+          <td style="padding:0;text-align:right">
+            <span style="font-size:9px;color:#888">${totalPts} pts</span>
+          </td>
+        </tr></table>
+      </div>
+    `;
+  }, []);
+
+  const buildQuestionHTML = useCallback((q: ExamQuestion, questionNum: number) => {
+    let html = `
+      <div style="padding:8px 0 10px 0;border-bottom:1px dotted #e0e0e0;margin-bottom:2px">
+        <p style="margin:0 0 4px 0">
+          <span style="font-weight:bold;font-size:11px;color:#1a1a2e;margin-right:6px">${String(questionNum).padStart(2, '0')}.</span>
+          <span style="font-size:11px">${q.title}</span>
+          <span style="font-size:8px;color:#999;margin-left:6px">[${q.points} pts]</span>
+        </p>`;
+
+    if (q.type === "multiple_choice") {
+      const opts = q.contentJson?.options;
+      if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+        const entries = Object.entries(opts as Record<string, string>).sort(([a], [b]) => a.localeCompare(b));
+        html += `<div style="margin:4px 0 0 22px;font-size:10px;color:#333">`;
+        entries.forEach(([letter, text]) => {
+          html += `<p style="margin:2px 0"><span style="font-weight:bold;margin-right:4px">${letter.toUpperCase()})</span> ${text}</p>`;
+        });
         html += `</div>`;
+      } else if (Array.isArray(opts) && opts.length > 0) {
+        html += `<div style="margin:4px 0 0 22px;font-size:10px;color:#333">`;
+        opts.forEach((opt: any, i: number) => {
+          const letter = String.fromCharCode(65 + i);
+          const text = typeof opt === "string" ? opt : opt.text;
+          html += `<p style="margin:2px 0"><span style="font-weight:bold;margin-right:4px">${letter})</span> ${text}</p>`;
+        });
+        html += `</div>`;
+      } else {
+        html += `<div style="margin:4px 0 0 22px;font-size:10px;color:#666">
+          <p style="margin:2px 0">A) ________________________</p>
+          <p style="margin:2px 0">B) ________________________</p>
+          <p style="margin:2px 0">C) ________________________</p>
+          <p style="margin:2px 0">D) ________________________</p>
+        </div>`;
       }
-
-      // Footer with ProvaFácil branding
-      html += `<div style="margin-top:30px;padding-top:10px;border-top:1px solid #ddd;text-align:center;font-size:9px;color:#aaa;">
-        Gerado por <strong>ProvaFácil</strong> — provafacil.com
-      </div>`;
-
-      container.innerHTML = html;
-
-      // Replace QR placeholder with actual QR code
-      const qrPlaceholder = container.querySelector('#qr-placeholder');
-      if (qrPlaceholder) {
-        try {
-          const qrDataUrl = await QRCode.toDataURL(examUniqueId, {
-            width: 80,
-            margin: 1,
-            errorCorrectionLevel: 'M',
-          });
-          qrPlaceholder.innerHTML = `<img src="${qrDataUrl}" style="width:80px;height:80px;" />`;
-        } catch (e) {
-          console.error('QR code generation failed:', e);
+    } else if (q.type === "true_false") {
+      html += `<p style="margin:4px 0 0 22px;font-size:10px;color:#444">(  ) Verdadeiro &nbsp;&nbsp;&nbsp;&nbsp; (  ) Falso</p>`;
+    } else if (q.type === "open_ended") {
+      html += `<div style="margin:6px 0 0 22px;height:60px;border-bottom:1px solid #ccc"></div>`;
+    } else if (q.type === "matching") {
+      const colA = q.contentJson?.column_a as string[] | undefined;
+      const colB = q.contentJson?.column_b as string[] | undefined;
+      if (colA && colB && colA.length > 0) {
+        html += `<table style="margin:4px 0 0 22px;font-size:10px;color:#333;width:calc(100% - 22px);border-collapse:collapse"><tr>
+          <td style="vertical-align:top;width:48%;padding:0">
+            <p style="font-weight:bold;margin:0 0 4px 0;font-size:9px;text-transform:uppercase;letter-spacing:1px">Coluna A</p>`;
+        colA.forEach((item, i) => { html += `<p style="margin:2px 0">${i + 1}. ${item}</p>`; });
+        html += `</td><td style="vertical-align:top;width:48%;padding:0 0 0 16px">
+            <p style="font-weight:bold;margin:0 0 4px 0;font-size:9px;text-transform:uppercase;letter-spacing:1px">Coluna B</p>`;
+        colB.forEach((item, i) => { html += `<p style="margin:2px 0">${String.fromCharCode(65 + i)}) ${item}</p>`; });
+        html += `</td></tr></table>`;
+      } else {
+        const pairs = q.contentJson?.pairs as { left: string }[] | undefined;
+        if (pairs && pairs.length > 0) {
+          html += `<div style="margin:4px 0 0 22px;font-size:10px;color:#333">`;
+          pairs.forEach((p) => { html += `<p style="margin:2px 0">(  ) ${p.left} — ________________________</p>`; });
+          html += `</div>`;
         }
       }
+    }
 
-      return container;
-    },
-    [versionCount, institutionName, examTitle, teacherName, formattedDate, instructions]
-  );
+    html += `</div>`;
+    return html;
+  }, []);
+
+  const buildFooterHTML = useCallback((pageNum: number, totalPages: number) => {
+    return `
+      <div style="padding:6px 0;text-align:center;border-top:1px solid #ddd;margin-top:4px">
+        <table style="width:100%;border-collapse:collapse"><tr>
+          <td style="text-align:left;padding:0;font-size:8px;color:#aaa">Gerado por <strong>ProvaFácil</strong></td>
+          <td style="text-align:right;padding:0;font-size:8px;color:#aaa">Página ${pageNum} de ${totalPages}</td>
+        </tr></table>
+      </div>
+    `;
+  }, []);
 
   const generatePDF = useCallback(async () => {
     if (sections.length === 0 || sections.every((s) => s.questions.length === 0)) {
@@ -565,69 +572,91 @@ export default function ExamPDFExporter({
     try {
       const numVersions = parseInt(versionCount);
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      let isFirstPage = true;
+      let isFirstVersion = true;
 
       const A4_WIDTH_MM = 210;
       const A4_HEIGHT_MM = 297;
-      const MARGIN_MM = 0;
+      const PAGE_MARGIN_TOP_MM = 0; // header block has its own padding
+      const PAGE_MARGIN_BOTTOM_MM = 15;
+      const CONTENT_WIDTH_PX = 794;
+
+      // Convert canvas pixel height to mm
+      const pxToMM = (canvas: HTMLCanvasElement) => (canvas.height * A4_WIDTH_MM) / canvas.width;
 
       for (let v = 0; v < numVersions; v++) {
         const versionLetter = VERSION_LETTERS[v];
         const versionSections = numVersions > 1 ? shuffleSections(sections) : sections;
+        const examUniqueId = `PF-${Date.now().toString(36).toUpperCase()}-${versionLetter}`;
 
-        const container = await renderExamHTML(versionLetter, versionSections);
-        // Add data-pdf-section to each major block
-        container.querySelectorAll(':scope > div').forEach((el) => {
-          (el as HTMLElement).setAttribute('data-pdf-section', 'true');
-        });
-        document.body.appendChild(container);
+        // Pre-render all blocks as canvases
+        type Block = { canvas: HTMLCanvasElement; heightMM: number };
+        const blocks: Block[] = [];
 
-        const canvas = await html2canvas(container, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-        });
+        // Header block
+        const headerHTML = await buildHeaderHTML(versionLetter, examUniqueId);
+        const headerCanvas = await renderBlock(headerHTML, CONTENT_WIDTH_PX);
+        blocks.push({ canvas: headerCanvas, heightMM: pxToMM(headerCanvas) });
 
-        document.body.removeChild(container);
+        // Questions
+        let questionNum = 1;
+        for (const section of versionSections) {
+          // Section title
+          const totalPts = section.questions.reduce((s, q) => s + q.points, 0);
+          const secCanvas = await renderBlock(buildSectionTitleHTML(section.name, totalPts), CONTENT_WIDTH_PX);
+          blocks.push({ canvas: secCanvas, heightMM: pxToMM(secCanvas) });
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.95);
-        const pdfWidth = A4_WIDTH_MM;
-        const totalHeightMM = (canvas.height * pdfWidth) / canvas.width;
+          for (const q of section.questions) {
+            const qCanvas = await renderBlock(buildQuestionHTML(q, questionNum), CONTENT_WIDTH_PX);
+            blocks.push({ canvas: qCanvas, heightMM: pxToMM(qCanvas) });
+            questionNum++;
+          }
+        }
 
-        // Multi-page: slice the canvas into A4-sized pages
-        const pageContentHeight = A4_HEIGHT_MM;
-        const totalPages = Math.ceil(totalHeightMM / pageContentHeight);
+        // Now paginate: fit blocks into pages without cutting
+        const FOOTER_HEIGHT_MM = 12;
+        const usableHeight = A4_HEIGHT_MM - PAGE_MARGIN_BOTTOM_MM - FOOTER_HEIGHT_MM;
+        const pages: Block[][] = [[]];
+        const pageYs: number[] = [0];
 
-        for (let page = 0; page < totalPages; page++) {
-          if (!isFirstPage) pdf.addPage();
-          isFirstPage = false;
+        for (const block of blocks) {
+          const currentPage = pages.length - 1;
+          const currentY = pageYs[currentPage];
 
-          // Calculate source slice in canvas pixels
-          const sliceTopPx = (page * pageContentHeight / totalHeightMM) * canvas.height;
-          const sliceHeightPx = Math.min(
-            (pageContentHeight / totalHeightMM) * canvas.height,
-            canvas.height - sliceTopPx
-          );
+          if (currentY + block.heightMM > usableHeight && pages[currentPage].length > 0) {
+            // Start new page
+            pages.push([block]);
+            pageYs.push(block.heightMM);
+          } else {
+            pages[currentPage].push(block);
+            pageYs[currentPage] = currentY + block.heightMM;
+          }
+        }
 
-          // Create a sub-canvas for this page
-          const pageCanvas = document.createElement("canvas");
-          pageCanvas.width = canvas.width;
-          pageCanvas.height = Math.round(sliceHeightPx);
-          const ctx = pageCanvas.getContext("2d");
-          if (ctx) {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-            ctx.drawImage(
-              canvas,
-              0, Math.round(sliceTopPx), canvas.width, Math.round(sliceHeightPx),
-              0, 0, pageCanvas.width, pageCanvas.height
-            );
+        const totalPages = pages.length;
+
+        // Render footer canvases
+        const footerCanvases: HTMLCanvasElement[] = [];
+        for (let p = 0; p < totalPages; p++) {
+          const fc = await renderBlock(buildFooterHTML(p + 1, totalPages), CONTENT_WIDTH_PX);
+          footerCanvases.push(fc);
+        }
+
+        // Draw pages
+        for (let p = 0; p < totalPages; p++) {
+          if (!isFirstVersion || p > 0) pdf.addPage();
+          isFirstVersion = false;
+
+          let yMM = 0;
+          for (const block of pages[p]) {
+            const imgData = block.canvas.toDataURL("image/jpeg", 0.95);
+            pdf.addImage(imgData, "JPEG", 0, yMM, A4_WIDTH_MM, block.heightMM);
+            yMM += block.heightMM;
           }
 
-          const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
-          const sliceHeightMM = (pageCanvas.height * pdfWidth) / pageCanvas.width;
-          pdf.addImage(pageImgData, "JPEG", MARGIN_MM, MARGIN_MM, pdfWidth, sliceHeightMM);
+          // Footer at bottom
+          const footerImg = footerCanvases[p].toDataURL("image/jpeg", 0.95);
+          const footerH = pxToMM(footerCanvases[p]);
+          pdf.addImage(footerImg, "JPEG", 0, A4_HEIGHT_MM - PAGE_MARGIN_BOTTOM_MM - footerH, A4_WIDTH_MM, footerH);
 
           if (watermarkEnabled && watermarkText) {
             addWatermark(pdf, watermarkText);
@@ -637,7 +666,6 @@ export default function ExamPDFExporter({
         if (includeAnswerSheet) {
           addAnswerSheetPage(pdf, versionSections, versionLetter);
         }
-
         if (includeAnswerKey) {
           addAnswerKeyPage(pdf, versionSections, versionLetter);
         }
@@ -653,7 +681,7 @@ export default function ExamPDFExporter({
     } finally {
       setIsGenerating(false);
     }
-  }, [sections, versionCount, renderExamHTML, watermarkEnabled, watermarkText, addWatermark, includeAnswerKey, includeAnswerSheet, addAnswerKeyPage, addAnswerSheetPage, examTitle, onOpenChange]);
+  }, [sections, versionCount, renderBlock, buildHeaderHTML, buildSectionTitleHTML, buildQuestionHTML, buildFooterHTML, watermarkEnabled, watermarkText, addWatermark, includeAnswerKey, includeAnswerSheet, addAnswerKeyPage, addAnswerSheetPage, examTitle, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
