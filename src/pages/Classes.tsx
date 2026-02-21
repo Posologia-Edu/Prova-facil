@@ -14,6 +14,7 @@ import {
   UserPlus,
   X,
   FileText,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,6 +47,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -99,9 +101,12 @@ export default function ClassesPage() {
   // Manage students dialog
   const [manageStudentsOpen, setManageStudentsOpen] = useState(false);
   const [managingClassId, setManagingClassId] = useState<string | null>(null);
+  const [studentAddMode, setStudentAddMode] = useState<"single" | "batch">("single");
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentEmail, setNewStudentEmail] = useState("");
   const [newStudentReg, setNewStudentReg] = useState("");
+  const [batchText, setBatchText] = useState("");
+  const [batchLoading, setBatchLoading] = useState(false);
 
   // Form state
   const [newName, setNewName] = useState("");
@@ -117,7 +122,6 @@ export default function ClassesPage() {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) { setLoading(false); return; }
 
-    // Get profile
     const { data: profile } = await supabase.from("profiles").select("full_name").eq("user_id", user.user.id).single();
     setProfileName(profile?.full_name || "");
     setProfileEmail(user.user.email || "");
@@ -131,7 +135,6 @@ export default function ClassesPage() {
 
     if (!data) { setClasses([]); setLoading(false); return; }
 
-    // Get exam counts per class
     const classIds = data.map(c => c.id);
     const { data: examsData } = await supabase
       .from("exams")
@@ -144,7 +147,6 @@ export default function ClassesPage() {
       if (e.class_id) examCountMap[e.class_id] = (examCountMap[e.class_id] || 0) + 1;
     });
 
-    // Get student counts
     const { data: studentCounts } = await supabase
       .from("class_students")
       .select("class_id")
@@ -236,7 +238,6 @@ export default function ClassesPage() {
     fetchClasses();
   };
 
-  // Open class detail
   const openClassDetail = async (cls: ClassItem) => {
     setSelectedClass(cls);
     setStudentsLoading(true);
@@ -251,9 +252,10 @@ export default function ClassesPage() {
     setStudentsLoading(false);
   };
 
-  // Manage students
   const openManageStudents = (classId: string) => {
     setManagingClassId(classId);
+    setStudentAddMode("single");
+    setBatchText("");
     setManageStudentsOpen(true);
     loadManageStudents(classId);
   };
@@ -278,6 +280,33 @@ export default function ClassesPage() {
     fetchClasses();
   };
 
+  const addBatchStudents = async () => {
+    if (!managingClassId || !batchText.trim()) { toast.error("Cole os dados dos alunos."); return; }
+    setBatchLoading(true);
+
+    const lines = batchText.trim().split("\n").filter(l => l.trim());
+    const inserts = lines.map(line => {
+      // Support: "Name; email; registration" or "Name\temail\tregistration" or just "Name"
+      const parts = line.includes(";") ? line.split(";") : line.split("\t");
+      return {
+        class_id: managingClassId!,
+        student_name: (parts[0] || "").trim(),
+        student_email: (parts[1] || "").trim() || null,
+        student_registration: (parts[2] || "").trim() || null,
+      };
+    }).filter(s => s.student_name);
+
+    if (inserts.length === 0) { toast.error("Nenhum aluno válido encontrado."); setBatchLoading(false); return; }
+
+    const { error } = await supabase.from("class_students").insert(inserts);
+    setBatchLoading(false);
+    if (error) { toast.error("Erro ao importar alunos."); return; }
+    setBatchText("");
+    toast.success(`${inserts.length} aluno(s) importado(s) com sucesso!`);
+    loadManageStudents(managingClassId!);
+    fetchClasses();
+  };
+
   const removeStudent = async (studentId: string) => {
     if (!managingClassId) return;
     await supabase.from("class_students").delete().eq("id", studentId);
@@ -285,6 +314,74 @@ export default function ClassesPage() {
     loadManageStudents(managingClassId);
     fetchClasses();
   };
+
+  // Shared manage students dialog content
+  const manageStudentsContent = (
+    <Dialog open={manageStudentsOpen} onOpenChange={setManageStudentsOpen}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Gerenciar Alunos</DialogTitle></DialogHeader>
+        <Tabs value={studentAddMode} onValueChange={(v) => setStudentAddMode(v as "single" | "batch")}>
+          <TabsList className="w-full">
+            <TabsTrigger value="single" className="flex-1 gap-1.5">
+              <UserPlus className="h-3.5 w-3.5" /> Discente Avulso
+            </TabsTrigger>
+            <TabsTrigger value="batch" className="flex-1 gap-1.5">
+              <Upload className="h-3.5 w-3.5" /> Discente em Lote
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="single" className="space-y-4 pt-2">
+            <div className="grid grid-cols-3 gap-2">
+              <Input placeholder="Nome *" value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} />
+              <Input placeholder="E-mail" value={newStudentEmail} onChange={(e) => setNewStudentEmail(e.target.value)} />
+              <Input placeholder="Matrícula" value={newStudentReg} onChange={(e) => setNewStudentReg(e.target.value)} />
+            </div>
+            <Button size="sm" onClick={addStudent} className="w-full gap-1.5">
+              <UserPlus className="h-3.5 w-3.5" /> Adicionar Aluno
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="batch" className="space-y-4 pt-2">
+            <p className="text-xs text-muted-foreground">
+              Cole os dados dos alunos, um por linha. Separe os campos com <strong>;</strong> ou <strong>Tab</strong>.<br />
+              Formato: <code>Nome; E-mail; Matrícula</code> (e-mail e matrícula são opcionais).
+            </p>
+            <Textarea
+              placeholder={"João Silva; joao@email.com; 2024001\nMaria Santos; maria@email.com; 2024002\nPedro Souza"}
+              value={batchText}
+              onChange={(e) => setBatchText(e.target.value)}
+              rows={8}
+              className="font-mono text-xs"
+            />
+            <Button size="sm" onClick={addBatchStudents} disabled={batchLoading} className="w-full gap-1.5">
+              {batchLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              Importar {batchText.trim().split("\n").filter(l => l.trim()).length} Aluno(s)
+            </Button>
+          </TabsContent>
+        </Tabs>
+
+        <Separator />
+        <h4 className="text-sm font-semibold">Alunos cadastrados ({students.length})</h4>
+        {students.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic text-center py-4">Nenhum aluno cadastrado.</p>
+        ) : (
+          <div className="space-y-2 max-h-[30vh] overflow-y-auto">
+            {students.map((s) => (
+              <div key={s.id} className="flex items-center justify-between p-2 rounded border text-sm">
+                <div>
+                  <p className="font-medium">{s.student_name}</p>
+                  <p className="text-xs text-muted-foreground">{s.student_registration || "—"} · {s.student_email || "—"}</p>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeStudent(s.id)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 
   // Detail view
   if (selectedClass) {
@@ -391,7 +488,7 @@ export default function ClassesPage() {
           )}
         </div>
 
-        {/* Edit dialog reuse */}
+        {/* Edit dialog */}
         <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditingClass(null); }}>
           <DialogContent>
             <DialogHeader><DialogTitle>Editar Turma</DialogTitle></DialogHeader>
@@ -416,40 +513,7 @@ export default function ClassesPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Manage students dialog */}
-        <Dialog open={manageStudentsOpen} onOpenChange={setManageStudentsOpen}>
-          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Gerenciar Alunos</DialogTitle></DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-3 gap-2">
-                <Input placeholder="Nome *" value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} />
-                <Input placeholder="E-mail" value={newStudentEmail} onChange={(e) => setNewStudentEmail(e.target.value)} />
-                <Input placeholder="Matrícula" value={newStudentReg} onChange={(e) => setNewStudentReg(e.target.value)} />
-              </div>
-              <Button size="sm" onClick={addStudent} className="w-full gap-1.5">
-                <UserPlus className="h-3.5 w-3.5" /> Adicionar Aluno
-              </Button>
-              <Separator />
-              {students.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic text-center py-4">Nenhum aluno cadastrado.</p>
-              ) : (
-                <div className="space-y-2 max-h-[40vh] overflow-y-auto">
-                  {students.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between p-2 rounded border text-sm">
-                      <div>
-                        <p className="font-medium">{s.student_name}</p>
-                        <p className="text-xs text-muted-foreground">{s.student_registration || "—"} · {s.student_email || "—"}</p>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeStudent(s.id)}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        {manageStudentsContent}
       </div>
     );
   }
@@ -578,41 +642,7 @@ export default function ClassesPage() {
       )}
 
       {/* Manage students dialog (from list) */}
-      {!selectedClass && (
-        <Dialog open={manageStudentsOpen} onOpenChange={setManageStudentsOpen}>
-          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Gerenciar Alunos</DialogTitle></DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-3 gap-2">
-                <Input placeholder="Nome *" value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} />
-                <Input placeholder="E-mail" value={newStudentEmail} onChange={(e) => setNewStudentEmail(e.target.value)} />
-                <Input placeholder="Matrícula" value={newStudentReg} onChange={(e) => setNewStudentReg(e.target.value)} />
-              </div>
-              <Button size="sm" onClick={addStudent} className="w-full gap-1.5">
-                <UserPlus className="h-3.5 w-3.5" /> Adicionar Aluno
-              </Button>
-              <Separator />
-              {students.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic text-center py-4">Nenhum aluno cadastrado.</p>
-              ) : (
-                <div className="space-y-2 max-h-[40vh] overflow-y-auto">
-                  {students.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between p-2 rounded border text-sm">
-                      <div>
-                        <p className="font-medium">{s.student_name}</p>
-                        <p className="text-xs text-muted-foreground">{s.student_registration || "—"} · {s.student_email || "—"}</p>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeStudent(s.id)}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {!selectedClass && manageStudentsContent}
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ const typeLabels: Record<string, string> = {
 
 export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQuestionGeneratorProps) {
   const { toast } = useToast();
+  const { language } = useLanguage();
   const [step, setStep] = useState<"config" | "review">("config");
   const [loading, setLoading] = useState(false);
   const [topic, setTopic] = useState("");
@@ -76,7 +78,7 @@ export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQ
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-questions", {
-        body: { topic, context, difficulty, questionType, count: count[0] },
+        body: { topic, context, difficulty, questionType, count: count[0], language },
       });
 
       if (error) throw error;
