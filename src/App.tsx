@@ -14,6 +14,7 @@ import Questions from "./pages/Questions";
 import Composer from "./pages/Composer";
 import Exams from "./pages/Exams";
 import ExamEditor from "./pages/ExamEditor";
+import ExamView from "./pages/ExamView";
 import Classes from "./pages/Classes";
 import Analytics from "./pages/Analytics";
 import Admin from "./pages/Admin";
@@ -93,6 +94,14 @@ const App = () => (
             />
             <Route
               path="/exams/:examId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><ExamView /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams/:examId/edit"
               element={
                 <ProtectedRoute>
                   <AppLayout><ExamEditor /></AppLayout>
