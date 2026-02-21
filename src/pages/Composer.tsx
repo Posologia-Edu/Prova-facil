@@ -112,6 +112,7 @@ export default function ComposerPage() {
   const [shuffleActive, setShuffleActive] = useState(false);
   const [sectionNameEdit, setSectionNameEdit] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
 
   // Bank questions from DB
   const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
@@ -254,6 +255,7 @@ export default function ComposerPage() {
       questions: [],
     };
     setSections((prev) => [...prev, newSection]);
+    setActiveSectionId(newSection.id);
     toast.success("Nova seção adicionada!");
   };
 
@@ -386,6 +388,22 @@ export default function ComposerPage() {
             <Sparkles className="h-3.5 w-3.5 text-secondary" />
             Gerar com IA
           </Button>
+          {/* Section selector */}
+          {sections.length > 1 && (
+            <div className="px-4 pb-3 border-b">
+              <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">Adicionar à seção:</Label>
+              <Select value={activeSectionId || sections[0]?.id || ""} onValueChange={setActiveSectionId}>
+                <SelectTrigger className="h-7 text-xs mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {sections.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <div className="flex-1 overflow-auto p-3 space-y-2">
           {bankLoading ? (
@@ -402,8 +420,9 @@ export default function ComposerPage() {
                 key={q.id}
                 className="p-3 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all group"
                 onClick={() => {
-                  if (sections.length > 0) addQuestionToSection(sections[0].id, q);
-                  else toast.info("Adicione uma seção primeiro.");
+                  if (sections.length === 0) { toast.info("Adicione uma seção primeiro."); return; }
+                  const targetId = activeSectionId || sections[0].id;
+                  addQuestionToSection(targetId, q);
                 }}
               >
                 <div className="flex items-start gap-2">
@@ -660,6 +679,31 @@ export default function ComposerPage() {
                           {q.type === "open_ended" && (
                             <div className="mt-2 border-b border-dashed" style={{ height: "60px" }} />
                           )}
+                          {q.type === "matching" && (() => {
+                            const colA = q.contentJson?.column_a as string[] | undefined;
+                            const colB = q.contentJson?.column_b as string[] | undefined;
+                            if (colA && colB && colA.length > 0) {
+                              return (
+                                <div className="mt-2 pl-4 text-xs text-muted-foreground">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <p className="font-semibold text-foreground mb-1">Coluna A</p>
+                                      {colA.map((item, i) => (
+                                        <p key={i} className="mb-0.5">{i + 1}. {item}</p>
+                                      ))}
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold text-foreground mb-1">Coluna B</p>
+                                      {colB.map((item, i) => (
+                                        <p key={i} className="mb-0.5">{String.fromCharCode(97 + i)}) {item}</p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                         <span className="text-[10px] text-muted-foreground shrink-0">[{q.points} pts]</span>
                         <Button
