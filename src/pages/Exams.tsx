@@ -306,7 +306,7 @@ export default function ExamsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exams/${exam.id}`); }}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exams/${exam.id}/edit`); }}>
                           <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(exam); }}>
@@ -346,9 +346,7 @@ export default function ExamsPage() {
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
               <p className="text-muted-foreground">Nenhuma prova encontrada.</p>
-              <Button className="mt-4" onClick={handleCreateExam}>
-                <Plus className="h-4 w-4 mr-1.5" /> Criar Prova
-              </Button>
+              <p className="text-sm text-muted-foreground mt-2">Use o Compositor de Provas para criar uma nova prova.</p>
             </div>
           )}
         </>

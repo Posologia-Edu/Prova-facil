@@ -22,6 +22,7 @@ import {
   GraduationCap,
   Sparkles,
   Loader2,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -336,8 +337,16 @@ export default function ComposerPage() {
       }
 
       setExamId(exam.id);
-      toast.success("Prova criada com sucesso!");
-      navigate(`/exams/${exam.id}`);
+      toast.success("Prova salva com sucesso! Ela aparecerá em 'Minhas Provas'.");
+      // Reset composer for new exam
+      setExamTitle("Nova Prova");
+      setSections([]);
+      setInstitutionName("");
+      setTeacherName("");
+      setExamDate(new Date().toISOString().split("T")[0]);
+      setInstructions("Responda todas as questões.");
+      setExamId(null);
+      setActiveSectionId(null);
     } catch (e) {
       toast.error("Erro ao salvar prova.");
     } finally {
@@ -518,9 +527,9 @@ export default function ComposerPage() {
             <Share2 className="h-3.5 w-3.5 mr-1.5" />
             Publicar Online
           </Button>
-          <Button size="sm" onClick={handleSaveExam} disabled={saving} className="gap-1.5">
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            Criar Prova
+          <Button size="sm" onClick={handleSaveExam} disabled={saving || totalQuestions === 0} className="gap-1.5">
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Salvar Prova
           </Button>
         </div>
 
@@ -706,7 +715,26 @@ export default function ComposerPage() {
                             return null;
                           })()}
                         </div>
-                        <span className="text-[10px] text-muted-foreground shrink-0">[{q.points} pts]</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Input
+                            type="number"
+                            min={0}
+                            step={0.5}
+                            value={q.points}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              setSections((prev) =>
+                                prev.map((s) =>
+                                  s.id === section.id
+                                    ? { ...s, questions: s.questions.map((qq) => qq.id === q.id ? { ...qq, points: val } : qq) }
+                                    : s
+                                )
+                              );
+                            }}
+                            className="h-6 w-14 text-[10px] text-center px-1"
+                          />
+                          <span className="text-[10px] text-muted-foreground">pts</span>
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"

@@ -449,12 +449,21 @@ export default function ExamPDFExporter({
             <p style="margin:0"><strong style="font-size:12px">${questionNum}.</strong> ${q.title} <span style="font-size:9px;color:#999">[${q.points} pts]</span></p>`;
 
           if (q.type === "multiple_choice") {
-            const options = q.contentJson?.options as { text: string }[] | undefined;
-            if (options && options.length > 0) {
+            const opts = q.contentJson?.options;
+            if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+              // Object format: {a: "...", b: "..."}
+              const entries = Object.entries(opts as Record<string, string>).sort(([a], [b]) => a.localeCompare(b));
               html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333">`;
-              options.forEach((opt, i) => {
+              entries.forEach(([letter, text]) => {
+                html += `<p style="margin:2px 0">${letter}) ${text}</p>`;
+              });
+              html += `</div>`;
+            } else if (Array.isArray(opts) && opts.length > 0) {
+              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333">`;
+              opts.forEach((opt: any, i: number) => {
                 const letter = String.fromCharCode(97 + i);
-                html += `<p style="margin:2px 0">${letter}) ${opt.text}</p>`;
+                const text = typeof opt === "string" ? opt : opt.text;
+                html += `<p style="margin:2px 0">${letter}) ${text}</p>`;
               });
               html += `</div>`;
             } else {
@@ -470,19 +479,34 @@ export default function ExamPDFExporter({
           } else if (q.type === "open_ended") {
             html += `<div style="margin-top:6px;border-bottom:1px dashed #ccc;height:50px"></div>`;
           } else if (q.type === "matching") {
-            const pairs = q.contentJson?.pairs as { left: string }[] | undefined;
-            if (pairs && pairs.length > 0) {
-              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333">`;
-              pairs.forEach((p) => {
-                html += `<p style="margin:2px 0">( ) ${p.left} — ________________________</p>`;
+            const colA = q.contentJson?.column_a as string[] | undefined;
+            const colB = q.contentJson?.column_b as string[] | undefined;
+            if (colA && colB && colA.length > 0) {
+              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333;display:flex;gap:40px">`;
+              html += `<div><p style="font-weight:bold;margin-bottom:4px">Coluna A</p>`;
+              colA.forEach((item, i) => {
+                html += `<p style="margin:2px 0">${i + 1}. ${item}</p>`;
               });
-              html += `</div>`;
+              html += `</div><div><p style="font-weight:bold;margin-bottom:4px">Coluna B</p>`;
+              colB.forEach((item, i) => {
+                html += `<p style="margin:2px 0">${String.fromCharCode(97 + i)}) ${item}</p>`;
+              });
+              html += `</div></div>`;
             } else {
-              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#666">
-                <p style="margin:2px 0">( ) Item A — ________________________</p>
-                <p style="margin:2px 0">( ) Item B — ________________________</p>
-                <p style="margin:2px 0">( ) Item C — ________________________</p>
-              </div>`;
+              // fallback for pairs format
+              const pairs = q.contentJson?.pairs as { left: string }[] | undefined;
+              if (pairs && pairs.length > 0) {
+                html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333">`;
+                pairs.forEach((p) => {
+                  html += `<p style="margin:2px 0">( ) ${p.left} — ________________________</p>`;
+                });
+                html += `</div>`;
+              } else {
+                html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#666">
+                  <p style="margin:2px 0">( ) Item A — ________________________</p>
+                  <p style="margin:2px 0">( ) Item B — ________________________</p>
+                </div>`;
+              }
             }
           }
 
