@@ -224,10 +224,6 @@ export default function ExamsPage() {
             <CheckSquare className="h-4 w-4 mr-1.5" />
             SELECIONAR PROVAS
           </Button>
-          <Button onClick={handleCreateExam}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            CRIAR PROVA
-          </Button>
         </div>
       </div>
 

@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import ExamPDFExporter from "@/components/ExamPDFExporter";
 import PublishExamDialog from "@/components/PublishExamDialog";
 import ExamTemplatesDialog, { type ExamTemplate } from "@/components/ExamTemplatesDialog";
+import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
 import {
   Plus,
   GripVertical,
@@ -18,6 +20,8 @@ import {
   ChevronDown,
   ChevronRight,
   GraduationCap,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,12 +44,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BankQuestion {
   id: string;
   type: string;
   title: string;
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: string;
   tags: string[];
 }
 
@@ -76,15 +81,6 @@ const difficultyOrder: Record<string, number> = {
   hard: 2,
 };
 
-const bankQuestions: BankQuestion[] = [
-  { id: "1", type: "multiple_choice", title: "Qual é o principal mecanismo de ação dos inibidores da ECA?", difficulty: "medium", tags: ["Farmacologia"] },
-  { id: "2", type: "true_false", title: "A aspirina inibe irreversivelmente as enzimas COX-1 e COX-2.", difficulty: "easy", tags: ["AINEs"] },
-  { id: "3", type: "open_ended", title: "Explique as diferenças farmacocinéticas entre varfarina e heparina.", difficulty: "hard", tags: ["Anticoagulantes"] },
-  { id: "4", type: "matching", title: "Associe as classes de medicamentos aos seus efeitos colaterais.", difficulty: "medium", tags: ["Efeitos Colaterais"] },
-  { id: "5", type: "multiple_choice", title: "Qual neurotransmissor é principalmente afetado pelos ISRSs?", difficulty: "easy", tags: ["SNC"] },
-  { id: "6", type: "open_ended", title: "Discuta o papel do sistema enzimático P450 no metabolismo de fármacos.", difficulty: "hard", tags: ["Metabolismo"] },
-];
-
 const typeIcons: Record<string, React.ReactNode> = {
   multiple_choice: <CheckCircle2 className="h-3.5 w-3.5" />,
   true_false: <HelpCircle className="h-3.5 w-3.5" />,
@@ -102,36 +98,63 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export default function ComposerPage() {
-  const [examTitle, setExamTitle] = useState("Farmacologia 101 - Prova Parcial");
-  const [sections, setSections] = useState<Section[]>([
-    {
-      id: "s1",
-      name: "Parte I: Múltipla Escolha",
-      collapsed: false,
-      questions: [
-        { id: "eq1", questionId: "1", title: "Qual é o principal mecanismo de ação dos inibidores da ECA?", type: "multiple_choice", points: 2 },
-        { id: "eq2", questionId: "5", title: "Qual neurotransmissor é principalmente afetado pelos ISRSs?", type: "multiple_choice", points: 2 },
-      ],
-    },
-    {
-      id: "s2",
-      name: "Parte II: Estudos de Caso",
-      collapsed: false,
-      questions: [
-        { id: "eq3", questionId: "3", title: "Explique as diferenças farmacocinéticas entre varfarina e heparina.", type: "open_ended", points: 5 },
-      ],
-    },
-  ]);
+  const navigate = useNavigate();
+  const [examTitle, setExamTitle] = useState("Nova Prova");
+  const [examId, setExamId] = useState<string | null>(null);
+  const [sections, setSections] = useState<Section[]>([]);
   const [headerOpen, setHeaderOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [shuffleActive, setShuffleActive] = useState(false);
   const [sectionNameEdit, setSectionNameEdit] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Bank questions from DB
+  const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
+  const [bankLoading, setBankLoading] = useState(true);
 
   // Filters for question bank
   const [filterTag, setFilterTag] = useState<string>("all");
   const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
+
+  // Header config
+  const [institutionName, setInstitutionName] = useState("");
+  const [teacherName, setTeacherName] = useState("");
+  const [examDate, setExamDate] = useState(new Date().toISOString().split("T")[0]);
+  const [instructions, setInstructions] = useState("Responda todas as questões.");
+
+  // Load bank questions from DB
+  useEffect(() => {
+    const loadBank = async () => {
+      setBankLoading(true);
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) { setBankLoading(false); return; }
+
+      const { data } = await supabase
+        .from("question_bank")
+        .select("id, type, content_json, difficulty, tags")
+        .eq("user_id", user.user.id)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+
+      setBankQuestions(
+        (data || []).map((q) => {
+          const cj = q.content_json as any;
+          return {
+            id: q.id,
+            type: q.type,
+            title: cj?.question_text || cj?.title || "Questão",
+            difficulty: q.difficulty,
+            tags: q.tags || [],
+          };
+        })
+      );
+      setBankLoading(false);
+    };
+    loadBank();
+  }, []);
 
   const applyTemplate = (template: ExamTemplate) => {
     setExamTitle(template.name);
@@ -151,10 +174,6 @@ export default function ComposerPage() {
     );
     setInstructions(`Tempo permitido: ${template.duration}. Responda todas as questões.`);
   };
-  const [institutionName, setInstitutionName] = useState("Universidade de Ciências da Saúde");
-  const [teacherName, setTeacherName] = useState("Dr. Maria Santos");
-  const [examDate, setExamDate] = useState("2026-03-15");
-  const [instructions, setInstructions] = useState("Responda todas as questões. Mostre seu raciocínio para crédito parcial. Tempo permitido: 90 minutos.");
 
   // IDs of questions already in exam
   const usedQuestionIds = useMemo(() => {
@@ -168,7 +187,7 @@ export default function ComposerPage() {
     const tags = new Set<string>();
     bankQuestions.forEach((q) => q.tags.forEach((t) => tags.add(t)));
     return Array.from(tags).sort();
-  }, []);
+  }, [bankQuestions]);
 
   // Filtered and sorted bank questions
   const filteredBankQuestions = useMemo(() => {
@@ -179,14 +198,13 @@ export default function ComposerPage() {
     if (filterDifficulty !== "all") {
       filtered = filtered.filter((q) => q.difficulty === filterDifficulty);
     }
-    // Sort by tag then difficulty
     return filtered.sort((a, b) => {
       const tagA = a.tags[0] || "";
       const tagB = b.tags[0] || "";
       if (tagA !== tagB) return tagA.localeCompare(tagB);
-      return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+      return (difficultyOrder[a.difficulty] || 1) - (difficultyOrder[b.difficulty] || 1);
     });
-  }, [usedQuestionIds, filterTag, filterDifficulty]);
+  }, [bankQuestions, usedQuestionIds, filterTag, filterDifficulty]);
 
   const addQuestionToSection = (sectionId: string, question: BankQuestion) => {
     if (usedQuestionIds.has(question.id)) {
@@ -246,7 +264,6 @@ export default function ComposerPage() {
     const newState = !shuffleActive;
     setShuffleActive(newState);
     if (newState) {
-      // Shuffle questions within each section
       setSections((prev) =>
         prev.map((s) => ({ ...s, questions: shuffleArray(s.questions) }))
       );
@@ -266,6 +283,82 @@ export default function ComposerPage() {
   const deleteSection = (sectionId: string) => {
     setSections((prev) => prev.filter((s) => s.id !== sectionId));
     toast.success("Seção removida.");
+  };
+
+  const handleAISave = (generated: GeneratedQuestion[]) => {
+    if (sections.length === 0) {
+      toast.info("Adicione uma seção primeiro.");
+      return;
+    }
+    const newQuestions: ExamQuestion[] = generated.map((g, i) => ({
+      id: `eq-ai-${Date.now()}-${i}`,
+      questionId: `ai-${Date.now()}-${i}`,
+      title: g.question_text,
+      type: g.type,
+      points: 1,
+    }));
+    setSections((prev) =>
+      prev.map((s, idx) =>
+        idx === 0 ? { ...s, questions: [...s.questions, ...newQuestions] } : s
+      )
+    );
+  };
+
+  // Save exam to DB
+  const handleSaveExam = async () => {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) { toast.error("Faça login primeiro."); return; }
+
+    const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
+    if (totalQuestions === 0) {
+      toast.error("Adicione pelo menos uma questão à prova.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      // Create exam
+      const { data: exam, error: examErr } = await supabase
+        .from("exams")
+        .insert({
+          user_id: user.user.id,
+          title: examTitle,
+          status: "draft",
+          header_config_json: { institution: institutionName, professor: teacherName, examDate, instructions },
+        })
+        .select("id")
+        .single();
+
+      if (examErr || !exam) throw examErr;
+
+      // Insert exam questions (only real bank questions, skip template/ai-generated ones)
+      let position = 0;
+      for (const section of sections) {
+        for (const q of section.questions) {
+          // Check if this is a real bank question ID (UUID format)
+          const isRealId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q.questionId);
+          if (isRealId) {
+            await supabase.from("exam_questions").insert({
+              exam_id: exam.id,
+              question_id: q.questionId,
+              position,
+              points: q.points,
+              section_name: section.name,
+            });
+          }
+          position++;
+        }
+      }
+
+      setExamId(exam.id);
+      toast.success("Prova criada com sucesso!");
+      navigate(`/exams/${exam.id}`);
+    } catch (e) {
+      toast.error("Erro ao salvar prova.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const totalPoints = sections.reduce(
@@ -306,41 +399,51 @@ export default function ComposerPage() {
               </SelectContent>
             </Select>
           </div>
+          {/* AI generate button */}
+          <Button variant="outline" size="sm" className="w-full mt-3 gap-1.5" onClick={() => setAiOpen(true)}>
+            <Sparkles className="h-3.5 w-3.5 text-secondary" />
+            Gerar com IA
+          </Button>
         </div>
         <div className="flex-1 overflow-auto p-3 space-y-2">
-          {filteredBankQuestions.length === 0 && (
+          {bankLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredBankQuestions.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-6 italic">
-              {usedQuestionIds.size > 0 ? "Todas as questões já estão na prova ou filtradas." : "Nenhuma questão encontrada."}
+              {usedQuestionIds.size > 0 ? "Todas as questões já estão na prova ou filtradas." : "Nenhuma questão encontrada no banco."}
             </p>
-          )}
-          {filteredBankQuestions.map((q) => (
-            <Card
-              key={q.id}
-              className="p-3 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all group"
-              onClick={() => {
-                if (sections.length > 0) addQuestionToSection(sections[0].id, q);
-                else toast.info("Adicione uma seção primeiro.");
-              }}
-            >
-              <div className="flex items-start gap-2">
-                <div className="text-muted-foreground mt-0.5">{typeIcons[q.type]}</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium leading-snug line-clamp-2">{q.title}</p>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <Badge variant={q.difficulty as any} className="text-[10px] px-1.5 py-0">
-                      {difficultyLabels[q.difficulty]}
-                    </Badge>
-                    {q.tags.map((t) => (
-                      <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0">
-                        {t}
+          ) : (
+            filteredBankQuestions.map((q) => (
+              <Card
+                key={q.id}
+                className="p-3 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all group"
+                onClick={() => {
+                  if (sections.length > 0) addQuestionToSection(sections[0].id, q);
+                  else toast.info("Adicione uma seção primeiro.");
+                }}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="text-muted-foreground mt-0.5">{typeIcons[q.type]}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium leading-snug line-clamp-2">{q.title}</p>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <Badge variant={q.difficulty as any} className="text-[10px] px-1.5 py-0">
+                        {difficultyLabels[q.difficulty] || q.difficulty}
                       </Badge>
-                    ))}
+                      {q.tags.map((t) => (
+                        <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0">
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
+                  <Plus className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </div>
-                <Plus className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))
+          )}
         </div>
       </div>
 
@@ -414,6 +517,10 @@ export default function ComposerPage() {
             <Share2 className="h-3.5 w-3.5 mr-1.5" />
             Publicar Online
           </Button>
+          <Button size="sm" onClick={handleSaveExam} disabled={saving} className="gap-1.5">
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+            Criar Prova
+          </Button>
         </div>
 
         <ExamPDFExporter
@@ -436,8 +543,14 @@ export default function ComposerPage() {
         <PublishExamDialog
           open={publishOpen}
           onOpenChange={setPublishOpen}
-          examId={null}
+          examId={examId}
           examTitle={examTitle}
+        />
+
+        <AIQuestionGenerator
+          open={aiOpen}
+          onOpenChange={setAiOpen}
+          onSaveQuestions={handleAISave}
         />
 
         {/* Prévia A4 */}
@@ -454,11 +567,11 @@ export default function ComposerPage() {
                   <span className="text-[8px] text-muted-foreground">QR Code</span>
                 </div>
               </div>
-              <h2 className="text-base font-bold uppercase tracking-wide">{institutionName}</h2>
+              {institutionName && <h2 className="text-base font-bold uppercase tracking-wide">{institutionName}</h2>}
               <Separator className="my-3 bg-foreground/20" />
               <h3 className="text-lg font-bold mt-2">{examTitle}</h3>
               <div className="flex justify-between text-xs mt-3 text-muted-foreground">
-                <span>Professor(a): {teacherName}</span>
+                {teacherName && <span>Professor(a): {teacherName}</span>}
                 <span>Data: {new Date(examDate).toLocaleDateString("pt-BR")}</span>
               </div>
               <div className="mt-3 border-b border-dashed pb-2">
