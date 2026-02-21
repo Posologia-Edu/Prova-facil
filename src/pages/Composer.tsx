@@ -52,6 +52,7 @@ interface BankQuestion {
   title: string;
   difficulty: string;
   tags: string[];
+  contentJson?: Record<string, any>;
 }
 
 interface ExamQuestion {
@@ -60,6 +61,7 @@ interface ExamQuestion {
   title: string;
   type: string;
   points: number;
+  contentJson?: Record<string, any>;
 }
 
 interface Section {
@@ -147,6 +149,7 @@ export default function ComposerPage() {
           title: cj?.question_text || cj?.title || "Questão",
           difficulty: q.difficulty,
           tags: q.tags || [],
+          contentJson: cj,
         };
       })
     );
@@ -223,6 +226,7 @@ export default function ComposerPage() {
                   title: question.title,
                   type: question.type,
                   points: 1,
+                  contentJson: question.contentJson,
                 },
               ],
             }
@@ -619,14 +623,37 @@ export default function ComposerPage() {
                         <span className="font-semibold text-xs min-w-[24px]">{qi + 1}.</span>
                         <div className="flex-1">
                           <p className="text-sm">{q.title}</p>
-                          {q.type === "multiple_choice" && (
-                            <div className="mt-2 space-y-1 pl-4 text-xs text-muted-foreground">
-                              <p>a) ________________________</p>
-                              <p>b) ________________________</p>
-                              <p>c) ________________________</p>
-                              <p>d) ________________________</p>
-                            </div>
-                          )}
+                          {q.type === "multiple_choice" && (() => {
+                            const opts = q.contentJson?.options;
+                            // options can be an object {a:"...",b:"..."} or array [{text:"..."}]
+                            if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+                              const entries = Object.entries(opts as Record<string, string>).sort(([a], [b]) => a.localeCompare(b));
+                              return (
+                                <div className="mt-2 space-y-1 pl-4 text-xs text-muted-foreground">
+                                  {entries.map(([letter, text]) => (
+                                    <p key={letter}>{letter}) {text}</p>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            if (Array.isArray(opts) && opts.length > 0) {
+                              return (
+                                <div className="mt-2 space-y-1 pl-4 text-xs text-muted-foreground">
+                                  {opts.map((opt: any, i: number) => (
+                                    <p key={i}>{String.fromCharCode(97 + i)}) {typeof opt === "string" ? opt : opt.text}</p>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="mt-2 space-y-1 pl-4 text-xs text-muted-foreground">
+                                <p>a) ________________________</p>
+                                <p>b) ________________________</p>
+                                <p>c) ________________________</p>
+                                <p>d) ________________________</p>
+                              </div>
+                            );
+                          })()}
                           {q.type === "true_false" && (
                             <p className="mt-2 pl-4 text-xs text-muted-foreground">( ) Verdadeiro &nbsp;&nbsp; ( ) Falso</p>
                           )}
