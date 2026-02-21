@@ -126,35 +126,34 @@ export default function ComposerPage() {
   const [instructions, setInstructions] = useState("Responda todas as questões.");
 
   // Load bank questions from DB
-  useEffect(() => {
-    const loadBank = async () => {
-      setBankLoading(true);
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) { setBankLoading(false); return; }
+  const loadBank = async () => {
+    setBankLoading(true);
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) { setBankLoading(false); return; }
 
-      const { data } = await supabase
-        .from("question_bank")
-        .select("id, type, content_json, difficulty, tags")
-        .eq("user_id", user.user.id)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false });
+    const { data } = await supabase
+      .from("question_bank")
+      .select("id, type, content_json, difficulty, tags")
+      .eq("user_id", user.user.id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
 
-      setBankQuestions(
-        (data || []).map((q) => {
-          const cj = q.content_json as any;
-          return {
-            id: q.id,
-            type: q.type,
-            title: cj?.question_text || cj?.title || "Questão",
-            difficulty: q.difficulty,
-            tags: q.tags || [],
-          };
-        })
-      );
-      setBankLoading(false);
-    };
-    loadBank();
-  }, []);
+    setBankQuestions(
+      (data || []).map((q) => {
+        const cj = q.content_json as any;
+        return {
+          id: q.id,
+          type: q.type,
+          title: cj?.question_text || cj?.title || "Questão",
+          difficulty: q.difficulty,
+          tags: q.tags || [],
+        };
+      })
+    );
+    setBankLoading(false);
+  };
+
+  useEffect(() => { loadBank(); }, []);
 
   const applyTemplate = (template: ExamTemplate) => {
     setExamTitle(template.name);
@@ -285,23 +284,9 @@ export default function ComposerPage() {
     toast.success("Seção removida.");
   };
 
-  const handleAISave = (generated: GeneratedQuestion[]) => {
-    if (sections.length === 0) {
-      toast.info("Adicione uma seção primeiro.");
-      return;
-    }
-    const newQuestions: ExamQuestion[] = generated.map((g, i) => ({
-      id: `eq-ai-${Date.now()}-${i}`,
-      questionId: `ai-${Date.now()}-${i}`,
-      title: g.question_text,
-      type: g.type,
-      points: 1,
-    }));
-    setSections((prev) =>
-      prev.map((s, idx) =>
-        idx === 0 ? { ...s, questions: [...s.questions, ...newQuestions] } : s
-      )
-    );
+  const handleAISave = async (generated: GeneratedQuestion[]) => {
+    // Refetch bank to show newly saved AI questions in the sidebar
+    await loadBank();
   };
 
   // Save exam to DB

@@ -113,15 +113,50 @@ export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQ
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const selected = generated.filter((q) => q.selected);
     if (selected.length === 0) {
       toast({ title: "Nenhuma questão selecionada", variant: "destructive" });
       return;
     }
-    onSaveQuestions(selected);
-    handleClose();
-    toast({ title: `${selected.length} questão(ões) salva(s)`, description: "Adicionadas ao banco de questões." });
+
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        toast({ title: "Faça login primeiro.", variant: "destructive" });
+        return;
+      }
+
+      // Save each question to question_bank
+      const inserts = selected.map((q) => ({
+        user_id: userData.user!.id,
+        type: q.type,
+        difficulty: q.difficulty,
+        bloom_level: q.bloom_level || "",
+        tags: q.tags || [],
+        content_json: {
+          question_text: q.question_text,
+          options: q.options,
+          correct_answer: q.correct_answer,
+          explanation: q.explanation,
+          expected_answer: q.expected_answer,
+          grading_criteria: q.grading_criteria,
+          column_a: q.column_a,
+          column_b: q.column_b,
+          correct_matches: q.correct_matches,
+        },
+      }));
+
+      const { error } = await supabase.from("question_bank").insert(inserts);
+      if (error) throw error;
+
+      onSaveQuestions(selected);
+      handleClose();
+      toast({ title: `${selected.length} questão(ões) salva(s)`, description: "Adicionadas ao banco de questões." });
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Erro ao salvar", description: e.message || "Tente novamente.", variant: "destructive" });
+    }
   };
 
   const handleClose = () => {

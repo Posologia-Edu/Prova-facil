@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Library,
   Plus,
@@ -61,6 +61,7 @@ import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQues
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QuestionOption {
   text: string;
@@ -101,68 +102,7 @@ const difficultyColors: Record<string, string> = {
   hard: "text-destructive",
 };
 
-const initialQuestions: Question[] = [
-  {
-    id: "1", type: "multiple_choice",
-    title: "What is the primary mechanism of action of ACE inhibitors?",
-    tags: ["Pharmacology", "Cardiovascular"], difficulty: "medium", bloom_level: "Understanding", created_at: "2026-02-15",
-    options: [
-      { text: "Bloqueiam a conversão de angiotensina I em angiotensina II", isCorrect: true },
-      { text: "Bloqueiam os receptores beta-adrenérgicos", isCorrect: false },
-      { text: "Inibem a bomba de sódio-potássio", isCorrect: false },
-      { text: "Ativam os canais de cálcio", isCorrect: false },
-    ],
-    explanation: "Os inibidores da ECA bloqueiam a enzima conversora de angiotensina, impedindo a conversão de angiotensina I em angiotensina II, resultando em vasodilatação e redução da pressão arterial.",
-  },
-  {
-    id: "2", type: "true_false",
-    title: "Aspirin irreversibly inhibits COX-1 and COX-2 enzymes.",
-    tags: ["Pharmacology", "NSAIDs"], difficulty: "easy", bloom_level: "Remembering", created_at: "2026-02-14",
-    options: [
-      { text: "Verdadeiro", isCorrect: true },
-      { text: "Falso", isCorrect: false },
-    ],
-    explanation: "A aspirina acetila irreversivelmente as enzimas COX-1 e COX-2, diferentemente de outros AINEs que são inibidores reversíveis.",
-  },
-  {
-    id: "3", type: "open_ended",
-    title: "Explain the pharmacokinetic differences between warfarin and heparin.",
-    tags: ["Pharmacology", "Anticoagulants"], difficulty: "hard", bloom_level: "Analyzing", created_at: "2026-02-13",
-    expectedAnswer: "A warfarina é administrada por via oral, tem início de ação lento (2-5 dias), longa duração e atua inibindo fatores dependentes de vitamina K. A heparina é administrada por via parenteral, tem início de ação rápido, curta duração e atua potencializando a antitrombina III.",
-    explanation: "A comparação entre warfarina e heparina é fundamental para entender as estratégias de anticoagulação em diferentes contextos clínicos.",
-  },
-  {
-    id: "4", type: "matching",
-    title: "Match the following drug classes with their side effects.",
-    tags: ["Pharmacology", "Side Effects"], difficulty: "medium", bloom_level: "Applying", created_at: "2026-02-12",
-    matchingPairs: [
-      { left: "Inibidores da ECA", right: "Tosse seca" },
-      { left: "Beta-bloqueadores", right: "Bradicardia" },
-      { left: "Diuréticos tiazídicos", right: "Hipocalemia" },
-      { left: "Bloqueadores de Ca²⁺", right: "Edema periférico" },
-    ],
-    explanation: "Conhecer os efeitos colaterais característicos de cada classe é essencial para a prática clínica segura.",
-  },
-  {
-    id: "5", type: "multiple_choice",
-    title: "Which neurotransmitter is primarily affected by SSRIs?",
-    tags: ["Pharmacology", "CNS"], difficulty: "easy", bloom_level: "Remembering", created_at: "2026-02-11",
-    options: [
-      { text: "Dopamina", isCorrect: false },
-      { text: "Serotonina", isCorrect: true },
-      { text: "Noradrenalina", isCorrect: false },
-      { text: "GABA", isCorrect: false },
-    ],
-    explanation: "Os ISRS (Inibidores Seletivos da Recaptação de Serotonina) atuam especificamente bloqueando a recaptação de serotonina na fenda sináptica.",
-  },
-  {
-    id: "6", type: "open_ended",
-    title: "Discuss the role of the P450 enzyme system in drug metabolism.",
-    tags: ["Pharmacology", "Metabolism"], difficulty: "hard", bloom_level: "Evaluating", created_at: "2026-02-10",
-    expectedAnswer: "O sistema citocromo P450 é uma superfamília de enzimas hepáticas responsáveis pela fase I do metabolismo de fármacos. As principais isoformas (CYP3A4, CYP2D6, CYP2C9) catalisam reações de oxidação, redução e hidrólise.",
-    explanation: "O entendimento do sistema P450 é crucial para prever interações medicamentosas e ajustar doses terapêuticas.",
-  },
-];
+// No more mock data — questions are loaded from the database
 
 function QuestionDetailContent({ question }: { question: Question }) {
   const letterLabels = ["A", "B", "C", "D", "E", "F", "G", "H"];
@@ -278,37 +218,85 @@ export default function QuestionsPage() {
   const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
-  const [questions, setQuestions] = useState<Question[]>(initialQuestions);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
 
-  const handleDeleteQuestion = (id: string) => {
+  const loadQuestions = useCallback(async () => {
+    setLoading(true);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) { setLoading(false); return; }
+
+    const { data } = await supabase
+      .from("question_bank")
+      .select("id, type, content_json, difficulty, tags, bloom_level, created_at")
+      .eq("user_id", userData.user.id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    setQuestions(
+      (data || []).map((q) => {
+        const cj = q.content_json as any;
+        const options = cj?.options
+          ? Object.entries(cj.options).map(([key, val]) => ({
+              text: val as string,
+              isCorrect: cj.correct_answer === key,
+            }))
+          : undefined;
+        const matchingPairs = cj?.column_a && cj?.column_b
+          ? cj.column_a.map((left: string, i: number) => ({ left, right: cj.column_b[i] || "" }))
+          : undefined;
+        return {
+          id: q.id,
+          type: q.type as Question["type"],
+          title: cj?.question_text || cj?.title || "Questão",
+          tags: q.tags || [],
+          difficulty: q.difficulty as Question["difficulty"],
+          bloom_level: q.bloom_level || "",
+          created_at: q.created_at?.split("T")[0] || "",
+          options,
+          explanation: cj?.explanation,
+          matchingPairs,
+          expectedAnswer: cj?.expected_answer,
+        };
+      })
+    );
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { loadQuestions(); }, [loadQuestions]);
+
+  const handleDeleteQuestion = async (id: string) => {
+    await supabase.from("question_bank").update({ deleted_at: new Date().toISOString() }).eq("id", id);
     setQuestions((prev) => prev.filter((q) => q.id !== id));
     setDeleteId(null);
     toast.success("Questão movida para a lixeira.");
   };
 
-  const handleDuplicateQuestion = (q: Question) => {
-    const duplicate: Question = {
-      ...q,
-      id: `dup-${Date.now()}`,
-      title: `${q.title} (cópia)`,
-      created_at: new Date().toISOString().split("T")[0],
-    };
-    setQuestions((prev) => [duplicate, ...prev]);
+  const handleDuplicateQuestion = async (q: Question) => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
+    // Fetch original content_json
+    const { data: orig } = await supabase.from("question_bank").select("content_json, type, difficulty, tags, bloom_level").eq("id", q.id).single();
+    if (!orig) return;
+    const { error } = await supabase.from("question_bank").insert({
+      user_id: userData.user.id,
+      type: orig.type,
+      difficulty: orig.difficulty,
+      tags: orig.tags,
+      bloom_level: orig.bloom_level,
+      content_json: orig.content_json,
+    });
+    if (!error) {
+      toast.success("Questão duplicada.");
+      loadQuestions();
+    }
   };
 
-  const handleAISave = (generated: GeneratedQuestion[]) => {
-    const newQuestions: Question[] = generated.map((q, i) => ({
-      id: `ai-${Date.now()}-${i}`,
-      type: q.type as Question["type"],
-      title: q.question_text,
-      tags: q.tags || [],
-      difficulty: q.difficulty as Question["difficulty"],
-      bloom_level: q.bloom_level || "",
-      created_at: new Date().toISOString().split("T")[0],
-    }));
-    setQuestions((prev) => [...newQuestions, ...prev]);
+  const handleAISave = async () => {
+    // AI questions are already saved to DB by the AIQuestionGenerator component
+    await loadQuestions();
   };
 
   const filtered = questions.filter((q) => {
