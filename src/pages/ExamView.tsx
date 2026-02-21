@@ -84,7 +84,11 @@ export default function ExamViewPage() {
         setInstitutionName(hc.institution || "");
         setTeacherName(hc.professor || "");
         setExamDate(hc.examDate || "");
-        setInstructions(hc.instructions || "");
+        // Combine pre and during instructions
+        const parts: string[] = [];
+        if (hc.preInstructions) parts.push(hc.preInstructions);
+        if (hc.duringInstructions) parts.push(hc.duringInstructions);
+        setInstructions(parts.join(" | ") || hc.instructions || "");
       }
 
       // Load exam questions grouped by section
