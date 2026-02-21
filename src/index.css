@@ -102,6 +102,14 @@
   .exam-paper-bg {
     background-color: hsl(var(--exam-paper));
     color: hsl(var(--exam-text));
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent calc(297mm - 1px),
+      hsl(var(--destructive) / 0.2) calc(297mm - 1px),
+      hsl(var(--destructive) / 0.2) 297mm
+    );
+    background-size: 100% 297mm;
   }
   .gradient-sidebar {
     background: linear-gradient(180deg, hsl(220 60% 16%) 0%, hsl(220 55% 12%) 100%);

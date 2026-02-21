@@ -556,7 +556,8 @@ export default function ComposerPage() {
 
         {/* Prévia A4 */}
         <div className="flex-1 overflow-auto p-8 flex justify-center">
-          <div className="w-[210mm] min-h-[297mm] exam-paper-bg shadow-xl rounded-sm border p-12 font-exam text-sm leading-relaxed">
+          <div className="w-[210mm] exam-paper-bg shadow-xl rounded-sm border p-12 font-exam text-sm leading-relaxed" style={{ minHeight: "297mm", columnFill: "auto" }}>
+            {/* Page break indicators every ~297mm are visual only; actual pagination is handled in PDF export */}
             {/* Cabeçalho */}
             <div className="text-center mb-6">
               <div className="flex items-center justify-between mb-2">
