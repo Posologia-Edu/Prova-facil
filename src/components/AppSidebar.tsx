@@ -55,6 +55,7 @@ export function AppSidebar() {
   const mainNav = [
     { title: t("nav_dashboard"), url: "/dashboard", icon: navIcons.dashboard },
     { title: t("nav_questions"), url: "/questions", icon: navIcons.questions },
+    { title: "Minhas Provas", url: "/exams", icon: navIcons.composer },
     { title: t("nav_composer"), url: "/composer", icon: navIcons.composer },
     { title: t("nav_classes"), url: "/classes", icon: navIcons.classes },
     { title: t("nav_analytics"), url: "/analytics", icon: navIcons.analytics },
