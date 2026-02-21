@@ -225,6 +225,9 @@ const Index = () => {
             <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               {t("docs_title")}
             </Link>
+            <Link to="/contato" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Contato
+            </Link>
             <p className="text-sm text-muted-foreground">{t("landing_footer")}</p>
             <p className="text-sm text-muted-foreground">Desenvolvido por Sérgio Araújo — Posologia Produções</p>
           </div>
