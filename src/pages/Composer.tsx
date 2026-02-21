@@ -46,6 +46,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import ExamSaveConfigDialog, { type ExamConfig } from "@/components/ExamSaveConfigDialog";
 
 interface BankQuestion {
   id: string;
@@ -114,6 +115,7 @@ export default function ComposerPage() {
   const [sectionNameEdit, setSectionNameEdit] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const [saveConfigOpen, setSaveConfigOpen] = useState(false);
 
   // Bank questions from DB
   const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
@@ -296,8 +298,8 @@ export default function ComposerPage() {
     await loadBank();
   };
 
-  // Save exam to DB
-  const handleSaveExam = async () => {
+  // Save exam to DB via config dialog
+  const handleSaveExam = async (config: ExamConfig) => {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) { toast.error("Faça login primeiro."); return; }
 
@@ -309,16 +311,26 @@ export default function ComposerPage() {
         .from("exams")
         .insert({
           user_id: user.user.id,
-          title: examTitle,
+          title: config.title,
+          description: config.description,
           status: "draft",
-          header_config_json: { institution: institutionName, professor: teacherName, examDate, instructions },
+          class_id: config.classId,
+          header_config_json: {
+            institution: config.institution,
+            professor: config.teacher,
+            examDate,
+            instructions: config.examInstructions || instructions,
+            prepInstructions: config.prepInstructions,
+            showPrepInstructions: config.showPrepInstructions,
+            showExamInstructions: config.showExamInstructions,
+          },
         })
         .select("id")
         .single();
 
       if (examErr || !exam) throw examErr;
 
-      // Insert exam questions (only real bank questions, skip template/ai-generated ones)
+      // Insert exam questions
       let position = 0;
       for (const section of sections) {
         for (const q of section.questions) {
@@ -339,6 +351,7 @@ export default function ComposerPage() {
       setExamId(exam.id);
       toast.success("Prova salva com sucesso! Ela aparecerá em 'Minhas Provas'.");
       // Reset composer for new exam
+      setSaveConfigOpen(false);
       setExamTitle("Nova Prova");
       setSections([]);
       setInstitutionName("");
@@ -527,7 +540,7 @@ export default function ComposerPage() {
             <Share2 className="h-3.5 w-3.5 mr-1.5" />
             Publicar Online
           </Button>
-          <Button size="sm" onClick={handleSaveExam} disabled={saving || totalQuestions === 0} className="gap-1.5">
+          <Button size="sm" onClick={() => setSaveConfigOpen(true)} disabled={saving || totalQuestions === 0} className="gap-1.5">
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Salvar Prova
           </Button>
@@ -561,6 +574,16 @@ export default function ComposerPage() {
           open={aiOpen}
           onOpenChange={setAiOpen}
           onSaveQuestions={handleAISave}
+        />
+
+        <ExamSaveConfigDialog
+          open={saveConfigOpen}
+          onOpenChange={setSaveConfigOpen}
+          onSave={handleSaveExam}
+          saving={saving}
+          defaultTitle={examTitle}
+          defaultInstitution={institutionName}
+          defaultTeacher={teacherName}
         />
 
         {/* Prévia A4 */}
