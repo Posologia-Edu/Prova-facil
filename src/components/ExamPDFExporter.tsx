@@ -499,11 +499,19 @@ export default function ExamPDFExporter({
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       let isFirstPage = true;
 
+      const A4_WIDTH_MM = 210;
+      const A4_HEIGHT_MM = 297;
+      const MARGIN_MM = 0;
+
       for (let v = 0; v < numVersions; v++) {
         const versionLetter = VERSION_LETTERS[v];
         const versionSections = numVersions > 1 ? shuffleSections(sections) : sections;
 
         const container = renderExamHTML(versionLetter, versionSections);
+        // Add data-pdf-section to each major block
+        container.querySelectorAll(':scope > div').forEach((el) => {
+          (el as HTMLElement).setAttribute('data-pdf-section', 'true');
+        });
         document.body.appendChild(container);
 
         const canvas = await html2canvas(container, {
@@ -516,16 +524,46 @@ export default function ExamPDFExporter({
         document.body.removeChild(container);
 
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
-        const pdfWidth = 210;
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pdfWidth = A4_WIDTH_MM;
+        const totalHeightMM = (canvas.height * pdfWidth) / canvas.width;
 
-        if (!isFirstPage) pdf.addPage();
-        isFirstPage = false;
+        // Multi-page: slice the canvas into A4-sized pages
+        const pageContentHeight = A4_HEIGHT_MM;
+        const totalPages = Math.ceil(totalHeightMM / pageContentHeight);
 
-        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+        for (let page = 0; page < totalPages; page++) {
+          if (!isFirstPage) pdf.addPage();
+          isFirstPage = false;
 
-        if (watermarkEnabled && watermarkText) {
-          addWatermark(pdf, watermarkText);
+          // Calculate source slice in canvas pixels
+          const sliceTopPx = (page * pageContentHeight / totalHeightMM) * canvas.height;
+          const sliceHeightPx = Math.min(
+            (pageContentHeight / totalHeightMM) * canvas.height,
+            canvas.height - sliceTopPx
+          );
+
+          // Create a sub-canvas for this page
+          const pageCanvas = document.createElement("canvas");
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = Math.round(sliceHeightPx);
+          const ctx = pageCanvas.getContext("2d");
+          if (ctx) {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            ctx.drawImage(
+              canvas,
+              0, Math.round(sliceTopPx), canvas.width, Math.round(sliceHeightPx),
+              0, 0, pageCanvas.width, pageCanvas.height
+            );
+          }
+
+          const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
+          const sliceHeightMM = (pageCanvas.height * pdfWidth) / pageCanvas.width;
+          pdf.addImage(pageImgData, "JPEG", MARGIN_MM, MARGIN_MM, pdfWidth, sliceHeightMM);
+
+          if (watermarkEnabled && watermarkText) {
+            addWatermark(pdf, watermarkText);
+          }
         }
 
         if (includeAnswerSheet) {

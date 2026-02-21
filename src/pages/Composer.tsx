@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import ExamPDFExporter from "@/components/ExamPDFExporter";
 import PublishExamDialog from "@/components/PublishExamDialog";
 import ExamTemplatesDialog, { type ExamTemplate } from "@/components/ExamTemplatesDialog";
@@ -29,8 +29,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 interface BankQuestion {
   id: string;
@@ -61,6 +69,12 @@ const difficultyLabels: Record<string, string> = {
   hard: "difícil",
 };
 
+const difficultyOrder: Record<string, number> = {
+  easy: 0,
+  medium: 1,
+  hard: 2,
+};
+
 const bankQuestions: BankQuestion[] = [
   { id: "1", type: "multiple_choice", title: "Qual é o principal mecanismo de ação dos inibidores da ECA?", difficulty: "medium", tags: ["Farmacologia"] },
   { id: "2", type: "true_false", title: "A aspirina inibe irreversivelmente as enzimas COX-1 e COX-2.", difficulty: "easy", tags: ["AINEs"] },
@@ -76,6 +90,15 @@ const typeIcons: Record<string, React.ReactNode> = {
   open_ended: <AlignLeft className="h-3.5 w-3.5" />,
   matching: <ArrowLeftRight className="h-3.5 w-3.5" />,
 };
+
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 
 export default function ComposerPage() {
   const [examTitle, setExamTitle] = useState("Farmacologia 101 - Prova Parcial");
@@ -102,6 +125,12 @@ export default function ComposerPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [shuffleActive, setShuffleActive] = useState(false);
+  const [sectionNameEdit, setSectionNameEdit] = useState<string | null>(null);
+
+  // Filters for question bank
+  const [filterTag, setFilterTag] = useState<string>("all");
+  const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
 
   const applyTemplate = (template: ExamTemplate) => {
     setExamTitle(template.name);
@@ -126,7 +155,43 @@ export default function ComposerPage() {
   const [examDate, setExamDate] = useState("2026-03-15");
   const [instructions, setInstructions] = useState("Responda todas as questões. Mostre seu raciocínio para crédito parcial. Tempo permitido: 90 minutos.");
 
+  // IDs of questions already in exam
+  const usedQuestionIds = useMemo(() => {
+    const ids = new Set<string>();
+    sections.forEach((s) => s.questions.forEach((q) => ids.add(q.questionId)));
+    return ids;
+  }, [sections]);
+
+  // Get unique tags for filter
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    bankQuestions.forEach((q) => q.tags.forEach((t) => tags.add(t)));
+    return Array.from(tags).sort();
+  }, []);
+
+  // Filtered and sorted bank questions
+  const filteredBankQuestions = useMemo(() => {
+    let filtered = bankQuestions.filter((q) => !usedQuestionIds.has(q.id));
+    if (filterTag !== "all") {
+      filtered = filtered.filter((q) => q.tags.includes(filterTag));
+    }
+    if (filterDifficulty !== "all") {
+      filtered = filtered.filter((q) => q.difficulty === filterDifficulty);
+    }
+    // Sort by tag then difficulty
+    return filtered.sort((a, b) => {
+      const tagA = a.tags[0] || "";
+      const tagB = b.tags[0] || "";
+      if (tagA !== tagB) return tagA.localeCompare(tagB);
+      return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+    });
+  }, [usedQuestionIds, filterTag, filterDifficulty]);
+
   const addQuestionToSection = (sectionId: string, question: BankQuestion) => {
+    if (usedQuestionIds.has(question.id)) {
+      toast.info("Esta questão já está na prova.");
+      return;
+    }
     setSections((prev) =>
       prev.map((s) =>
         s.id === sectionId
@@ -146,6 +211,7 @@ export default function ComposerPage() {
           : s
       )
     );
+    toast.success("Questão adicionada!");
   };
 
   const removeQuestion = (sectionId: string, questionId: string) => {
@@ -159,16 +225,46 @@ export default function ComposerPage() {
   };
 
   const addSection = () => {
-    setSections((prev) => [
-      ...prev,
-      { id: `s-${Date.now()}`, name: `Parte ${prev.length + 1}`, collapsed: false, questions: [] },
-    ]);
+    const newSection: Section = {
+      id: `s-${Date.now()}`,
+      name: `Parte ${sections.length + 1}`,
+      collapsed: false,
+      questions: [],
+    };
+    setSections((prev) => [...prev, newSection]);
+    toast.success("Nova seção adicionada!");
   };
 
   const toggleSection = (sectionId: string) => {
     setSections((prev) =>
       prev.map((s) => (s.id === sectionId ? { ...s, collapsed: !s.collapsed } : s))
     );
+  };
+
+  const handleShuffle = () => {
+    const newState = !shuffleActive;
+    setShuffleActive(newState);
+    if (newState) {
+      // Shuffle questions within each section
+      setSections((prev) =>
+        prev.map((s) => ({ ...s, questions: shuffleArray(s.questions) }))
+      );
+      toast.success("Embaralhamento ativado! Questões foram embaralhadas.");
+    } else {
+      toast.info("Embaralhamento desativado.");
+    }
+  };
+
+  const updateSectionName = (sectionId: string, newName: string) => {
+    setSections((prev) =>
+      prev.map((s) => (s.id === sectionId ? { ...s, name: newName } : s))
+    );
+    setSectionNameEdit(null);
+  };
+
+  const deleteSection = (sectionId: string) => {
+    setSections((prev) => prev.filter((s) => s.id !== sectionId));
+    toast.success("Seção removida.");
   };
 
   const totalPoints = sections.reduce(
@@ -184,14 +280,45 @@ export default function ComposerPage() {
         <div className="p-4 border-b">
           <h2 className="font-semibold text-sm">Banco de Questões</h2>
           <p className="text-xs text-muted-foreground mt-0.5">Clique para adicionar à prova</p>
+          {/* Filters */}
+          <div className="flex gap-2 mt-3">
+            <Select value={filterTag} onValueChange={setFilterTag}>
+              <SelectTrigger className="h-7 text-xs flex-1">
+                <SelectValue placeholder="Assunto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos assuntos</SelectItem>
+                {allTags.map((tag) => (
+                  <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
+              <SelectTrigger className="h-7 text-xs flex-1">
+                <SelectValue placeholder="Dificuldade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="easy">Fácil</SelectItem>
+                <SelectItem value="medium">Média</SelectItem>
+                <SelectItem value="hard">Difícil</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div className="flex-1 overflow-auto p-3 space-y-2">
-          {bankQuestions.map((q) => (
+          {filteredBankQuestions.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-6 italic">
+              {usedQuestionIds.size > 0 ? "Todas as questões já estão na prova ou filtradas." : "Nenhuma questão encontrada."}
+            </p>
+          )}
+          {filteredBankQuestions.map((q) => (
             <Card
               key={q.id}
               className="p-3 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all group"
               onClick={() => {
                 if (sections.length > 0) addQuestionToSection(sections[0].id, q);
+                else toast.info("Adicione uma seção primeiro.");
               }}
             >
               <div className="flex items-start gap-2">
@@ -199,7 +326,7 @@ export default function ComposerPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium leading-snug line-clamp-2">{q.title}</p>
                   <div className="flex items-center gap-1.5 mt-1.5">
-                    <Badge variant={q.difficulty} className="text-[10px] px-1.5 py-0">
+                    <Badge variant={q.difficulty as any} className="text-[10px] px-1.5 py-0">
                       {difficultyLabels[q.difficulty]}
                     </Badge>
                     {q.tags.map((t) => (
@@ -238,7 +365,12 @@ export default function ComposerPage() {
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Seção
           </Button>
-          <Button variant="outline" size="sm">
+          <Button
+            variant={shuffleActive ? "default" : "outline"}
+            size="sm"
+            onClick={handleShuffle}
+            className={`transition-all ${shuffleActive ? "shadow-inner ring-2 ring-primary/30 scale-95" : ""}`}
+          >
             <Shuffle className="h-3.5 w-3.5 mr-1.5" />
             Embaralhar
           </Button>
@@ -333,7 +465,7 @@ export default function ComposerPage() {
             {sections.map((section) => (
               <div key={section.id} className="mb-6">
                 <div
-                  className="flex items-center gap-2 cursor-pointer select-none mb-3"
+                  className="flex items-center gap-2 cursor-pointer select-none mb-3 group/section"
                   onClick={() => toggleSection(section.id)}
                 >
                   {section.collapsed ? (
@@ -341,10 +473,42 @@ export default function ComposerPage() {
                   ) : (
                     <ChevronDown className="h-4 w-4" />
                   )}
-                  <h4 className="font-bold text-sm uppercase tracking-wider">{section.name}</h4>
+                  {sectionNameEdit === section.id ? (
+                    <Input
+                      autoFocus
+                      className="h-6 text-sm font-bold uppercase tracking-wider w-60"
+                      defaultValue={section.name}
+                      onClick={(e) => e.stopPropagation()}
+                      onBlur={(e) => updateSectionName(section.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") updateSectionName(section.id, e.currentTarget.value);
+                      }}
+                    />
+                  ) : (
+                    <h4
+                      className="font-bold text-sm uppercase tracking-wider"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setSectionNameEdit(section.id);
+                      }}
+                    >
+                      {section.name}
+                    </h4>
+                  )}
                   <span className="text-xs text-muted-foreground ml-auto">
                     {section.questions.reduce((s, q) => s + q.points, 0)} pts
                   </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover/section:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSection(section.id);
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
                 </div>
                 {!section.collapsed && (
                   <div className="space-y-4 pl-2">
