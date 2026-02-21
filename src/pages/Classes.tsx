@@ -41,6 +41,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface ClassItem {
   id: string;
@@ -63,9 +64,36 @@ export default function ClassesPage() {
   const [classes, setClasses] = useState<ClassItem[]>(mockClasses);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Form state for new class
+  const [newName, setNewName] = useState("");
+  const [newSemester, setNewSemester] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+
+  const handleCreateClass = () => {
+    if (!newName.trim()) {
+      toast.error("Informe o nome da turma.");
+      return;
+    }
+    const newClass: ClassItem = {
+      id: `cls-${Date.now()}`,
+      name: newName.trim(),
+      semester: newSemester.trim(),
+      description: newDescription.trim(),
+      studentCount: 0,
+      examCount: 0,
+    };
+    setClasses((prev) => [...prev, newClass]);
+    setNewName("");
+    setNewSemester("");
+    setNewDescription("");
+    setCreateOpen(false);
+    toast.success("Turma criada com sucesso!");
+  };
+
   const handleDeleteClass = (id: string) => {
     setClasses((prev) => prev.filter((c) => c.id !== id));
     setDeleteId(null);
+    toast.success("Turma excluída.");
   };
 
   const handleDuplicateClass = (cls: ClassItem) => {
@@ -75,6 +103,7 @@ export default function ClassesPage() {
       name: `${cls.name} (cópia)`,
     };
     setClasses((prev) => [...prev, duplicate]);
+    toast.success("Turma duplicada.");
   };
 
   return (
@@ -84,7 +113,10 @@ export default function ClassesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Minhas Turmas</h1>
           <p className="text-muted-foreground text-sm mt-1">Gerencie suas turmas e listas de alunos.</p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <Dialog open={createOpen} onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) { setNewName(""); setNewSemester(""); setNewDescription(""); }
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -97,21 +129,21 @@ export default function ClassesPage() {
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label>Nome da Turma</Label>
-                <Input placeholder="Ex: Farmacologia 101" />
+                <Label>Nome da Turma *</Label>
+                <Input placeholder="Ex: Farmacologia 101" value={newName} onChange={(e) => setNewName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>Semestre</Label>
-                <Input placeholder="Ex: 1º Sem. 2026" />
+                <Input placeholder="Ex: 1º Sem. 2026" value={newSemester} onChange={(e) => setNewSemester(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>Descrição</Label>
-                <Textarea placeholder="Breve descrição..." rows={2} />
+                <Textarea placeholder="Breve descrição..." rows={2} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-              <Button onClick={() => setCreateOpen(false)}>Criar Turma</Button>
+              <Button onClick={handleCreateClass}>Criar Turma</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
