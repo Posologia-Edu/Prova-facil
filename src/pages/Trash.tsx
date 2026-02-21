@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Trash2,
   RotateCcw,
@@ -7,6 +7,7 @@ import {
   FileEdit,
   GraduationCap,
   X,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TrashItem {
   id: string;
@@ -31,13 +33,6 @@ interface TrashItem {
   deletedAt: string;
   details?: string;
 }
-
-// Mock data – will be replaced with real DB queries later
-const mockTrashItems: TrashItem[] = [
-  { id: "t1", name: "What is the primary mechanism of action of ACE inhibitors?", type: "question", deletedAt: "2026-02-20", details: "Múltipla Escolha · Farmacologia" },
-  { id: "t2", name: "Farmacologia 101 - Prova Parcial", type: "exam", deletedAt: "2026-02-19", details: "5 questões · 12 pontos" },
-  { id: "t3", name: "Bioquímica II", type: "class", deletedAt: "2026-02-18", details: "38 alunos · 2 provas" },
-];
 
 const typeIcons = {
   question: Library,
@@ -52,25 +47,131 @@ const typeLabels = {
 };
 
 export default function TrashPage() {
-  const [items, setItems] = useState<TrashItem[]>(mockTrashItems);
+  const [items, setItems] = useState<TrashItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [permanentDeleteId, setPermanentDeleteId] = useState<string | null>(null);
   const [emptyTrashOpen, setEmptyTrashOpen] = useState(false);
 
-  const handleRestore = (id: string) => {
+  const fetchTrash = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const [questionsRes, examsRes, classesRes] = await Promise.all([
+        supabase
+          .from("question_bank")
+          .select("id, content_json, type, tags, deleted_at")
+          .eq("user_id", user.id)
+          .not("deleted_at", "is", null),
+        supabase
+          .from("exams")
+          .select("id, title, description, deleted_at")
+          .eq("user_id", user.id)
+          .not("deleted_at", "is", null),
+        supabase
+          .from("classes")
+          .select("id, name, student_count, deleted_at")
+          .eq("user_id", user.id)
+          .not("deleted_at", "is", null),
+      ]);
+
+      const trashItems: TrashItem[] = [];
+
+      (questionsRes.data || []).forEach((q: any) => {
+        const content = q.content_json || {};
+        const statement = content.statement || content.enunciado || content.text || "Questão sem título";
+        const truncated = statement.length > 80 ? statement.substring(0, 80) + "..." : statement;
+        const typeName = q.type === "multiple_choice" ? "Múltipla Escolha" : q.type === "true_false" ? "V/F" : q.type === "essay" ? "Dissertativa" : q.type;
+        const tagsStr = (q.tags || []).length > 0 ? ` · ${(q.tags as string[]).slice(0, 2).join(", ")}` : "";
+        trashItems.push({
+          id: q.id,
+          name: truncated,
+          type: "question",
+          deletedAt: q.deleted_at!,
+          details: `${typeName}${tagsStr}`,
+        });
+      });
+
+      (examsRes.data || []).forEach((e: any) => {
+        trashItems.push({
+          id: e.id,
+          name: e.title || "Prova sem título",
+          type: "exam",
+          deletedAt: e.deleted_at!,
+          details: e.description || undefined,
+        });
+      });
+
+      (classesRes.data || []).forEach((c: any) => {
+        trashItems.push({
+          id: c.id,
+          name: c.name || "Turma sem nome",
+          type: "class",
+          deletedAt: c.deleted_at!,
+          details: c.student_count ? `${c.student_count} alunos` : undefined,
+        });
+      });
+
+      trashItems.sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
+      setItems(trashItems);
+    } catch (err) {
+      console.error("Error fetching trash:", err);
+      toast.error("Erro ao carregar a lixeira.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrash();
+  }, []);
+
+  const handleRestore = async (id: string) => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+
+    const table = item.type === "question" ? "question_bank" : item.type === "exam" ? "exams" : "classes";
+    const { error } = await supabase.from(table).update({ deleted_at: null } as any).eq("id", id);
+    if (error) {
+      toast.error("Erro ao restaurar item.");
+      return;
+    }
     setItems((prev) => prev.filter((i) => i.id !== id));
     toast.success("Item restaurado com sucesso!");
   };
 
-  const handlePermanentDelete = (id: string) => {
+  const handlePermanentDelete = async (id: string) => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+
+    const table = item.type === "question" ? "question_bank" : item.type === "exam" ? "exams" : "classes";
+    const { error } = await supabase.from(table).delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir item permanentemente.");
+      return;
+    }
     setItems((prev) => prev.filter((i) => i.id !== id));
     setPermanentDeleteId(null);
     toast.success("Item excluído permanentemente.");
   };
 
-  const handleEmptyTrash = () => {
-    setItems([]);
-    setEmptyTrashOpen(false);
-    toast.success("Lixeira esvaziada.");
+  const handleEmptyTrash = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await Promise.all([
+        supabase.from("question_bank").delete().eq("user_id", user.id).not("deleted_at", "is", null),
+        supabase.from("exams").delete().eq("user_id", user.id).not("deleted_at", "is", null),
+        supabase.from("classes").delete().eq("user_id", user.id).not("deleted_at", "is", null),
+      ]);
+      setItems([]);
+      setEmptyTrashOpen(false);
+      toast.success("Lixeira esvaziada.");
+    } catch {
+      toast.error("Erro ao esvaziar lixeira.");
+    }
   };
 
   const filterByType = (type: string) =>
@@ -87,6 +188,15 @@ export default function TrashPage() {
   };
 
   const renderItems = (filteredItems: TrashItem[]) => {
+    if (loading) {
+      return (
+        <div className="text-center py-16">
+          <Loader2 className="h-8 w-8 mx-auto text-muted-foreground animate-spin" />
+          <p className="text-sm text-muted-foreground mt-3">Carregando...</p>
+        </div>
+      );
+    }
+
     if (filteredItems.length === 0) {
       return (
         <div className="text-center py-16">
@@ -196,7 +306,6 @@ export default function TrashPage() {
         <TabsContent value="class" className="mt-4">{renderItems(filterByType("class"))}</TabsContent>
       </Tabs>
 
-      {/* Permanent delete confirmation */}
       <AlertDialog open={!!permanentDeleteId} onOpenChange={(open) => !open && setPermanentDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -220,7 +329,6 @@ export default function TrashPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Empty trash confirmation */}
       <AlertDialog open={emptyTrashOpen} onOpenChange={setEmptyTrashOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
