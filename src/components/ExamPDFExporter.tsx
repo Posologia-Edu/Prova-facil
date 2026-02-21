@@ -404,9 +404,10 @@ export default function ExamPDFExporter({
       container.style.fontSize = "13px";
       container.style.lineHeight = "1.6";
       container.style.color = "#1a1a1a";
-      container.style.position = "absolute";
+      container.style.position = "fixed";
       container.style.left = "-9999px";
       container.style.top = "0";
+      container.style.zIndex = "-1";
 
       const numVersions = parseInt(versionCount);
       const versionTag = numVersions > 1 ? ` — Versão ${versionLetter}` : "";
@@ -416,20 +417,22 @@ export default function ExamPDFExporter({
 
       let html = `
         <div style="text-align:center;margin-bottom:24px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="display:flex;align-items:center;gap:8px">
+          <table style="width:100%;margin-bottom:8px"><tr>
+            <td style="text-align:left;vertical-align:middle">
               <span style="font-size:16px;font-weight:bold;color:#1a1a2e;">🎓 ProvaFácil</span>
-            </div>
-            <div id="qr-placeholder" style="width:80px;height:80px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:8px;color:#999;">QR</div>
-          </div>
+            </td>
+            <td style="text-align:right;vertical-align:middle">
+              <div id="qr-placeholder" style="width:80px;height:80px;border:1px dashed #ccc;text-align:center;line-height:80px;font-size:8px;color:#999;display:inline-block;">QR</div>
+            </td>
+          </tr></table>
           <h2 style="font-size:14px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:0">${institutionName}</h2>
           <hr style="border:none;border-top:1px solid #ccc;margin:12px 0"/>
           <h3 style="font-size:17px;font-weight:bold;margin:8px 0">${examTitle}${versionTag}</h3>
           <p style="font-size:8px;color:#aaa;margin:2px 0">ID: ${examUniqueId}</p>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:#666;margin-top:10px">
-            <span>Professor(a): ${teacherName}</span>
-            <span>Data: ${formattedDate}</span>
-          </div>
+          <table style="width:100%;font-size:11px;color:#666;margin-top:10px"><tr>
+            <td style="text-align:left">Professor(a): ${teacherName}</td>
+            <td style="text-align:right">Data: ${formattedDate}</td>
+          </tr></table>
           <div style="margin-top:12px;border-bottom:1px dashed #999;padding-bottom:8px">
             <p style="font-size:11px;margin:0">Nome do Aluno: ________________________________________ RA: _______________</p>
           </div>
@@ -482,16 +485,16 @@ export default function ExamPDFExporter({
             const colA = q.contentJson?.column_a as string[] | undefined;
             const colB = q.contentJson?.column_b as string[] | undefined;
             if (colA && colB && colA.length > 0) {
-              html += `<div style="margin-top:6px;padding-left:20px;font-size:11px;color:#333;display:flex;gap:40px">`;
-              html += `<div><p style="font-weight:bold;margin-bottom:4px">Coluna A</p>`;
+              html += `<table style="margin-top:6px;padding-left:20px;font-size:11px;color:#333;width:100%"><tr><td style="vertical-align:top;width:50%">`;
+              html += `<p style="font-weight:bold;margin-bottom:4px">Coluna A</p>`;
               colA.forEach((item, i) => {
                 html += `<p style="margin:2px 0">${i + 1}. ${item}</p>`;
               });
-              html += `</div><div><p style="font-weight:bold;margin-bottom:4px">Coluna B</p>`;
+              html += `</td><td style="vertical-align:top;width:50%"><p style="font-weight:bold;margin-bottom:4px">Coluna B</p>`;
               colB.forEach((item, i) => {
                 html += `<p style="margin:2px 0">${String.fromCharCode(97 + i)}) ${item}</p>`;
               });
-              html += `</div></div>`;
+              html += `</td></tr></table>`;
             } else {
               // fallback for pairs format
               const pairs = q.contentJson?.pairs as { left: string }[] | undefined;

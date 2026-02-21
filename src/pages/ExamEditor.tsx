@@ -131,6 +131,8 @@ export default function ExamEditorPage() {
   const [preInstructions, setPreInstructions] = useState("");
   const [showDuringInstructions, setShowDuringInstructions] = useState(false);
   const [duringInstructions, setDuringInstructions] = useState("");
+  const [classId, setClassId] = useState<string | null>(null);
+  const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
 
   // Application state
   const [startAt, setStartAt] = useState("");
@@ -191,6 +193,7 @@ export default function ExamEditorPage() {
       if (exam) {
         setExamTitle(exam.title);
         setExamStatus(exam.status);
+        setClassId(exam.class_id || null);
         const hc = exam.header_config_json as any;
         if (hc) {
           setInstitution(hc.institution || "");
@@ -239,6 +242,22 @@ export default function ExamEditorPage() {
 
     loadExam();
   }, [examId]);
+
+  // Load classes
+  useEffect(() => {
+    const loadClasses = async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+      const { data } = await supabase
+        .from("classes")
+        .select("id, name")
+        .eq("user_id", user.user.id)
+        .is("deleted_at", null)
+        .order("name");
+      setClasses((data || []).map(c => ({ id: c.id, name: c.name })));
+    };
+    loadClasses();
+  }, []);
 
   // Load bank questions
   useEffect(() => {
@@ -459,6 +478,7 @@ export default function ExamEditorPage() {
     if (!examId) return;
     await supabase.from("exams").update({
       title: examTitle,
+      class_id: classId,
       header_config_json: {
         institution,
         professor,
@@ -731,6 +751,21 @@ export default function ExamEditorPage() {
           {showDuringInstructions && (
             <Textarea value={duringInstructions} onChange={(e) => setDuringInstructions(e.target.value)} placeholder="Instruções durante a prova..." rows={3} />
           )}
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label>Vincular a uma turma:</Label>
+            <Select value={classId || "none"} onValueChange={(v) => setClassId(v === "none" ? null : v)}>
+              <SelectTrigger><SelectValue placeholder="Selecione uma turma" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma turma</SelectItem>
+                {classes.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <Separator />
           <h3 className="font-semibold text-sm">Configurações adicionais</h3>
