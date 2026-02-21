@@ -93,7 +93,7 @@ export default function ClassesPage() {
   const handleDeleteClass = (id: string) => {
     setClasses((prev) => prev.filter((c) => c.id !== id));
     setDeleteId(null);
-    toast.success("Turma excluída.");
+    toast.success("Turma movida para a lixeira.");
   };
 
   const handleDuplicateClass = (cls: ClassItem) => {
@@ -207,7 +207,7 @@ export default function ClassesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir turma?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A turma será removida permanentemente.
+              A turma será movida para a lixeira. Você poderá restaurá-la em até 30 dias.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

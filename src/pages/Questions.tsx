@@ -60,6 +60,7 @@ import {
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 interface QuestionOption {
   text: string;
@@ -284,6 +285,7 @@ export default function QuestionsPage() {
   const handleDeleteQuestion = (id: string) => {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
     setDeleteId(null);
+    toast.success("Questão movida para a lixeira.");
   };
 
   const handleDuplicateQuestion = (q: Question) => {

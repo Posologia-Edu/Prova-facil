@@ -26,6 +26,7 @@ import NotFound from "./pages/NotFound";
 import Documentation from "./pages/Documentation";
 import Settings from "./pages/Settings";
 import Contact from "./pages/Contact";
+import Trash from "./pages/Trash";
 
 const queryClient = new QueryClient();
 
@@ -125,6 +126,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><Settings /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/trash"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><Trash /></AppLayout>
                 </ProtectedRoute>
               }
             />
