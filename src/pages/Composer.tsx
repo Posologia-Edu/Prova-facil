@@ -309,12 +309,6 @@ export default function ComposerPage() {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) { toast.error("Faça login primeiro."); return; }
 
-    const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
-    if (totalQuestions === 0) {
-      toast.error("Adicione pelo menos uma questão à prova.");
-      return;
-    }
-
     setSaving(true);
 
     try {
@@ -336,7 +330,6 @@ export default function ComposerPage() {
       let position = 0;
       for (const section of sections) {
         for (const q of section.questions) {
-          // Check if this is a real bank question ID (UUID format)
           const isRealId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q.questionId);
           if (isRealId) {
             await supabase.from("exam_questions").insert({
