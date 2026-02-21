@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      class_students: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          student_email: string | null
+          student_name: string
+          student_registration: string | null
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          student_email?: string | null
+          student_name: string
+          student_registration?: string | null
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          student_email?: string | null
+          student_name?: string
+          student_registration?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_students_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           created_at: string
@@ -191,6 +226,7 @@ export type Database = {
           class_id: string | null
           created_at: string
           deleted_at: string | null
+          description: string | null
           header_config_json: Json
           id: string
           layout_config_json: Json
@@ -203,6 +239,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           deleted_at?: string | null
+          description?: string | null
           header_config_json?: Json
           id?: string
           layout_config_json?: Json
@@ -215,6 +252,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           deleted_at?: string | null
+          description?: string | null
           header_config_json?: Json
           id?: string
           layout_config_json?: Json
