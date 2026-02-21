@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -7,9 +7,7 @@ import {
   Trash2,
   MoreVertical,
   Eye,
-  FileDown,
   Copy,
-  ArrowLeft,
   Save,
   CheckCircle2,
   HelpCircle,
@@ -18,9 +16,9 @@ import {
   Search,
   Filter,
   ListPlus,
-  Layers,
-  BarChart3,
+  Sparkles,
   Download,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,9 +41,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -64,20 +59,17 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
 
 // Types
-interface QuestionOption {
-  text: string;
-  isCorrect: boolean;
-}
-
 interface BankQuestion {
   id: string;
   type: string;
   title: string;
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: string;
   tags: string[];
-  options?: QuestionOption[];
+  content_json: any;
 }
 
 interface ExamQuestion {
@@ -86,27 +78,16 @@ interface ExamQuestion {
   title: string;
   type: string;
   points: number;
-  options?: QuestionOption[];
 }
 
 interface Participant {
   id: string;
   name: string;
   matricula: string;
-  status: "completed" | "in_progress" | "not_started";
+  status: string;
   score: number | null;
   questionScores: (number | null)[];
 }
-
-// Mock data
-const bankQuestions: BankQuestion[] = [
-  { id: "b1", type: "multiple_choice", title: "Maria, uma mulher de 32 anos de idade, procura o pronto-socorro com queixa de falta de ar e chiado no peito após praticar exercício físico.", difficulty: "medium", tags: ["Asma"] },
-  { id: "b2", type: "multiple_choice", title: "Maria, 62 anos, sofre de lombalgia há alguns anos e apresentou recentemente piora do quadro com irradiação para o membro inferior esquerdo.", difficulty: "hard", tags: ["analgésicos"] },
-  { id: "b3", type: "open_ended", title: "João, 45 anos, foi internado na emergência com dor aguda muito forte após sofrer um acidente de carro.", difficulty: "hard", tags: ["Opioides", "analgésicos"] },
-  { id: "b4", type: "multiple_choice", title: "Paciente L.P, um homem de 50 anos, procura um médico com queixa de dor ao urinar e aumento da frequência de micção.", difficulty: "medium", tags: ["Urologia"] },
-  { id: "b5", type: "multiple_choice", title: "Paciente J.S, uma mulher de 35 anos, procura um médico com queixa de dor abdominal e dor ao urinar.", difficulty: "easy", tags: ["Urologia"] },
-  { id: "b6", type: "matching", title: "Uma paciente grávida de 28 semanas apresenta queixa de lombalgia intensa há 2 semanas, sem sinais de melhora com o tratamento conservador atual.", difficulty: "hard", tags: ["Obstetrícia"] },
-];
 
 const typeIcons: Record<string, React.ReactNode> = {
   multiple_choice: <CheckCircle2 className="h-3.5 w-3.5" />,
@@ -118,47 +99,15 @@ const typeIcons: Record<string, React.ReactNode> = {
 const typeLabels: Record<string, string> = {
   multiple_choice: "Múltipla Escolha",
   true_false: "Verdadeiro ou Falso",
-  open_ended: "Discursiva",
+  open_ended: "Dissertativa",
   matching: "Associação de Colunas",
 };
 
-const questionTypes = [
+const createQuestionTypes = [
   { value: "multiple_choice", label: "Múltipla Escolha" },
   { value: "true_false", label: "Verdadeiro ou Falso" },
-  { value: "open_ended", label: "Discursiva" },
+  { value: "open_ended", label: "Dissertativa" },
   { value: "matching", label: "Associação de Colunas" },
-  { value: "block", label: "Bloco" },
-  { value: "programming", label: "Programação" },
-];
-
-// Mock participants
-const mockParticipants: Participant[] = [
-  { id: "p1", name: "ALIANA VITORIA BARBOSA CARNEIRO", matricula: "20200010980", status: "completed", score: 6.10, questionScores: [0.6, 0.6, 0.6, 0, 0.6, 0.6, 0.6, 0.6, 1.1] },
-  { id: "p2", name: "BRENA KADJA DANTAS DOS SANTOS", matricula: "20200018049", status: "completed", score: 5.40, questionScores: [0.6, 0.6, 0.6, 0.6, 0.6, 0, 0.6, 0.6, 0.5] },
-  { id: "p3", name: "BRUNA KARINE MEDEIROS ARAÚJO", matricula: "20190018880", status: "completed", score: 5.50, questionScores: [0, 0.6, 0.6, 0, 0.6, 0.6, 0.6, 0.6, 0.8] },
-  { id: "p4", name: "DANIELE DA SILVA", matricula: "20200018728", status: "completed", score: 5.20, questionScores: [0.6, 0.6, 0.6, 0, 0.6, 0.6, 0.6, 0.6, 0.5] },
-  { id: "p5", name: "DANIELLY SIMONETI GURGEL DA ROCHA", matricula: "20200005461", status: "completed", score: 4.30, questionScores: [0.6, 0, 0.6, 0, 0.6, 0.6, 0, 0.6, 0.5] },
-];
-
-const histogramData = [
-  { range: "0 - 1,4", count: 0 },
-  { range: "1,4 - 2,8", count: 1 },
-  { range: "2,8 - 4,2", count: 3 },
-  { range: "4,2 - 5,6", count: 23 },
-  { range: "5,6 - 7", count: 15 },
-];
-
-const accuracyData = [
-  { q: "Q1", pct: 88 },
-  { q: "Q2", pct: 88 },
-  { q: "Q3", pct: 91 },
-  { q: "Q4", pct: 27 },
-  { q: "Q5", pct: 79 },
-  { q: "Q6", pct: 88 },
-  { q: "Q7", pct: 74 },
-  { q: "Q8", pct: 88 },
-  { q: "Q9", pct: 63 },
-  { q: "Q10", pct: 65 },
 ];
 
 export default function ExamEditorPage() {
@@ -167,10 +116,11 @@ export default function ExamEditorPage() {
 
   // Exam state
   const [examTitle, setExamTitle] = useState("Nova Prova");
-  const [examStatus, setExamStatus] = useState<"draft" | "applied" | "in_progress" | "graded">("draft");
+  const [examStatus, setExamStatus] = useState<string>("draft");
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [pointsMode, setPointsMode] = useState("by_grade");
   const [activeTab, setActiveTab] = useState("questions");
+  const [loading, setLoading] = useState(true);
 
   // Config state
   const [institution, setInstitution] = useState("");
@@ -192,8 +142,12 @@ export default function ExamEditorPage() {
   const [examView, setExamView] = useState(false);
   const [publishGrades, setPublishGrades] = useState(true);
 
+  // Bank questions from DB
+  const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
+
   // Question picker dialog
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"single" | "combo">("single");
   const [selectedBankIds, setSelectedBankIds] = useState<Set<string>>(new Set());
   const [pickerSearch, setPickerSearch] = useState("");
 
@@ -201,14 +155,116 @@ export default function ExamEditorPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createType, setCreateType] = useState("multiple_choice");
   const [createTitle, setCreateTitle] = useState("");
+  const [createDifficulty, setCreateDifficulty] = useState("medium");
+  const [createTags, setCreateTags] = useState("");
+  const [createBloom, setCreateBloom] = useState("understanding");
 
-  // Add/Create menus
+  // AI generator
+  const [aiOpen, setAiOpen] = useState(false);
+
+  // Menus
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
 
-  const usedIds = useMemo(() => new Set(questions.map((q) => q.questionId)), [questions]);
+  // Participants (from DB)
+  const [participants, setParticipants] = useState<Participant[]>([]);
 
+  const usedIds = useMemo(() => new Set(questions.map((q) => q.questionId)), [questions]);
   const totalPoints = questions.reduce((s, q) => s + q.points, 0);
+
+  // Load exam data
+  useEffect(() => {
+    const loadExam = async () => {
+      if (!examId) return;
+      setLoading(true);
+
+      const { data: exam } = await supabase
+        .from("exams")
+        .select("*")
+        .eq("id", examId)
+        .single();
+
+      if (exam) {
+        setExamTitle(exam.title);
+        setExamStatus(exam.status);
+        const hc = exam.header_config_json as any;
+        if (hc) {
+          setInstitution(hc.institution || "");
+          setProfessor(hc.professor || "");
+          setShowPreInstructions(!!hc.preInstructions);
+          setPreInstructions(hc.preInstructions || "");
+          setShowDuringInstructions(!!hc.duringInstructions);
+          setDuringInstructions(hc.duringInstructions || "");
+        }
+      }
+
+      // Load exam questions
+      const { data: eqs } = await supabase
+        .from("exam_questions")
+        .select("id, question_id, position, points, section_name")
+        .eq("exam_id", examId)
+        .order("position", { ascending: true });
+
+      if (eqs && eqs.length > 0) {
+        const qIds = eqs.map((eq) => eq.question_id);
+        const { data: qBank } = await supabase
+          .from("question_bank")
+          .select("id, type, content_json")
+          .in("id", qIds);
+
+        const qMap: Record<string, any> = {};
+        (qBank || []).forEach((q) => { qMap[q.id] = q; });
+
+        setQuestions(
+          eqs.map((eq) => {
+            const bq = qMap[eq.question_id];
+            const cj = bq?.content_json as any;
+            return {
+              id: eq.id,
+              questionId: eq.question_id,
+              title: cj?.question_text || cj?.title || "Questão",
+              type: bq?.type || "multiple_choice",
+              points: Number(eq.points) || 0.6,
+            };
+          })
+        );
+      }
+
+      setLoading(false);
+    };
+
+    loadExam();
+  }, [examId]);
+
+  // Load bank questions
+  useEffect(() => {
+    const loadBank = async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data } = await supabase
+        .from("question_bank")
+        .select("id, type, content_json, difficulty, tags")
+        .eq("user_id", user.user.id)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+
+      setBankQuestions(
+        (data || []).map((q) => {
+          const cj = q.content_json as any;
+          return {
+            id: q.id,
+            type: q.type,
+            title: cj?.question_text || cj?.title || "Questão",
+            difficulty: q.difficulty,
+            tags: q.tags || [],
+            content_json: q.content_json,
+          };
+        })
+      );
+    };
+    loadBank();
+  }, []);
 
   const filteredBank = bankQuestions.filter(
     (q) =>
@@ -218,61 +274,209 @@ export default function ExamEditorPage() {
   );
 
   const toggleBankSelect = (id: string) => {
-    setSelectedBankIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    if (pickerMode === "single") {
+      // Single mode: only one at a time
+      setSelectedBankIds((prev) => {
+        if (prev.has(id)) return new Set();
+        return new Set([id]);
+      });
+    } else {
+      // Combo mode: multiple
+      setSelectedBankIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    }
   };
 
-  const addSelectedQuestions = () => {
+  const addSelectedQuestions = async () => {
+    if (!examId) return;
     const toAdd = bankQuestions.filter((q) => selectedBankIds.has(q.id));
-    const newQuestions: ExamQuestion[] = toAdd.map((q) => ({
-      id: `eq-${Date.now()}-${q.id}`,
-      questionId: q.id,
-      title: q.title,
-      type: q.type,
+    const startPos = questions.length;
+
+    const inserts = toAdd.map((q, i) => ({
+      exam_id: examId,
+      question_id: q.id,
+      position: startPos + i,
       points: 0.6,
-      options: q.options,
     }));
+
+    const { data, error } = await supabase
+      .from("exam_questions")
+      .insert(inserts)
+      .select("id, question_id, position, points");
+
+    if (error) { toast.error("Erro ao adicionar questões."); return; }
+
+    const newQuestions: ExamQuestion[] = (data || []).map((eq) => {
+      const bq = bankQuestions.find((b) => b.id === eq.question_id);
+      return {
+        id: eq.id,
+        questionId: eq.question_id,
+        title: bq?.title || "Questão",
+        type: bq?.type || "multiple_choice",
+        points: Number(eq.points) || 0.6,
+      };
+    });
+
     setQuestions((prev) => [...prev, ...newQuestions]);
     setSelectedBankIds(new Set());
     setPickerOpen(false);
     toast.success(`${toAdd.length} questão(ões) adicionada(s).`);
   };
 
-  const handleCreateQuestion = () => {
+  const handleCreateQuestion = async () => {
     if (!createTitle.trim()) {
       toast.error("Digite o enunciado da questão.");
       return;
     }
-    const newQ: ExamQuestion = {
-      id: `eq-new-${Date.now()}`,
-      questionId: `custom-${Date.now()}`,
-      title: createTitle,
-      type: createType,
-      points: 0.6,
-    };
-    setQuestions((prev) => [...prev, newQ]);
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user || !examId) return;
+
+    // Create in question_bank
+    const contentJson: any = { question_text: createTitle };
+    const tags = createTags.split(",").map((t) => t.trim()).filter(Boolean);
+
+    const { data: newQ, error: qErr } = await supabase
+      .from("question_bank")
+      .insert({
+        user_id: user.user.id,
+        type: createType,
+        difficulty: createDifficulty,
+        bloom_level: createBloom,
+        tags,
+        content_json: contentJson,
+      })
+      .select("id")
+      .single();
+
+    if (qErr || !newQ) { toast.error("Erro ao criar questão."); return; }
+
+    // Add to exam
+    const pos = questions.length;
+    const { data: eqData, error: eqErr } = await supabase
+      .from("exam_questions")
+      .insert({ exam_id: examId, question_id: newQ.id, position: pos, points: 0.6 })
+      .select("id")
+      .single();
+
+    if (eqErr) { toast.error("Erro ao adicionar à prova."); return; }
+
+    setQuestions((prev) => [
+      ...prev,
+      {
+        id: eqData!.id,
+        questionId: newQ.id,
+        title: createTitle,
+        type: createType,
+        points: 0.6,
+      },
+    ]);
+
+    // Also add to bank list
+    setBankQuestions((prev) => [
+      { id: newQ.id, type: createType, title: createTitle, difficulty: createDifficulty, tags, content_json: contentJson },
+      ...prev,
+    ]);
+
     setCreateOpen(false);
     setCreateTitle("");
+    setCreateTags("");
     toast.success("Questão criada e adicionada à prova.");
   };
 
-  const removeQuestion = (id: string) => {
+  const handleAISave = async (generated: GeneratedQuestion[]) => {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user || !examId) return;
+
+    for (const g of generated) {
+      const contentJson: any = {
+        question_text: g.question_text,
+        options: g.options,
+        correct_answer: g.correct_answer,
+        explanation: g.explanation,
+        expected_answer: g.expected_answer,
+        column_a: g.column_a,
+        column_b: g.column_b,
+        correct_matches: g.correct_matches,
+      };
+
+      const { data: newQ } = await supabase
+        .from("question_bank")
+        .insert({
+          user_id: user.user.id,
+          type: g.type,
+          difficulty: g.difficulty,
+          bloom_level: g.bloom_level,
+          tags: g.tags || [],
+          content_json: contentJson,
+        })
+        .select("id")
+        .single();
+
+      if (newQ) {
+        const pos = questions.length;
+        const { data: eqData } = await supabase
+          .from("exam_questions")
+          .insert({ exam_id: examId, question_id: newQ.id, position: pos, points: 0.6 })
+          .select("id")
+          .single();
+
+        if (eqData) {
+          setQuestions((prev) => [
+            ...prev,
+            { id: eqData.id, questionId: newQ.id, title: g.question_text, type: g.type, points: 0.6 },
+          ]);
+        }
+      }
+    }
+    toast.success(`${generated.length} questão(ões) gerada(s) e adicionada(s).`);
+  };
+
+  const removeQuestion = async (id: string) => {
+    await supabase.from("exam_questions").delete().eq("id", id);
     setQuestions((prev) => prev.filter((q) => q.id !== id));
   };
 
-  const updatePoints = (id: string, pts: number) => {
+  const updatePoints = async (id: string, pts: number) => {
     setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, points: pts } : q)));
+    await supabase.from("exam_questions").update({ points: pts }).eq("id", id);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!examId) return;
+    await supabase.from("exams").update({
+      title: examTitle,
+      header_config_json: {
+        institution,
+        professor,
+        preInstructions: showPreInstructions ? preInstructions : "",
+        duringInstructions: showDuringInstructions ? duringInstructions : "",
+      },
+    }).eq("id", examId);
     toast.success("Prova salva com sucesso!");
   };
 
-  const handleDuplicate = () => {
+  const handleDuplicate = async () => {
+    if (!examId) return;
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return;
+
+    const { data } = await supabase
+      .from("exams")
+      .insert({ user_id: user.user.id, title: `${examTitle} (cópia)`, status: "draft" })
+      .select("id")
+      .single();
+
+    if (!data) { toast.error("Erro ao duplicar."); return; }
+
+    if (questions.length > 0) {
+      await supabase.from("exam_questions").insert(
+        questions.map((q, i) => ({ exam_id: data.id, question_id: q.questionId, position: i, points: q.points }))
+      );
+    }
     toast.success("Prova duplicada com sucesso!");
   };
 
@@ -283,23 +487,16 @@ export default function ExamEditorPage() {
     graded: { label: "CONSOLIDADA", className: "bg-success text-success-foreground" },
   };
 
-  const currentStatus = statusLabel[examStatus];
+  const currentStatus = statusLabel[examStatus] || statusLabel.draft;
   const showExtraTabs = examStatus === "applied" || examStatus === "in_progress" || examStatus === "graded";
 
-  const completedCount = mockParticipants.filter((p) => p.status === "completed").length;
-  const inProgressCount = mockParticipants.filter((p) => p.status === "in_progress").length;
-  const notStartedCount = mockParticipants.filter((p) => p.status === "not_started").length;
-
-  const avgScore = mockParticipants.length > 0
-    ? (mockParticipants.reduce((s, p) => s + (p.score || 0), 0) / mockParticipants.length).toFixed(2)
-    : "0";
-
-  const stdDev = (() => {
-    if (mockParticipants.length === 0) return "0";
-    const avg = mockParticipants.reduce((s, p) => s + (p.score || 0), 0) / mockParticipants.length;
-    const variance = mockParticipants.reduce((s, p) => s + Math.pow((p.score || 0) - avg, 2), 0) / mockParticipants.length;
-    return Math.sqrt(variance).toFixed(2);
-  })();
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-4">
@@ -398,16 +595,6 @@ export default function ExamEditorPage() {
                     </div>
                   </div>
                   <p className="text-sm mt-2 leading-relaxed">{q.title}</p>
-                  {q.options && (
-                    <div className="mt-3 space-y-1.5">
-                      {q.options.map((opt, i) => (
-                        <div key={i} className={`text-sm flex gap-2 ${opt.isCorrect ? "font-semibold" : ""}`}>
-                          <span className="font-bold">{String.fromCharCode(65 + i)})</span>
-                          <span>{opt.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                   <div className="flex items-center justify-between mt-3 pt-3 border-t">
                     <span className="text-xs text-muted-foreground">Elaborada por mim</span>
                     <div className="flex items-center gap-2">
@@ -438,11 +625,11 @@ export default function ExamEditorPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => { setAddMenuOpen(false); setPickerOpen(true); }}>
-                  Questão
+                <DropdownMenuItem onClick={() => { setAddMenuOpen(false); setPickerMode("single"); setSelectedBankIds(new Set()); setPickerOpen(true); }}>
+                  Questão Simples
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setAddMenuOpen(false); setPickerOpen(true); }}>
-                  Combinação
+                <DropdownMenuItem onClick={() => { setAddMenuOpen(false); setPickerMode("combo"); setSelectedBankIds(new Set()); setPickerOpen(true); }}>
+                  Combinação de Questões
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -457,19 +644,31 @@ export default function ExamEditorPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                {questionTypes.map((qt) => (
+                {createQuestionTypes.map((qt) => (
                   <DropdownMenuItem
                     key={qt.value}
                     onClick={() => {
                       setCreateMenuOpen(false);
                       setCreateType(qt.value);
                       setCreateTitle("");
+                      setCreateTags("");
+                      setCreateDifficulty("medium");
+                      setCreateBloom("understanding");
                       setCreateOpen(true);
                     }}
                   >
                     {qt.label}
                   </DropdownMenuItem>
                 ))}
+                <DropdownMenuItem
+                  onClick={() => {
+                    setCreateMenuOpen(false);
+                    setAiOpen(true);
+                  }}
+                >
+                  <Sparkles className="h-3.5 w-3.5 mr-2 text-secondary" />
+                  Gerar com IA
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -579,60 +778,8 @@ export default function ExamEditorPage() {
                   className="pl-9"
                 />
               </div>
-              <Select value={participantStatus} onValueChange={setParticipantStatus}>
-                <SelectTrigger className="w-[120px]"><SelectValue placeholder="Status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="completed">Concluída</SelectItem>
-                  <SelectItem value="in_progress">Em execução</SelectItem>
-                  <SelectItem value="not_started">Não iniciada</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
-
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-              <span className="text-success">Provas concluídas: {completedCount}</span>
-              <span>Em execução: {inProgressCount}</span>
-              <span>Não iniciadas: {notStartedCount}</span>
-              <span className="text-primary font-semibold">Total: {mockParticipants.length}</span>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Matrícula</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Nota</TableHead>
-                  <TableHead className="w-8"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockParticipants.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-mono text-sm">{p.matricula}</TableCell>
-                    <TableCell>{p.name}</TableCell>
-                    <TableCell>
-                      <Badge className={
-                        p.status === "completed" ? "bg-success text-success-foreground" :
-                        p.status === "in_progress" ? "bg-warning text-warning-foreground" :
-                        "bg-muted text-muted-foreground"
-                      }>
-                        {p.status === "completed" ? "CONCLUÍDA" : p.status === "in_progress" ? "EM EXECUÇÃO" : "NÃO INICIADA"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {p.score !== null ? p.score.toFixed(2).replace(".", ",") : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <p className="text-sm text-muted-foreground">Nenhum participante registrado ainda.</p>
           </div>
         </TabsContent>
 
@@ -659,103 +806,12 @@ export default function ExamEditorPage() {
               </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="text-success">Questões corrigidas: {mockParticipants.length * questions.length || 430}</span>
-            <span>Não corrigidas: 0</span>
-            <span>Não respondidas: 0</span>
-            <span className="text-primary font-semibold">Total: {mockParticipants.length * questions.length || 430}</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Select defaultValue="full">
-              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full">Visualização completa</SelectItem>
-                <SelectItem value="summary">Resumo</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Download className="h-4 w-4" /> EXPORTAR NOTAS
-            </Button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Matrícula</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead className="font-bold">Nota</TableHead>
-                  {Array.from({ length: 9 }, (_, i) => (
-                    <TableHead key={i} className="text-center text-xs">
-                      Q{i + 1}<br /><span className="text-[10px] text-muted-foreground">(0,60)</span>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockParticipants.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-mono text-sm">{p.matricula}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{p.name}</TableCell>
-                    <TableCell className="font-bold text-primary">{p.score?.toFixed(2).replace(".", ",")}</TableCell>
-                    {p.questionScores.map((s, i) => (
-                      <TableCell key={i} className="text-center text-sm">
-                        {s !== null ? s.toFixed(1).replace(".", ",") : "—"}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <p className="text-sm text-muted-foreground">Nenhuma correção disponível.</p>
         </TabsContent>
 
         {/* ===== ESTATÍSTICAS TAB ===== */}
         <TabsContent value="stats" className="mt-6 space-y-8">
-          <div className="grid grid-cols-2 gap-8">
-            <div className="text-center">
-              <p className="text-4xl font-bold text-primary">{avgScore.replace(".", ",")}</p>
-              <p className="text-sm text-muted-foreground mt-1">Média de nota da turma</p>
-            </div>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-primary">{stdDev.replace(".", ",")}</p>
-              <p className="text-sm text-muted-foreground mt-1">Desvio padrão de nota da turma</p>
-            </div>
-          </div>
-
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Histograma de notas</h3>
-              <Button variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>
-            </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={histogramData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="range" tick={{ fontSize: 12 }} label={{ value: "Faixa das notas", position: "insideBottom", offset: -5 }} />
-                <YAxis label={{ value: "Número de alunos", angle: -90, position: "insideLeft" }} />
-                <Tooltip />
-                <Bar dataKey="count" fill="hsl(220 60% 50%)" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Porcentagem de acerto por questão</h3>
-              <Button variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>
-            </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={accuracyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="q" />
-                <YAxis domain={[0, 100]} />
-                <Tooltip />
-                <Bar dataKey="pct" fill="hsl(220 50% 35%)" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
+          <p className="text-sm text-muted-foreground">Nenhuma estatística disponível ainda.</p>
         </TabsContent>
       </Tabs>
 
@@ -763,52 +819,57 @@ export default function ExamEditorPage() {
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Selecionar Questões do Banco</DialogTitle>
+            <DialogTitle>
+              {pickerMode === "single" ? "Selecionar Questão" : "Selecionar Questões (Combinação)"}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="flex items-center gap-3 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar"
+                placeholder="Buscar por texto ou tag..."
                 value={pickerSearch}
                 onChange={(e) => setPickerSearch(e.target.value)}
                 className="pl-9"
               />
             </div>
-            <Button variant="outline" size="sm">
-              <Filter className="h-4 w-4 mr-1.5" /> FILTROS
-            </Button>
           </div>
 
           <div className="flex-1 overflow-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {filteredBank.map((q) => {
-                const isSelected = selectedBankIds.has(q.id);
-                return (
-                  <Card
-                    key={q.id}
-                    className={`p-3 cursor-pointer transition-all ${
-                      isSelected ? "ring-2 ring-primary border-primary" : "hover:border-primary/30"
-                    }`}
-                    onClick={() => toggleBankSelect(q.id)}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      {typeIcons[q.type]}
-                      <span className="text-xs text-muted-foreground">0%</span>
-                      {isSelected && <CheckCircle2 className="h-4 w-4 text-success ml-auto" />}
-                    </div>
-                    <p className="text-xs leading-relaxed line-clamp-5">{q.title}</p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {q.tags.map((t) => (
-                        <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0">{t}</Badge>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-2">Elaborada por mim</p>
-                  </Card>
-                );
-              })}
-            </div>
+            {filteredBank.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">Nenhuma questão encontrada no banco.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {filteredBank.map((q) => {
+                  const isSelected = selectedBankIds.has(q.id);
+                  return (
+                    <Card
+                      key={q.id}
+                      className={`p-3 cursor-pointer transition-all ${
+                        isSelected ? "ring-2 ring-primary border-primary" : "hover:border-primary/30"
+                      }`}
+                      onClick={() => toggleBankSelect(q.id)}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        {typeIcons[q.type]}
+                        <Badge variant="outline" className="text-[10px]">
+                          {typeLabels[q.type] || q.type}
+                        </Badge>
+                        {isSelected && <CheckCircle2 className="h-4 w-4 text-success ml-auto" />}
+                      </div>
+                      <p className="text-xs leading-relaxed line-clamp-5">{q.title}</p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {q.tags.map((t) => (
+                          <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0">{t}</Badge>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-2">Elaborada por mim</p>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <DialogFooter className="mt-4">
@@ -827,7 +888,7 @@ export default function ExamEditorPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Criar Questão — {questionTypes.find((t) => t.value === createType)?.label}</DialogTitle>
+            <DialogTitle>Criar Questão — {createQuestionTypes.find((t) => t.value === createType)?.label}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -842,7 +903,7 @@ export default function ExamEditorPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Dificuldade</Label>
-                <Select defaultValue="medium">
+                <Select value={createDifficulty} onValueChange={setCreateDifficulty}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="easy">Fácil</SelectItem>
@@ -852,9 +913,23 @@ export default function ExamEditorPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Tags</Label>
-                <Input placeholder="Ex: Farmacologia" />
+                <Label>Taxonomia de Bloom</Label>
+                <Select value={createBloom} onValueChange={setCreateBloom}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="remembering">Lembrar</SelectItem>
+                    <SelectItem value="understanding">Compreender</SelectItem>
+                    <SelectItem value="applying">Aplicar</SelectItem>
+                    <SelectItem value="analyzing">Analisar</SelectItem>
+                    <SelectItem value="evaluating">Avaliar</SelectItem>
+                    <SelectItem value="creating">Criar</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Tags (separadas por vírgula)</Label>
+              <Input value={createTags} onChange={(e) => setCreateTags(e.target.value)} placeholder="Ex: Farmacologia, Cardiovascular" />
             </div>
           </div>
           <DialogFooter>
@@ -863,6 +938,13 @@ export default function ExamEditorPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ===== AI QUESTION GENERATOR ===== */}
+      <AIQuestionGenerator
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+        onSaveQuestions={handleAISave}
+      />
     </div>
   );
 }
