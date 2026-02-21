@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { topic, context, difficulty, questionType, count } = await req.json();
+    const { topic, context, difficulty, questionType, count, language } = await req.json();
 
     if (!topic || !difficulty || !questionType) {
       return new Response(
@@ -35,10 +35,13 @@ serve(async (req) => {
       matching: `Each question must have a "column_a" array and a "column_b" array (each with 4-5 items), and a "correct_matches" object mapping column_a indices to column_b indices.`,
     };
 
-    const systemPrompt = `You are an expert academic question generator for university-level exams. 
+    const langMap: Record<string, string> = { pt: "Brazilian Portuguese", en: "English", es: "Spanish" };
+    const targetLang = langMap[language] || "Brazilian Portuguese";
+
+    const systemPrompt = `You are an expert academic question generator for university-level exams.
 You generate high-quality, pedagogically sound questions.
 You MUST respond using the "generate_questions" tool call. Do NOT respond with plain text.
-Always generate questions in the same language as the topic provided.`;
+You MUST generate ALL questions in ${targetLang}. Every question text, option, explanation, and answer MUST be in ${targetLang}.`;
 
     const userPrompt = `Generate ${numQuestions} ${questionType.replace("_", " ")} questions about the topic: "${topic}".
 Difficulty level: ${difficulty}.

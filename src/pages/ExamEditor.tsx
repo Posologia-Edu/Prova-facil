@@ -61,6 +61,7 @@ import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 // Types
 interface BankQuestion {
@@ -113,6 +114,7 @@ const createQuestionTypes = [
 export default function ExamEditorPage() {
   const { examId } = useParams();
   const navigate = useNavigate();
+  const { language } = useLanguage();
 
   // Exam state
   const [examTitle, setExamTitle] = useState("Nova Prova");
@@ -150,6 +152,8 @@ export default function ExamEditorPage() {
   const [pickerMode, setPickerMode] = useState<"single" | "combo">("single");
   const [selectedBankIds, setSelectedBankIds] = useState<Set<string>>(new Set());
   const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerTypeFilter, setPickerTypeFilter] = useState("all");
+  const [pickerDiffFilter, setPickerDiffFilter] = useState("all");
 
   // Create question dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -266,12 +270,18 @@ export default function ExamEditorPage() {
     loadBank();
   }, []);
 
-  const filteredBank = bankQuestions.filter(
-    (q) =>
-      !usedIds.has(q.id) &&
-      (q.title.toLowerCase().includes(pickerSearch.toLowerCase()) ||
-        q.tags.some((t) => t.toLowerCase().includes(pickerSearch.toLowerCase())))
-  );
+  const filteredBank = bankQuestions.filter((q) => {
+    if (usedIds.has(q.id)) return false;
+    if (pickerTypeFilter !== "all" && q.type !== pickerTypeFilter) return false;
+    if (pickerDiffFilter !== "all" && q.difficulty !== pickerDiffFilter) return false;
+    if (!pickerSearch.trim()) return true;
+    const search = pickerSearch.toLowerCase();
+    return (
+      q.title.toLowerCase().includes(search) ||
+      q.tags.some((t) => t.toLowerCase().includes(search)) ||
+      (q.content_json as any)?.question_text?.toLowerCase()?.includes(search)
+    );
+  });
 
   const toggleBankSelect = (id: string) => {
     if (pickerMode === "single") {
@@ -824,8 +834,8 @@ export default function ExamEditorPage() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex items-center gap-3 mb-4">
-            <div className="relative flex-1">
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por texto ou tag..."
@@ -834,6 +844,29 @@ export default function ExamEditorPage() {
                 className="pl-9"
               />
             </div>
+            <Select value={pickerTypeFilter} onValueChange={setPickerTypeFilter}>
+              <SelectTrigger className="w-[160px] h-9 text-xs">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
+                <SelectItem value="true_false">V ou F</SelectItem>
+                <SelectItem value="open_ended">Dissertativa</SelectItem>
+                <SelectItem value="matching">Associação</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={pickerDiffFilter} onValueChange={setPickerDiffFilter}>
+              <SelectTrigger className="w-[130px] h-9 text-xs">
+                <SelectValue placeholder="Dificuldade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="easy">Fácil</SelectItem>
+                <SelectItem value="medium">Média</SelectItem>
+                <SelectItem value="hard">Difícil</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex-1 overflow-auto">
