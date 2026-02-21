@@ -75,12 +75,18 @@ function getCorrectAnswer(q: ExamQuestion): string {
   if (!c) return "—";
 
   if (q.type === "multiple_choice") {
-    const options = c.options as { text: string; isCorrect?: boolean }[] | undefined;
-    if (options) {
-      const idx = options.findIndex((o) => o.isCorrect);
+    const options = c.options;
+    if (Array.isArray(options)) {
+      const idx = options.findIndex((o: any) => o.isCorrect);
       if (idx >= 0) {
-        const letter = String.fromCharCode(97 + idx); // a, b, c, d...
+        const letter = String.fromCharCode(97 + idx);
         return `${letter}) ${options[idx].text}`;
+      }
+    } else if (options && typeof options === "object") {
+      // Object format {a: "text", b: "text"} — use correct_answer key
+      const correctKey = c.correct_answer || c.correctAnswer;
+      if (correctKey && (options as Record<string, string>)[correctKey]) {
+        return `${correctKey}) ${(options as Record<string, string>)[correctKey]}`;
       }
     }
     return c.correct_answer || c.correctAnswer || "—";
@@ -110,10 +116,13 @@ function getCorrectLetterOnly(q: ExamQuestion): string | null {
   if (q.type !== "multiple_choice") return null;
   const c = q.contentJson;
   if (!c) return null;
-  const options = c.options as { text: string; isCorrect?: boolean }[] | undefined;
-  if (options) {
-    const idx = options.findIndex((o) => o.isCorrect);
-    if (idx >= 0) return String.fromCharCode(65 + idx); // A, B, C, D
+  const options = c.options;
+  if (Array.isArray(options)) {
+    const idx = options.findIndex((o: any) => o.isCorrect);
+    if (idx >= 0) return String.fromCharCode(65 + idx);
+  } else if (options && typeof options === "object") {
+    const correctKey = c.correct_answer || c.correctAnswer;
+    if (correctKey) return String(correctKey).toUpperCase();
   }
   return null;
 }
