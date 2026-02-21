@@ -12,6 +12,8 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Questions from "./pages/Questions";
 import Composer from "./pages/Composer";
+import Exams from "./pages/Exams";
+import ExamEditor from "./pages/ExamEditor";
 import Classes from "./pages/Classes";
 import Analytics from "./pages/Analytics";
 import Admin from "./pages/Admin";
@@ -78,6 +80,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><Composer /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><Exams /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams/:examId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><ExamEditor /></AppLayout>
                 </ProtectedRoute>
               }
             />
