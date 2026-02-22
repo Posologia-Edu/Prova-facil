@@ -18,6 +18,7 @@ import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/use-admin";
 import { useLanguage, LANGUAGE_LABELS, LANGUAGE_FLAGS, type Language } from "@/i18n/LanguageContext";
+import { useState, useEffect } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +52,22 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
   const { t, language, setLanguage } = useLanguage();
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    const fetchName = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        if (data?.full_name) setUserName(data.full_name);
+      }
+    };
+    fetchName();
+  }, []);
 
   const mainNav = [
     { title: t("nav_dashboard"), url: "/dashboard", icon: navIcons.dashboard },
@@ -80,7 +97,7 @@ export function AppSidebar() {
           </div>
           <div>
             <h1 className="text-base font-bold text-sidebar-primary-foreground tracking-tight">ProvaFácil</h1>
-            <p className="text-xs text-sidebar-foreground/60">{t("app_subtitle")}</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate max-w-[140px]">{userName || t("app_subtitle")}</p>
           </div>
         </Link>
       </SidebarHeader>
