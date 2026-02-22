@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_invitations: {
+        Row: {
+          completed_at: string | null
+          created_user_id: string | null
+          email: string
+          id: string
+          invited_at: string
+          invited_by: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_user_id?: string | null
+          email: string
+          id?: string
+          invited_at?: string
+          invited_by: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_user_id?: string | null
+          email?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string
+          status?: string
+        }
+        Relationships: []
+      }
       class_students: {
         Row: {
           class_id: string

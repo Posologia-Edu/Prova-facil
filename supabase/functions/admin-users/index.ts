@@ -54,7 +54,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { action, userId } = await req.json();
+    const body = await req.json();
+    const { action, userId, email: bodyEmail } = body;
 
     switch (action) {
       case "list_users": {
@@ -147,6 +148,35 @@ Deno.serve(async (req) => {
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      case "list_invitations": {
+        const { data: invitations } = await adminClient
+          .from("admin_invitations")
+          .select("*")
+          .order("invited_at", { ascending: false });
+
+        return new Response(JSON.stringify(invitations || []), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "mark_invite_completed": {
+        if (!bodyEmail) {
+          return new Response(JSON.stringify({ error: "Email é obrigatório" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        await adminClient
+          .from("admin_invitations")
+          .update({ status: "completed", completed_at: new Date().toISOString() })
+          .eq("email", bodyEmail);
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       default:

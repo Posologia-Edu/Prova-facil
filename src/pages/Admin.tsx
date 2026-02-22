@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users,
@@ -14,6 +16,9 @@ import {
   Library,
   Loader2,
   Clock,
+  Mail,
+  UserPlus,
+  Circle,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -38,6 +43,14 @@ interface UserProfile {
   roles: string[];
 }
 
+interface Invitation {
+  id: string;
+  email: string;
+  status: string;
+  invited_at: string;
+  completed_at: string | null;
+}
+
 interface Stats {
   totalUsers: number;
   pendingUsers: number;
@@ -45,12 +58,12 @@ interface Stats {
   totalExams: number;
 }
 
-async function adminAction(action: string, userId?: string) {
+async function adminAction(action: string, userId?: string, extra?: Record<string, any>) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Não autenticado");
 
   const res = await supabase.functions.invoke("admin-users", {
-    body: { action, userId },
+    body: { action, userId, ...extra },
   });
 
   if (res.error) throw new Error(res.error.message);
@@ -60,19 +73,24 @@ async function adminAction(action: string, userId?: string) {
 export default function AdminPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
   const { toast } = useToast();
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [usersData, statsData] = await Promise.all([
+      const [usersData, statsData, invitationsData] = await Promise.all([
         adminAction("list_users"),
         adminAction("get_stats"),
+        adminAction("list_invitations"),
       ]);
       setUsers(usersData);
       setStats(statsData);
+      setInvitations(invitationsData || []);
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
@@ -91,6 +109,28 @@ export default function AdminPage() {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
     setActionLoading(null);
+  };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+
+    setInviteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-invite", {
+        body: { email: inviteEmail.trim() },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      toast({ title: "Convite enviado!", description: `E-mail enviado para ${inviteEmail}` });
+      setInviteEmail("");
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Erro ao enviar convite", description: err.message, variant: "destructive" });
+    }
+    setInviteLoading(false);
   };
 
   const pendingUsers = users.filter((u) => !u.is_approved);
@@ -169,6 +209,72 @@ export default function AdminPage() {
         </Card>
       </div>
 
+      {/* Invite Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <UserPlus className="h-5 w-5" />
+            Convidar Usuário Premium
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form onSubmit={handleInvite} className="flex gap-3 items-end">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="invite-email">E-mail do convidado</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="professor@universidade.br"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={inviteLoading} className="gap-2">
+              {inviteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              Enviar convite
+            </Button>
+          </form>
+
+          {/* Invitation List */}
+          {invitations.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Convites enviados</p>
+              <div className="divide-y rounded-lg border">
+                {invitations.map((inv) => (
+                  <div key={inv.id} className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <Circle
+                        className={`h-3 w-3 fill-current ${
+                          inv.status === "completed"
+                            ? "text-green-500"
+                            : "text-red-500"
+                        }`}
+                      />
+                      <div>
+                        <p className="text-sm font-medium">{inv.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Convidado em {new Date(inv.invited_at).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant={inv.status === "completed" ? "success" : "destructive"}>
+                      {inv.status === "completed" ? "Cadastro completo" : "Pendente"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* User Management */}
       <Tabs defaultValue="pending">
         <TabsList>
@@ -186,7 +292,7 @@ export default function AdminPage() {
           {pendingUsers.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-muted-foreground">
-                <CheckCircle className="h-12 w-12 mx-auto mb-3 text-success" />
+                <CheckCircle className="h-12 w-12 mx-auto mb-3 text-green-500" />
                 <p className="font-medium">Nenhum usuário pendente</p>
                 <p className="text-sm">Todos os cadastros foram processados.</p>
               </CardContent>
