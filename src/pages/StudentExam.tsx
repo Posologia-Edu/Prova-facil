@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Clock, ChevronLeft, ChevronRight, Send, Loader2, AlertTriangle, FileText } from "lucide-react";
+import { Clock, ChevronLeft, ChevronRight, Send, Loader2, AlertTriangle, FileText, Save } from "lucide-react";
 import { toast } from "sonner";
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
@@ -39,7 +40,9 @@ export default function StudentExam() {
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const autoSubmittedRef = useRef(false);
+  const lastSavedRef = useRef<string>("");
 
   const studentEmail = sessionStorage.getItem("student_email");
 
@@ -163,6 +166,43 @@ export default function StudentExam() {
 
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [timeLeft !== null, submitExam]);
+
+  // Auto-save progress every 30 seconds
+  useEffect(() => {
+    if (!sessionId || !studentEmail) return;
+
+    autoSaveRef.current = setInterval(async () => {
+      const answersSnapshot = JSON.stringify(answers);
+      if (answersSnapshot === lastSavedRef.current || answersSnapshot === "{}") return;
+
+      try {
+        await fetch(FUNCTION_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "save-progress", sessionId, email: studentEmail, answers }),
+        });
+        lastSavedRef.current = answersSnapshot;
+      } catch {
+        // Silently fail - will retry on next interval
+      }
+    }, 30000);
+
+    return () => { if (autoSaveRef.current) clearInterval(autoSaveRef.current); };
+  }, [sessionId, studentEmail, answers]);
+
+  // Save on page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (Object.keys(answers).length > 0 && sessionId && studentEmail) {
+        navigator.sendBeacon(
+          FUNCTION_URL,
+          JSON.stringify({ action: "save-progress", sessionId, email: studentEmail, answers })
+        );
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [answers, sessionId, studentEmail]);
 
   const setAnswer = (questionId: string, text: string, json: Record<string, unknown> = {}) => {
     setAnswers(prev => ({
@@ -341,7 +381,57 @@ export default function StudentExam() {
                     </RadioGroup>
                   )}
 
-                  {(currentQ.type === "open_ended" || currentQ.type === "matching") && (
+                  {currentQ.type === "matching" && (() => {
+                    const colA = (content.column_a as string[]) || [];
+                    const colB = (content.column_b as string[]) || [];
+                    const currentMatches = (answers[currentQ.id]?.answer_json as Record<string, string>)?.matches || {};
+                    return (
+                      <div className="space-y-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Associe cada item da Coluna A com o item correspondente da Coluna B:</p>
+                        {colA.map((itemA, i) => (
+                          <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 p-3 rounded-lg bg-muted/40 border">
+                            <div className="flex-1 text-sm font-medium min-w-0">
+                              <span className="text-primary font-bold mr-1.5">{i + 1}.</span>
+                              {itemA}
+                            </div>
+                            <Select
+                              value={currentMatches[String(i)] || ""}
+                              onValueChange={(val) => {
+                                const newMatches = { ...currentMatches, [String(i)]: val };
+                                const matchText = colA.map((_, idx) => `${idx + 1}-${newMatches[String(idx)] || "?"}`).join(", ");
+                                setAnswer(currentQ.id, matchText, { matches: newMatches, selected: "matched" });
+                              }}
+                            >
+                              <SelectTrigger className="sm:w-[280px] w-full bg-background">
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {colB.map((itemB, j) => (
+                                  <SelectItem key={j} value={String(j)}>
+                                    <span className="font-bold mr-1">{String.fromCharCode(65 + j)})</span> {itemB.length > 80 ? itemB.slice(0, 80) + "..." : itemB}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ))}
+                        {colB.length > 0 && (
+                          <div className="mt-4 p-3 rounded-lg border bg-muted/20">
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">Coluna B - Opções:</p>
+                            <div className="space-y-1.5">
+                              {colB.map((itemB, j) => (
+                                <p key={j} className="text-xs text-muted-foreground">
+                                  <span className="font-bold text-foreground">{String.fromCharCode(65 + j)})</span> {itemB}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {currentQ.type === "open_ended" && (
                     <Textarea
                       placeholder="Digite sua resposta aqui..."
                       value={answers[currentQ.id]?.answer_text || ""}

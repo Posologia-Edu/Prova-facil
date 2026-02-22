@@ -177,6 +177,51 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── SAVE-PROGRESS: periodically save answers without finishing ───
+    if (action === "save-progress") {
+      const { sessionId, email, answers } = body;
+      if (!sessionId || !email) return json({ error: "Dados incompletos." }, 400);
+
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const { data: sess } = await supabase
+        .from("exam_sessions")
+        .select("id, status")
+        .eq("id", sessionId)
+        .eq("student_email", normalizedEmail)
+        .single();
+
+      if (!sess) return json({ error: "Sessão não encontrada." }, 404);
+      if (sess.status !== "in_progress") return json({ error: "Prova já finalizada.", status: "finished" }, 400);
+
+      // Upsert each answer
+      for (const [questionId, ans] of Object.entries(answers || {})) {
+        const a = ans as { answer_text?: string; answer_json?: Record<string, unknown> };
+        const { data: existing } = await supabase
+          .from("student_answers")
+          .select("id")
+          .eq("session_id", sessionId)
+          .eq("question_id", questionId)
+          .maybeSingle();
+
+        const answerData = {
+          session_id: sessionId,
+          question_id: questionId,
+          answer_text: a.answer_text || "",
+          answer_json: a.answer_json || {},
+          grading_status: "pending",
+        };
+
+        if (existing) {
+          await supabase.from("student_answers").update(answerData).eq("id", existing.id);
+        } else {
+          await supabase.from("student_answers").insert(answerData);
+        }
+      }
+
+      return json({ success: true });
+    }
+
     // ─── SUBMIT: save answers and finish ───
     if (action === "submit") {
       const { sessionId, email, answers } = body;
