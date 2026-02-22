@@ -31,6 +31,7 @@ import Settings from "./pages/Settings";
 import Contact from "./pages/Contact";
 import Trash from "./pages/Trash";
 import ResetPassword from "./pages/ResetPassword";
+import Marketplace from "./pages/Marketplace";
 
 const queryClient = new QueryClient();
 
@@ -162,6 +163,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><Trash /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/marketplace"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><Marketplace /></AppLayout>
                 </ProtectedRoute>
               }
             />
