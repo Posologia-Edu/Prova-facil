@@ -1,102 +1,56 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, Loader2, ArrowLeft } from "lucide-react";
+import { GraduationCap, Loader2, ArrowLeft, KeyRound, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
+const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
+
 export default function StudentAuth() {
-  const [tab, setTab] = useState("login");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [pin, setPin] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const checkSession = async (session: any) => {
-      if (!session) return;
-      // Assign student role if no role exists
-      await supabase.rpc("assign_role_on_signup", { _role: "student" });
-
-      // Check if user has student role
-      const { data: role } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-
-      if (role?.role === "student") {
-        navigate("/student/dashboard");
-      } else if (role) {
-        // User is teacher/admin, cannot access student portal
-        toast({ title: "Acesso negado", description: "Esta conta é de professor. Use o portal de professores.", variant: "destructive" });
-        await supabase.auth.signOut();
-      }
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session) checkSession(session);
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) checkSession(session);
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAccess = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim() || !pin.trim()) return;
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
-      setLoading(false);
-      return;
-    }
-    // Check role
-    const { data: role } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", data.user.id)
-      .maybeSingle();
 
-    if (role && role.role !== "student") {
-      toast({ title: "Acesso negado", description: "Esta conta é de professor. Use o portal de professores em /auth.", variant: "destructive" });
-      await supabase.auth.signOut();
-      setLoading(false);
-      return;
-    }
-    setLoading(false);
-    // If no role yet, the trigger will assign student role
-    navigate("/student/dashboard");
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin + "/student/dashboard",
-        data: { full_name: fullName },
-      },
-    });
-    setLoading(false);
-    if (error) {
-      toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
-    } else {
-      toast({
-        title: "Cadastro realizado!",
-        description: "Verifique seu e-mail para confirmar a conta.",
+    try {
+      const res = await fetch(FUNCTION_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "validate", email, pin }),
       });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        toast({ title: "Acesso negado", description: data.error || "Erro desconhecido.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      // Store email for subsequent requests
+      sessionStorage.setItem("student_email", email.trim().toLowerCase());
+      sessionStorage.setItem("student_session_id", data.sessionId);
+
+      if (data.status === "finished") {
+        navigate(`/student/results/${data.sessionId}`);
+      } else {
+        navigate(`/student/exam/${data.sessionId}`);
+      }
+    } catch (err) {
+      toast({ title: "Erro", description: "Não foi possível conectar ao servidor.", variant: "destructive" });
     }
+
+    setLoading(false);
   };
 
   return (
@@ -119,54 +73,50 @@ export default function StudentAuth() {
             </div>
             <CardTitle className="text-2xl font-bold">Portal do Aluno</CardTitle>
             <CardDescription>
-              {tab === "login" ? "Entre para acessar suas provas" : "Crie sua conta de aluno"}
+              Digite seu e-mail cadastrado pelo professor e o PIN da prova
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={tab} onValueChange={setTab}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Cadastrar</TabsTrigger>
-              </TabsList>
+            <form onSubmit={handleAccess} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="student-email">
+                  <Mail className="inline h-3.5 w-3.5 mr-1" />
+                  E-mail cadastrado
+                </Label>
+                <Input
+                  id="student-email"
+                  type="email"
+                  placeholder="seu.email@universidade.br"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="student-pin">
+                  <KeyRound className="inline h-3.5 w-3.5 mr-1" />
+                  PIN da prova
+                </Label>
+                <Input
+                  id="student-pin"
+                  type="text"
+                  placeholder="Ex: abc123"
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  className="font-mono uppercase tracking-widest text-center text-lg"
+                  maxLength={10}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Acessar Prova
+              </Button>
+            </form>
 
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="s-login-email">E-mail</Label>
-                    <Input id="s-login-email" type="email" placeholder="aluno@universidade.br" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="s-login-password">Senha</Label>
-                    <Input id="s-login-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Entrar
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="s-signup-name">Nome completo</Label>
-                    <Input id="s-signup-name" type="text" placeholder="João da Silva" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="s-signup-email">E-mail</Label>
-                    <Input id="s-signup-email" type="email" placeholder="aluno@universidade.br" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="s-signup-password">Senha</Label>
-                    <Input id="s-signup-password" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Criar conta
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+            <p className="text-xs text-muted-foreground text-center mt-4">
+              Seu professor deve ter cadastrado seu e-mail na turma. Caso não consiga acessar, entre em contato com ele.
+            </p>
           </CardContent>
         </Card>
       </div>
