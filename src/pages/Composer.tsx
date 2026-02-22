@@ -1,17 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import ExamPDFExporter from "@/components/ExamPDFExporter";
-import PublishExamDialog from "@/components/PublishExamDialog";
 import ExamTemplatesDialog, { type ExamTemplate } from "@/components/ExamTemplatesDialog";
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
 import {
   Plus,
   GripVertical,
   Settings2,
-  FileDown,
   Shuffle,
   LayoutTemplate,
-  Share2,
   Trash2,
   CheckCircle2,
   HelpCircle,
@@ -108,7 +105,6 @@ export default function ComposerPage() {
   const [sections, setSections] = useState<Section[]>([]);
   const [headerOpen, setHeaderOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [publishOpen, setPublishOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [shuffleActive, setShuffleActive] = useState(false);
@@ -532,14 +528,6 @@ export default function ComposerPage() {
               </div>
             </SheetContent>
           </Sheet>
-          <Button size="sm" onClick={() => setExportOpen(true)}>
-            <FileDown className="h-3.5 w-3.5 mr-1.5" />
-            Exportar
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}>
-            <Share2 className="h-3.5 w-3.5 mr-1.5" />
-            Publicar Online
-          </Button>
           <Button size="sm" onClick={() => setSaveConfigOpen(true)} disabled={saving || totalQuestions === 0} className="gap-1.5">
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Salvar Prova
@@ -563,12 +551,6 @@ export default function ComposerPage() {
           onSelectTemplate={applyTemplate}
         />
 
-        <PublishExamDialog
-          open={publishOpen}
-          onOpenChange={setPublishOpen}
-          examId={examId}
-          examTitle={examTitle}
-        />
 
         <AIQuestionGenerator
           open={aiOpen}
