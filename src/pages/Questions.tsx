@@ -157,7 +157,6 @@ function QuestionDetailContent({ question }: { question: Question }) {
                 />
               )}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1 truncate">{question.embedUrl}</p>
           </div>
         );
       })()}
