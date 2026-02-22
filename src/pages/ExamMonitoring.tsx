@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -16,8 +17,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Users, Clock, CheckCircle2, Loader2, Bot, Eye } from "lucide-react";
+import { ArrowLeft, Users, Clock, CheckCircle2, Loader2, Bot, Eye, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import AITutorChat from "@/components/AITutorChat";
 import type { Json } from "@/integrations/supabase/types";
 
 interface SessionRow {
@@ -152,6 +154,12 @@ export default function ExamMonitoring() {
     toast.success("Avaliação salva.");
     setReviewOpen(false);
     if (selectedSession) loadStudentAnswers(selectedSession);
+  };
+
+  const handleAISuggestScore = (score: number, feedback: string) => {
+    setTeacherScore(String(score));
+    setTeacherFeedback(feedback.substring(0, 300));
+    toast.info(`Nota sugerida: ${score}/${Number(reviewAnswer?.max_points)} aplicada.`);
   };
 
   if (loading) {
@@ -296,38 +304,99 @@ export default function ExamMonitoring() {
 
       {/* Review dialog */}
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Revisar Nota</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-primary" />
+              Correção com Tutor de IA
+            </DialogTitle>
           </DialogHeader>
           {reviewAnswer && (
-            <div className="space-y-4">
-              <div>
-                <Label className="text-xs text-muted-foreground">Resposta do aluno</Label>
-                <p className="text-sm bg-muted/50 rounded p-3 mt-1">{reviewAnswer.answer_text || "Sem resposta"}</p>
-              </div>
-              {reviewAnswer.ai_feedback && (
-                <div>
-                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Bot className="h-3 w-3" /> Avaliação da IA ({reviewAnswer.ai_score}/{Number(reviewAnswer.max_points)})
-                  </Label>
-                  <p className="text-sm bg-primary/5 rounded p-3 mt-1">{reviewAnswer.ai_feedback}</p>
+            <Tabs defaultValue="tutor" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="tutor" className="gap-1">
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Tutor de IA
+                </TabsTrigger>
+                <TabsTrigger value="review" className="gap-1">
+                  <Eye className="h-3.5 w-3.5" />
+                  Nota Manual
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="tutor" className="mt-4">
+                <div className="space-y-3">
+                  {/* Question & answer context */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Enunciado</Label>
+                    <p className="text-sm bg-muted/50 rounded p-2 mt-1">
+                      {((reviewAnswer.question_bank?.content_json as Record<string, unknown>)?.statement as string) ||
+                        ((reviewAnswer.question_bank?.content_json as Record<string, unknown>)?.title as string) ||
+                        "Questão"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Resposta do aluno</Label>
+                    <p className="text-sm bg-muted/50 rounded p-2 mt-1">{reviewAnswer.answer_text || "Sem resposta"}</p>
+                  </div>
+                  <Separator />
+                  <AITutorChat
+                    answerId={reviewAnswer.id}
+                    studentAnswer={reviewAnswer.answer_text || ""}
+                    questionStatement={
+                      ((reviewAnswer.question_bank?.content_json as Record<string, unknown>)?.statement as string) || ""
+                    }
+                    aiScore={reviewAnswer.ai_score}
+                    aiFeedback={reviewAnswer.ai_feedback}
+                    teacherScore={reviewAnswer.teacher_score}
+                    maxPoints={Number(reviewAnswer.max_points) || 1}
+                    onSuggestScore={handleAISuggestScore}
+                  />
                 </div>
-              )}
-              <Separator />
-              <div className="space-y-2">
-                <Label>Nota do Professor (máx: {Number(reviewAnswer.max_points)})</Label>
-                <Input type="number" min={0} max={Number(reviewAnswer.max_points)} step={0.5} value={teacherScore} onChange={(e) => setTeacherScore(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Feedback (opcional)</Label>
-                <Textarea value={teacherFeedback} onChange={(e) => setTeacherFeedback(e.target.value)} rows={3} placeholder="Comentário para o aluno..." />
-              </div>
-            </div>
+              </TabsContent>
+
+              <TabsContent value="review" className="mt-4">
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Resposta do aluno</Label>
+                    <p className="text-sm bg-muted/50 rounded p-3 mt-1">{reviewAnswer.answer_text || "Sem resposta"}</p>
+                  </div>
+                  {reviewAnswer.ai_feedback && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Bot className="h-3 w-3" /> Avaliação da IA ({reviewAnswer.ai_score}/{Number(reviewAnswer.max_points)})
+                      </Label>
+                      <p className="text-sm bg-primary/5 rounded p-3 mt-1">{reviewAnswer.ai_feedback}</p>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label>Nota do Professor (máx: {Number(reviewAnswer.max_points)})</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={Number(reviewAnswer.max_points)}
+                      step={0.5}
+                      value={teacherScore}
+                      onChange={(e) => setTeacherScore(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Feedback (opcional)</Label>
+                    <Textarea
+                      value={teacherFeedback}
+                      onChange={(e) => setTeacherFeedback(e.target.value)}
+                      rows={3}
+                      placeholder="Comentário para o aluno..."
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setReviewOpen(false)}>Cancelar</Button>
-            <Button onClick={saveReview}>Salvar</Button>
+            <Button onClick={saveReview}>Salvar Nota</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
