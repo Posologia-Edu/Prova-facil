@@ -82,7 +82,6 @@ Deno.serve(async (req) => {
         .from("exam_sessions")
         .insert({
           publication_id: pub.id,
-          student_id: "00000000-0000-0000-0000-000000000000", // placeholder UUID since column is NOT NULL
           student_email: normalizedEmail,
           student_name: student.student_name,
           status: "in_progress",

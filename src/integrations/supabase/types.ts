@@ -217,7 +217,7 @@ export type Database = {
           started_at: string
           status: string
           student_email: string | null
-          student_id: string
+          student_id: string | null
           student_name: string | null
           total_score: number | null
         }
@@ -230,7 +230,7 @@ export type Database = {
           started_at?: string
           status?: string
           student_email?: string | null
-          student_id: string
+          student_id?: string | null
           student_name?: string | null
           total_score?: number | null
         }
@@ -243,7 +243,7 @@ export type Database = {
           started_at?: string
           status?: string
           student_email?: string | null
-          student_id?: string
+          student_id?: string | null
           student_name?: string | null
           total_score?: number | null
         }
