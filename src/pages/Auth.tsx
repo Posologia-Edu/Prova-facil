@@ -27,11 +27,29 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    const checkAndRedirect = async (session: any) => {
+      if (!session) return;
+      // Check if user is a student - block access to teacher portal
+      const { data: role } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "student")
+        .maybeSingle();
+
+      if (role) {
+        toast({ title: "Acesso negado", description: "Esta conta é de aluno. Use o Portal do Aluno.", variant: "destructive" });
+        await supabase.auth.signOut();
+        return;
+      }
+      navigate("/dashboard");
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) navigate("/dashboard");
+      if (session) checkAndRedirect(session);
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/dashboard");
+      if (session) checkAndRedirect(session);
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
@@ -39,11 +57,27 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast({ title: t("auth_error_login"), description: error.message, variant: "destructive" });
+      setLoading(false);
+      return;
     }
+    // Check if user is a student - block
+    const { data: role } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .eq("role", "student")
+      .maybeSingle();
+
+    if (role) {
+      toast({ title: "Acesso negado", description: "Esta conta é de aluno. Use o Portal do Aluno em /student/auth.", variant: "destructive" });
+      await supabase.auth.signOut();
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {

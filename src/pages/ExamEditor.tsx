@@ -518,7 +518,7 @@ export default function ExamEditorPage() {
   };
 
   const currentStatus = statusLabel[examStatus] || statusLabel.draft;
-  const showExtraTabs = examStatus === "applied" || examStatus === "in_progress" || examStatus === "graded";
+  const showExtraTabs = true; // Always show application, grading, stats tabs
 
   if (loading) {
     return (
