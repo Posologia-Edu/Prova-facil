@@ -22,6 +22,9 @@ export default function StudentAuth() {
   useEffect(() => {
     const checkSession = async (session: any) => {
       if (!session) return;
+      // Assign student role if no role exists
+      await supabase.rpc("assign_role_on_signup", { _role: "student" });
+
       // Check if user has student role
       const { data: role } = await supabase
         .from("user_roles")
