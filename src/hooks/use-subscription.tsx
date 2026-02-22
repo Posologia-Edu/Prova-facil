@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const PREMIUM_PRODUCT_ID = "prod_TzvUGnyBqiwcv3";
+const PREMIUM_PRODUCT_ID = "prod_U1kTkTPojtC3x4";
 
 // Free plan limits
 export const FREE_LIMITS = {
