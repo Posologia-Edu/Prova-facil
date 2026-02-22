@@ -57,6 +57,24 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, userId, email: bodyEmail } = body;
 
+    // mark_invite_completed doesn't require admin — any authenticated user can mark their own invite
+    if (action === "mark_invite_completed") {
+      if (!user.email) {
+        return new Response(JSON.stringify({ error: "Email não encontrado" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      await adminClient
+        .from("admin_invitations")
+        .update({ status: "completed", completed_at: new Date().toISOString(), created_user_id: user.id })
+        .eq("email", user.email);
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     switch (action) {
       case "list_users": {
         const { data: profiles } = await adminClient
@@ -161,23 +179,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      case "mark_invite_completed": {
-        if (!bodyEmail) {
-          return new Response(JSON.stringify({ error: "Email é obrigatório" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        
-        await adminClient
-          .from("admin_invitations")
-          .update({ status: "completed", completed_at: new Date().toISOString() })
-          .eq("email", bodyEmail);
-
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
 
       default:
         return new Response(JSON.stringify({ error: "Ação inválida" }), {
