@@ -134,21 +134,33 @@ function QuestionDetailContent({ question }: { question: Question }) {
       </div>
 
       {/* Embed URL */}
-      {question.embedUrl && (
-        <div>
-          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Conteúdo Incorporado</Label>
-          <div className="mt-1.5 rounded-lg border overflow-hidden">
-            <iframe
-              src={question.embedUrl}
-              className="w-full h-64 border-0"
-              title="Conteúdo incorporado"
-              sandbox="allow-scripts allow-same-origin"
-              loading="lazy"
-            />
+      {question.embedUrl && (() => {
+        const isImage = /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(question.embedUrl!);
+        return (
+          <div>
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Conteúdo Incorporado</Label>
+            <div className="mt-1.5 rounded-lg border overflow-hidden">
+              {isImage ? (
+                <img
+                  src={question.embedUrl}
+                  alt="Imagem da questão"
+                  className="w-full h-auto object-contain max-h-60"
+                />
+              ) : (
+                <iframe
+                  src={question.embedUrl}
+                  className="w-full border-0"
+                  style={{ height: '200px' }}
+                  title="Conteúdo incorporado"
+                  sandbox="allow-scripts allow-same-origin"
+                  loading="lazy"
+                />
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1 truncate">{question.embedUrl}</p>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1 truncate">{question.embedUrl}</p>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Options for multiple choice / true-false */}
       {question.options && question.options.length > 0 && (
