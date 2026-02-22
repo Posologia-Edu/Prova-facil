@@ -223,6 +223,65 @@ export default function QuestionsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
 
+  // Manual creation form state
+  const [newType, setNewType] = useState("multiple_choice");
+  const [newText, setNewText] = useState("");
+  const [newDifficulty, setNewDifficulty] = useState("medium");
+  const [newBloom, setNewBloom] = useState("understanding");
+  const [newTags, setNewTags] = useState("");
+  const [newEmbed, setNewEmbed] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const resetForm = () => {
+    setNewType("multiple_choice");
+    setNewText("");
+    setNewDifficulty("medium");
+    setNewBloom("understanding");
+    setNewTags("");
+    setNewEmbed("");
+  };
+
+  const handleCreateQuestion = async () => {
+    if (!newText.trim()) {
+      toast.error("Digite o texto da questão.");
+      return;
+    }
+    setSaving(true);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) { setSaving(false); return; }
+
+    const contentJson: any = { question_text: newText.trim() };
+    if (newType === "multiple_choice") {
+      contentJson.options = { a: "", b: "", c: "", d: "" };
+      contentJson.correct_answer = "a";
+    } else if (newType === "true_false") {
+      contentJson.options = { a: "Verdadeiro", b: "Falso" };
+      contentJson.correct_answer = "a";
+    }
+
+    const tags = newTags.split(",").map(t => t.trim()).filter(Boolean);
+
+    const { error } = await supabase.from("question_bank").insert({
+      user_id: userData.user.id,
+      type: newType,
+      difficulty: newDifficulty,
+      bloom_level: newBloom,
+      tags,
+      embed_url: newEmbed || null,
+      content_json: contentJson,
+    });
+
+    setSaving(false);
+    if (error) {
+      toast.error("Erro ao criar questão.");
+      return;
+    }
+    toast.success("Questão criada com sucesso!");
+    resetForm();
+    setCreateOpen(false);
+    await loadQuestions();
+  };
+
   const loadQuestions = useCallback(async () => {
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
@@ -342,7 +401,7 @@ export default function QuestionsPage() {
                 <TabsContent value="manual" className="space-y-4 pt-2">
                   <div className="space-y-2">
                     <Label>Tipo de Questão</Label>
-                    <Select defaultValue="multiple_choice">
+                    <Select value={newType} onValueChange={setNewType}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
@@ -354,12 +413,12 @@ export default function QuestionsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Texto da Questão</Label>
-                    <Textarea placeholder="Digite a questão..." rows={3} />
+                    <Textarea placeholder="Digite a questão..." rows={3} value={newText} onChange={(e) => setNewText(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Dificuldade</Label>
-                      <Select defaultValue="medium">
+                      <Select value={newDifficulty} onValueChange={setNewDifficulty}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="easy">Fácil</SelectItem>
@@ -370,7 +429,7 @@ export default function QuestionsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Taxonomia de Bloom</Label>
-                      <Select defaultValue="understanding">
+                      <Select value={newBloom} onValueChange={setNewBloom}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="remembering">Lembrar</SelectItem>
@@ -385,11 +444,11 @@ export default function QuestionsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Tags (separadas por vírgula)</Label>
-                    <Input placeholder="Ex: Farmacologia, Cardiovascular" />
+                    <Input placeholder="Ex: Farmacologia, Cardiovascular" value={newTags} onChange={(e) => setNewTags(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label>URL de Embed (opcional)</Label>
-                    <Input placeholder="https://... (visualizador molecular, simulação, etc.)" />
+                    <Input placeholder="https://... (visualizador molecular, simulação, etc.)" value={newEmbed} onChange={(e) => setNewEmbed(e.target.value)} />
                     <p className="text-[11px] text-muted-foreground">
                       Incorpore ferramentas externas na versão digital da questão via iframe.
                     </p>
@@ -412,8 +471,8 @@ export default function QuestionsPage() {
                 </TabsContent>
               </Tabs>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setCreateOpen(false)}>{t("cancel")}</Button>
-                <Button onClick={() => setCreateOpen(false)}>{t("questions_new")}</Button>
+                <Button variant="outline" onClick={() => { resetForm(); setCreateOpen(false); }}>{t("cancel")}</Button>
+                <Button onClick={handleCreateQuestion} disabled={saving}>{saving ? "Salvando..." : t("questions_new")}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
