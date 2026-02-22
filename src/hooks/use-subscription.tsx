@@ -47,7 +47,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setIsPremium(data?.subscribed === true && data?.product_id === PREMIUM_PRODUCT_ID);
+      const isInvitedPremium = data?.is_invited === true;
+      setIsPremium(isInvitedPremium || (data?.subscribed === true && data?.product_id === PREMIUM_PRODUCT_ID));
       setSubscriptionEnd(data?.subscription_end || null);
     } catch (err) {
       console.error("Subscription check failed:", err);

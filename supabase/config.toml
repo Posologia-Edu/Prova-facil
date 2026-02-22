@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.send-contact]
 verify_jwt = false
+
+[functions.send-invite]
+verify_jwt = false

@@ -36,6 +36,24 @@ serve(async (req) => {
     }
     const user = userData.user;
 
+    // Check if user was invited by admin (lifetime premium)
+    const { data: invitation } = await supabaseClient
+      .from("admin_invitations")
+      .select("status")
+      .eq("email", user.email)
+      .maybeSingle();
+
+    if (invitation) {
+      return new Response(JSON.stringify({
+        subscribed: true,
+        product_id: "invited_premium",
+        subscription_end: null,
+        is_invited: true,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
 
