@@ -14,10 +14,25 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
   const [authenticated, setAuthenticated] = useState(false);
   const [approved, setApproved] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isStudent, setIsStudent] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const checkAccess = async (userId: string) => {
+      // Check if user is a student - block access to teacher portal
+      const { data: studentRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "student")
+        .maybeSingle();
+
+      if (studentRole) {
+        setIsStudent(true);
+        setLoading(false);
+        return;
+      }
+
       // Check approval
       const { data: profile } = await supabase
         .from("profiles")
@@ -80,6 +95,27 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
 
   if (!authenticated) return null;
 
+  if (isStudent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="text-center max-w-md space-y-4">
+          <ShieldX className="h-16 w-16 mx-auto text-destructive" />
+          <h2 className="text-xl font-bold">Acesso Restrito</h2>
+          <p className="text-muted-foreground text-sm">
+            Esta área é exclusiva para professores. Use o Portal do Aluno para acessar suas provas.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="outline" onClick={async () => { await supabase.auth.signOut(); navigate("/"); }}>
+              Sair
+            </Button>
+            <Button onClick={() => navigate("/student/dashboard")}>
+              Ir para Portal do Aluno
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (!approved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">

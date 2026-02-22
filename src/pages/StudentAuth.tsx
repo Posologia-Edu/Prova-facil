@@ -20,11 +20,29 @@ export default function StudentAuth() {
   const { toast } = useToast();
 
   useEffect(() => {
+    const checkSession = async (session: any) => {
+      if (!session) return;
+      // Check if user has student role
+      const { data: role } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (role?.role === "student") {
+        navigate("/student/dashboard");
+      } else if (role) {
+        // User is teacher/admin, cannot access student portal
+        toast({ title: "Acesso negado", description: "Esta conta é de professor. Use o portal de professores.", variant: "destructive" });
+        await supabase.auth.signOut();
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session) navigate("/student/dashboard");
+      if (session) checkSession(session);
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/student/dashboard");
+      if (session) checkSession(session);
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
@@ -32,11 +50,28 @@ export default function StudentAuth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
+      setLoading(false);
+      return;
     }
+    // Check role
+    const { data: role } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+
+    if (role && role.role !== "student") {
+      toast({ title: "Acesso negado", description: "Esta conta é de professor. Use o portal de professores em /auth.", variant: "destructive" });
+      await supabase.auth.signOut();
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+    // If no role yet, the trigger will assign student role
+    navigate("/student/dashboard");
   };
 
   const handleSignup = async (e: React.FormEvent) => {
