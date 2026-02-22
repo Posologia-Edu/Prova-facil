@@ -6,15 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Check, X, Crown, Zap, ArrowLeft, Loader2, ExternalLink } from "lucide-react";
+import { Check, X, Crown, Zap, ArrowLeft, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function Pricing() {
   const { t } = useLanguage();
   const { isPremium, subscriptionEnd, isLoading, checkSubscription } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const navigate = useNavigate();
 
   const features = [
@@ -41,16 +52,19 @@ export default function Pricing() {
     }
   };
 
-  const handleManage = async () => {
-    setPortalLoading(true);
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("customer-portal");
+      const { data, error } = await supabase.functions.invoke("cancel-subscription");
       if (error) throw error;
-      if (data?.url) window.open(data.url, "_blank");
+      if (data?.success) {
+        toast.success(t("pricing_cancel_success"));
+        checkSubscription();
+      }
     } catch (err: any) {
-      toast.error(err.message || "Error");
+      toast.error(err.message || "Erro ao cancelar");
     } finally {
-      setPortalLoading(false);
+      setCancelLoading(false);
     }
   };
 
@@ -124,10 +138,26 @@ export default function Pricing() {
                 <p className="text-xs text-muted-foreground">
                   {t("pricing_active_until")} {subscriptionEnd ? new Date(subscriptionEnd).toLocaleDateString() : "—"}
                 </p>
-                <Button variant="outline" className="w-full" onClick={handleManage} disabled={portalLoading}>
-                  {portalLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ExternalLink className="h-4 w-4 mr-2" />}
-                  {t("pricing_manage")}
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full" disabled={cancelLoading}>
+                      {cancelLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
+                      {t("pricing_cancel")}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t("pricing_cancel_title")}</AlertDialogTitle>
+                      <AlertDialogDescription>{t("pricing_cancel_desc")}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleCancelSubscription} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        {t("pricing_cancel_confirm")}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </>
             ) : (
               <Button className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90" onClick={handleCheckout} disabled={checkoutLoading || isLoading}>
