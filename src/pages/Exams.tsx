@@ -12,6 +12,7 @@ import {
   Trash2,
   CheckSquare,
   Loader2,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -193,6 +194,38 @@ export default function ExamsPage() {
     fetchExams();
   };
 
+  const handleShareToMarketplace = async (exam: Exam) => {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return;
+
+    // Check if already shared
+    const { data: existing } = await supabase
+      .from("marketplace_exams")
+      .select("id")
+      .eq("exam_id", exam.id)
+      .maybeSingle();
+
+    if (existing) {
+      toast.info("Esta prova já está no Marketplace.");
+      return;
+    }
+
+    const { error } = await supabase.from("marketplace_exams").insert({
+      exam_id: exam.id,
+      user_id: user.user.id,
+      title: exam.title,
+      description: "",
+      question_count: exam.questionCount,
+      tags: [],
+    });
+
+    if (error) {
+      toast.error("Erro ao compartilhar no Marketplace.");
+      return;
+    }
+    toast.success("Prova compartilhada no Marketplace!");
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -311,6 +344,9 @@ export default function ExamsPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(exam); }}>
                           <Copy className="h-3.5 w-3.5 mr-2" /> Duplicar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleShareToMarketplace(exam); }}>
+                          <Store className="h-3.5 w-3.5 mr-2" /> Compartilhar no Marketplace
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"

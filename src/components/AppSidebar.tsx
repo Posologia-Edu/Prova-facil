@@ -13,6 +13,7 @@ import {
   Globe,
   Settings,
   Trash2,
+  Store,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,6 +79,7 @@ export function AppSidebar() {
     { title: t("nav_analytics"), url: "/analytics", icon: navIcons.analytics },
     { title: t("nav_calendar"), url: "/calendar", icon: navIcons.calendar },
     { title: t("nav_pricing"), url: "/pricing", icon: navIcons.pricing },
+    { title: "Marketplace", url: "/marketplace", icon: Store },
     { title: "Lixeira", url: "/trash", icon: Trash2 },
   ];
 

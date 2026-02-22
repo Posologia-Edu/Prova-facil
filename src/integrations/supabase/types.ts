@@ -301,6 +301,132 @@ export type Database = {
           },
         ]
       }
+      marketplace_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          marketplace_exam_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          marketplace_exam_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          marketplace_exam_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_comments_marketplace_exam_id_fkey"
+            columns: ["marketplace_exam_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_exams: {
+        Row: {
+          avg_rating: number | null
+          created_at: string
+          description: string | null
+          download_count: number | null
+          exam_id: string
+          id: string
+          is_active: boolean
+          question_count: number
+          rating_count: number | null
+          subject: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_rating?: number | null
+          created_at?: string
+          description?: string | null
+          download_count?: number | null
+          exam_id: string
+          id?: string
+          is_active?: boolean
+          question_count?: number
+          rating_count?: number | null
+          subject?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_rating?: number | null
+          created_at?: string
+          description?: string | null
+          download_count?: number | null
+          exam_id?: string
+          id?: string
+          is_active?: boolean
+          question_count?: number
+          rating_count?: number | null
+          subject?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_exams_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: true
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          marketplace_exam_id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          marketplace_exam_id: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          marketplace_exam_id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_ratings_marketplace_exam_id_fkey"
+            columns: ["marketplace_exam_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
