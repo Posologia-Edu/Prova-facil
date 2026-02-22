@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
     // Send email via Resend
     const resend = new Resend(resendApiKey);
     const { error: emailError } = await resend.emails.send({
-      from: "ProvaFácil <onboarding@resend.dev>",
+      from: "ProvaFácil <noreply@tbl.posologia.app>",
       to: [email],
       subject: "Você foi convidado para o ProvaFácil!",
       html: `
