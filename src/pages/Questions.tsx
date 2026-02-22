@@ -80,6 +80,7 @@ interface Question {
   explanation?: string;
   matchingPairs?: { left: string; right: string }[];
   expectedAnswer?: string;
+  embedUrl?: string;
 }
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -131,6 +132,23 @@ function QuestionDetailContent({ question }: { question: Question }) {
         <Label className="text-xs text-muted-foreground uppercase tracking-wider">Enunciado</Label>
         <p className="mt-1.5 text-sm leading-relaxed font-medium">{question.title}</p>
       </div>
+
+      {/* Embed URL */}
+      {question.embedUrl && (
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Conteúdo Incorporado</Label>
+          <div className="mt-1.5 rounded-lg border overflow-hidden">
+            <iframe
+              src={question.embedUrl}
+              className="w-full h-64 border-0"
+              title="Conteúdo incorporado"
+              sandbox="allow-scripts allow-same-origin"
+              loading="lazy"
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1 truncate">{question.embedUrl}</p>
+        </div>
+      )}
 
       {/* Options for multiple choice / true-false */}
       {question.options && question.options.length > 0 && (
@@ -289,7 +307,7 @@ export default function QuestionsPage() {
 
     const { data } = await supabase
       .from("question_bank")
-      .select("id, type, content_json, difficulty, tags, bloom_level, created_at")
+      .select("id, type, content_json, difficulty, tags, bloom_level, created_at, embed_url")
       .eq("user_id", userData.user.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -318,6 +336,7 @@ export default function QuestionsPage() {
           explanation: cj?.explanation,
           matchingPairs,
           expectedAnswer: cj?.expected_answer,
+          embedUrl: q.embed_url || undefined,
         };
       })
     );
