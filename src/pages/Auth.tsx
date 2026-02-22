@@ -29,6 +29,9 @@ const Auth = () => {
   useEffect(() => {
     const checkAndRedirect = async (session: any) => {
       if (!session) return;
+      // Assign teacher role if no role exists (for teacher portal signups)
+      await supabase.rpc("assign_role_on_signup", { _role: "teacher" });
+
       // Check if user is a student - block access to teacher portal
       const { data: role } = await supabase
         .from("user_roles")
