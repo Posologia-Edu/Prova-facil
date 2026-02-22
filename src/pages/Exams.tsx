@@ -13,6 +13,7 @@ import {
   CheckSquare,
   Loader2,
   Store,
+  StoreIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -51,6 +52,8 @@ interface Exam {
   questionCount: number;
   participantCount: number;
   createdAt: string;
+  isImported?: boolean;
+  marketplaceId?: string; // if shared in marketplace
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -121,6 +124,17 @@ export default function ExamsPage() {
       if (eid) participantMap[eid] = (participantMap[eid] || 0) + 1;
     });
 
+    // Fetch marketplace status for user's exams
+    const { data: marketplaceData } = await supabase
+      .from("marketplace_exams")
+      .select("id, exam_id")
+      .eq("user_id", user.user.id);
+
+    const marketplaceMap: Record<string, string> = {};
+    (marketplaceData || []).forEach((m) => {
+      marketplaceMap[m.exam_id] = m.id;
+    });
+
     setExams(
       (examsData || []).map((e) => ({
         id: e.id,
@@ -129,6 +143,8 @@ export default function ExamsPage() {
         questionCount: countMap[e.id] || 0,
         participantCount: participantMap[e.id] || 0,
         createdAt: e.created_at,
+        isImported: e.title.endsWith("(Marketplace)"),
+        marketplaceId: marketplaceMap[e.id] || undefined,
       }))
     );
     setLoading(false);
@@ -198,6 +214,11 @@ export default function ExamsPage() {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return;
 
+    if (exam.isImported) {
+      toast.error("Provas importadas do Marketplace não podem ser compartilhadas novamente.");
+      return;
+    }
+
     // Check if already shared
     const { data: existing } = await supabase
       .from("marketplace_exams")
@@ -224,6 +245,23 @@ export default function ExamsPage() {
       return;
     }
     toast.success("Prova compartilhada no Marketplace!");
+    fetchExams();
+  };
+
+  const handleRevokeMarketplace = async (exam: Exam) => {
+    if (!exam.marketplaceId) return;
+
+    const { error } = await supabase
+      .from("marketplace_exams")
+      .delete()
+      .eq("id", exam.marketplaceId);
+
+    if (error) {
+      toast.error("Erro ao revogar compartilhamento.");
+      return;
+    }
+    toast.success("Prova removida do Marketplace.");
+    fetchExams();
   };
 
   const toggleSelect = (id: string) => {
@@ -345,9 +383,15 @@ export default function ExamsPage() {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(exam); }}>
                           <Copy className="h-3.5 w-3.5 mr-2" /> Duplicar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleShareToMarketplace(exam); }}>
-                          <Store className="h-3.5 w-3.5 mr-2" /> Compartilhar no Marketplace
-                        </DropdownMenuItem>
+                        {exam.marketplaceId ? (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRevokeMarketplace(exam); }}>
+                            <Store className="h-3.5 w-3.5 mr-2" /> Revogar do Marketplace
+                          </DropdownMenuItem>
+                        ) : !exam.isImported ? (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleShareToMarketplace(exam); }}>
+                            <Store className="h-3.5 w-3.5 mr-2" /> Compartilhar no Marketplace
+                          </DropdownMenuItem>
+                        ) : null}
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={(e) => { e.stopPropagation(); setDeleteId(exam.id); }}
