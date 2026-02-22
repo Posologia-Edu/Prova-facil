@@ -20,6 +20,7 @@ import {
   Loader2,
   Send,
   Filter,
+  Tag,
 } from "lucide-react";
 import {
   Select,
@@ -43,6 +44,7 @@ interface MarketplaceExam {
   download_count: number;
   created_at: string;
   author_name?: string;
+  question_topics?: string[];
 }
 
 interface Comment {
@@ -103,11 +105,46 @@ export default function Marketplace() {
       });
     }
 
+    // Fetch question topics for each exam
+    const examIds = (data || []).map((e: any) => e.exam_id);
+    let topicsMap: Record<string, string[]> = {};
+    if (examIds.length > 0) {
+      const { data: eqData } = await supabase
+        .from("exam_questions")
+        .select("exam_id, question_id")
+        .in("exam_id", examIds);
+
+      if (eqData && eqData.length > 0) {
+        const questionIds = [...new Set(eqData.map((eq: any) => eq.question_id))];
+        const { data: questionsData } = await supabase
+          .from("question_bank")
+          .select("id, tags")
+          .in("id", questionIds);
+
+        const questionTagsMap: Record<string, string[]> = {};
+        (questionsData || []).forEach((q: any) => {
+          questionTagsMap[q.id] = q.tags || [];
+        });
+
+        // Group tags by exam
+        for (const eq of eqData) {
+          if (!topicsMap[eq.exam_id]) topicsMap[eq.exam_id] = [];
+          const tags = questionTagsMap[eq.question_id] || [];
+          topicsMap[eq.exam_id].push(...tags);
+        }
+        // Deduplicate
+        for (const key of Object.keys(topicsMap)) {
+          topicsMap[key] = [...new Set(topicsMap[key])];
+        }
+      }
+    }
+
     setExams(
       (data || []).map((e: any) => ({
         ...e,
         tags: e.tags || [],
         author_name: profilesMap[e.user_id] || "Anônimo",
+        question_topics: topicsMap[e.exam_id] || [],
       }))
     );
     setLoading(false);
@@ -143,8 +180,8 @@ export default function Marketplace() {
       }))
     );
 
-    // Fetch user's existing rating
-    if (currentUserId) {
+    // Fetch user's existing rating (only if not the author)
+    if (currentUserId && currentUserId !== exam.user_id) {
       const { data: ratingData } = await supabase
         .from("marketplace_ratings")
         .select("rating")
@@ -155,8 +192,10 @@ export default function Marketplace() {
     }
   };
 
+  const isAuthor = selectedExam && currentUserId === selectedExam.user_id;
+
   const handleRate = async (rating: number) => {
-    if (!currentUserId || !selectedExam) return;
+    if (!currentUserId || !selectedExam || isAuthor) return;
     setUserRating(rating);
 
     const { error } = await supabase
@@ -206,7 +245,7 @@ export default function Marketplace() {
     }
 
     setNewComment("");
-    openExamDetail(selectedExam); // refresh comments
+    openExamDetail(selectedExam);
     toast({ title: "Comentário adicionado!" });
   };
 
@@ -215,7 +254,6 @@ export default function Marketplace() {
     setImporting(true);
 
     try {
-      // Fetch original exam data
       const { data: originalExam } = await supabase
         .from("exams")
         .select("*")
@@ -228,7 +266,6 @@ export default function Marketplace() {
         return;
       }
 
-      // Create a copy of the exam for the current user
       const { data: newExam, error: examError } = await supabase
         .from("exams")
         .insert({
@@ -248,7 +285,6 @@ export default function Marketplace() {
         return;
       }
 
-      // Copy exam questions
       const { data: originalQuestions } = await supabase
         .from("exam_questions")
         .select("*")
@@ -256,7 +292,6 @@ export default function Marketplace() {
         .order("position");
 
       if (originalQuestions && originalQuestions.length > 0) {
-        // Copy each question to the user's question bank, then link
         for (const eq of originalQuestions) {
           const { data: originalQ } = await supabase
             .from("question_bank")
@@ -291,7 +326,6 @@ export default function Marketplace() {
         }
       }
 
-      // Increment download count
       await supabase
         .from("marketplace_exams")
         .update({ download_count: (exam.download_count || 0) + 1 })
@@ -411,6 +445,22 @@ export default function Marketplace() {
                 {exam.description && (
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{exam.description}</p>
                 )}
+                {/* Question topics */}
+                {exam.question_topics && exam.question_topics.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    <Tag className="h-3 w-3 text-muted-foreground mt-0.5" />
+                    {exam.question_topics.slice(0, 4).map((topic) => (
+                      <Badge key={topic} variant="outline" className="text-xs font-normal">
+                        {topic}
+                      </Badge>
+                    ))}
+                    {exam.question_topics.length > 4 && (
+                      <Badge variant="outline" className="text-xs font-normal">
+                        +{exam.question_topics.length - 4}
+                      </Badge>
+                    )}
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-1 mb-3">
                   {exam.tags.slice(0, 3).map((tag) => (
                     <Badge key={tag} variant="outline" className="text-xs">
@@ -482,6 +532,21 @@ export default function Marketplace() {
                 </span>
               </div>
 
+              {/* Question topics */}
+              {selectedExam?.question_topics && selectedExam.question_topics.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-sm mb-2 flex items-center gap-1.5">
+                    <Tag className="h-4 w-4" />
+                    Assuntos das questões
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedExam.question_topics.map((topic) => (
+                      <Badge key={topic} variant="secondary" className="text-xs">{topic}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {selectedExam?.tags && selectedExam.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {selectedExam.tags.map((tag) => (
@@ -492,31 +557,55 @@ export default function Marketplace() {
 
               {/* Rating */}
               <div className="space-y-2">
-                <h3 className="font-semibold text-sm">Sua avaliação</h3>
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => handleRate(star)}
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(0)}
-                      className="p-0.5 transition-transform hover:scale-110"
-                    >
-                      <Star
-                        className={`h-6 w-6 ${
-                          star <= (hoverRating || userRating)
-                            ? "fill-amber-400 text-amber-400"
-                            : "text-muted-foreground/30"
-                        }`}
-                      />
-                    </button>
-                  ))}
-                  <span className="ml-2 text-sm text-muted-foreground">
-                    {selectedExam?.avg_rating
-                      ? `Média: ${selectedExam.avg_rating.toFixed(1)} (${selectedExam.rating_count} avaliações)`
-                      : "Sem avaliações ainda"}
-                  </span>
-                </div>
+                <h3 className="font-semibold text-sm">
+                  {isAuthor ? "Avaliações da sua prova" : "Sua avaliação"}
+                </h3>
+                {isAuthor ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`h-5 w-5 ${
+                            star <= (selectedExam?.avg_rating || 0)
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-muted-foreground/30"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedExam?.avg_rating
+                        ? `${selectedExam.avg_rating.toFixed(1)} (${selectedExam.rating_count} avaliações)`
+                        : "Sem avaliações ainda"}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => handleRate(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        className="p-0.5 transition-transform hover:scale-110"
+                      >
+                        <Star
+                          className={`h-6 w-6 ${
+                            star <= (hoverRating || userRating)
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-muted-foreground/30"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      {selectedExam?.avg_rating
+                        ? `Média: ${selectedExam.avg_rating.toFixed(1)} (${selectedExam.rating_count} avaliações)`
+                        : "Sem avaliações ainda"}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Import */}
@@ -544,6 +633,7 @@ export default function Marketplace() {
                   Comentários ({comments.length})
                 </h3>
 
+                {/* Comment input - available for everyone */}
                 <div className="flex gap-2">
                   <Textarea
                     placeholder="Deixe um comentário..."

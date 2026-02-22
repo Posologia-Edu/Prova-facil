@@ -291,6 +291,12 @@ type TranslationKeys = {
   // Settings
   settings_title: string;
   settings_subtitle: string;
+  settings_change_name: string;
+  settings_change_name_desc: string;
+  settings_full_name: string;
+  settings_update_name: string;
+  settings_name_success_title: string;
+  settings_name_success_desc: string;
   settings_change_email: string;
   settings_change_email_desc: string;
   settings_new_email: string;
@@ -306,6 +312,13 @@ type TranslationKeys = {
   settings_password_success_desc: string;
   settings_password_mismatch: string;
   settings_error: string;
+
+  // Pricing cancel
+  pricing_cancel: string;
+  pricing_cancel_title: string;
+  pricing_cancel_desc: string;
+  pricing_cancel_confirm: string;
+  pricing_cancel_success: string;
 
   // Common
   cancel: string;
@@ -582,6 +595,12 @@ const pt: TranslationKeys = {
 
   settings_title: "Configurações",
   settings_subtitle: "Gerencie suas credenciais de acesso.",
+  settings_change_name: "Alterar Nome",
+  settings_change_name_desc: "Atualize seu nome de exibição.",
+  settings_full_name: "Nome completo",
+  settings_update_name: "Atualizar nome",
+  settings_name_success_title: "Nome atualizado!",
+  settings_name_success_desc: "Seu nome foi atualizado com sucesso.",
   settings_change_email: "Alterar E-mail",
   settings_change_email_desc: "Um e-mail de confirmação será enviado para o novo endereço.",
   settings_new_email: "Novo e-mail",
@@ -597,6 +616,12 @@ const pt: TranslationKeys = {
   settings_password_success_desc: "Sua senha foi atualizada com sucesso.",
   settings_password_mismatch: "As senhas não coincidem.",
   settings_error: "Erro",
+
+  pricing_cancel: "Cancelar assinatura",
+  pricing_cancel_title: "Cancelar assinatura Premium?",
+  pricing_cancel_desc: "Você continuará com acesso Premium até o final do período já pago. Após isso, voltará ao plano gratuito.",
+  pricing_cancel_confirm: "Sim, cancelar",
+  pricing_cancel_success: "Assinatura cancelada. Você terá acesso até o final do período pago.",
 
   cancel: "Cancelar",
   save: "Salvar",
@@ -872,6 +897,12 @@ const en: TranslationKeys = {
 
   settings_title: "Settings",
   settings_subtitle: "Manage your access credentials.",
+  settings_change_name: "Change Name",
+  settings_change_name_desc: "Update your display name.",
+  settings_full_name: "Full name",
+  settings_update_name: "Update name",
+  settings_name_success_title: "Name updated!",
+  settings_name_success_desc: "Your name has been updated successfully.",
   settings_change_email: "Change Email",
   settings_change_email_desc: "A confirmation email will be sent to the new address.",
   settings_new_email: "New email",
@@ -887,6 +918,12 @@ const en: TranslationKeys = {
   settings_password_success_desc: "Your password has been updated successfully.",
   settings_password_mismatch: "Passwords do not match.",
   settings_error: "Error",
+
+  pricing_cancel: "Cancel subscription",
+  pricing_cancel_title: "Cancel Premium subscription?",
+  pricing_cancel_desc: "You will keep Premium access until the end of the current billing period. After that, you'll revert to the free plan.",
+  pricing_cancel_confirm: "Yes, cancel",
+  pricing_cancel_success: "Subscription canceled. You'll have access until the end of your billing period.",
 
   cancel: "Cancel",
   save: "Save",
@@ -1162,6 +1199,12 @@ const es: TranslationKeys = {
 
   settings_title: "Configuración",
   settings_subtitle: "Gestione sus credenciales de acceso.",
+  settings_change_name: "Cambiar Nombre",
+  settings_change_name_desc: "Actualice su nombre de visualización.",
+  settings_full_name: "Nombre completo",
+  settings_update_name: "Actualizar nombre",
+  settings_name_success_title: "¡Nombre actualizado!",
+  settings_name_success_desc: "Su nombre ha sido actualizado con éxito.",
   settings_change_email: "Cambiar Correo",
   settings_change_email_desc: "Se enviará un correo de confirmación a la nueva dirección.",
   settings_new_email: "Nuevo correo",
@@ -1177,6 +1220,12 @@ const es: TranslationKeys = {
   settings_password_success_desc: "Su contraseña ha sido actualizada con éxito.",
   settings_password_mismatch: "Las contraseñas no coinciden.",
   settings_error: "Error",
+
+  pricing_cancel: "Cancelar suscripción",
+  pricing_cancel_title: "¿Cancelar suscripción Premium?",
+  pricing_cancel_desc: "Mantendrá el acceso Premium hasta el final del período de facturación actual. Después, volverá al plan gratuito.",
+  pricing_cancel_confirm: "Sí, cancelar",
+  pricing_cancel_success: "Suscripción cancelada. Tendrá acceso hasta el final de su período de facturación.",
 
   cancel: "Cancelar",
   save: "Guardar",
