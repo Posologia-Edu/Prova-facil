@@ -81,21 +81,14 @@ export default function ExamMonitoring() {
 
     const { data: sess } = await supabase
       .from("exam_sessions")
-      .select("*, profiles!exam_sessions_student_id_fkey(full_name)")
+      .select("*")
       .eq("publication_id", publicationId)
       .order("created_at", { ascending: false });
 
-    // The join may not work with FK, so let's fetch profiles separately
     if (sess) {
-      const studentIds = sess.map((s) => s.student_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .in("user_id", studentIds);
-
-      const enriched = sess.map((s) => ({
+      const enriched = sess.map((s: any) => ({
         ...s,
-        profiles: profiles?.find((p) => p.user_id === s.student_id) || null,
+        profiles: { full_name: s.student_name || s.student_email || "Aluno" },
       }));
       setSessions(enriched as SessionRow[]);
     }

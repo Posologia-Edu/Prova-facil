@@ -1,22 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Clock, ChevronLeft, ChevronRight, Send, Loader2, AlertTriangle, CheckCircle2, FileText, Shield } from "lucide-react";
+import { Clock, ChevronLeft, ChevronRight, Send, Loader2, AlertTriangle, FileText } from "lucide-react";
 import { toast } from "sonner";
-import type { Json } from "@/integrations/supabase/types";
+
+const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
 
 interface Question {
   id: string;
   type: string;
-  content_json: Json;
+  content_json: Record<string, unknown>;
   position: number;
   points: number;
   section_name: string;
@@ -42,28 +41,22 @@ export default function StudentExam() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSubmittedRef = useRef(false);
 
-  // Helper to extract content fields regardless of JSON shape
+  const studentEmail = sessionStorage.getItem("student_email");
+
   const getStatement = (content: Record<string, unknown>): string => {
     return (content.question_text as string) || (content.statement as string) || (content.title as string) || "Questão sem enunciado";
   };
 
-  const getAlternatives = (content: Record<string, unknown>, type: string): Array<{ letter: string; text: string; correct?: boolean }> => {
-    // Handle `alternatives` array format
+  const getAlternatives = (content: Record<string, unknown>): Array<{ letter: string; text: string }> => {
     if (Array.isArray(content.alternatives)) {
       return (content.alternatives as Array<Record<string, unknown>>).map(a => ({
         letter: String(a.letter),
         text: String(a.text),
-        correct: !!a.correct,
       }));
     }
-    // Handle `options` object format: { a: "text", b: "text", ... }
     if (content.options && typeof content.options === "object" && !Array.isArray(content.options)) {
       const opts = content.options as Record<string, string>;
-      return Object.entries(opts).map(([letter, text]) => ({
-        letter,
-        text,
-        correct: content.correct_answer === letter,
-      }));
+      return Object.entries(opts).map(([letter, text]) => ({ letter, text }));
     }
     return [];
   };
@@ -74,194 +67,83 @@ export default function StudentExam() {
     setSubmitting(true);
 
     try {
-      const { data: { session: authSession } } = await supabase.auth.getSession();
-      if (!authSession || !sessionId) return;
+      const res = await fetch(FUNCTION_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "submit", sessionId, email: studentEmail, answers }),
+      });
 
-      for (const q of questions) {
-        const ans = answers[q.id];
-        const answerText = ans?.answer_text || "";
-        const answerJson = ans?.answer_json || {};
-
-        let isCorrect: boolean | null = null;
-        let pointsEarned = 0;
-        let gradingStatus = "pending";
-
-        const content = q.content_json as Record<string, unknown>;
-        if (q.type === "multiple_choice" || q.type === "true_false") {
-          const alts = getAlternatives(content, q.type);
-          const correctAlt = alts.find(a => a.correct);
-          const selectedLetter = (answerJson as Record<string, string>).selected;
-          isCorrect = correctAlt ? String(correctAlt.letter) === selectedLetter : false;
-          pointsEarned = isCorrect ? q.points : 0;
-          gradingStatus = "graded";
-        }
-
-        const { data: existing } = await supabase
-          .from("student_answers")
-          .select("id")
-          .eq("session_id", sessionId)
-          .eq("question_id", q.id)
-          .maybeSingle();
-
-        if (existing) {
-          await supabase.from("student_answers").update({
-            answer_text: answerText,
-            answer_json: answerJson as Json,
-            is_correct: isCorrect,
-            points_earned: pointsEarned,
-            max_points: q.points,
-            grading_status: gradingStatus,
-          }).eq("id", existing.id);
-        } else {
-          await supabase.from("student_answers").insert({
-            session_id: sessionId,
-            question_id: q.id,
-            answer_text: answerText,
-            answer_json: answerJson as Json,
-            is_correct: isCorrect,
-            points_earned: pointsEarned,
-            max_points: q.points,
-            grading_status: gradingStatus,
-          });
-        }
-      }
-
-      const totalScore = questions.reduce((sum, q) => {
-        const content = q.content_json as Record<string, unknown>;
-        if (q.type === "multiple_choice" || q.type === "true_false") {
-          const alts = getAlternatives(content, q.type);
-          const correctAlt = alts.find(a => a.correct);
-          const ans = answers[q.id];
-          const selectedLetter = (ans?.answer_json as Record<string, string>)?.selected;
-          const correct = correctAlt ? String(correctAlt.letter) === selectedLetter : false;
-          return sum + (correct ? q.points : 0);
-        }
-        return sum;
-      }, 0);
-
-      const maxScore = questions.reduce((sum, q) => sum + q.points, 0);
-
-      await supabase.from("exam_sessions").update({
-        status: "submitted",
-        finished_at: new Date().toISOString(),
-        total_score: totalScore,
-        max_score: maxScore,
-      }).eq("id", sessionId);
-
-      const subjectiveQuestions = questions.filter(q => q.type === "open_ended" || q.type === "matching");
-      if (subjectiveQuestions.length > 0) {
-        try { await supabase.functions.invoke("grade-exam", { body: { sessionId } }); }
-        catch { console.warn("AI grading will be processed later"); }
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Erro ao enviar prova.");
+        setSubmitting(false);
+        return;
       }
 
       toast.success(auto ? "Tempo esgotado! Prova enviada automaticamente." : "Prova enviada com sucesso!");
       navigate(`/student/results/${sessionId}`);
-    } catch (error) {
-      console.error("Error submitting exam:", error);
+    } catch {
       toast.error("Erro ao enviar prova. Tente novamente.");
       setSubmitting(false);
     }
-  }, [submitting, sessionId, questions, answers, navigate]);
+  }, [submitting, sessionId, studentEmail, answers, navigate]);
 
   useEffect(() => {
     const loadExam = async () => {
-      if (!sessionId) return;
-
-      const { data: { session: authSession } } = await supabase.auth.getSession();
-      if (!authSession) { navigate("/student/auth"); return; }
-
-      const { data: examSession, error: sessError } = await supabase
-        .from("exam_sessions")
-        .select("*, exam_publications(*)")
-        .eq("id", sessionId)
-        .single();
-
-      if (sessError || !examSession) {
-        toast.error("Sessão não encontrada.");
-        navigate("/student/dashboard");
+      if (!sessionId || !studentEmail) {
+        navigate("/student/auth");
         return;
       }
 
-      if (examSession.status !== "in_progress") {
-        navigate(`/student/results/${sessionId}`);
-        return;
-      }
+      try {
+        const res = await fetch(FUNCTION_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "load", sessionId, email: studentEmail }),
+        });
 
-      const pub = examSession.exam_publications as unknown as {
-        exam_id: string;
-        time_limit_minutes: number;
-      };
-
-      const startedAt = new Date(examSession.started_at).getTime();
-      const limitMs = pub.time_limit_minutes * 60 * 1000;
-      const elapsed = Date.now() - startedAt;
-      const remaining = Math.max(0, Math.floor((limitMs - elapsed) / 1000));
-      setTimeLeft(remaining);
-
-      if (remaining <= 0) { submitExam(true); return; }
-
-      const { data: exam } = await supabase
-        .from("exams")
-        .select("title")
-        .eq("id", pub.exam_id)
-        .single();
-
-      setExamTitle(exam?.title || "Prova");
-
-      // Load questions - use service-level query to get actual exam questions
-      const { data: examQuestions } = await supabase
-        .from("exam_questions")
-        .select("question_id, position, points, section_name")
-        .eq("exam_id", pub.exam_id)
-        .order("position");
-
-      if (!examQuestions || examQuestions.length === 0) {
-        toast.error("Nenhuma questão encontrada nesta prova.");
-        return;
-      }
-
-      const questionIds = examQuestions.map(eq => eq.question_id);
-      const { data: bankQuestions } = await supabase
-        .from("question_bank")
-        .select("id, type, content_json")
-        .in("id", questionIds);
-
-      const merged: Question[] = examQuestions.map(eq => {
-        const bq = bankQuestions?.find(b => b.id === eq.question_id);
-        return {
-          id: eq.question_id,
-          type: bq?.type || "open_ended",
-          content_json: bq?.content_json || {},
-          position: eq.position,
-          points: Number(eq.points) || 1,
-          section_name: eq.section_name || "Geral",
-        };
-      });
-
-      setQuestions(merged);
-
-      const { data: existingAnswers } = await supabase
-        .from("student_answers")
-        .select("question_id, answer_text, answer_json")
-        .eq("session_id", sessionId);
-
-      if (existingAnswers) {
-        const ansMap: Record<string, Answer> = {};
-        for (const a of existingAnswers) {
-          ansMap[a.question_id] = {
-            question_id: a.question_id,
-            answer_text: a.answer_text || "",
-            answer_json: (a.answer_json as Record<string, unknown>) || {},
-          };
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          if (data.status === "finished") {
+            navigate(`/student/results/${sessionId}`);
+            return;
+          }
+          toast.error(data.error || "Erro ao carregar prova.");
+          navigate("/student/auth");
+          return;
         }
-        setAnswers(ansMap);
-      }
 
-      setLoading(false);
+        setExamTitle(data.examTitle);
+        setTimeLeft(data.timeLeft);
+        setQuestions(data.questions);
+
+        if (data.timeLeft <= 0) {
+          submitExam(true);
+          return;
+        }
+
+        // Restore existing answers
+        if (data.existingAnswers?.length) {
+          const ansMap: Record<string, Answer> = {};
+          for (const a of data.existingAnswers) {
+            ansMap[a.question_id] = {
+              question_id: a.question_id,
+              answer_text: a.answer_text || "",
+              answer_json: a.answer_json || {},
+            };
+          }
+          setAnswers(ansMap);
+        }
+
+        setLoading(false);
+      } catch {
+        toast.error("Erro de conexão.");
+        navigate("/student/auth");
+      }
     };
 
     loadExam();
-  }, [sessionId, navigate, submitExam]);
+  }, [sessionId, studentEmail, navigate]);
 
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0) return;
@@ -309,9 +191,9 @@ export default function StudentExam() {
   }
 
   const currentQ = questions[currentIdx];
-  const content = (currentQ?.content_json || {}) as Record<string, unknown>;
+  const content = currentQ?.content_json || {};
   const statement = getStatement(content);
-  const alternatives = getAlternatives(content, currentQ?.type || "");
+  const alternatives = getAlternatives(content);
   const answeredCount = Object.keys(answers).filter(k => {
     const a = answers[k];
     return a.answer_text || (a.answer_json as Record<string, string>)?.selected;
@@ -321,7 +203,7 @@ export default function StudentExam() {
 
   return (
     <div className="min-h-screen bg-muted/30 flex flex-col">
-      {/* Professional top bar */}
+      {/* Top bar */}
       <header className="bg-card border-b shadow-sm sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
@@ -378,7 +260,6 @@ export default function StudentExam() {
           <div className="space-y-4">
             {currentQ && (
               <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                {/* Question header */}
                 <div className="px-6 py-4 bg-muted/30 border-b flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="bg-primary text-primary-foreground text-xs font-bold px-2.5 py-1 rounded-md">
@@ -393,7 +274,6 @@ export default function StudentExam() {
                   </span>
                 </div>
 
-                {/* Question statement */}
                 <div className="px-6 py-5">
                   <p className="text-sm sm:text-base leading-relaxed text-foreground whitespace-pre-wrap">
                     {statement}
@@ -402,9 +282,8 @@ export default function StudentExam() {
 
                 <Separator />
 
-                {/* Answer area */}
                 <div className="px-6 py-5">
-                  {(currentQ.type === "multiple_choice") && alternatives.length > 0 && (
+                  {currentQ.type === "multiple_choice" && alternatives.length > 0 && (
                     <RadioGroup
                       value={(answers[currentQ.id]?.answer_json as Record<string, string>)?.selected || ""}
                       onValueChange={(val) => setAnswer(currentQ.id, val, { selected: val })}
@@ -448,14 +327,14 @@ export default function StudentExam() {
                           <label
                             key={opt.value}
                             htmlFor={`tf-${currentQ.id}-${opt.value}`}
-                            className={`flex items-center gap-3 p-3.5 rounded-lg border-2 cursor-pointer transition-all ${
+                            className={`flex items-start gap-3 p-3.5 rounded-lg border-2 cursor-pointer transition-all ${
                               isSelected
                                 ? "border-primary bg-primary/5 shadow-sm"
-                                : "border-transparent bg-muted/40 hover:bg-muted/70 hover:border-muted-foreground/20"
+                                : "border-transparent bg-muted/40 hover:bg-muted/70"
                             }`}
                           >
-                            <RadioGroupItem value={opt.value} id={`tf-${currentQ.id}-${opt.value}`} />
-                            <span className="font-medium text-sm">{opt.label}</span>
+                            <RadioGroupItem value={opt.value} id={`tf-${currentQ.id}-${opt.value}`} className="mt-0.5 shrink-0" />
+                            <span className="text-sm font-medium">{opt.label}</span>
                           </label>
                         );
                       })}
@@ -463,42 +342,13 @@ export default function StudentExam() {
                   )}
 
                   {(currentQ.type === "open_ended" || currentQ.type === "matching") && (
-                    <div className="space-y-2">
-                      {currentQ.type === "matching" && content.column_a && (
-                        <div className="mb-4 space-y-3">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Coluna A</p>
-                              {(content.column_a as string[]).map((item, i) => (
-                                <div key={i} className="text-sm p-2 bg-muted/40 rounded mb-1.5">
-                                  {i + 1}. {item}
-                                </div>
-                              ))}
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Coluna B</p>
-                              {(content.column_b as string[]).map((item, i) => (
-                                <div key={i} className="text-sm p-2 bg-muted/40 rounded mb-1.5">
-                                  {String.fromCharCode(65 + i)}. {item}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          <Separator />
-                        </div>
-                      )}
-                      <Textarea
-                        placeholder={
-                          currentQ.type === "matching"
-                            ? "Digite as correspondências (ex: 1-B, 2-A, 3-D, 4-C)"
-                            : "Digite sua resposta aqui..."
-                        }
-                        value={answers[currentQ.id]?.answer_text || ""}
-                        onChange={(e) => setAnswer(currentQ.id, e.target.value)}
-                        rows={6}
-                        className="resize-none text-sm"
-                      />
-                    </div>
+                    <Textarea
+                      placeholder="Digite sua resposta aqui..."
+                      value={answers[currentQ.id]?.answer_text || ""}
+                      onChange={(e) => setAnswer(currentQ.id, e.target.value)}
+                      rows={6}
+                      className="resize-none"
+                    />
                   )}
                 </div>
               </div>
@@ -509,18 +359,20 @@ export default function StudentExam() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentIdx(p => Math.max(0, p - 1))}
+                onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))}
                 disabled={currentIdx === 0}
                 className="gap-1"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Anterior
               </Button>
-
+              <span className="text-xs text-muted-foreground">
+                {answeredCount}/{questions.length} respondidas
+              </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentIdx(p => Math.min(questions.length - 1, p + 1))}
+                onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
                 disabled={currentIdx === questions.length - 1}
                 className="gap-1"
               >
@@ -530,24 +382,21 @@ export default function StudentExam() {
             </div>
           </div>
 
-          {/* Side navigation panel */}
+          {/* Question navigator sidebar */}
           <div className="hidden lg:block">
             <div className="bg-card rounded-xl border shadow-sm p-4 sticky top-20">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Questões</p>
-                <p className="text-xs text-muted-foreground">{answeredCount}/{questions.length}</p>
-              </div>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">Navegação</p>
               <div className="grid grid-cols-5 gap-1.5">
                 {questions.map((q, i) => {
-                  const hasAnswer = answers[q.id]?.answer_text || (answers[q.id]?.answer_json as Record<string, string>)?.selected;
+                  const answered = !!(answers[q.id]?.answer_text || (answers[q.id]?.answer_json as Record<string, string>)?.selected);
                   return (
                     <button
                       key={q.id}
                       onClick={() => setCurrentIdx(i)}
-                      className={`h-8 w-8 rounded-md text-xs font-medium transition-all ${
+                      className={`h-8 w-8 rounded-md text-xs font-bold transition-all ${
                         i === currentIdx
-                          ? "bg-primary text-primary-foreground shadow-md ring-2 ring-primary/30"
-                          : hasAnswer
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : answered
                           ? "bg-primary/15 text-primary border border-primary/30"
                           : "bg-muted text-muted-foreground hover:bg-muted/80"
                       }`}
@@ -557,102 +406,27 @@ export default function StudentExam() {
                   );
                 })}
               </div>
-
-              <Separator className="my-4" />
-
-              {/* Status summary */}
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-sm bg-primary/15 border border-primary/30" />
-                  <span className="text-muted-foreground">Respondidas: {answeredCount}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-sm bg-muted" />
-                  <span className="text-muted-foreground">Pendentes: {questions.length - answeredCount}</span>
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              <Button
-                size="sm"
-                className="w-full gap-1.5 text-xs"
-                onClick={() => setShowSubmitDialog(true)}
-                disabled={submitting}
-              >
-                <Send className="h-3.5 w-3.5" />
-                Entregar Prova
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile question navigator */}
-        <div className="lg:hidden mt-4">
-          <div className="bg-card rounded-xl border shadow-sm p-3">
-            <div className="flex gap-1.5 flex-wrap justify-center">
-              {questions.map((q, i) => {
-                const hasAnswer = answers[q.id]?.answer_text || (answers[q.id]?.answer_json as Record<string, string>)?.selected;
-                return (
-                  <button
-                    key={q.id}
-                    onClick={() => setCurrentIdx(i)}
-                    className={`h-8 w-8 rounded-md text-xs font-medium transition-all ${
-                      i === currentIdx
-                        ? "bg-primary text-primary-foreground shadow-md"
-                        : hasAnswer
-                        ? "bg-primary/15 text-primary border border-primary/30"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                );
-              })}
             </div>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t bg-card py-2 text-center">
-        <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground">
-          <Shield className="h-3 w-3" />
-          Ambiente seguro de avaliação · ProvaFácil
-        </div>
-      </footer>
-
       {/* Submit dialog */}
       <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
-              Entregar prova?
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>Você respondeu <strong>{answeredCount}</strong> de <strong>{questions.length}</strong> questões.</p>
-                {answeredCount < questions.length && (
-                  <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg border border-destructive/20">
-                    <AlertTriangle className="h-4 w-4 inline mr-1.5" />
-                    {questions.length - answeredCount} questão(ões) em branco. Após entregar, não será possível alterar.
-                  </div>
-                )}
-                {answeredCount === questions.length && (
-                  <div className="bg-primary/10 text-primary text-sm p-3 rounded-lg border border-primary/20">
-                    <CheckCircle2 className="h-4 w-4 inline mr-1.5" />
-                    Todas as questões foram respondidas!
-                  </div>
-                )}
-              </div>
+            <AlertDialogTitle>Entregar prova?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você respondeu {answeredCount} de {questions.length} questões.
+              {answeredCount < questions.length && " Algumas questões não foram respondidas."}
+              {" "}Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Continuar Prova</AlertDialogCancel>
+            <AlertDialogCancel>Continuar respondendo</AlertDialogCancel>
             <AlertDialogAction onClick={() => submitExam(false)} disabled={submitting}>
               {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-              Confirmar Entrega
+              Entregar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, CheckCircle2, XCircle, Clock, Loader2, Bot } from "lucide-react";
-import type { Json } from "@/integrations/supabase/types";
+
+const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
 
 interface AnswerRow {
   id: string;
   question_id: string;
   answer_text: string | null;
-  answer_json: Json;
+  answer_json: Record<string, unknown>;
   is_correct: boolean | null;
   points_earned: number | null;
   max_points: number | null;
@@ -23,7 +23,7 @@ interface AnswerRow {
   grading_status: string;
   question_bank: {
     type: string;
-    content_json: Json;
+    content_json: Record<string, unknown>;
   } | null;
 }
 
@@ -41,38 +41,38 @@ export default function StudentResults() {
   } | null>(null);
   const [examTitle, setExamTitle] = useState("");
 
+  const studentEmail = sessionStorage.getItem("student_email");
+
   useEffect(() => {
     const load = async () => {
-      if (!sessionId) return;
+      if (!sessionId || !studentEmail) {
+        navigate("/student/auth");
+        return;
+      }
 
-      const { data: sess } = await supabase
-        .from("exam_sessions")
-        .select("*, exam_publications(exam_id)")
-        .eq("id", sessionId)
-        .single();
+      try {
+        const res = await fetch(FUNCTION_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "results", sessionId, email: studentEmail }),
+        });
 
-      if (!sess) { navigate("/student/dashboard"); return; }
-      setSession(sess);
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          navigate("/student/auth");
+          return;
+        }
 
-      const pub = sess.exam_publications as unknown as { exam_id: string };
-      const { data: exam } = await supabase
-        .from("exams")
-        .select("title")
-        .eq("id", pub.exam_id)
-        .single();
-      setExamTitle(exam?.title || "Prova");
-
-      const { data: ans } = await supabase
-        .from("student_answers")
-        .select("*, question_bank(type, content_json)")
-        .eq("session_id", sessionId)
-        .order("created_at");
-
-      setAnswers((ans as unknown as AnswerRow[]) || []);
-      setLoading(false);
+        setExamTitle(data.examTitle);
+        setSession(data.session);
+        setAnswers(data.answers || []);
+        setLoading(false);
+      } catch {
+        navigate("/student/auth");
+      }
     };
     load();
-  }, [sessionId, navigate]);
+  }, [sessionId, studentEmail, navigate]);
 
   if (loading) {
     return (
@@ -89,7 +89,7 @@ export default function StudentResults() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card px-6 py-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/student/dashboard")} className="mb-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/student/auth")} className="mb-2">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
@@ -108,7 +108,6 @@ export default function StudentResults() {
       </header>
 
       <main className="max-w-3xl mx-auto p-6 space-y-6">
-        {/* Score summary */}
         <Card>
           <CardContent className="py-6 text-center">
             <p className="text-4xl font-bold">{totalEarned.toFixed(1)}<span className="text-muted-foreground text-xl">/{totalMax.toFixed(1)}</span></p>
@@ -116,7 +115,6 @@ export default function StudentResults() {
           </CardContent>
         </Card>
 
-        {/* Answers */}
         {answers.map((a, i) => {
           const content = (a.question_bank?.content_json || {}) as Record<string, unknown>;
           const statement = (content.statement as string) || (content.title as string) || "Questão";

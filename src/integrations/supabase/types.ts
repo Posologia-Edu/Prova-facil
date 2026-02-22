@@ -216,7 +216,9 @@ export type Database = {
           publication_id: string
           started_at: string
           status: string
+          student_email: string | null
           student_id: string
+          student_name: string | null
           total_score: number | null
         }
         Insert: {
@@ -227,7 +229,9 @@ export type Database = {
           publication_id: string
           started_at?: string
           status?: string
+          student_email?: string | null
           student_id: string
+          student_name?: string | null
           total_score?: number | null
         }
         Update: {
@@ -238,7 +242,9 @@ export type Database = {
           publication_id?: string
           started_at?: string
           status?: string
+          student_email?: string | null
           student_id?: string
+          student_name?: string | null
           total_score?: number | null
         }
         Relationships: [
