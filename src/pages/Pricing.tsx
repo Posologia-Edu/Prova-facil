@@ -76,21 +76,23 @@ export default function Pricing() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          {t("pricing_back")}
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">{t("pricing_title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("pricing_subtitle")}</p>
+    <div className="flex flex-col items-center w-full space-y-8 py-4">
+      <div className="w-full max-w-4xl">
+        <div className="flex items-center gap-4 mb-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {t("pricing_back")}
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">{t("pricing_title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("pricing_subtitle")}</p>
+          </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 max-w-4xl">
-        <Card className={`relative ${!isPremium ? "border-primary" : ""}`}>
-          {!isPremium && <Badge className="absolute -top-3 left-6" variant="outline">{t("pricing_current_plan")}</Badge>}
+      <div className="grid md:grid-cols-2 gap-8 max-w-4xl w-full">
+        <Card className={`relative pt-4 ${!isPremium ? "border-primary" : ""}`}>
+          {!isPremium && <Badge className="absolute -top-3 left-6 z-10 bg-background" variant="outline">{t("pricing_current_plan")}</Badge>}
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5" />{t("pricing_free")}</CardTitle>
             <CardDescription>{t("pricing_free_desc")}</CardDescription>
@@ -106,7 +108,7 @@ export default function Pricing() {
               ))}
             </ul>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="pt-4">
             {!isPremium ? (
               <p className="text-xs text-muted-foreground text-center w-full">{t("pricing_current_plan")}</p>
             ) : (
@@ -115,8 +117,8 @@ export default function Pricing() {
           </CardFooter>
         </Card>
 
-        <Card className={`relative ${isPremium ? "border-primary shadow-lg" : "border-secondary/50"}`}>
-          {isPremium && <Badge className="absolute -top-3 left-6">{t("pricing_current_plan")}</Badge>}
+        <Card className={`relative pt-4 ${isPremium ? "border-primary shadow-lg" : "border-secondary/50"}`}>
+          {isPremium && <Badge className="absolute -top-3 left-6 z-10 bg-background">{t("pricing_current_plan")}</Badge>}
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-secondary" />{t("pricing_premium")}</CardTitle>
             <CardDescription>{t("pricing_premium_desc")}</CardDescription>
@@ -132,7 +134,7 @@ export default function Pricing() {
               ))}
             </ul>
           </CardContent>
-          <CardFooter className="flex flex-col gap-2">
+          <CardFooter className="flex flex-col gap-2 pt-4">
             {isPremium ? (
               <>
                 <p className="text-xs text-muted-foreground">
@@ -169,7 +171,7 @@ export default function Pricing() {
         </Card>
       </div>
 
-      <div className="max-w-4xl">
+      <div className="max-w-4xl w-full">
         <Separator className="my-4" />
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">{t("pricing_not_sure")}</p>
