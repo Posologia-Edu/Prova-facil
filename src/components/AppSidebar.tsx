@@ -39,16 +39,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const navIcons = {
-  dashboard: LayoutDashboard,
-  questions: Library,
-  composer: FileEdit,
-  classes: GraduationCap,
-  analytics: BarChart3,
-  calendar: CalendarDays,
-  pricing: Crown,
-};
-
 export function AppSidebar() {
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
@@ -70,17 +60,21 @@ export function AppSidebar() {
     fetchName();
   }, []);
 
-  const mainNav = [
-    { title: t("nav_dashboard"), url: "/dashboard", icon: navIcons.dashboard },
-    { title: t("nav_questions"), url: "/questions", icon: navIcons.questions },
-    { title: t("nav_composer"), url: "/composer", icon: navIcons.composer },
-    { title: "Minhas Provas", url: "/exams", icon: BookOpen },
-    { title: t("nav_classes"), url: "/classes", icon: navIcons.classes },
-    { title: t("nav_analytics"), url: "/analytics", icon: navIcons.analytics },
-    { title: t("nav_calendar"), url: "/calendar", icon: navIcons.calendar },
-    { title: t("nav_pricing"), url: "/pricing", icon: navIcons.pricing },
+  const principalNav = [
+    { title: t("nav_dashboard"), url: "/dashboard", icon: LayoutDashboard },
+  ];
+
+  const contentNav = [
+    { title: t("nav_questions"), url: "/questions", icon: Library },
+    { title: t("nav_composer"), url: "/composer", icon: FileEdit },
+    { title: t("sidebar_my_exams"), url: "/exams", icon: BookOpen },
+  ];
+
+  const managementNav = [
+    { title: t("nav_classes"), url: "/classes", icon: GraduationCap },
+    { title: t("nav_calendar"), url: "/calendar", icon: CalendarDays },
+    { title: t("nav_analytics"), url: "/analytics", icon: BarChart3 },
     { title: "Marketplace", url: "/marketplace", icon: Store },
-    { title: "Lixeira", url: "/trash", icon: Trash2 },
   ];
 
   const handleLogout = async () => {
@@ -89,6 +83,33 @@ export function AppSidebar() {
   };
 
   const languages: Language[] = ["pt", "en", "es"];
+
+  const renderNavGroup = (label: string, items: typeof principalNav) => (
+    <SidebarGroup>
+      <SidebarGroupLabel className="text-sidebar-foreground/40 text-[11px] font-semibold uppercase tracking-wider px-3 mb-1">
+        {label}
+      </SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.url}>
+              <SidebarMenuButton asChild>
+                <NavLink
+                  to={item.url}
+                  end={item.url === "/dashboard"}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                  activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
 
   return (
     <Sidebar className="w-64 gradient-sidebar border-r-0">
@@ -104,31 +125,10 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="px-3 py-4">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[11px] font-semibold uppercase tracking-wider px-3 mb-1">
-            {t("nav_menu")}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNav.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/dashboard"}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      <SidebarContent className="px-3 py-4 space-y-2">
+        {renderNavGroup(t("sidebar_principal"), principalNav)}
+        {renderNavGroup(t("sidebar_content"), contentNav)}
+        {renderNavGroup(t("sidebar_management"), managementNav)}
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
@@ -156,6 +156,32 @@ export function AppSidebar() {
             </DropdownMenu>
           </SidebarMenuItem>
 
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <NavLink
+                to="/pricing"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+              >
+                <Crown className="h-4 w-4" />
+                <span>{t("nav_pricing")}</span>
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <NavLink
+                to="/trash"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>{t("sidebar_trash")}</span>
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
           {isAdmin && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
@@ -170,6 +196,7 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}
+
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <NavLink
@@ -182,6 +209,7 @@ export function AppSidebar() {
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
+
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer">
               <LogOut className="h-4 w-4" />

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ShieldX } from "lucide-react";
+import { Loader2, ShieldX, Clock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface Props {
   children: React.ReactNode;
@@ -15,11 +16,14 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
   const [approved, setApproved] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isStudent, setIsStudent] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
-    const checkAccess = async (userId: string) => {
-      // Check if user is a student - block access to teacher portal
+    const checkAccess = async (userId: string, email?: string) => {
+      if (email) setUserEmail(email);
+
       const { data: studentRole } = await supabase
         .from("user_roles")
         .select("role")
@@ -33,7 +37,6 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
         return;
       }
 
-      // Check approval
       const { data: profile } = await supabase
         .from("profiles")
         .select("is_approved")
@@ -43,7 +46,6 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
       const userApproved = profile?.is_approved ?? false;
       setApproved(userApproved);
 
-      // Check admin
       const { data: role } = await supabase
         .from("user_roles")
         .select("role")
@@ -53,8 +55,6 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
 
       const admin = !!role;
       setIsAdmin(admin);
-
-      // Admins are always approved
       if (admin) setApproved(true);
 
       setLoading(false);
@@ -68,7 +68,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
         return;
       }
       setAuthenticated(true);
-      checkAccess(session.user.id);
+      checkAccess(session.user.id, session.user.email);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -79,7 +79,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
         return;
       }
       setAuthenticated(true);
-      checkAccess(session.user.id);
+      checkAccess(session.user.id, session.user.email);
     });
 
     return () => subscription.unsubscribe();
@@ -100,41 +100,47 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="text-center max-w-md space-y-4">
           <ShieldX className="h-16 w-16 mx-auto text-destructive" />
-          <h2 className="text-xl font-bold">Acesso Restrito</h2>
-          <p className="text-muted-foreground text-sm">
-            Esta área é exclusiva para professores. Use o Portal do Aluno para acessar suas provas.
-          </p>
+          <h2 className="text-xl font-bold">{t("protected_student_title")}</h2>
+          <p className="text-muted-foreground text-sm">{t("protected_student_desc")}</p>
           <div className="flex gap-3 justify-center">
             <Button variant="outline" onClick={async () => { await supabase.auth.signOut(); navigate("/"); }}>
-              Sair
+              {t("nav_logout")}
             </Button>
             <Button onClick={() => navigate("/student/dashboard")}>
-              Ir para Portal do Aluno
+              {t("protected_student_portal")}
             </Button>
           </div>
         </div>
       </div>
     );
   }
+
   if (!approved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="text-center max-w-md space-y-4">
-          <ShieldX className="h-16 w-16 mx-auto text-muted-foreground" />
-          <h2 className="text-xl font-bold">Aguardando Aprovação</h2>
+        <div className="text-center max-w-md space-y-5">
+          <div className="relative inline-block">
+            <Clock className="h-16 w-16 mx-auto text-primary animate-pulse" />
+          </div>
+          <h2 className="text-xl font-bold">{t("protected_pending_title")}</h2>
           <p className="text-muted-foreground text-sm">
-            Seu cadastro está sendo analisado pelo administrador.
-            Você receberá acesso assim que for aprovado.
+            {t("protected_pending_desc")}
           </p>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              navigate("/");
-            }}
-          >
-            Sair
-          </Button>
+          {userEmail && (
+            <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2 inline-block">
+              <Mail className="inline h-3 w-3 mr-1" />
+              {userEmail}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">{t("protected_pending_time")}</p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="outline" onClick={async () => { await supabase.auth.signOut(); navigate("/"); }}>
+              {t("nav_logout")}
+            </Button>
+            <Button variant="secondary" onClick={() => navigate("/contact")}>
+              {t("protected_contact_admin")}
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -145,12 +151,10 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="text-center max-w-md space-y-4">
           <ShieldX className="h-16 w-16 mx-auto text-destructive" />
-          <h2 className="text-xl font-bold">Acesso Restrito</h2>
-          <p className="text-muted-foreground text-sm">
-            Esta área é exclusiva para administradores.
-          </p>
+          <h2 className="text-xl font-bold">{t("protected_admin_title")}</h2>
+          <p className="text-muted-foreground text-sm">{t("protected_admin_desc")}</p>
           <Button variant="outline" onClick={() => navigate("/dashboard")}>
-            Voltar ao Painel
+            {t("protected_back_dashboard")}
           </Button>
         </div>
       </div>
