@@ -611,9 +611,21 @@ export default function QuestionsPage() {
         ))}
         {filtered.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
-            <Library className="h-12 w-12 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">{t("questions_none_found")}</p>
-            <p className="text-sm mt-1">{t("questions_adjust_filters")}</p>
+            <Library className="h-16 w-16 mx-auto mb-4 opacity-30" />
+            <p className="font-semibold text-foreground text-lg">{t("questions_none_found")}</p>
+            <p className="text-sm mt-1 mb-5">{questions.length === 0 ? t("empty_questions_hint") : t("questions_adjust_filters")}</p>
+            {questions.length === 0 && (
+              <div className="flex items-center justify-center gap-3">
+                <Button variant="outline" onClick={() => setAiOpen(true)}>
+                  <Sparkles className="h-4 w-4 mr-2 text-secondary" />
+                  {t("questions_generate_ai")}
+                </Button>
+                <Button onClick={() => setCreateOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t("questions_new")}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

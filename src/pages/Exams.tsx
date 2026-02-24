@@ -423,10 +423,24 @@ export default function ExamsPage() {
           </div>
 
           {filtered.length === 0 && (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-              <p className="text-muted-foreground">Nenhuma prova encontrada.</p>
-              <p className="text-sm text-muted-foreground mt-2">Use o Compositor de Provas para criar uma nova prova.</p>
+            <div className="text-center py-16">
+              <FileText className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+              <p className="font-semibold text-foreground text-lg">Nenhuma prova encontrada</p>
+              <p className="text-sm text-muted-foreground mt-1 mb-5">
+                {exams.length === 0 ? "Use o Compositor para montar sua primeira prova com questões do banco." : "Tente ajustar os filtros de busca."}
+              </p>
+              {exams.length === 0 && (
+                <div className="flex items-center justify-center gap-3">
+                  <Button onClick={() => navigate("/composer")}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Prova no Compositor
+                  </Button>
+                  <Button variant="outline" onClick={handleCreateExam}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Criar Prova em Branco
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </>

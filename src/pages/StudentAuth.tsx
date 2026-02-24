@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { GraduationCap, Loader2, ArrowLeft, KeyRound, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
 
@@ -16,6 +17,7 @@ export default function StudentAuth() {
   const [pin, setPin] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const handleAccess = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,12 +34,11 @@ export default function StudentAuth() {
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        toast({ title: "Acesso negado", description: data.error || "Erro desconhecido.", variant: "destructive" });
+        toast({ title: t("student_access_denied"), description: data.error || t("student_unknown_error"), variant: "destructive" });
         setLoading(false);
         return;
       }
 
-      // Store email for subsequent requests
       sessionStorage.setItem("student_email", email.trim().toLowerCase());
       sessionStorage.setItem("student_session_id", data.sessionId);
 
@@ -47,7 +48,7 @@ export default function StudentAuth() {
         navigate(`/student/exam/${data.sessionId}`);
       }
     } catch (err) {
-      toast({ title: "Erro", description: "Não foi possível conectar ao servidor.", variant: "destructive" });
+      toast({ title: t("student_error"), description: t("student_connection_error"), variant: "destructive" });
     }
 
     setLoading(false);
@@ -63,7 +64,7 @@ export default function StudentAuth() {
       <div className="w-full max-w-md">
         <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4" />
-          Voltar ao início
+          {t("student_back_home")}
         </Link>
 
         <Card className="border shadow-lg">
@@ -71,22 +72,20 @@ export default function StudentAuth() {
             <div className="flex justify-center mb-2">
               <GraduationCap className="h-10 w-10 text-primary" />
             </div>
-            <CardTitle className="text-2xl font-bold">Portal do Aluno</CardTitle>
-            <CardDescription>
-              Digite seu e-mail cadastrado pelo professor e o PIN da prova
-            </CardDescription>
+            <CardTitle className="text-2xl font-bold">{t("student_portal_title")}</CardTitle>
+            <CardDescription>{t("student_portal_desc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAccess} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="student-email">
                   <Mail className="inline h-3.5 w-3.5 mr-1" />
-                  E-mail cadastrado
+                  {t("student_email_label")}
                 </Label>
                 <Input
                   id="student-email"
                   type="email"
-                  placeholder="seu.email@universidade.br"
+                  placeholder={t("student_email_placeholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -95,12 +94,12 @@ export default function StudentAuth() {
               <div className="space-y-2">
                 <Label htmlFor="student-pin">
                   <KeyRound className="inline h-3.5 w-3.5 mr-1" />
-                  PIN da prova
+                  {t("student_pin_label")}
                 </Label>
                 <Input
                   id="student-pin"
                   type="text"
-                  placeholder="Ex: abc123"
+                  placeholder={t("student_pin_placeholder")}
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   className="font-mono uppercase tracking-widest text-center text-lg"
@@ -110,12 +109,12 @@ export default function StudentAuth() {
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Acessar Prova
+                {t("student_access_btn")}
               </Button>
             </form>
 
             <p className="text-xs text-muted-foreground text-center mt-4">
-              Seu professor deve ter cadastrado seu e-mail na turma. Caso não consiga acessar, entre em contato com ele.
+              {t("student_help_text")}
             </p>
           </CardContent>
         </Card>

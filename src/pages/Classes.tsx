@@ -560,10 +560,13 @@ export default function ClassesPage() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : classes.length === 0 ? (
-        <div className="text-center py-12">
-          <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-          <p className="text-muted-foreground">Nenhuma turma criada.</p>
-          <p className="text-sm text-muted-foreground mt-1">Clique em "Nova Turma" para começar.</p>
+        <div className="text-center py-16">
+          <GraduationCap className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+          <p className="font-semibold text-foreground text-lg">Nenhuma turma criada</p>
+          <p className="text-sm text-muted-foreground mt-1 mb-5">Cadastre sua primeira turma para organizar alunos e vincular provas.</p>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Criar Primeira Turma
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

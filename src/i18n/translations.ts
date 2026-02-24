@@ -320,6 +320,55 @@ type TranslationKeys = {
   pricing_cancel_confirm: string;
   pricing_cancel_success: string;
 
+  // Sidebar groups
+  sidebar_principal: string;
+  sidebar_content: string;
+  sidebar_management: string;
+  sidebar_my_exams: string;
+  sidebar_trash: string;
+
+  // Onboarding
+  onboarding_title: string;
+  onboarding_subtitle: string;
+  onboarding_step1: string;
+  onboarding_step1_desc: string;
+  onboarding_step2: string;
+  onboarding_step2_desc: string;
+  onboarding_step3: string;
+  onboarding_step3_desc: string;
+  onboarding_step4: string;
+  onboarding_step4_desc: string;
+
+  // Protected route
+  protected_student_title: string;
+  protected_student_desc: string;
+  protected_student_portal: string;
+  protected_pending_title: string;
+  protected_pending_desc: string;
+  protected_pending_time: string;
+  protected_contact_admin: string;
+  protected_admin_title: string;
+  protected_admin_desc: string;
+  protected_back_dashboard: string;
+
+  // Student portal
+  student_portal_title: string;
+  student_portal_desc: string;
+  student_email_label: string;
+  student_email_placeholder: string;
+  student_pin_label: string;
+  student_pin_placeholder: string;
+  student_access_btn: string;
+  student_help_text: string;
+  student_back_home: string;
+  student_access_denied: string;
+  student_unknown_error: string;
+  student_error: string;
+  student_connection_error: string;
+
+  // Empty states
+  empty_questions_hint: string;
+
   // Common
   cancel: string;
   save: string;
@@ -623,6 +672,50 @@ const pt: TranslationKeys = {
   pricing_cancel_confirm: "Sim, cancelar",
   pricing_cancel_success: "Assinatura cancelada. Você terá acesso até o final do período pago.",
 
+  sidebar_principal: "Principal",
+  sidebar_content: "Conteúdo",
+  sidebar_management: "Gestão",
+  sidebar_my_exams: "Minhas Provas",
+  sidebar_trash: "Lixeira",
+
+  onboarding_title: "Bem-vindo ao ProvaFácil!",
+  onboarding_subtitle: "Siga estes passos para começar a criar suas provas:",
+  onboarding_step1: "Crie sua primeira turma",
+  onboarding_step1_desc: "Organize seus alunos em turmas",
+  onboarding_step2: "Adicione questões ao banco",
+  onboarding_step2_desc: "Crie manualmente ou gere com IA",
+  onboarding_step3: "Monte sua primeira prova",
+  onboarding_step3_desc: "Use o compositor visual",
+  onboarding_step4: "Publique a prova online",
+  onboarding_step4_desc: "Compartilhe com seus alunos",
+
+  protected_student_title: "Acesso Restrito",
+  protected_student_desc: "Esta área é exclusiva para professores. Use o Portal do Aluno para acessar suas provas.",
+  protected_student_portal: "Ir para Portal do Aluno",
+  protected_pending_title: "Aguardando Aprovação",
+  protected_pending_desc: "Seu cadastro está sendo analisado pelo administrador. Você receberá acesso assim que for aprovado.",
+  protected_pending_time: "Geralmente a aprovação ocorre em até 24 horas úteis.",
+  protected_contact_admin: "Contatar Administrador",
+  protected_admin_title: "Acesso Restrito",
+  protected_admin_desc: "Esta área é exclusiva para administradores.",
+  protected_back_dashboard: "Voltar ao Painel",
+
+  student_portal_title: "Portal do Aluno",
+  student_portal_desc: "Digite seu e-mail cadastrado pelo professor e o PIN da prova",
+  student_email_label: "E-mail cadastrado",
+  student_email_placeholder: "seu.email@universidade.br",
+  student_pin_label: "PIN da prova",
+  student_pin_placeholder: "Ex: abc123",
+  student_access_btn: "Acessar Prova",
+  student_help_text: "Seu professor deve ter cadastrado seu e-mail na turma. Caso não consiga acessar, entre em contato com ele.",
+  student_back_home: "Voltar ao início",
+  student_access_denied: "Acesso negado",
+  student_unknown_error: "Erro desconhecido.",
+  student_error: "Erro",
+  student_connection_error: "Não foi possível conectar ao servidor.",
+
+  empty_questions_hint: "Comece criando questões com IA ou manualmente para montar suas provas.",
+
   cancel: "Cancelar",
   save: "Salvar",
   create: "Criar",
@@ -925,6 +1018,50 @@ const en: TranslationKeys = {
   pricing_cancel_confirm: "Yes, cancel",
   pricing_cancel_success: "Subscription canceled. You'll have access until the end of your billing period.",
 
+  sidebar_principal: "Main",
+  sidebar_content: "Content",
+  sidebar_management: "Management",
+  sidebar_my_exams: "My Exams",
+  sidebar_trash: "Trash",
+
+  onboarding_title: "Welcome to ProvaFácil!",
+  onboarding_subtitle: "Follow these steps to start creating your exams:",
+  onboarding_step1: "Create your first class",
+  onboarding_step1_desc: "Organize your students into classes",
+  onboarding_step2: "Add questions to the bank",
+  onboarding_step2_desc: "Create manually or generate with AI",
+  onboarding_step3: "Build your first exam",
+  onboarding_step3_desc: "Use the visual composer",
+  onboarding_step4: "Publish the exam online",
+  onboarding_step4_desc: "Share with your students",
+
+  protected_student_title: "Restricted Access",
+  protected_student_desc: "This area is for teachers only. Use the Student Portal to access your exams.",
+  protected_student_portal: "Go to Student Portal",
+  protected_pending_title: "Awaiting Approval",
+  protected_pending_desc: "Your registration is being reviewed by the administrator. You will get access once approved.",
+  protected_pending_time: "Approval usually takes up to 24 business hours.",
+  protected_contact_admin: "Contact Administrator",
+  protected_admin_title: "Restricted Access",
+  protected_admin_desc: "This area is for administrators only.",
+  protected_back_dashboard: "Back to Dashboard",
+
+  student_portal_title: "Student Portal",
+  student_portal_desc: "Enter your email registered by the teacher and the exam PIN",
+  student_email_label: "Registered email",
+  student_email_placeholder: "your.email@university.edu",
+  student_pin_label: "Exam PIN",
+  student_pin_placeholder: "e.g.: abc123",
+  student_access_btn: "Access Exam",
+  student_help_text: "Your teacher must have registered your email in the class. If you can't access, contact them.",
+  student_back_home: "Back to home",
+  student_access_denied: "Access denied",
+  student_unknown_error: "Unknown error.",
+  student_error: "Error",
+  student_connection_error: "Could not connect to server.",
+
+  empty_questions_hint: "Start creating questions with AI or manually to build your exams.",
+
   cancel: "Cancel",
   save: "Save",
   create: "Create",
@@ -1226,6 +1363,50 @@ const es: TranslationKeys = {
   pricing_cancel_desc: "Mantendrá el acceso Premium hasta el final del período de facturación actual. Después, volverá al plan gratuito.",
   pricing_cancel_confirm: "Sí, cancelar",
   pricing_cancel_success: "Suscripción cancelada. Tendrá acceso hasta el final de su período de facturación.",
+
+  sidebar_principal: "Principal",
+  sidebar_content: "Contenido",
+  sidebar_management: "Gestión",
+  sidebar_my_exams: "Mis Exámenes",
+  sidebar_trash: "Papelera",
+
+  onboarding_title: "¡Bienvenido a ProvaFácil!",
+  onboarding_subtitle: "Siga estos pasos para comenzar a crear sus exámenes:",
+  onboarding_step1: "Cree su primera clase",
+  onboarding_step1_desc: "Organice sus alumnos en clases",
+  onboarding_step2: "Agregue preguntas al banco",
+  onboarding_step2_desc: "Cree manualmente o genere con IA",
+  onboarding_step3: "Arme su primer examen",
+  onboarding_step3_desc: "Use el compositor visual",
+  onboarding_step4: "Publique el examen en línea",
+  onboarding_step4_desc: "Comparta con sus alumnos",
+
+  protected_student_title: "Acceso Restringido",
+  protected_student_desc: "Esta área es exclusiva para profesores. Use el Portal del Alumno para acceder a sus exámenes.",
+  protected_student_portal: "Ir al Portal del Alumno",
+  protected_pending_title: "Esperando Aprobación",
+  protected_pending_desc: "Su registro está siendo analizado por el administrador. Recibirá acceso una vez aprobado.",
+  protected_pending_time: "La aprobación generalmente ocurre en hasta 24 horas hábiles.",
+  protected_contact_admin: "Contactar Administrador",
+  protected_admin_title: "Acceso Restringido",
+  protected_admin_desc: "Esta área es exclusiva para administradores.",
+  protected_back_dashboard: "Volver al Panel",
+
+  student_portal_title: "Portal del Alumno",
+  student_portal_desc: "Ingrese su correo registrado por el profesor y el PIN del examen",
+  student_email_label: "Correo registrado",
+  student_email_placeholder: "su.correo@universidad.edu",
+  student_pin_label: "PIN del examen",
+  student_pin_placeholder: "Ej: abc123",
+  student_access_btn: "Acceder al Examen",
+  student_help_text: "Su profesor debe haber registrado su correo en la clase. Si no puede acceder, contáctelo.",
+  student_back_home: "Volver al inicio",
+  student_access_denied: "Acceso denegado",
+  student_unknown_error: "Error desconocido.",
+  student_error: "Error",
+  student_connection_error: "No fue posible conectar al servidor.",
+
+  empty_questions_hint: "Comience creando preguntas con IA o manualmente para armar sus exámenes.",
 
   cancel: "Cancelar",
   save: "Guardar",
