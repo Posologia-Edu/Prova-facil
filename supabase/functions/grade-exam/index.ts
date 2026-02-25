@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAiWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,11 +17,8 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
-
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get subjective answers for this session
     const { data: answers, error: ansError } = await supabase
       .from("student_answers")
       .select("id, question_id, answer_text, max_points, question_bank(type, content_json)")
@@ -35,7 +33,6 @@ serve(async (req) => {
       });
     }
 
-    // Filter only subjective questions
     const subjectiveAnswers = answers.filter((a: any) => {
       const type = a.question_bank?.type;
       return type === "open_ended" || type === "matching";
@@ -62,30 +59,23 @@ Responda APENAS no formato JSON:
 {"score": <número>, "feedback": "<justificativa>"}`;
 
       try {
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${lovableApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
-            messages: [
-              { role: "system", content: "Você é um avaliador acadêmico justo e construtivo. Sempre responda em JSON válido." },
-              { role: "user", content: prompt },
-            ],
-          }),
+        const { response: aiResponse, provider } = await callAiWithFallback({
+          messages: [
+            { role: "system", content: "Você é um avaliador acadêmico justo e construtivo. Sempre responda em JSON válido." },
+            { role: "user", content: prompt },
+          ],
         });
 
+        console.log(`grade-exam answer ${answer.id} using provider: ${provider}`);
+
         if (!aiResponse.ok) {
-          console.error("AI gateway error:", aiResponse.status);
+          console.error("AI error:", aiResponse.status);
           continue;
         }
 
         const aiData = await aiResponse.json();
         const responseText = aiData.choices?.[0]?.message?.content || "";
 
-        // Parse JSON from response
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
@@ -107,7 +97,6 @@ Responda APENAS no formato JSON:
       }
     }
 
-    // Recalculate total score
     const { data: allAnswers } = await supabase
       .from("student_answers")
       .select("points_earned, ai_score, teacher_score")
@@ -129,9 +118,8 @@ Responda APENAS no formato JSON:
     });
   } catch (error) {
     console.error("grade-exam error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

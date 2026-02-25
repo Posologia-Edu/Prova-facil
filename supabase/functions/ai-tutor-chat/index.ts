@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAiWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,13 +17,8 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
-
-    if (!lovableApiKey) throw new Error("LOVABLE_API_KEY is not configured");
-
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get the answer with question context
     const { data: answer, error: ansError } = await supabase
       .from("student_answers")
       .select("*, question_bank(type, content_json)")
@@ -37,7 +33,6 @@ serve(async (req) => {
     const maxPoints = Number(answer.max_points) || 1;
     const studentAnswer = answer.answer_text || JSON.stringify(answer.answer_json) || "Sem resposta";
 
-    // Build context for the AI tutor
     let expectedAnswer = "";
     if (questionType === "multiple_choice") {
       const options = content.options || [];
@@ -78,12 +73,7 @@ Avalie a resposta do aluno de forma justa e construtiva. Forneça:
 3. Pontos positivos e negativos da resposta
 4. Sugestão de feedback construtivo para o aluno
 ` : `
-Você está em modo de discussão com o professor. Responda de forma construtiva e fundamentada:
-- Se o professor questionar a nota, argumente com base nos critérios pedagógicos
-- Se o professor pedir para reconsiderar, analise novamente e sugira ajustes
-- Seja receptivo a diferentes critérios de avaliação
-- Sugira notas e feedbacks quando solicitado
-- Mantenha um tom colaborativo e profissional
+Você está em modo de discussão com o professor. Responda de forma construtiva e fundamentada.
 `}`;
 
     const chatMessages = [
@@ -91,7 +81,6 @@ Você está em modo de discussão com o professor. Responda de forma construtiva
       ...(messages || []),
     ];
 
-    // If action is "grade" and no user messages, add initial grading request
     if (action === "grade" && (!messages || messages.length === 0)) {
       chatMessages.push({
         role: "user",
@@ -99,34 +88,26 @@ Você está em modo de discussão com o professor. Responda de forma construtiva
       });
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: chatMessages,
-        stream: true,
-      }),
+    const { response, provider } = await callAiWithFallback({
+      messages: chatMessages,
+      stream: true,
     });
+
+    console.log(`ai-tutor-chat using provider: ${provider}`);
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
+      console.error("AI error:", response.status, t);
       throw new Error("AI gateway error");
     }
 
@@ -135,9 +116,8 @@ Você está em modo de discussão com o professor. Responda de forma construtiva
     });
   } catch (error) {
     console.error("ai-tutor-chat error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
