@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Key, Eye, EyeOff, Trash2, Loader2, ExternalLink } from "lucide-react";
+import { Key, Eye, EyeOff, Trash2, Loader2, ExternalLink, CheckCircle2, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ApiKeyEntry {
   id: string;
@@ -129,6 +130,17 @@ export default function AdminApiKeys() {
                   <div className="flex items-center gap-2">
                     <Key className="h-4 w-4 text-muted-foreground" />
                     <span className="font-semibold">{info.label}</span>
+                    {hasKey ? (
+                      <Badge variant="default" className="bg-primary hover:bg-primary text-primary-foreground gap-1 text-xs">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Configurada
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground gap-1 text-xs">
+                        <XCircle className="h-3 w-3" />
+                        Não configurada
+                      </Badge>
+                    )}
                   </div>
                   <a
                     href={info.link}
