@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAiWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,11 +20,6 @@ serve(async (req) => {
         JSON.stringify({ error: "Missing required fields: topic, difficulty, questionType" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    }
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     const numQuestions = Math.min(count || 3, 10);
@@ -58,12 +54,7 @@ For each question, also provide:
         question_text: { type: "string", description: "The question text" },
         options: {
           type: "object",
-          properties: {
-            a: { type: "string" },
-            b: { type: "string" },
-            c: { type: "string" },
-            d: { type: "string" },
-          },
+          properties: { a: { type: "string" }, b: { type: "string" }, c: { type: "string" }, d: { type: "string" } },
           required: ["a", "b", "c", "d"],
           additionalProperties: false,
         },
@@ -99,50 +90,41 @@ For each question, also provide:
     const props = questionProperties[questionType] || questionProperties.multiple_choice;
     const requiredFields = Object.keys(props);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_questions",
-              description: "Return an array of generated exam questions.",
-              parameters: {
-                type: "object",
-                properties: {
-                  questions: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: props,
-                      required: requiredFields,
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ["questions"],
-                additionalProperties: false,
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "generate_questions",
+          description: "Return an array of generated exam questions.",
+          parameters: {
+            type: "object",
+            properties: {
+              questions: {
+                type: "array",
+                items: { type: "object", properties: props, required: requiredFields, additionalProperties: false },
               },
             },
+            required: ["questions"],
+            additionalProperties: false,
           },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_questions" } },
-      }),
+        },
+      },
+    ];
+
+    const { response, provider } = await callAiWithFallback({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools,
+      tool_choice: { type: "function", function: { name: "generate_questions" } },
     });
+
+    console.log(`generate-questions using provider: ${provider}`);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("AI error:", response.status, errorText);
 
       if (response.status === 429) {
         return new Response(
@@ -179,7 +161,7 @@ For each question, also provide:
     return new Response(
       JSON.stringify({
         questions: parsed.questions,
-        metadata: { topic, difficulty, questionType, count: parsed.questions.length },
+        metadata: { topic, difficulty, questionType, count: parsed.questions.length, provider },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

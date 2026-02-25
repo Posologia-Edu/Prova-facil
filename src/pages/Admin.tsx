@@ -19,7 +19,9 @@ import {
   Mail,
   UserPlus,
   Circle,
+  Key,
 } from "lucide-react";
+import AdminApiKeys from "@/components/AdminApiKeys";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -274,6 +276,9 @@ export default function AdminPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* API Keys */}
+      <AdminApiKeys />
 
       {/* User Management */}
       <Tabs defaultValue="pending">

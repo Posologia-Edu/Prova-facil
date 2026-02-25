@@ -44,6 +44,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_api_keys: {
+        Row: {
+          api_key: string
+          created_at: string
+          id: string
+          is_active: boolean
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          api_key?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       class_students: {
         Row: {
           class_id: string
