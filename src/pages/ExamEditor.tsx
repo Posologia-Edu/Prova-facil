@@ -631,7 +631,8 @@ export default function ExamEditorPage() {
     graded: { label: "CONSOLIDADA", className: "bg-success text-success-foreground" },
   };
 
-  const currentStatus = statusLabel[examStatus] || statusLabel.draft;
+  const derivedStatus = publication?.is_active ? "in_progress" : examStatus;
+  const currentStatus = statusLabel[derivedStatus] || statusLabel.draft;
 
   // Grading: filter sessions
   const filteredSessions = sessions.filter(s => {
