@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useSubscription } from "@/hooks/use-subscription";
+import { PremiumGate } from "@/components/PremiumGate";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +54,7 @@ interface AnswerRow {
 export default function ExamMonitoring() {
   const { publicationId } = useParams<{ publicationId: string }>();
   const navigate = useNavigate();
+  const { isPremium, isLoading: subLoading } = useSubscription();
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [examTitle, setExamTitle] = useState("");
@@ -155,10 +158,24 @@ export default function ExamMonitoring() {
     toast.info(`Nota sugerida: ${score}/${Number(reviewAnswer?.max_points)} aplicada.`);
   };
 
-  if (loading) {
+  if (loading || subLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isPremium) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Button>
+        <PremiumGate feature="Monitoramento em Tempo Real">
+          <span />
+        </PremiumGate>
       </div>
     );
   }

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSubscription, FREE_LIMITS } from "@/hooks/use-subscription";
+import { useMonthlyExamCount } from "@/hooks/use-monthly-usage";
 import {
   Plus,
   FileText,
@@ -65,6 +67,8 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 
 export default function ExamsPage() {
   const navigate = useNavigate();
+  const { isPremium } = useSubscription();
+  const { count: monthlyExamCount, refresh: refreshExamCount } = useMonthlyExamCount();
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -160,6 +164,11 @@ export default function ExamsPage() {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) { toast.error("Faça login primeiro."); return; }
 
+    if (!isPremium && monthlyExamCount >= FREE_LIMITS.examsPerMonth) {
+      toast.error(`Limite de ${FREE_LIMITS.examsPerMonth} prova(s) por mês no plano gratuito. Faça upgrade para criar mais.`);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("exams")
       .insert({ user_id: user.user.id, title: "Nova Prova", status: "draft" })
@@ -167,6 +176,7 @@ export default function ExamsPage() {
       .single();
 
     if (error) { toast.error("Erro ao criar prova."); return; }
+    refreshExamCount();
     navigate(`/exams/${data.id}`);
   };
 

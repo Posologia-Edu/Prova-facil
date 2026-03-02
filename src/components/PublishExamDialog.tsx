@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSubscription } from "@/hooks/use-subscription";
+import { PremiumGate } from "@/components/PremiumGate";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +24,7 @@ interface PublishExamDialogProps {
 }
 
 export default function PublishExamDialog({ open, onOpenChange, examId, examTitle }: PublishExamDialogProps) {
+  const { isPremium } = useSubscription();
   const [timeLimit, setTimeLimit] = useState("60");
   const [hasStartDate, setHasStartDate] = useState(false);
   const [hasEndDate, setHasEndDate] = useState(false);
@@ -103,12 +106,14 @@ export default function PublishExamDialog({ open, onOpenChange, examId, examTitl
               Os alunos devem acessar o Portal do Aluno e digitar este código.
             </p>
           </div>
+        ) : !isPremium ? (
+          <div className="space-y-5 py-2">
+            <PremiumGate feature="Provas Online">
+              <span />
+            </PremiumGate>
+          </div>
         ) : (
           <div className="space-y-5 py-2">
-            <div>
-              <p className="text-sm font-medium mb-1">{examTitle}</p>
-              <p className="text-xs text-muted-foreground">Configure as opções de aplicação online.</p>
-            </div>
 
             <div className="space-y-2">
               <Label>Tempo limite (minutos)</Label>
@@ -140,6 +145,8 @@ export default function PublishExamDialog({ open, onOpenChange, examId, examTitl
         <DialogFooter>
           {accessCode ? (
             <Button onClick={handleClose}>Fechar</Button>
+          ) : !isPremium ? (
+            <Button variant="outline" onClick={handleClose}>Fechar</Button>
           ) : (
             <>
               <Button variant="outline" onClick={handleClose}>Cancelar</Button>

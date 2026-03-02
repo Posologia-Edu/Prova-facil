@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Crown } from "lucide-react";
+import { useSubscription, FREE_LIMITS } from "@/hooks/use-subscription";
+import { useMonthlyQuestionCount } from "@/hooks/use-monthly-usage";
+import { UsageLimitGate } from "@/components/PremiumGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,6 +63,8 @@ const typeLabels: Record<string, string> = {
 export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQuestionGeneratorProps) {
   const { toast } = useToast();
   const { language } = useLanguage();
+  const { isPremium } = useSubscription();
+  const { count: monthlyCount, refresh: refreshCount } = useMonthlyQuestionCount();
   const [step, setStep] = useState<"config" | "review">("config");
   const [loading, setLoading] = useState(false);
   const [topic, setTopic] = useState("");
@@ -153,6 +158,7 @@ export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQ
       if (error) throw error;
 
       onSaveQuestions(selected);
+      refreshCount();
       handleClose();
       toast({ title: `${selected.length} questão(ões) salva(s)`, description: "Adicionadas ao banco de questões." });
     } catch (e: any) {
@@ -186,6 +192,11 @@ export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQ
 
         {step === "config" && (
           <div className="space-y-5 py-2">
+            {!isPremium && (
+              <UsageLimitGate current={monthlyCount} limit={FREE_LIMITS.questionsPerMonth} featureLabel="questões com IA por mês">
+                <span />
+              </UsageLimitGate>
+            )}
             <div className="space-y-2">
               <Label>Tópico *</Label>
               <Input
@@ -322,7 +333,7 @@ export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQ
           {step === "config" ? (
             <>
               <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-              <Button onClick={handleGenerate} disabled={loading}>
+              <Button onClick={handleGenerate} disabled={loading || (!isPremium && monthlyCount >= FREE_LIMITS.questionsPerMonth)}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
