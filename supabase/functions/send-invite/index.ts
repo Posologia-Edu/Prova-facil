@@ -105,6 +105,24 @@ Deno.serve(async (req) => {
         .eq("user_id", createdUserId);
     }
 
+    // Ensure invited user has the teacher role (not student)
+    const { data: existingRole } = await adminClient
+      .from("user_roles")
+      .select("id, role")
+      .eq("user_id", createdUserId)
+      .maybeSingle();
+
+    if (existingRole && existingRole.role === "student") {
+      await adminClient
+        .from("user_roles")
+        .update({ role: "teacher" })
+        .eq("id", existingRole.id);
+    } else if (!existingRole) {
+      await adminClient
+        .from("user_roles")
+        .insert({ user_id: createdUserId, role: "teacher" });
+    }
+
     // Generate recovery link (acts as "set password" link)
     const origin = req.headers.get("origin") || "https://examcraft-studio-45.lovable.app";
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
