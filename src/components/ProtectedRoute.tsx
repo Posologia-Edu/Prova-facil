@@ -24,6 +24,22 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
     const checkAccess = async (userId: string, email?: string) => {
       if (email) setUserEmail(email);
 
+      // Check if user was invited by admin — invited users are always treated as teachers
+      if (email) {
+        const { data: invitation } = await supabase
+          .from("admin_invitations")
+          .select("status")
+          .eq("email", email)
+          .maybeSingle();
+
+        if (invitation) {
+          // Invited users bypass student check — they have premium teacher access
+          setApproved(true);
+          setLoading(false);
+          return;
+        }
+      }
+
       const { data: studentRole } = await supabase
         .from("user_roles")
         .select("role")
