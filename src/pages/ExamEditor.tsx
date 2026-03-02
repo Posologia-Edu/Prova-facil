@@ -1203,7 +1203,8 @@ export default function ExamEditorPage() {
                       </div>
                       <p className="text-xs leading-relaxed line-clamp-5">{q.title}</p>
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {q.tags.map((t) => (<Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0">{t}</Badge>))}
+                        {q.tags.slice(0, 3).map((t) => (<Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]" title={t}>{t}</Badge>))}
+                        {q.tags.length > 3 && <Badge variant="outline" className="text-[10px] px-1.5 py-0" title={q.tags.slice(3).join(", ")}>+{q.tags.length - 3}</Badge>}
                       </div>
                     </Card>
                   );
