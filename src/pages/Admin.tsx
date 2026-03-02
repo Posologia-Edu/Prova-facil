@@ -20,6 +20,10 @@ import {
   UserPlus,
   Circle,
   Key,
+  CreditCard,
+  Crown,
+  Gift,
+  CalendarDays,
 } from "lucide-react";
 import AdminApiKeys from "@/components/AdminApiKeys";
 import {
@@ -53,6 +57,20 @@ interface Invitation {
   completed_at: string | null;
 }
 
+interface Subscriber {
+  subscription_id: string;
+  customer_email: string;
+  customer_name: string;
+  status: string;
+  product_id: string | null;
+  amount: number;
+  currency: string;
+  interval: string;
+  current_period_start: string;
+  current_period_end: string;
+  created: string;
+}
+
 interface Stats {
   totalUsers: number;
   pendingUsers: number;
@@ -76,7 +94,10 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [subscriberInvitations, setSubscriberInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [subscribersLoading, setSubscribersLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -97,6 +118,18 @@ export default function AdminPage() {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
     setLoading(false);
+  };
+
+  const loadSubscribers = async () => {
+    setSubscribersLoading(true);
+    try {
+      const data = await adminAction("list_subscribers");
+      setSubscribers(data.subscribers || []);
+      setSubscriberInvitations(data.invitations || []);
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+    setSubscribersLoading(false);
   };
 
   useEffect(() => { loadData(); }, []);
@@ -238,7 +271,6 @@ export default function AdminPage() {
             </Button>
           </form>
 
-          {/* Invitation List */}
           {invitations.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Convites enviados</p>
@@ -248,27 +280,27 @@ export default function AdminPage() {
                     <div className="flex items-center gap-3">
                       <Circle
                         className={`h-3 w-3 fill-current ${
-                          inv.status === "completed"
-                            ? "text-green-500"
-                            : "text-red-500"
+                          inv.status === "completed" ? "text-green-500" : "text-red-500"
                         }`}
                       />
                       <div>
                         <p className="text-sm font-medium">{inv.email}</p>
                         <p className="text-xs text-muted-foreground">
                           Convidado em {new Date(inv.invited_at).toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
+                            day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
                           })}
                         </p>
                       </div>
                     </div>
-                    <Badge variant={inv.status === "completed" ? "success" : "destructive"}>
-                      {inv.status === "completed" ? "Cadastro completo" : "Pendente"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="gap-1 border-amber-500/30 text-amber-600 bg-amber-500/10">
+                        <Gift className="h-3 w-3" />
+                        Premium Convidado
+                      </Badge>
+                      <Badge variant={inv.status === "completed" ? "success" : "destructive"}>
+                        {inv.status === "completed" ? "Cadastro completo" : "Pendente"}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -280,8 +312,8 @@ export default function AdminPage() {
       {/* API Keys */}
       <AdminApiKeys />
 
-      {/* User Management */}
-      <Tabs defaultValue="pending">
+      {/* Tabs: Users + Subscribers */}
+      <Tabs defaultValue="pending" onValueChange={(v) => { if (v === "subscribers" && subscribers.length === 0) loadSubscribers(); }}>
         <TabsList>
           <TabsTrigger value="pending" className="gap-2">
             <Clock className="h-4 w-4" />
@@ -290,6 +322,10 @@ export default function AdminPage() {
           <TabsTrigger value="approved" className="gap-2">
             <CheckCircle className="h-4 w-4" />
             Aprovados ({approvedUsers.length})
+          </TabsTrigger>
+          <TabsTrigger value="subscribers" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Assinantes
           </TabsTrigger>
         </TabsList>
 
@@ -329,6 +365,104 @@ export default function AdminPage() {
               />
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="subscribers" className="mt-4">
+          {subscribersLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Paying Subscribers */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Assinantes Pagantes ({subscribers.length})
+                  </h3>
+                  <Button size="sm" variant="outline" onClick={loadSubscribers} className="gap-1">
+                    <Loader2 className={`h-3 w-3 ${subscribersLoading ? "animate-spin" : ""}`} />
+                    Atualizar
+                  </Button>
+                </div>
+
+                {subscribers.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-8 text-center text-muted-foreground">
+                      <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                      <p className="font-medium">Nenhum assinante pagante</p>
+                      <p className="text-sm">Ainda não há assinaturas ativas no Stripe.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="divide-y rounded-lg border">
+                    {subscribers.map((sub) => (
+                      <div key={sub.subscription_id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{sub.customer_name || sub.customer_email}</p>
+                            <Badge className="gap-1 bg-primary/10 text-primary border-primary/20 hover:bg-primary/20">
+                              <Crown className="h-3 w-3" />
+                              Premium
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{sub.customer_email}</p>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="text-right">
+                            <p className="font-medium text-foreground">
+                              {(sub.amount / 100).toLocaleString("pt-BR", { style: "currency", currency: sub.currency })}
+                              <span className="text-muted-foreground font-normal">/{sub.interval === "month" ? "mês" : sub.interval === "year" ? "ano" : sub.interval}</span>
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center gap-1">
+                              <CalendarDays className="h-3 w-3" />
+                              <span>Desde {new Date(sub.created).toLocaleDateString("pt-BR")}</span>
+                            </div>
+                            <p>Renova em {new Date(sub.current_period_end).toLocaleDateString("pt-BR")}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Invited Premium Users */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                  <Gift className="h-4 w-4" />
+                  Convidados Premium ({subscriberInvitations.filter((i) => i.status === "completed").length})
+                </h3>
+                {subscriberInvitations.filter((i) => i.status === "completed").length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 text-center text-muted-foreground">
+                      <p className="text-sm">Nenhum convidado completou o cadastro ainda.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="divide-y rounded-lg border">
+                    {subscriberInvitations.filter((i) => i.status === "completed").map((inv) => (
+                      <div key={inv.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{inv.email}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Cadastro em {new Date(inv.completed_at || inv.invited_at).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="gap-1 border-amber-500/30 text-amber-600 bg-amber-500/10">
+                          <Gift className="h-3 w-3" />
+                          Premium Convidado (Vitalício)
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
