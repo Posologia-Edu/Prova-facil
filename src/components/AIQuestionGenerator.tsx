@@ -74,6 +74,13 @@ export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQ
   const [count, setCount] = useState([3]);
   const [generated, setGenerated] = useState<GeneratedQuestion[]>([]);
 
+  // Remaining quota for free users
+  const remaining = isPremium ? Infinity : Math.max(0, FREE_LIMITS.questionsPerMonth - monthlyCount);
+  const maxSlider = isPremium ? 10 : Math.min(10, remaining);
+
+  // Clamp count to maxSlider when quota changes
+  const effectiveCount = Math.min(count[0], maxSlider || 1);
+
   const handleGenerate = async () => {
     if (!topic.trim()) {
       toast({ title: "Informe um tópico", description: "O campo de tópico é obrigatório.", variant: "destructive" });
@@ -83,7 +90,7 @@ export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQ
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-questions", {
-        body: { topic, context, difficulty, questionType, count: count[0], language },
+        body: { topic, context, difficulty, questionType, count: effectiveCount, language },
       });
 
       if (error) throw error;
@@ -125,6 +132,20 @@ export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQ
     if (selected.length === 0) {
       toast({ title: "Nenhuma questão selecionada", variant: "destructive" });
       return;
+    }
+
+    // Re-check limit before saving (prevents race conditions)
+    if (!isPremium) {
+      await refreshCount();
+      const currentRemaining = FREE_LIMITS.questionsPerMonth - monthlyCount;
+      if (selected.length > currentRemaining) {
+        toast({
+          title: "Limite excedido",
+          description: `Você pode salvar no máximo ${Math.max(0, currentRemaining)} questão(ões) no plano gratuito este mês. Desmarque algumas ou faça upgrade.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     try {
@@ -240,8 +261,8 @@ export function AIQuestionGenerator({ open, onOpenChange, onSaveQuestions }: AIQ
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Quantidade de questões: {count[0]}</Label>
-              <Slider value={count} onValueChange={setCount} min={1} max={10} step={1} />
+              <Label>Quantidade de questões: {count[0]}{!isPremium && ` (restam ${remaining} este mês)`}</Label>
+              <Slider value={count} onValueChange={setCount} min={1} max={maxSlider} step={1} disabled={maxSlider === 0} />
             </div>
           </div>
         )}
