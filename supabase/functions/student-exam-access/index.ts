@@ -51,12 +51,14 @@ Deno.serve(async (req) => {
       if (!exam?.class_id) return json({ error: "Esta prova não está vinculada a nenhuma turma." }, 400);
 
       // Check if student email is registered in the class
-      const { data: student, error: studentErr } = await supabase
+      const { data: students, error: studentErr } = await supabase
         .from("class_students")
         .select("id, student_name, student_email")
         .eq("class_id", exam.class_id)
         .ilike("student_email", normalizedEmail)
-        .maybeSingle();
+        .limit(1);
+
+      const student = students?.[0] || null;
 
       if (studentErr || !student) {
         return json({ error: "Seu e-mail não está cadastrado nesta turma. Entre em contato com seu professor." }, 403);
