@@ -19,6 +19,53 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // Check teacher's subscription before AI grading
+    const { data: session } = await supabase
+      .from("exam_sessions")
+      .select("publication_id, exam_publications(user_id)")
+      .eq("id", sessionId)
+      .single();
+
+    if (!session) throw new Error("Session not found");
+    const teacherUserId = (session.exam_publications as any)?.user_id;
+
+    let teacherIsPremium = false;
+    // Check invitation
+    const { data: invitation } = await supabase
+      .from("admin_invitations")
+      .select("id")
+      .eq("created_user_id", teacherUserId)
+      .eq("status", "completed")
+      .maybeSingle();
+
+    if (invitation) {
+      teacherIsPremium = true;
+    } else {
+      // Check Stripe
+      try {
+        const Stripe = (await import("https://esm.sh/stripe@18.5.0")).default;
+        const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+        if (stripeKey) {
+          const { data: teacherAuth } = await supabase.auth.admin.getUserById(teacherUserId);
+          if (teacherAuth?.user?.email) {
+            const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+            const customers = await stripe.customers.list({ email: teacherAuth.user.email, limit: 1 });
+            if (customers.data.length > 0) {
+              const subs = await stripe.subscriptions.list({ customer: customers.data[0].id, status: "active", limit: 1 });
+              if (subs.data.length > 0) teacherIsPremium = true;
+            }
+          }
+        }
+      } catch (e) { console.warn("Stripe check failed:", e); }
+    }
+
+    if (!teacherIsPremium) {
+      return new Response(JSON.stringify({ error: "AI grading requires a Premium plan.", blocked: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403,
+      });
+    }
+
     const { data: answers, error: ansError } = await supabase
       .from("student_answers")
       .select("id, question_id, answer_text, max_points, question_bank(type, content_json)")

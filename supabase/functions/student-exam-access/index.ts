@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       // Find active publication by access_code (PIN)
       const { data: pub, error: pubErr } = await supabase
         .from("exam_publications")
-        .select("id, exam_id, time_limit_minutes, start_at, end_at, is_active, exams(title, class_id)")
+        .select("id, exam_id, user_id, time_limit_minutes, start_at, end_at, is_active, exams(title, class_id)")
         .eq("access_code", normalizedPin)
         .eq("is_active", true)
         .maybeSingle();
@@ -75,6 +75,53 @@ Deno.serve(async (req) => {
           return json({ sessionId: existingSession.id, status: "finished", examTitle: exam.title });
         }
         return json({ sessionId: existingSession.id, status: "in_progress", examTitle: exam.title });
+      }
+
+      // Check student limit for free plan (10 students per exam)
+      // Get teacher's subscription status
+      const teacherUserId = pub.user_id;
+      let teacherIsPremium = false;
+
+      // Check if teacher was invited as premium
+      const { data: invitation } = await supabase
+        .from("admin_invitations")
+        .select("id")
+        .eq("created_user_id", teacherUserId)
+        .eq("status", "completed")
+        .maybeSingle();
+
+      if (invitation) {
+        teacherIsPremium = true;
+      } else {
+        // Check Stripe subscription
+        try {
+          const Stripe = (await import("https://esm.sh/stripe@18.5.0")).default;
+          const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+          if (stripeKey) {
+            // Get teacher email
+            const { data: teacherAuth } = await supabase.auth.admin.getUserById(teacherUserId);
+            if (teacherAuth?.user?.email) {
+              const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+              const customers = await stripe.customers.list({ email: teacherAuth.user.email, limit: 1 });
+              if (customers.data.length > 0) {
+                const subs = await stripe.subscriptions.list({ customer: customers.data[0].id, status: "active", limit: 1 });
+                if (subs.data.length > 0) teacherIsPremium = true;
+              }
+            }
+          }
+        } catch (e) { console.warn("Stripe check failed, assuming free plan:", e); }
+      }
+
+      if (!teacherIsPremium) {
+        const FREE_STUDENT_LIMIT = 10;
+        const { count: sessionCount } = await supabase
+          .from("exam_sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("publication_id", pub.id);
+
+        if (sessionCount !== null && sessionCount >= FREE_STUDENT_LIMIT) {
+          return json({ error: `Esta prova atingiu o limite de ${FREE_STUDENT_LIMIT} alunos do plano gratuito do professor.` }, 403);
+        }
       }
 
       // Create new session (student_id can be null for non-auth students)

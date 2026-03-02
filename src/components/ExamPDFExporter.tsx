@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { jsPDF } from "jspdf";
+import { useSubscription } from "@/hooks/use-subscription";
+import { PremiumGate } from "@/components/PremiumGate";
 import html2canvas from "html2canvas";
 import QRCode from "qrcode";
 import {
@@ -137,6 +139,7 @@ export default function ExamPDFExporter({
   examDate,
   instructions,
 }: ExamPDFExporterProps) {
+  const { isPremium } = useSubscription();
   const [watermarkEnabled, setWatermarkEnabled] = useState(false);
   const [watermarkText, setWatermarkText] = useState("CONFIDENCIAL");
   const [includeAnswerKey, setIncludeAnswerKey] = useState(true);
@@ -693,6 +696,13 @@ export default function ExamPDFExporter({
           </DialogTitle>
         </DialogHeader>
 
+        {!isPremium ? (
+          <div className="py-4">
+            <PremiumGate feature="Exportação em PDF">
+              <span />
+            </PremiumGate>
+          </div>
+        ) : (
         <div className="space-y-5 py-2">
           {/* Marca d'água */}
           <div className="space-y-3">
@@ -773,24 +783,27 @@ export default function ExamPDFExporter({
             </p>
           </div>
         </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isGenerating}>
             Cancelar
           </Button>
-          <Button onClick={generatePDF} disabled={isGenerating}>
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Gerando...
-              </>
-            ) : (
-              <>
-                <FileDown className="h-4 w-4 mr-2" />
-                Gerar PDF
-              </>
-            )}
-          </Button>
+          {isPremium && (
+            <Button onClick={generatePDF} disabled={isGenerating}>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Gerar PDF
+                </>
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
 
