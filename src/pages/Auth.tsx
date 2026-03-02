@@ -32,6 +32,25 @@ const Auth = () => {
       // Assign teacher role if no role exists (for teacher portal signups)
       await supabase.rpc("assign_role_on_signup", { _role: "teacher" });
 
+      // Ensure profile exists and is approved (for OAuth users or legacy accounts)
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id, is_approved")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (!existingProfile) {
+        // Profile not created by trigger yet - create it manually
+        await supabase.from("profiles").insert({
+          user_id: session.user.id,
+          full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || "",
+          is_approved: true,
+        });
+      } else if (!existingProfile.is_approved) {
+        // Legacy user with is_approved = false - approve them
+        await supabase.from("profiles").update({ is_approved: true }).eq("id", existingProfile.id);
+      }
+
       // Check if user is a student - block access to teacher portal
       const { data: role } = await supabase
         .from("user_roles")
