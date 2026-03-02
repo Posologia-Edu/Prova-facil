@@ -447,15 +447,20 @@ export default function ComposerPage() {
                   <div className="text-muted-foreground mt-0.5">{typeIcons[q.type]}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium leading-snug line-clamp-2">{q.title}</p>
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <Badge variant={q.difficulty as any} className="text-[10px] px-1.5 py-0">
+                    <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                      <Badge variant={q.difficulty as any} className="text-[10px] px-1.5 py-0 shrink-0">
                         {difficultyLabels[q.difficulty] || q.difficulty}
                       </Badge>
-                      {q.tags.map((t) => (
-                        <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0">
+                      {q.tags.slice(0, 3).map((t) => (
+                        <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]" title={t}>
                           {t}
                         </Badge>
                       ))}
+                      {q.tags.length > 3 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0" title={q.tags.slice(3).join(", ")}>
+                          +{q.tags.length - 3}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <Plus className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
