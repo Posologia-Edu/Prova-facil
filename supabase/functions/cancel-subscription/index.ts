@@ -37,24 +37,32 @@ serve(async (req) => {
     }
 
     const customerId = customers.data[0].id;
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
-    });
+    // Check for active or trialing subscriptions
+    const [activeSubs, trialingSubs] = await Promise.all([
+      stripe.subscriptions.list({ customer: customerId, status: "active", limit: 1 }),
+      stripe.subscriptions.list({ customer: customerId, status: "trialing", limit: 1 }),
+    ]);
 
-    if (subscriptions.data.length === 0) {
+    const allSubs = [...activeSubs.data, ...trialingSubs.data];
+    if (allSubs.length === 0) {
       throw new Error("Nenhuma assinatura ativa encontrada.");
     }
 
-    // Cancel at period end so user keeps access until the end of billing period
-    const canceled = await stripe.subscriptions.update(subscriptions.data[0].id, {
+    const subscription = allSubs[0];
+
+    const canceled = await stripe.subscriptions.update(subscription.id, {
       cancel_at_period_end: true,
     });
 
+    const endTimestamp = canceled.current_period_end || canceled.trial_end;
+    let cancelAt = null;
+    if (endTimestamp && typeof endTimestamp === 'number') {
+      try { cancelAt = new Date(endTimestamp * 1000).toISOString(); } catch (_) {}
+    }
+
     return new Response(JSON.stringify({
       success: true,
-      cancel_at: new Date(canceled.current_period_end * 1000).toISOString(),
+      cancel_at: cancelAt,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
