@@ -1,57 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { GraduationCap, ArrowLeft, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const categories = [
-  "Problema técnico",
-  "Sugestão de melhoria",
-  "Dúvida",
-  "Parceria",
-  "Outro",
-];
-
-const subjects = [
-  "Banco de Questões",
-  "Compositor de Provas",
-  "Correção Automática",
-  "Login / Conta",
-  "Assinatura / Pagamento",
-  "Outro",
-];
-
 export default function Contact() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [institution, setInstitution] = useState("");
-  const [message, setMessage] = useState("");
-  const [category, setCategory] = useState("");
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email ?? "");
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, institution")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (profile) {
+          setUserName(profile.full_name || "");
+        }
+      }
+      setLoading(false);
+    };
+    loadUser();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim() || !email.trim() || !message.trim() || !category) {
-      toast.error("Preencha todos os campos obrigatórios.");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast.error("Informe um email válido.");
+    if (!subject.trim() || !message.trim()) {
+      toast.error("Preencha o assunto e a mensagem.");
       return;
     }
 
@@ -62,26 +50,21 @@ export default function Contact() {
 
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-contact", {
+      const { error } = await supabase.functions.invoke("send-contact", {
         body: {
-          name: name.trim(),
-          email: email.trim(),
-          institution: institution.trim(),
+          name: userName.trim(),
+          email: userEmail.trim(),
           message: message.trim(),
-          category,
-          subject,
+          category: "Contato",
+          subject: subject.trim(),
         },
       });
 
       if (error) throw error;
 
       toast.success("Mensagem enviada com sucesso! Responderemos em breve.");
-      setName("");
-      setEmail("");
-      setInstitution("");
-      setMessage("");
-      setCategory("");
       setSubject("");
+      setMessage("");
     } catch (err: any) {
       console.error("Contact form error:", err);
       toast.error("Erro ao enviar mensagem. Tente novamente.");
@@ -90,9 +73,16 @@ export default function Contact() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Navbar */}
       <nav className="border-b bg-card/80 backdrop-blur-lg">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
@@ -108,61 +98,46 @@ export default function Contact() {
         </div>
       </nav>
 
-      <div className="container mx-auto px-4 py-16 max-w-3xl">
+      <div className="container mx-auto px-4 py-16 max-w-2xl">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
-            Contato
+            Fale Conosco
           </h1>
           <p className="mt-3 text-muted-foreground text-lg">
-            Use este canal para comunicar problemas, sugestões, dentre outros.
+            Envie sua mensagem e responderemos o mais breve possível.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Row 1: Nome, Instituição, Email */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome *</Label>
-              <Input
-                id="name"
-                placeholder="Seu nome completo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={100}
-                required
-              />
+              <Label>Remetente</Label>
+              <Input value={userName} disabled className="bg-muted" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="institution">Instituição/Projeto</Label>
-              <Input
-                id="institution"
-                placeholder="Ex: UFMG"
-                value={institution}
-                onChange={(e) => setInstitution(e.target.value)}
-                maxLength={100}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                maxLength={255}
-                required
-              />
+              <Label>Email</Label>
+              <Input value={userEmail} disabled className="bg-muted" />
             </div>
           </div>
 
-          {/* Mensagem */}
+          <div className="space-y-2">
+            <Label htmlFor="subject">Assunto *</Label>
+            <Input
+              id="subject"
+              placeholder="Sobre o que deseja falar?"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              maxLength={200}
+              required
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="message">Mensagem *</Label>
             <Textarea
               id="message"
               placeholder="Descreva sua mensagem aqui..."
-              rows={5}
+              rows={6}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               maxLength={2000}
@@ -173,37 +148,6 @@ export default function Contact() {
             </p>
           </div>
 
-          {/* Row 2: Categoria, Assunto */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Categoria *</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha uma opção" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Assunto</Label>
-              <Select value={subject} onValueChange={setSubject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha uma opção" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjects.map((sub) => (
-                    <SelectItem key={sub} value={sub}>{sub}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Submit */}
           <div className="flex justify-end pt-2">
             <Button type="submit" size="lg" disabled={sending} className="bg-secondary text-secondary-foreground hover:bg-secondary/90 px-8">
               {sending ? (
