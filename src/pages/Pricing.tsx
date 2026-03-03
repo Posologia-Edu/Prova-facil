@@ -86,7 +86,7 @@ export default function Pricing() {
 
       <div className="grid md:grid-cols-2 gap-8 max-w-4xl w-full">
         <Card className={`relative pt-4 ${!isPremium ? "border-primary" : ""}`}>
-          {!isPremium && <Badge className="absolute -top-3 left-6 z-10 bg-background" variant="outline">{t("pricing_current_plan")}</Badge>}
+          {!isPremium && <Badge className="absolute -top-3 left-6 z-10 bg-primary text-primary-foreground" variant="default">{t("pricing_current_plan")}</Badge>}
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5" />{t("pricing_free")}</CardTitle>
             <CardDescription>{t("pricing_free_desc")}</CardDescription>
@@ -112,7 +112,7 @@ export default function Pricing() {
         </Card>
 
         <Card className={`relative pt-4 ${isPremium ? "border-primary shadow-lg" : "border-secondary/50"}`}>
-          {isPremium && <Badge className="absolute -top-3 left-6 z-10 bg-background">{t("pricing_current_plan")}</Badge>}
+          {isPremium && <Badge className="absolute -top-3 left-6 z-10 bg-primary text-primary-foreground">{t("pricing_current_plan")}</Badge>}
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-secondary" />{t("pricing_premium")}</CardTitle>
             <CardDescription>{t("pricing_premium_desc")}</CardDescription>
