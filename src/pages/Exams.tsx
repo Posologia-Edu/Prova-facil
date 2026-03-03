@@ -60,9 +60,9 @@ interface Exam {
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: { label: "EM ELABORAÇÃO", className: "bg-muted text-muted-foreground" },
-  applied: { label: "APLICADA", className: "bg-primary text-primary-foreground" },
   in_progress: { label: "EM APLICAÇÃO", className: "bg-warning text-warning-foreground" },
-  graded: { label: "CONSOLIDADA", className: "bg-success text-success-foreground" },
+  grading: { label: "EM CORREÇÃO", className: "bg-primary text-primary-foreground" },
+  completed: { label: "CONCLUÍDA", className: "bg-success text-success-foreground" },
 };
 
 export default function ExamsPage() {

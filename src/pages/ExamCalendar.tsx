@@ -54,6 +54,27 @@ export default function ExamCalendarPage() {
     },
   });
 
+  // Compute effective status for an event
+  const getEffectiveStatus = (e: ExamEvent): string => {
+    const now = new Date();
+    // If publication is active and we're within the time window → in_progress
+    if (e.isActive && e.startAt && e.endAt) {
+      if (now >= e.startAt && now <= e.endAt) return "in_progress";
+      if (now > e.endAt) return "grading";
+    }
+    if (e.isActive && e.startAt && !e.endAt && now >= e.startAt) return "in_progress";
+    if (!e.isActive && e.endAt && now > e.endAt && e.examStatus !== "completed") return "grading";
+    // Use the stored status from DB
+    return e.examStatus;
+  };
+
+  const statusConfig: Record<string, { label: string; variant: "secondary" | "default" | "warning" | "success" }> = {
+    draft: { label: "Em Elaboração", variant: "secondary" },
+    in_progress: { label: "Em Aplicação", variant: "warning" },
+    grading: { label: "Em Correção", variant: "default" },
+    completed: { label: "Concluída", variant: "success" },
+  };
+
   const eventsForDate = useMemo(() => {
     if (!selectedDate) return [];
     return events.filter((e) => {
@@ -69,6 +90,7 @@ export default function ExamCalendarPage() {
     const notes: { type: "warning" | "info" | "urgent"; message: string; examId: string }[] = [];
 
     events.forEach((e) => {
+      const effectiveStatus = getEffectiveStatus(e);
       // Exams starting in the next 3 days
       if (e.startAt && isBefore(now, e.startAt) && isBefore(e.startAt, addDays(now, 3))) {
         notes.push({
@@ -78,7 +100,7 @@ export default function ExamCalendarPage() {
         });
       }
       // Draft exams with scheduled dates
-      if (e.examStatus === "draft" && e.startAt) {
+      if (effectiveStatus === "draft" && e.startAt) {
         notes.push({
           type: "urgent",
           message: `"${e.examTitle}" ainda está em rascunho e tem data agendada!`,
@@ -224,12 +246,15 @@ export default function ExamCalendarPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={event.isActive ? "default" : "secondary"}>
-                          {event.isActive ? "Ativa" : "Inativa"}
-                        </Badge>
-                        <Badge variant={event.examStatus === "draft" ? "secondary" : "default"}>
-                          {event.examStatus === "draft" ? "Rascunho" : "Publicada"}
-                        </Badge>
+                        {(() => {
+                          const effective = getEffectiveStatus(event);
+                          const cfg = statusConfig[effective] || statusConfig.draft;
+                          return (
+                            <Badge variant={cfg.variant}>
+                              {cfg.label}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                     </div>
                     <Separator className="my-3" />

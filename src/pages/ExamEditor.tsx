@@ -626,13 +626,33 @@ export default function ExamEditorPage() {
 
   const statusLabel: Record<string, { label: string; className: string }> = {
     draft: { label: "EM ELABORAÇÃO", className: "bg-muted text-muted-foreground" },
-    applied: { label: "APLICADA", className: "bg-primary text-primary-foreground" },
     in_progress: { label: "EM APLICAÇÃO", className: "bg-warning text-warning-foreground" },
-    graded: { label: "CONSOLIDADA", className: "bg-success text-success-foreground" },
+    grading: { label: "EM CORREÇÃO", className: "bg-primary text-primary-foreground" },
+    completed: { label: "CONCLUÍDA", className: "bg-success text-success-foreground" },
   };
 
-  const derivedStatus = publication?.is_active ? "in_progress" : examStatus;
-  const currentStatus = statusLabel[derivedStatus] || statusLabel.draft;
+  // Auto-compute effective status
+  const computeEffectiveStatus = (): string => {
+    const now = new Date();
+    if (publication?.is_active) {
+      return "in_progress";
+    }
+    // If publication ended, check if we should be in grading
+    if (publication && !publication.is_active && examStatus === "draft") {
+      return "grading";
+    }
+    return examStatus;
+  };
+
+  const effectiveStatus = computeEffectiveStatus();
+  const currentStatus = statusLabel[effectiveStatus] || statusLabel.draft;
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!examId) return;
+    await supabase.from("exams").update({ status: newStatus }).eq("id", examId);
+    setExamStatus(newStatus);
+    toast.success(`Status alterado para "${statusLabel[newStatus]?.label || newStatus}".`);
+  };
 
   // Grading: filter sessions
   const filteredSessions = sessions.filter(s => {
@@ -663,9 +683,25 @@ export default function ExamEditorPage() {
             <p className="text-sm text-muted-foreground">Valor da prova: <span className="font-bold">{totalPoints.toFixed(2).replace(".", ",")}</span></p>
           )}
         </div>
-        <Badge className={`text-xs px-3 py-1 font-bold uppercase ${currentStatus.className}`}>
-          {currentStatus.label}
-        </Badge>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Badge className={`text-xs px-3 py-1 font-bold uppercase cursor-pointer hover:opacity-80 ${currentStatus.className}`}>
+              {currentStatus.label} ▾
+            </Badge>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {Object.entries(statusLabel).map(([key, val]) => (
+              <DropdownMenuItem
+                key={key}
+                onClick={() => handleStatusChange(key)}
+                className={effectiveStatus === key ? "font-bold" : ""}
+              >
+                <span className={`inline-block h-2 w-2 rounded-full mr-2 ${val.className}`} />
+                {val.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Tabs */}
