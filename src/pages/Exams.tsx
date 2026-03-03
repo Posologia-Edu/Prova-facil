@@ -51,11 +51,12 @@ interface Exam {
   id: string;
   title: string;
   status: string;
+  effectiveStatus: string;
   questionCount: number;
   participantCount: number;
   createdAt: string;
   isImported?: boolean;
-  marketplaceId?: string; // if shared in marketplace
+  marketplaceId?: string;
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -107,10 +108,10 @@ export default function ExamsPage() {
       countMap[q.exam_id] = (countMap[q.exam_id] || 0) + 1;
     });
 
-    // Fetch participant counts
+    // Fetch publications with dates to compute effective status
     const { data: pubs } = await supabase
       .from("exam_publications")
-      .select("id, exam_id")
+      .select("id, exam_id, is_active, start_at, end_at")
       .in("exam_id", examIds.length > 0 ? examIds : ["__none__"]);
 
     const pubIds = (pubs || []).map((p) => p.id);
@@ -128,6 +129,15 @@ export default function ExamsPage() {
       if (eid) participantMap[eid] = (participantMap[eid] || 0) + 1;
     });
 
+    // Build publication status map per exam
+    const pubStatusMap: Record<string, { is_active: boolean; end_at: string | null }> = {};
+    (pubs || []).forEach((p) => {
+      // Keep the most relevant publication (active takes priority)
+      if (!pubStatusMap[p.exam_id] || p.is_active) {
+        pubStatusMap[p.exam_id] = { is_active: p.is_active, end_at: p.end_at };
+      }
+    });
+
     // Fetch marketplace status for user's exams
     const { data: marketplaceData } = await supabase
       .from("marketplace_exams")
@@ -139,11 +149,21 @@ export default function ExamsPage() {
       marketplaceMap[m.exam_id] = m.id;
     });
 
+    const computeEffective = (dbStatus: string, examId: string): string => {
+      const pub = pubStatusMap[examId];
+      if (!pub) return dbStatus;
+      const now = new Date();
+      if (pub.is_active) return "in_progress";
+      if (pub.end_at && now > new Date(pub.end_at) && dbStatus !== "completed") return "grading";
+      return dbStatus;
+    };
+
     setExams(
       (examsData || []).map((e) => ({
         id: e.id,
         title: e.title,
         status: e.status,
+        effectiveStatus: computeEffective(e.status, e.id),
         questionCount: countMap[e.id] || 0,
         participantCount: participantMap[e.id] || 0,
         createdAt: e.created_at,
@@ -340,7 +360,7 @@ export default function ExamsPage() {
           {/* Exam Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filtered.map((exam) => {
-              const status = statusConfig[exam.status] || statusConfig.draft;
+              const status = statusConfig[exam.effectiveStatus] || statusConfig.draft;
               return (
                 <Card
                   key={exam.id}
