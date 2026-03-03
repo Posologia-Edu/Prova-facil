@@ -175,7 +175,14 @@ const App = () => (
               }
             />
             <Route path="/docs" element={<Documentation />} />
-            <Route path="/contato" element={<Contact />} />
+            <Route
+              path="/contato"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><Contact /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
