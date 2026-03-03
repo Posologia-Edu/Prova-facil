@@ -84,7 +84,14 @@ serve(async (req) => {
 
     if (hasActiveSub) {
       const subscription = allSubs[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      const endTimestamp = subscription.current_period_end || subscription.trial_end;
+      if (endTimestamp && typeof endTimestamp === 'number') {
+        try {
+          subscriptionEnd = new Date(endTimestamp * 1000).toISOString();
+        } catch (_) {
+          subscriptionEnd = null;
+        }
+      }
       productId = subscription.items.data[0].price.product;
     }
 
