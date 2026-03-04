@@ -12,16 +12,54 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // --- AUTH CHECK: admin only ---
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = claimsData.claims.sub;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Verify admin role
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!roleData) {
+      return new Response(JSON.stringify({ error: "Access denied" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // --- END AUTH CHECK ---
+
     const hubServiceKey = Deno.env.get("HUB_SERVICE_KEY");
     const hubServiceId = Deno.env.get("HUB_SERVICE_ID");
 
     if (!hubServiceKey || !hubServiceId) {
       throw new Error("HUB_SERVICE_KEY or HUB_SERVICE_ID not configured");
     }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Total users (profiles)
     const { count: totalUsers } = await supabase
@@ -35,8 +73,6 @@ Deno.serve(async (req) => {
       .select("id", { count: "exact", head: true })
       .gte("updated_at", thirtyDaysAgo);
 
-    // Subscribers: count exam_sessions from unique students (proxy for paid activity)
-    // Since there's no direct subscriptions table, we send 0
     const subscribers = 0;
 
     const body = {
@@ -70,21 +106,21 @@ Deno.serve(async (req) => {
     if (!response.ok) {
       console.error(`Hub responded with ${response.status}: ${responseText}`);
       return new Response(
-        JSON.stringify({ error: "Hub request failed", status: response.status, detail: responseText }),
+        JSON.stringify({ error: "Hub request failed", status: response.status }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Metrics sent successfully:", responseText);
+    console.log("Metrics sent successfully");
 
     return new Response(
-      JSON.stringify({ success: true, metrics: body, hub_response: responseText }),
+      JSON.stringify({ success: true, metrics: body }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("Error sending metrics:", err.message);
+    console.error("Error sending metrics:", (err as Error).message);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "Internal error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -12,6 +12,30 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // --- AUTH CHECK ---
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claimsData.claims.sub;
+    // --- END AUTH CHECK ---
+
     const { answerId, messages, action } = await req.json();
     if (!answerId) throw new Error("answerId is required");
 
@@ -19,13 +43,22 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // --- OWNERSHIP CHECK: verify the caller owns the exam that contains this answer ---
     const { data: answer, error: ansError } = await supabase
       .from("student_answers")
-      .select("*, question_bank(type, content_json)")
+      .select("*, question_bank(type, content_json), exam_sessions(publication_id, exam_publications(user_id))")
       .eq("id", answerId)
       .single();
 
     if (ansError || !answer) throw new Error("Answer not found");
+
+    const ownerUserId = (answer.exam_sessions as any)?.exam_publications?.user_id;
+    if (ownerUserId !== userId) {
+      return new Response(JSON.stringify({ error: "Access denied" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // --- END OWNERSHIP CHECK ---
 
     const content = (answer.question_bank as any)?.content_json || {};
     const statement = content.statement || content.title || "Questão";
