@@ -30,7 +30,7 @@ serve(async (req) => {
 
     const { error } = await resend.emails.send({
       from: "ProvaFácil <onboarding@resend.dev>",
-      to: ["srfernandesaraujo@gmail.com"],
+      to: ["sergio.araujo@ufrn.br"],
       reply_to: email,
       subject: `[ProvaFácil Contato] ${category}${subject ? ` - ${subject}` : ""} — ${name}`,
       html: `
