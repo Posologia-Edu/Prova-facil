@@ -135,6 +135,8 @@ For each question, also provide:
       },
     ];
 
+    const userId = claimsData.claims.sub as string;
+
     const { response, provider } = await callAiWithFallback({
       messages: [
         { role: "system", content: systemPrompt },
@@ -142,7 +144,7 @@ For each question, also provide:
       ],
       tools,
       tool_choice: { type: "function", function: { name: "generate_questions" } },
-    });
+    }, { userId, promptType: "generate_questions" });
 
     console.log(`generate-questions using provider: ${provider}`);
 

@@ -143,7 +143,7 @@ Responda APENAS no formato JSON:
             { role: "system", content: "Você é um avaliador acadêmico justo e construtivo. Sempre responda em JSON válido." },
             { role: "user", content: prompt },
           ],
-        });
+        }, { userId: userId as string, promptType: "grade_exam" });
 
         console.log(`grade-exam answer ${answer.id} using provider: ${provider}`);
 

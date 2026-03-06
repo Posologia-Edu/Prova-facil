@@ -124,7 +124,7 @@ Você está em modo de discussão com o professor. Responda de forma construtiva
     const { response, provider } = await callAiWithFallback({
       messages: chatMessages,
       stream: true,
-    });
+    }, { userId: userId as string, promptType: action === "grade" ? "tutor_grade" : "tutor_chat" });
 
     console.log(`ai-tutor-chat using provider: ${provider}`);
 
