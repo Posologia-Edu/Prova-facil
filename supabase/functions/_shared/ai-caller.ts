@@ -8,6 +8,11 @@ interface AiCallOptions {
   tool_choice?: any;
 }
 
+interface AiUsageContext {
+  userId: string;
+  promptType: string;
+}
+
 interface ProviderConfig {
   provider: string;
   api_key: string;
@@ -38,6 +43,54 @@ const PROVIDER_CONFIGS: Record<string, { baseUrl: string; defaultModel: string }
   },
 };
 
+// Cost per 1M tokens (input/output) in USD - approximate
+const COST_PER_1M_TOKENS: Record<string, { input: number; output: number }> = {
+  "gpt-4o-mini": { input: 0.15, output: 0.60 },
+  "gpt-4o": { input: 2.50, output: 10.00 },
+  "llama-3.3-70b-versatile": { input: 0.59, output: 0.79 },
+  "claude-sonnet-4-20250514": { input: 3.00, output: 15.00 },
+  "gemini-2.5-flash": { input: 0.15, output: 0.60 },
+  "google/gemini-2.5-flash": { input: 0.15, output: 0.60 },
+  "google/gemini-3-flash-preview": { input: 0.15, output: 0.60 },
+  "google/gemini-2.5-pro": { input: 1.25, output: 5.00 },
+};
+
+function estimateCost(model: string, tokensInput: number, tokensOutput: number): number {
+  const costs = COST_PER_1M_TOKENS[model];
+  if (!costs) return 0;
+  return (tokensInput * costs.input + tokensOutput * costs.output) / 1_000_000;
+}
+
+async function logAiUsage(
+  provider: string,
+  model: string,
+  promptType: string,
+  userId: string,
+  tokensInput: number,
+  tokensOutput: number,
+) {
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const cost = estimateCost(model, tokensInput, tokensOutput);
+
+    await supabase.from("ai_usage_log").insert({
+      user_id: userId,
+      provider,
+      model,
+      prompt_type: promptType,
+      tokens_input: tokensInput,
+      tokens_output: tokensOutput,
+      estimated_cost_usd: cost,
+    });
+  } catch (err) {
+    console.warn("Failed to log AI usage:", (err as Error).message);
+  }
+}
+
 async function getActiveProviders(): Promise<ProviderConfig[]> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -64,7 +117,6 @@ async function getActiveProviders(): Promise<ProviderConfig[]> {
 }
 
 async function callAnthropicApi(provider: ProviderConfig, options: AiCallOptions): Promise<Response> {
-  // Anthropic has a different API format
   const systemMsg = options.messages.find((m) => m.role === "system");
   const userMessages = options.messages.filter((m) => m.role !== "system");
 
@@ -131,15 +183,25 @@ async function callLovableAi(options: AiCallOptions): Promise<Response> {
 /**
  * Calls AI with fallback: tries external provider keys first, falls back to Lovable AI.
  * Returns the raw Response object.
+ * 
+ * If `usageContext` is provided, logs usage to ai_usage_log table.
+ * For non-streaming responses, token counts are extracted from the response.
+ * For streaming responses, logs with estimated tokens based on message length.
  */
-export async function callAiWithFallback(options: AiCallOptions): Promise<{ response: Response; provider: string }> {
+export async function callAiWithFallback(
+  options: AiCallOptions,
+  usageContext?: AiUsageContext,
+): Promise<{ response: Response; provider: string }> {
   const providers = await getActiveProviders();
+
+  let usedProvider = "lovable";
+  let usedModel = options.model || "google/gemini-3-flash-preview";
+  let response: Response | null = null;
 
   // Try each external provider
   for (const provider of providers) {
     try {
       console.log(`Trying external AI provider: ${provider.provider}`);
-      let response: Response;
 
       if (provider.provider === "anthropic") {
         response = await callAnthropicApi(provider, options);
@@ -149,17 +211,51 @@ export async function callAiWithFallback(options: AiCallOptions): Promise<{ resp
 
       if (response.ok) {
         console.log(`Successfully used provider: ${provider.provider}`);
-        return { response, provider: provider.provider };
+        usedProvider = provider.provider;
+        usedModel = options.model || provider.defaultModel;
+        break;
       }
 
       console.warn(`Provider ${provider.provider} returned ${response.status}, trying next...`);
+      response = null;
     } catch (err) {
       console.warn(`Provider ${provider.provider} failed:`, (err as Error).message);
     }
   }
 
   // Fallback to Lovable AI
-  console.log("Falling back to Lovable AI");
-  const response = await callLovableAi(options);
-  return { response, provider: "lovable" };
+  if (!response) {
+    console.log("Falling back to Lovable AI");
+    response = await callLovableAi(options);
+    usedProvider = "lovable";
+    usedModel = options.model || "google/gemini-3-flash-preview";
+  }
+
+  // Log usage if context provided and response is OK
+  if (usageContext && response.ok) {
+    if (!options.stream) {
+      // For non-streaming: clone response, extract usage, then log
+      const cloned = response.clone();
+      try {
+        const data = await cloned.json();
+        const usage = data.usage;
+        const tokensIn = usage?.prompt_tokens ?? 0;
+        const tokensOut = usage?.completion_tokens ?? 0;
+        // Fire and forget
+        logAiUsage(usedProvider, usedModel, usageContext.promptType, usageContext.userId, tokensIn, tokensOut);
+      } catch {
+        // Estimate from message length if parsing fails
+        const totalChars = options.messages.reduce((sum, m) => sum + m.content.length, 0);
+        const estimatedTokens = Math.ceil(totalChars / 4);
+        logAiUsage(usedProvider, usedModel, usageContext.promptType, usageContext.userId, estimatedTokens, 0);
+      }
+    } else {
+      // For streaming: estimate input tokens from prompt, output unknown
+      const totalChars = options.messages.reduce((sum, m) => sum + m.content.length, 0);
+      const estimatedInputTokens = Math.ceil(totalChars / 4);
+      logAiUsage(usedProvider, usedModel, usageContext.promptType, usageContext.userId, estimatedInputTokens, 0);
+    }
+  }
+
+  return { response, provider: usedProvider };
 }
