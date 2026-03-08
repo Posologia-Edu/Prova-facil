@@ -24,6 +24,7 @@ import {
   Crown,
   Gift,
   CalendarDays,
+  BarChart3,
 } from "lucide-react";
 import AdminApiKeys from "@/components/AdminApiKeys";
 import AdminAnalytics from "@/components/AdminAnalytics";
