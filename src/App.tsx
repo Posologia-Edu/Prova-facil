@@ -182,6 +182,13 @@ const App = () => (
               }
             />
             <Route path="/docs" element={<Documentation />} />
+            <Route path="/funcionalidades" element={<Features />} />
+            <Route path="/planos" element={<PublicPricing />} />
+            <Route path="/contato-publico" element={<PublicContact />} />
+            <Route path="/documentacao" element={<PublicDocumentation />} />
+            <Route path="/termos" element={<TermsOfService />} />
+            <Route path="/privacidade" element={<PrivacyPolicy />} />
+            <Route path="/cookies" element={<CookiePolicy />} />
             <Route
               path="/contato"
               element={
