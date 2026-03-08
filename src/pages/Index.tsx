@@ -6,6 +6,7 @@ import {
   CheckCircle, ArrowRight, Star, Users, GraduationCap, Globe
 } from "lucide-react";
 import FloatingAuth from "@/components/FloatingAuth";
+import { LandingFooter } from "@/components/LandingFooter";
 import { useLanguage, LANGUAGE_FLAGS, LANGUAGE_LABELS, type Language } from "@/i18n/LanguageContext";
 import {
   DropdownMenu,
