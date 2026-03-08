@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LandingFooter } from "@/components/LandingFooter";
-import { GraduationCap, ArrowLeft } from "lucide-react";
+import { CookiePreferencesDialog } from "@/components/CookiePreferencesDialog";
+import { GraduationCap, ArrowLeft, Settings2 } from "lucide-react";
 
 export default function CookiePolicy() {
   return (
