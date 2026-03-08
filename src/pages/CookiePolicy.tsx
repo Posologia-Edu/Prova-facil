@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LandingFooter } from "@/components/LandingFooter";
-import { GraduationCap, ArrowLeft } from "lucide-react";
+import { CookiePreferencesDialog } from "@/components/CookiePreferencesDialog";
+import { GraduationCap, ArrowLeft, Settings2 } from "lucide-react";
 
 export default function CookiePolicy() {
+  const [showPreferences, setShowPreferences] = useState(false);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <nav className="fixed top-0 left-0 right-0 z-50 border-b bg-card/80 backdrop-blur-lg">
@@ -74,9 +78,21 @@ export default function CookiePolicy() {
               <h2 className="text-lg font-semibold text-foreground mb-2">7. Contato</h2>
               <p>Para dúvidas sobre o uso de cookies, entre em contato através da nossa <Link to="/contato-publico" className="text-secondary hover:underline">página de contato</Link>.</p>
             </div>
+
+            <div className="pt-4 border-t">
+              <Button 
+                onClick={() => setShowPreferences(true)} 
+                className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              >
+                <Settings2 className="h-4 w-4" />
+                Gerenciar Preferências de Cookies
+              </Button>
+            </div>
           </div>
         </div>
       </section>
+
+      <CookiePreferencesDialog open={showPreferences} onOpenChange={setShowPreferences} />
 
       <LandingFooter />
     </div>

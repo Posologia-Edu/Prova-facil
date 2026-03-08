@@ -39,6 +39,8 @@ import PublicDocumentation from "./pages/PublicDocumentation";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
+import { CookieBanner } from "@/components/CookieBanner";
+import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +52,8 @@ const App = () => (
       <Sonner />
       <SubscriptionProvider>
         <BrowserRouter>
+          <AnalyticsProvider />
+          <CookieBanner />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
