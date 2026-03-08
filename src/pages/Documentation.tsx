@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { LandingFooter } from "@/components/LandingFooter";
 import { useLanguage } from "@/i18n/LanguageContext";
 import {
   GraduationCap, ArrowLeft, BookOpen, Brain, FileText, BarChart3,
