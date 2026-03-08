@@ -78,9 +78,21 @@ export default function CookiePolicy() {
               <h2 className="text-lg font-semibold text-foreground mb-2">7. Contato</h2>
               <p>Para dúvidas sobre o uso de cookies, entre em contato através da nossa <Link to="/contato-publico" className="text-secondary hover:underline">página de contato</Link>.</p>
             </div>
+
+            <div className="pt-4 border-t">
+              <Button 
+                onClick={() => setShowPreferences(true)} 
+                className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              >
+                <Settings2 className="h-4 w-4" />
+                Gerenciar Preferências de Cookies
+              </Button>
+            </div>
           </div>
         </div>
       </section>
+
+      <CookiePreferencesDialog open={showPreferences} onOpenChange={setShowPreferences} />
 
       <LandingFooter />
     </div>
