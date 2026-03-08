@@ -468,6 +468,8 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+        <TabsContent value="analytics" className="mt-4">
+          <AdminAnalytics />
         </TabsContent>
       </Tabs>
     </div>
