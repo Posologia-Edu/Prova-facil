@@ -32,6 +32,13 @@ import Contact from "./pages/Contact";
 import Trash from "./pages/Trash";
 import ResetPassword from "./pages/ResetPassword";
 import Marketplace from "./pages/Marketplace";
+import Features from "./pages/Features";
+import PublicPricing from "./pages/PublicPricing";
+import PublicContact from "./pages/PublicContact";
+import PublicDocumentation from "./pages/PublicDocumentation";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import CookiePolicy from "./pages/CookiePolicy";
 
 const queryClient = new QueryClient();
 
