@@ -26,6 +26,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import AdminApiKeys from "@/components/AdminApiKeys";
+import AdminAnalytics from "@/components/AdminAnalytics";
 import {
   AlertDialog,
   AlertDialogAction,
