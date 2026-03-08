@@ -315,7 +315,7 @@ export default function AdminPage() {
 
       {/* Tabs: Users + Subscribers */}
       <Tabs defaultValue="pending" onValueChange={(v) => { if (v === "subscribers" && subscribers.length === 0) loadSubscribers(); }}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="pending" className="gap-2">
             <Clock className="h-4 w-4" />
             Pendentes ({pendingUsers.length})
@@ -327,6 +327,10 @@ export default function AdminPage() {
           <TabsTrigger value="subscribers" className="gap-2">
             <CreditCard className="h-4 w-4" />
             Assinantes
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
           </TabsTrigger>
         </TabsList>
 
