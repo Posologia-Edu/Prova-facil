@@ -198,16 +198,7 @@ const Documentation = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t py-10">
-        <div className="container mx-auto px-4 flex flex-col items-center gap-4 md:flex-row md:justify-between">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="h-5 w-5 text-secondary" />
-            <span className="font-semibold text-foreground">ProvaFácil</span>
-          </div>
-          <p className="text-sm text-muted-foreground">{t("landing_footer")}</p>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 };
