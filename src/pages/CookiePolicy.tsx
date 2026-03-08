@@ -6,6 +6,8 @@ import { CookiePreferencesDialog } from "@/components/CookiePreferencesDialog";
 import { GraduationCap, ArrowLeft, Settings2 } from "lucide-react";
 
 export default function CookiePolicy() {
+  const [showPreferences, setShowPreferences] = useState(false);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <nav className="fixed top-0 left-0 right-0 z-50 border-b bg-card/80 backdrop-blur-lg">
