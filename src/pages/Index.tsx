@@ -6,6 +6,7 @@ import {
   CheckCircle, ArrowRight, Star, Users, GraduationCap, Globe
 } from "lucide-react";
 import FloatingAuth from "@/components/FloatingAuth";
+import { LandingFooter } from "@/components/LandingFooter";
 import { useLanguage, LANGUAGE_FLAGS, LANGUAGE_LABELS, type Language } from "@/i18n/LanguageContext";
 import {
   DropdownMenu,
@@ -214,25 +215,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t py-10">
-        <div className="container mx-auto px-4 flex flex-col items-center gap-4 md:flex-row md:justify-between">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="h-5 w-5 text-secondary" />
-            <span className="font-semibold text-foreground">ProvaFácil</span>
-          </div>
-          <div className="flex flex-col items-center gap-1 md:flex-row md:gap-4">
-            <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              {t("docs_title")}
-            </Link>
-            <Link to="/contato" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Contato
-            </Link>
-            <p className="text-sm text-muted-foreground">{t("landing_footer")}</p>
-            <p className="text-sm text-muted-foreground">Desenvolvido por Sérgio Araújo — Posologia Produções</p>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 };

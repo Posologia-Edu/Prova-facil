@@ -32,6 +32,13 @@ import Contact from "./pages/Contact";
 import Trash from "./pages/Trash";
 import ResetPassword from "./pages/ResetPassword";
 import Marketplace from "./pages/Marketplace";
+import Features from "./pages/Features";
+import PublicPricing from "./pages/PublicPricing";
+import PublicContact from "./pages/PublicContact";
+import PublicDocumentation from "./pages/PublicDocumentation";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import CookiePolicy from "./pages/CookiePolicy";
 
 const queryClient = new QueryClient();
 
@@ -175,6 +182,13 @@ const App = () => (
               }
             />
             <Route path="/docs" element={<Documentation />} />
+            <Route path="/funcionalidades" element={<Features />} />
+            <Route path="/planos" element={<PublicPricing />} />
+            <Route path="/contato-publico" element={<PublicContact />} />
+            <Route path="/documentacao" element={<PublicDocumentation />} />
+            <Route path="/termos" element={<TermsOfService />} />
+            <Route path="/privacidade" element={<PrivacyPolicy />} />
+            <Route path="/cookies" element={<CookiePolicy />} />
             <Route
               path="/contato"
               element={
