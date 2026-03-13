@@ -130,7 +130,8 @@ export default function OsceStudentPortal() {
         },
       });
       if (res.error) throw res.error;
-      const text = typeof res.data === "string" ? res.data : res.data?.response || "...";
+      const data = res.data;
+      const text = data?.response || (typeof data === "string" ? data : null) || "Desculpe, não consegui responder.";
       setMessages(prev => [...prev, { role: "assistant", content: text }]);
     } catch (e: any) {
       toast.error("Erro ao enviar mensagem");
