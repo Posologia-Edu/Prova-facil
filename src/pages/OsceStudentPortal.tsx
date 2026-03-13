@@ -115,7 +115,7 @@ export default function OsceStudentPortal() {
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || !currentStation?.virtual_patient_system_prompt) return;
+    if (!input.trim() || !currentStation) return;
     const userMsg = { role: "user", content: input.trim() };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -125,7 +125,7 @@ export default function OsceStudentPortal() {
     try {
       const res = await supabase.functions.invoke("osce-virtual-patient", {
         body: {
-          system_prompt: currentStation.virtual_patient_system_prompt,
+          stationId: currentStation.id,
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
         },
       });
