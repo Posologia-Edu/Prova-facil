@@ -120,7 +120,41 @@ export default function OsceEvaluator() {
     enabled: !!selectedStationId,
   });
 
-  // Realtime subscription for circuit updates
+  // Fetch materials for current station
+  const { data: stationMaterials } = useQuery({
+    queryKey: ["osce-eval-materials", selectedStationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("osce_station_materials")
+        .select("*")
+        .eq("station_id", selectedStationId!)
+        .order("position");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedStationId,
+  });
+
+  // Fetch existing chat messages for current student
+  useEffect(() => {
+    if (!circuit?.id || !selectedStationId || !currentStudent?.id) {
+      setChatMessages([]);
+      return;
+    }
+    const fetchMessages = async () => {
+      const { data } = await supabase
+        .from("osce_chat_messages" as any)
+        .select("*")
+        .eq("circuit_id", circuit.id)
+        .eq("station_id", selectedStationId)
+        .eq("student_id", currentStudent.id)
+        .order("created_at", { ascending: true });
+      if (data) setChatMessages(data as any[]);
+    };
+    fetchMessages();
+  }, [circuit?.id, selectedStationId, currentStudent?.id]);
+
+  // Realtime subscription for circuit updates + chat messages
   useEffect(() => {
     if (!circuit?.id) return;
     const channel = supabase
@@ -132,9 +166,20 @@ export default function OsceEvaluator() {
       .on("postgres_changes", { event: "*", schema: "public", table: "osce_circuit_students", filter: `circuit_id=eq.${circuit.id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["osce-current-student"] });
       })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "osce_chat_messages", filter: `circuit_id=eq.${circuit.id}` }, (payload: any) => {
+        const msg = payload.new;
+        if (msg.station_id === selectedStationId && msg.student_id === currentStudent?.id) {
+          setChatMessages(prev => [...prev, { role: msg.role, content: msg.content, created_at: msg.created_at }]);
+        }
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [circuit?.id]);
+  }, [circuit?.id, selectedStationId, currentStudent?.id]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   // Auto-create evaluation when student appears
   const createEvaluation = useMutation({
