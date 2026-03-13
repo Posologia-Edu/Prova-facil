@@ -538,6 +538,58 @@ export type Database = {
           },
         ]
       }
+      osce_chat_messages: {
+        Row: {
+          circuit_id: string
+          content: string
+          created_at: string
+          id: string
+          role: string
+          station_id: string
+          student_id: string
+        }
+        Insert: {
+          circuit_id: string
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          station_id: string
+          student_id: string
+        }
+        Update: {
+          circuit_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          station_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "osce_chat_messages_circuit_id_fkey"
+            columns: ["circuit_id"]
+            isOneToOne: false
+            referencedRelation: "osce_circuits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "osce_chat_messages_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "osce_stations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "osce_chat_messages_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "osce_circuit_students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       osce_checklist_items: {
         Row: {
           category: string | null
