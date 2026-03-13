@@ -383,8 +383,9 @@ export default function OsceEvaluator() {
       {/* Content */}
       <div className="flex-1 max-w-2xl mx-auto w-full p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-3 h-12">
+          <TabsList className="w-full grid grid-cols-4 h-12">
             <TabsTrigger value="checklist" className="text-sm gap-1"><ClipboardCheck className="h-4 w-4" /> Checklist</TabsTrigger>
+            <TabsTrigger value="student" className="text-sm gap-1"><Eye className="h-4 w-4" /> Aluno</TabsTrigger>
             <TabsTrigger value="case" className="text-sm gap-1"><BookOpen className="h-4 w-4" /> Caso</TabsTrigger>
             <TabsTrigger value="general" className="text-sm gap-1"><BarChart3 className="h-4 w-4" /> Geral</TabsTrigger>
           </TabsList>
@@ -396,6 +397,48 @@ export default function OsceEvaluator() {
                 evaluationId={evaluationId}
                 onScoreChange={(total, max, passed) => setScoreInfo({ total, max, passed })}
               />
+            )}
+          </TabsContent>
+
+          <TabsContent value="student" className="mt-4 space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Eye className="h-4 w-4" /> Chat do Aluno em Tempo Real
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[400px] pr-4">
+                  <div className="space-y-3">
+                    {chatMessages.length === 0 && (
+                      <p className="text-center text-muted-foreground text-sm py-8">
+                        Nenhuma mensagem ainda. O chat aparecerá aqui quando o aluno iniciar a conversa.
+                      </p>
+                    )}
+                    {chatMessages.map((msg, i) => (
+                      <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}>
+                          <p className="text-[10px] opacity-70 mb-1">{msg.role === "user" ? "Aluno" : "Paciente"}</p>
+                          {msg.content}
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+            {stationMaterials && stationMaterials.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-base">Materiais da Estação</CardTitle></CardHeader>
+                <CardContent>
+                  <OsceMaterialViewer materials={stationMaterials} />
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 
