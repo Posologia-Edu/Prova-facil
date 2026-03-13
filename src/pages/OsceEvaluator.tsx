@@ -27,7 +27,7 @@ export default function OsceEvaluator() {
   const [scoreInfo, setScoreInfo] = useState({ total: 0, max: 0, passed: true });
 
   // Fetch circuit by access code
-  const { data: circuit } = useQuery({
+  const { data: circuit, isLoading: circuitLoading } = useQuery({
     queryKey: ["osce-circuit-eval", accessCode],
     queryFn: async () => {
       const { data, error } = await supabase
