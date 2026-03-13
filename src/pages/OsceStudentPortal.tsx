@@ -170,16 +170,42 @@ export default function OsceStudentPortal() {
   }
 
   // Loading
-  if (!circuit || !myStudent) {
+  if (circuitLoading || studentLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-muted-foreground">Conectando ao exame...</p>
-          {myStudent === null && (
-            <p className="text-sm text-destructive">Email não encontrado neste circuito. Verifique com seu professor.</p>
-          )}
         </div>
+      </div>
+    );
+  }
+
+  if (!circuit) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center p-8">
+          <Stethoscope className="h-10 w-10 mx-auto text-destructive mb-4" />
+          <h2 className="text-lg font-bold mb-2">Circuito Não Encontrado</h2>
+          <p className="text-muted-foreground text-sm">
+            O código <strong>{accessCode}</strong> não corresponde a nenhum circuito OSCE ativo.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!myStudent) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center p-8">
+          <Stethoscope className="h-10 w-10 mx-auto text-destructive mb-4" />
+          <h2 className="text-lg font-bold mb-2">Email Não Encontrado</h2>
+          <p className="text-muted-foreground text-sm">
+            O email <strong>{email}</strong> não está cadastrado neste circuito OSCE. Verifique com seu professor.
+          </p>
+          <Button variant="outline" className="mt-4" onClick={() => setAuthenticated(false)}>Tentar outro email</Button>
+        </Card>
       </div>
     );
   }
