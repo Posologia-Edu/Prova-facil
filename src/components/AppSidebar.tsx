@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Library,
   FileEdit,
+  GraduationCap,
   Stethoscope,
   BarChart3,
   MessageSquare,
