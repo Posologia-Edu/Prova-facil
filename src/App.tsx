@@ -38,6 +38,7 @@ import OsceCircuitControl from "./pages/OsceCircuitControl";
 import OsceEvaluator from "./pages/OsceEvaluator";
 import OsceResults from "./pages/OsceResults";
 import OsceVirtualPatient from "./pages/OsceVirtualPatient";
+import OsceStudentPortal from "./pages/OsceStudentPortal";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
 import PublicContact from "./pages/PublicContact";
