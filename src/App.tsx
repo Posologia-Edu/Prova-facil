@@ -207,6 +207,25 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/osce/:circuitId/control"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><OsceCircuitControl /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/osce/:id/results"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><OsceResults /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Public OSCE routes (no auth required) */}
+            <Route path="/osce/evaluate/:accessCode" element={<OsceEvaluator />} />
+            <Route path="/osce/patient/:stationId" element={<OsceVirtualPatient />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
