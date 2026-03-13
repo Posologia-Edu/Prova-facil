@@ -42,7 +42,7 @@ export default function OsceEvaluator() {
   });
 
   // Fetch evaluator's assigned station
-  const { data: assignedEvaluator } = useQuery({
+  const { data: assignedEvaluator, isLoading: assignmentLoading } = useQuery({
     queryKey: ["osce-evaluator-assignment", circuit?.osce_exam_id, evaluatorEmail],
     queryFn: async () => {
       // Get all stations for the exam, then find evaluator assignment
