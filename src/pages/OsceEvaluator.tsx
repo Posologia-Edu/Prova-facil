@@ -27,7 +27,7 @@ export default function OsceEvaluator() {
   const [scoreInfo, setScoreInfo] = useState({ total: 0, max: 0, passed: true });
 
   // Fetch circuit by access code
-  const { data: circuit } = useQuery({
+  const { data: circuit, isLoading: circuitLoading } = useQuery({
     queryKey: ["osce-circuit-eval", accessCode],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -42,7 +42,7 @@ export default function OsceEvaluator() {
   });
 
   // Fetch evaluator's assigned station
-  const { data: assignedEvaluator } = useQuery({
+  const { data: assignedEvaluator, isLoading: assignmentLoading } = useQuery({
     queryKey: ["osce-evaluator-assignment", circuit?.osce_exam_id, evaluatorEmail],
     queryFn: async () => {
       // Get all stations for the exam, then find evaluator assignment
@@ -232,16 +232,33 @@ export default function OsceEvaluator() {
     );
   }
 
-  // Loading / no assignment
-  if (!circuit) {
+  // Loading
+  if (circuitLoading || assignmentLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground text-sm">Conectando ao exame...</p>
+        </div>
       </div>
     );
   }
 
-  if (authenticated && !assignedEvaluator && circuit) {
+  if (!circuit) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center p-8">
+          <Stethoscope className="h-10 w-10 mx-auto text-destructive mb-4" />
+          <h2 className="text-lg font-bold mb-2">Circuito Não Encontrado</h2>
+          <p className="text-muted-foreground text-sm">
+            O código <strong>{accessCode}</strong> não corresponde a nenhum circuito OSCE ativo.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!assignedEvaluator) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center p-8">
