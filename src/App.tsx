@@ -187,6 +187,22 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/osce"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><OsceExams /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/osce/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><OsceEditor /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
