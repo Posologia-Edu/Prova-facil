@@ -53,14 +53,14 @@ export default function OsceEditor() {
   });
 
   const addStation = useMutation({
-    mutationFn: async (isRest = false) => {
+    mutationFn: async (isRest: boolean) => {
       const nextPos = (stations?.length || 0) + 1;
-      const { error } = await supabase.from("osce_stations").insert({
+      const { error } = await supabase.from("osce_stations").insert([{
         osce_exam_id: id!,
         position: nextPos,
         title: isRest ? `Descanso ${nextPos}` : `Estação ${nextPos}`,
         is_rest_station: isRest,
-      });
+      }]);
       if (error) throw error;
     },
     onSuccess: () => {
