@@ -39,7 +39,7 @@ export default function OsceStudentPortal() {
   });
 
   // Fetch student record
-  const { data: myStudent, refetch: refetchStudent } = useQuery({
+  const { data: myStudent, isLoading: studentLoading, refetch: refetchStudent } = useQuery({
     queryKey: ["osce-my-student", circuit?.id, email],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -47,7 +47,7 @@ export default function OsceStudentPortal() {
         .select("*")
         .eq("circuit_id", circuit!.id)
         .eq("student_email", email.toLowerCase())
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
