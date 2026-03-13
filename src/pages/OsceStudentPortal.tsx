@@ -24,7 +24,7 @@ export default function OsceStudentPortal() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch circuit
-  const { data: circuit } = useQuery({
+  const { data: circuit, isLoading: circuitLoading } = useQuery({
     queryKey: ["osce-student-circuit", accessCode],
     queryFn: async () => {
       const { data, error } = await supabase
