@@ -55,7 +55,7 @@ Só revele informações quando perguntado diretamente. Mantenha a consistência
 
     const { response } = await callAiWithFallback({
       messages: aiMessages,
-      stream: true,
+      stream: false,
     });
 
     if (!response.ok) {
@@ -76,8 +76,11 @@ Só revele informações quando perguntado diretamente. Mantenha a consistência
       });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    const aiData = await response.json();
+    const content = aiData.choices?.[0]?.message?.content || "Desculpe, não consegui responder.";
+
+    return new Response(JSON.stringify({ response: content }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("osce-virtual-patient error:", e);

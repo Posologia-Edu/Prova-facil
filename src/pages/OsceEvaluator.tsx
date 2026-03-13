@@ -58,10 +58,10 @@ export default function OsceEvaluator() {
         .from("osce_station_evaluators")
         .select("*")
         .in("station_id", stationIds)
-        .eq("evaluator_email", evaluatorEmail.toLowerCase())
-        .maybeSingle();
+        .ilike("evaluator_email", evaluatorEmail.trim());
       if (error) throw error;
-      return data;
+      // Return first match (evaluator may be assigned to one station)
+      return data && data.length > 0 ? data[0] : null;
     },
     enabled: !!circuit?.osce_exam_id && !!evaluatorEmail && authenticated,
   });
