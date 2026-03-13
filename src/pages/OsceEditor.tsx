@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Sparkles, Settings, Coffee } from "lucide-react";
+import { ArrowLeft, Plus, Sparkles, Settings, Coffee, Play, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { OsceStationEditor } from "@/components/osce/OsceStationEditor";
 import { OsceAIGenerator } from "@/components/osce/OsceAIGenerator";
