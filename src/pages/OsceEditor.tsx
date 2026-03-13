@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Sparkles, Settings, Coffee } from "lucide-react";
+import { ArrowLeft, Plus, Sparkles, Settings, Coffee, Play, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { OsceStationEditor } from "@/components/osce/OsceStationEditor";
 import { OsceAIGenerator } from "@/components/osce/OsceAIGenerator";
@@ -69,6 +69,25 @@ export default function OsceEditor() {
     },
   });
 
+  const createCircuit = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const { data, error } = await supabase
+        .from("osce_circuits")
+        .insert([{ osce_exam_id: id!, user_id: session.user.id }])
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success("Circuito criado!");
+      navigate(`/osce/${data.id}/control`);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   if (examLoading) return <div className="p-8 text-muted-foreground">Carregando...</div>;
   if (!exam) return <div className="p-8 text-destructive">Exame não encontrado</div>;
 
@@ -87,6 +106,12 @@ export default function OsceEditor() {
         </div>
         <Button variant="outline" className="gap-2" onClick={() => setShowAI(true)}>
           <Sparkles className="h-4 w-4" /> Gerar com IA
+        </Button>
+        <Button variant="outline" className="gap-2" onClick={() => createCircuit.mutate()}>
+          <Play className="h-4 w-4" /> Iniciar Circuito
+        </Button>
+        <Button variant="outline" className="gap-2" onClick={() => navigate(`/osce/${id}/results`)}>
+          <BarChart3 className="h-4 w-4" /> Resultados
         </Button>
       </div>
 

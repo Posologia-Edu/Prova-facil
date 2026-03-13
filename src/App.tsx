@@ -34,6 +34,10 @@ import ResetPassword from "./pages/ResetPassword";
 import Marketplace from "./pages/Marketplace";
 import OsceExams from "./pages/OsceExams";
 import OsceEditor from "./pages/OsceEditor";
+import OsceCircuitControl from "./pages/OsceCircuitControl";
+import OsceEvaluator from "./pages/OsceEvaluator";
+import OsceResults from "./pages/OsceResults";
+import OsceVirtualPatient from "./pages/OsceVirtualPatient";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
 import PublicContact from "./pages/PublicContact";
@@ -203,6 +207,25 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/osce/:circuitId/control"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><OsceCircuitControl /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/osce/:id/results"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><OsceResults /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Public OSCE routes (no auth required) */}
+            <Route path="/osce/evaluate/:accessCode" element={<OsceEvaluator />} />
+            <Route path="/osce/patient/:stationId" element={<OsceVirtualPatient />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
