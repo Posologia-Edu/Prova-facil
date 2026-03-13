@@ -1,47 +1,65 @@
 
+# Auditoria Completa: Planos, Travas e Stripe
 
-# Plano: Avaliador visualiza tela do aluno em tempo real
+## 1. Configuracao no Stripe -- OK
 
-## Problema
+| Item | Status | Detalhe |
+|------|--------|---------|
+| Produto | OK | `prod_U1kTkTPojtC3x4` - "ExamCraft Premium" |
+| Preco | OK | `price_1T3gyOCtn5J7o2AoDHYVPrDq` - R$ 29,90/mes (BRL, recorrente mensal) |
+| Edge Function `create-checkout` | OK | Usa o price_id correto, modo subscription |
+| Edge Function `check-subscription` | OK | Verifica product_id correto, suporta convites admin |
+| Edge Function `cancel-subscription` | OK | Existe e e chamada na UI |
+| Frontend `use-subscription` | OK | Verifica `PREMIUM_PRODUCT_ID` correto, auto-refresh a cada 60s |
 
-No OSCE Online, o avaliador só vê o checklist. Ele precisa ver a conversa do aluno com o paciente virtual em tempo real para poder avaliar.
+## 2. Funcionalidades listadas na pagina de Planos -- TRAVAS NAO IMPLEMENTADAS
 
-## Solução
+A pagina de Pricing **exibe** corretamente as 8 funcionalidades comparativas, porem **nenhuma trava esta implementada no codigo**. O `useSubscription()` e `FREE_LIMITS` so sao usados na pagina de Pricing para exibicao. Nenhuma outra pagina ou componente importa ou verifica `isPremium` ou `FREE_LIMITS`.
 
-### 1. Nova tabela `osce_chat_messages`
+### Detalhamento das travas ausentes:
 
-Armazenar cada mensagem do chat aluno-paciente para que o avaliador possa monitorar em tempo real.
+| Funcionalidade | Gratuito | Premium | Trava implementada? |
+|----------------|----------|---------|---------------------|
+| Questoes com IA por mes | 5 | Ilimitado | **NAO** - `AIQuestionGenerator.tsx` nao verifica limite |
+| Provas por mes | 1 | Ilimitado | **NAO** - `ExamEditor.tsx` e `Exams.tsx` nao verificam |
+| Exportacao PDF | Bloqueado | Liberado | **NAO** - `ExamPDFExporter.tsx` nao verifica `isPremium` |
+| Provas online | Bloqueado | Liberado | **NAO** - `PublishExamDialog.tsx` nao verifica |
+| Alunos por prova | 10 | Ilimitado | **NAO** - nenhuma verificacao de limite |
+| Correcao por IA | Bloqueado | Liberado | **NAO** - `grade-exam` nao verifica plano |
+| Monitoramento em tempo real | Bloqueado | Liberado | **NAO** - `ExamMonitoring.tsx` nao verifica |
+| Suporte prioritario | Nao | Sim | N/A (nao e uma trava tecnica) |
 
-| Coluna | Tipo |
-|--------|------|
-| id | uuid PK |
-| circuit_id | uuid FK → osce_circuits |
-| station_id | uuid FK → osce_stations |
-| student_id | uuid FK → osce_circuit_students |
-| role | text (user/assistant) |
-| content | text |
-| created_at | timestamptz |
+## 3. Plano de Implementacao
 
-- RLS: anon/authenticated SELECT e INSERT com `USING (true)`
-- Habilitar Realtime para a tabela
+### Tarefa 1: Criar hook/utilitario de verificacao de limites
+- Adicionar funcao `checkUsageLimit` em `use-subscription.tsx` que consulta o banco para contar uso mensal (questoes geradas, provas criadas)
+- Exportar constantes `FREE_LIMITS` ja existentes para uso em todo o app
 
-### 2. Atualizar `OsceStudentPortal.tsx`
+### Tarefa 2: Bloquear Questoes com IA (limite 5/mes no gratuito)
+- Em `AIQuestionGenerator.tsx`: importar `useSubscription`, contar questoes geradas no mes atual via query na `question_bank`, bloquear se >= 5 e nao premium
+- Mostrar mensagem com link para upgrade
 
-Após cada mensagem (do aluno e da resposta do paciente), inserir na tabela `osce_chat_messages` com `circuit_id`, `station_id`, `student_id`.
+### Tarefa 3: Bloquear criacao de provas (limite 1/mes no gratuito)
+- Em `Exams.tsx` / `ExamEditor.tsx`: verificar contagem de provas criadas no mes, bloquear se >= 1 e nao premium
 
-### 3. Atualizar `OsceEvaluator.tsx`
+### Tarefa 4: Bloquear Exportacao PDF (so premium)
+- Em `ExamPDFExporter.tsx`: verificar `isPremium`, mostrar dialog de upgrade se gratuito
 
-Adicionar uma 4a aba **"Aluno"** (com ícone Eye) que mostra:
-- Feed em tempo real das mensagens do chat do aluno na estação atual
-- Subscription Realtime na tabela `osce_chat_messages` filtrado por `circuit_id + station_id + student_id`
-- Materiais da estação (mesmos que o aluno vê) para contexto
-- Layout similar ao chat do aluno (bolhas de mensagem) mas somente leitura
+### Tarefa 5: Bloquear Provas Online (so premium)
+- Em `PublishExamDialog.tsx`: verificar `isPremium`, impedir publicacao se gratuito
 
-### 4. Arquivos afetados
+### Tarefa 6: Limitar alunos por prova (10 no gratuito)
+- Em `PublishExamDialog.tsx` ou no edge function `student-exam-access`: verificar contagem de sessoes ativas vs limite
 
-| Ação | Arquivo |
-|------|---------|
-| Migration | Nova tabela `osce_chat_messages` + RLS + Realtime |
-| Editar | `src/pages/OsceStudentPortal.tsx` — salvar mensagens na tabela |
-| Editar | `src/pages/OsceEvaluator.tsx` — nova aba "Aluno" com chat em tempo real + materiais |
+### Tarefa 7: Bloquear Correcao por IA (so premium)
+- No edge function `grade-exam` e na UI de monitoramento: verificar plano antes de permitir correcao automatica
 
+### Tarefa 8: Bloquear Monitoramento em Tempo Real (so premium)
+- Em `ExamMonitoring.tsx`: verificar `isPremium`, redirecionar ou mostrar paywall se gratuito
+
+## Resumo
+
+- **Stripe**: Produto, preco e funcoes de checkout/verificacao estao **corretos e funcionais**
+- **Exibicao dos planos**: A pagina de Pricing exibe todas as funcionalidades corretamente
+- **Travas de plano**: **NENHUMA das 7 travas tecnicas esta implementada** - qualquer usuario gratuito pode usar todas as funcionalidades sem restricao
+- **Acao necessaria**: Implementar as verificacoes de `isPremium` e contagem de uso em cada componente/funcao relevante
