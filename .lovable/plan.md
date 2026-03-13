@@ -1,65 +1,230 @@
 
-# Auditoria Completa: Planos, Travas e Stripe
 
-## 1. Configuracao no Stripe -- OK
+# Plano: Módulo OSCE para o Prova Fácil
 
-| Item | Status | Detalhe |
-|------|--------|---------|
-| Produto | OK | `prod_U1kTkTPojtC3x4` - "ExamCraft Premium" |
-| Preco | OK | `price_1T3gyOCtn5J7o2AoDHYVPrDq` - R$ 29,90/mes (BRL, recorrente mensal) |
-| Edge Function `create-checkout` | OK | Usa o price_id correto, modo subscription |
-| Edge Function `check-subscription` | OK | Verifica product_id correto, suporta convites admin |
-| Edge Function `cancel-subscription` | OK | Existe e e chamada na UI |
-| Frontend `use-subscription` | OK | Verifica `PREMIUM_PRODUCT_ID` correto, auto-refresh a cada 60s |
+## Visão Geral
 
-## 2. Funcionalidades listadas na pagina de Planos -- TRAVAS NAO IMPLEMENTADAS
+Criar um módulo completo de avaliação OSCE (Objective Structured Clinical Examination) com 4 pilares: Construtor de Estações, Interface do Avaliador, Gestão do Circuito e Análise Pós-Prova. Inclui geração de cenários por IA e paciente virtual com chatbot.
 
-A pagina de Pricing **exibe** corretamente as 8 funcionalidades comparativas, porem **nenhuma trava esta implementada no codigo**. O `useSubscription()` e `FREE_LIMITS` so sao usados na pagina de Pricing para exibicao. Nenhuma outra pagina ou componente importa ou verifica `isPremium` ou `FREE_LIMITS`.
+---
 
-### Detalhamento das travas ausentes:
+## Banco de Dados — Novas Tabelas
 
-| Funcionalidade | Gratuito | Premium | Trava implementada? |
-|----------------|----------|---------|---------------------|
-| Questoes com IA por mes | 5 | Ilimitado | **NAO** - `AIQuestionGenerator.tsx` nao verifica limite |
-| Provas por mes | 1 | Ilimitado | **NAO** - `ExamEditor.tsx` e `Exams.tsx` nao verificam |
-| Exportacao PDF | Bloqueado | Liberado | **NAO** - `ExamPDFExporter.tsx` nao verifica `isPremium` |
-| Provas online | Bloqueado | Liberado | **NAO** - `PublishExamDialog.tsx` nao verifica |
-| Alunos por prova | 10 | Ilimitado | **NAO** - nenhuma verificacao de limite |
-| Correcao por IA | Bloqueado | Liberado | **NAO** - `grade-exam` nao verifica plano |
-| Monitoramento em tempo real | Bloqueado | Liberado | **NAO** - `ExamMonitoring.tsx` nao verifica |
-| Suporte prioritario | Nao | Sim | N/A (nao e uma trava tecnica) |
+### `osce_exams` — Prova OSCE principal
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid PK | — |
+| user_id | uuid | Proprietário (professor) |
+| title | text | Nome do exame |
+| description | text | — |
+| station_duration_minutes | int | Tempo padrão por estação |
+| transition_seconds | int | Tempo entre estações (ex: 60s) |
+| status | text | draft / in_progress / completed |
+| created_at / updated_at / deleted_at | timestamps | — |
 
-## 3. Plano de Implementacao
+### `osce_stations` — Estações individuais
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid PK | — |
+| osce_exam_id | uuid FK | Vincula ao exame |
+| position | int | Ordem no circuito |
+| title | text | Nome da estação |
+| duration_minutes | int | Override do tempo (nullable) |
+| student_instructions | text | Cenário/instruções da porta |
+| patient_script | text | Roteiro do paciente simulado |
+| case_summary | text | Resumo do caso clínico |
+| learning_objectives | text[] | Objetivos de aprendizagem |
+| virtual_patient_enabled | boolean | Se tem chatbot de paciente virtual |
+| virtual_patient_system_prompt | text | Prompt do chatbot gerado pela IA |
+| is_rest_station | boolean | Estação de descanso |
+| created_at / updated_at | timestamps | — |
 
-### Tarefa 1: Criar hook/utilitario de verificacao de limites
-- Adicionar funcao `checkUsageLimit` em `use-subscription.tsx` que consulta o banco para contar uso mensal (questoes geradas, provas criadas)
-- Exportar constantes `FREE_LIMITS` ja existentes para uso em todo o app
+### `osce_checklist_items` — Itens do checklist do avaliador
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid PK | — |
+| station_id | uuid FK | — |
+| position | int | Ordem |
+| description | text | Descrição do item |
+| type | text | `binary` / `likert` / `score` |
+| likert_max | int | Máximo da escala Likert (3, 5, 7) |
+| max_points | numeric | Pontuação máxima |
+| weight | numeric | Peso do item |
+| is_critical | boolean | Reprova se não marcado |
+| category | text | Agrupamento (Comunicação, Técnico, etc.) |
 
-### Tarefa 2: Bloquear Questoes com IA (limite 5/mes no gratuito)
-- Em `AIQuestionGenerator.tsx`: importar `useSubscription`, contar questoes geradas no mes atual via query na `question_bank`, bloquear se >= 5 e nao premium
-- Mostrar mensagem com link para upgrade
+### `osce_circuits` — Circuito/sessão de aplicação
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid PK | — |
+| osce_exam_id | uuid FK | — |
+| class_id | uuid FK (nullable) | Turma vinculada |
+| status | text | pending / running / paused / completed |
+| started_at | timestamp | Início real |
+| current_rotation | int | Rotação atual |
+| access_code | text | Código de acesso para avaliadores |
 
-### Tarefa 3: Bloquear criacao de provas (limite 1/mes no gratuito)
-- Em `Exams.tsx` / `ExamEditor.tsx`: verificar contagem de provas criadas no mes, bloquear se >= 1 e nao premium
+### `osce_evaluations` — Avaliações feitas
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid PK | — |
+| circuit_id | uuid FK | — |
+| station_id | uuid FK | — |
+| evaluator_id | uuid | Quem avaliou (pode ser auth user ou identificado por nome) |
+| student_name | text | Nome do aluno |
+| student_email | text (nullable) | — |
+| rotation | int | Em qual rotação aconteceu |
+| observations | text | Feedback qualitativo |
+| total_score | numeric | Pontuação calculada |
+| max_score | numeric | Máximo possível |
+| passed | boolean | Aprovado na estação |
+| started_at / finished_at | timestamps | — |
 
-### Tarefa 4: Bloquear Exportacao PDF (so premium)
-- Em `ExamPDFExporter.tsx`: verificar `isPremium`, mostrar dialog de upgrade se gratuito
+### `osce_evaluation_items` — Respostas individuais do checklist
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid PK | — |
+| evaluation_id | uuid FK | — |
+| checklist_item_id | uuid FK | — |
+| value | numeric | Nota ou 0/1 |
+| notes | text (nullable) | — |
 
-### Tarefa 5: Bloquear Provas Online (so premium)
-- Em `PublishExamDialog.tsx`: verificar `isPremium`, impedir publicacao se gratuito
+---
 
-### Tarefa 6: Limitar alunos por prova (10 no gratuito)
-- Em `PublishExamDialog.tsx` ou no edge function `student-exam-access`: verificar contagem de sessoes ativas vs limite
+## RLS
 
-### Tarefa 7: Bloquear Correcao por IA (so premium)
-- No edge function `grade-exam` e na UI de monitoramento: verificar plano antes de permitir correcao automatica
+- Todas as tabelas: owner (user_id) tem ALL, admin tem ALL
+- `osce_evaluations` e `osce_evaluation_items`: avaliadores com acesso via `access_code` do circuito (insert/update via edge function com `verify_jwt = false`)
+- `osce_circuits`: select público com `access_code` para avaliadores
 
-### Tarefa 8: Bloquear Monitoramento em Tempo Real (so premium)
-- Em `ExamMonitoring.tsx`: verificar `isPremium`, redirecionar ou mostrar paywall se gratuito
+---
 
-## Resumo
+## Arquitetura de Páginas e Componentes
 
-- **Stripe**: Produto, preco e funcoes de checkout/verificacao estao **corretos e funcionais**
-- **Exibicao dos planos**: A pagina de Pricing exibe todas as funcionalidades corretamente
-- **Travas de plano**: **NENHUMA das 7 travas tecnicas esta implementada** - qualquer usuario gratuito pode usar todas as funcionalidades sem restricao
-- **Acao necessaria**: Implementar as verificacoes de `isPremium` e contagem de uso em cada componente/funcao relevante
+### Páginas novas
+
+| Rota | Página | Descrição |
+|------|--------|-----------|
+| `/osce` | `OsceExams.tsx` | Listagem de exames OSCE (similar a `/exams`) |
+| `/osce/:id/edit` | `OsceEditor.tsx` | Construtor de estações com abas |
+| `/osce/:circuitId/control` | `OsceCircuitControl.tsx` | Painel de controle do circuito (admin) |
+| `/osce/evaluate/:accessCode` | `OsceEvaluator.tsx` | Interface do avaliador (mobile-first, sem login necessário) |
+| `/osce/:id/results` | `OsceResults.tsx` | Análise e relatórios pós-prova |
+| `/osce/patient/:stationId` | `OsceVirtualPatient.tsx` | Chatbot do paciente virtual (acesso do aluno) |
+
+### Componentes principais
+
+- `OsceStationEditor.tsx` — Editor de uma estação (instruções, roteiro, checklist)
+- `OsceChecklistBuilder.tsx` — Construtor dinâmico de itens (binary/likert/score, pesos, itens críticos)
+- `OsceEvaluatorChecklist.tsx` — Interface touch-friendly para marcação rápida
+- `OsceTimer.tsx` — Cronômetro com transição de cores (verde→amarelo→vermelho)
+- `OsceCircuitGrid.tsx` — Grid visual de estações × alunos em tempo real
+- `OsceRadarChart.tsx` — Gráfico de radar com recharts por categorias
+- `OsceAIGenerator.tsx` — Dialog para gerar cenário completo com IA
+- `OsceVirtualPatientChat.tsx` — Chat do paciente virtual
+
+---
+
+## Geração de Cenário com IA
+
+### Edge Function: `generate-osce-station`
+
+Recebe: `context` (área clínica, nível), `learning_objectives` (texto), `checklist_categories` (opcional)
+
+Retorna via tool calling (structured output):
+```json
+{
+  "student_instructions": "...",
+  "case_summary": "...",
+  "patient_script": "...",
+  "virtual_patient_system_prompt": "...",
+  "checklist_items": [
+    { "description": "...", "type": "binary", "category": "Comunicação", "is_critical": false, "weight": 1 },
+    { "description": "...", "type": "likert", "likert_max": 5, "category": "Empatia", "weight": 2 }
+  ]
+}
+```
+
+Usa `callAiWithFallback` existente com tool calling para structured output. O `virtual_patient_system_prompt` gerado alimenta automaticamente o chatbot de paciente virtual da estação.
+
+### Edge Function: `osce-virtual-patient`
+
+Chatbot streaming que recebe o `system_prompt` da estação (gerado pela IA ou escrito manualmente) e conversa com o aluno como paciente simulado. Usa a mesma infraestrutura de streaming do `ai-tutor-chat`.
+
+---
+
+## Interface do Avaliador — Detalhes
+
+- **Sem login obrigatório**: acesso via `access_code` do circuito (como portal do aluno)
+- **Mobile-first**: botões grandes, checkboxes de toque, sliders para Likert
+- **Cronômetro fixo no topo**: sincronizado via Realtime com o painel de controle
+- **3 abas flutuantes**: Checklist | Caso Clínico | Desempenho Geral
+- **Campo de observações**: com botão de Voice-to-Text usando Web Speech API nativa do browser
+- **Auto-save**: salva a cada interação no checklist
+
+---
+
+## Gestão do Circuito — Realtime
+
+- Habilitar Realtime nas tabelas `osce_circuits` e `osce_evaluations`
+- Painel de controle mostra grid de estações × alunos
+- Botão "Iniciar Exame" sincroniza timer para todos os avaliadores conectados
+- Sinal de troca de estação propagado via update no `current_rotation`
+
+---
+
+## Análise Pós-Prova
+
+- **Gráfico de Radar** (recharts `RadarChart`): desempenho por categoria do checklist (Comunicação, Raciocínio Clínico, Técnico, Empatia)
+- **Tabela resumo**: nota por estação, itens críticos faltantes, aprovado/reprovado
+- **Exportação PDF**: relatório individual por aluno com gráfico de radar + feedback dos avaliadores
+- **Visão consolidada**: médias por estação, identificação de estações mais difíceis
+
+---
+
+## Sidebar e Navegação
+
+- Adicionar item "OSCE" no grupo "Conteúdo" do `AppSidebar.tsx` com ícone `Stethoscope`
+- Rota `/osce` protegida com `ProtectedRoute`
+
+---
+
+## Resumo de Arquivos
+
+| Ação | Arquivo |
+|------|---------|
+| Migration | 7 tabelas + RLS + Realtime |
+| Edge Function | `generate-osce-station/index.ts` |
+| Edge Function | `osce-virtual-patient/index.ts` |
+| Criar | `src/pages/OsceExams.tsx` |
+| Criar | `src/pages/OsceEditor.tsx` |
+| Criar | `src/pages/OsceCircuitControl.tsx` |
+| Criar | `src/pages/OsceEvaluator.tsx` |
+| Criar | `src/pages/OsceResults.tsx` |
+| Criar | `src/pages/OsceVirtualPatient.tsx` |
+| Criar | `src/components/osce/OsceStationEditor.tsx` |
+| Criar | `src/components/osce/OsceChecklistBuilder.tsx` |
+| Criar | `src/components/osce/OsceEvaluatorChecklist.tsx` |
+| Criar | `src/components/osce/OsceTimer.tsx` |
+| Criar | `src/components/osce/OsceCircuitGrid.tsx` |
+| Criar | `src/components/osce/OsceRadarChart.tsx` |
+| Criar | `src/components/osce/OsceAIGenerator.tsx` |
+| Criar | `src/components/osce/OsceVirtualPatientChat.tsx` |
+| Editar | `src/App.tsx` — novas rotas |
+| Editar | `src/components/AppSidebar.tsx` — link OSCE |
+| Editar | `supabase/config.toml` — verify_jwt para novas functions |
+
+---
+
+## Ordem de Implementação Sugerida
+
+1. **Migration** — criar todas as tabelas e RLS
+2. **Listagem + Construtor de Estações** — páginas OsceExams + OsceEditor com checklist builder
+3. **Geração com IA** — edge function + dialog de geração
+4. **Interface do Avaliador** — mobile-first com timer e checklist
+5. **Gestão do Circuito** — painel de controle com Realtime
+6. **Paciente Virtual** — edge function de chat + página do chatbot
+7. **Análise e Relatórios** — gráficos de radar + exportação PDF
+
+> **Nota**: Dado o tamanho deste módulo, a implementação será dividida em várias etapas. Sugiro começar pelas etapas 1-3 (banco + construtor + IA) na primeira rodada.
+
