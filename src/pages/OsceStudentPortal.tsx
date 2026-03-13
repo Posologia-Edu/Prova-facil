@@ -312,6 +312,17 @@ export default function OsceStudentPortal() {
             <span className="font-medium">{currentStation?.title}</span>
             <div className="flex items-center gap-2">
               {/* Audio controls */}
+              {audioDevices.length > 1 && (
+                <select
+                  value={selectedDeviceId}
+                  onChange={(e) => switchMicrophone(e.target.value)}
+                  className="h-7 text-xs rounded border border-border bg-background px-1 max-w-[140px]"
+                >
+                  {audioDevices.map(d => (
+                    <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                  ))}
+                </select>
+              )}
               <Button
                 size="sm"
                 variant={isMuted ? "destructive" : "outline"}
