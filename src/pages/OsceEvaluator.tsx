@@ -27,6 +27,8 @@ export default function OsceEvaluator() {
   const [isRecording, setIsRecording] = useState(false);
   const [activeTab, setActiveTab] = useState("checklist");
   const [scoreInfo, setScoreInfo] = useState({ total: 0, max: 0, passed: true });
+  const [chatMessages, setChatMessages] = useState<{ role: string; content: string; created_at: string }[]>([]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch circuit by access code
   const { data: circuit, isLoading: circuitLoading } = useQuery({
