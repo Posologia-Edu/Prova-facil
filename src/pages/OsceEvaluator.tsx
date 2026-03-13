@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,10 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Stethoscope, ClipboardCheck, BookOpen, BarChart3, Mic, MicOff, LogIn, Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Stethoscope, ClipboardCheck, BookOpen, BarChart3, Eye, Mic, MicOff, LogIn, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { OsceTimer } from "@/components/osce/OsceTimer";
 import { OsceEvaluatorChecklist } from "@/components/osce/OsceEvaluatorChecklist";
+import { OsceMaterialViewer } from "@/components/osce/OsceMaterialViewer";
 
 export default function OsceEvaluator() {
   const { accessCode } = useParams<{ accessCode: string }>();

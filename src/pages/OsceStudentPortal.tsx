@@ -114,6 +114,21 @@ export default function OsceStudentPortal() {
     setAuthenticated(true);
   };
 
+  const persistMessage = async (role: string, content: string) => {
+    if (!circuit?.id || !myStudent?.current_station_id || !myStudent?.id) return;
+    try {
+      await supabase.from("osce_chat_messages" as any).insert([{
+        circuit_id: circuit.id,
+        station_id: myStudent.current_station_id,
+        student_id: myStudent.id,
+        role,
+        content,
+      }]);
+    } catch (e) {
+      console.error("Failed to persist chat message", e);
+    }
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || !currentStation) return;
     const userMsg = { role: "user", content: input.trim() };
@@ -121,6 +136,9 @@ export default function OsceStudentPortal() {
     setMessages(newMessages);
     setInput("");
     setSending(true);
+
+    // Persist user message
+    await persistMessage("user", userMsg.content);
 
     try {
       const res = await supabase.functions.invoke("osce-virtual-patient", {
@@ -133,6 +151,8 @@ export default function OsceStudentPortal() {
       const data = res.data;
       const text = data?.response || (typeof data === "string" ? data : null) || "Desculpe, não consegui responder.";
       setMessages(prev => [...prev, { role: "assistant", content: text }]);
+      // Persist assistant message
+      await persistMessage("assistant", text);
     } catch (e: any) {
       toast.error("Erro ao enviar mensagem");
     } finally {
