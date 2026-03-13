@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Trash2, Coffee, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { OsceChecklistBuilder } from "./OsceChecklistBuilder";
+import { OsceStationMaterials } from "./OsceStationMaterials";
 
 interface Props {
   station: any;
@@ -153,6 +154,10 @@ export function OsceStationEditor({ station, examId, defaultDuration }: Props) {
             <div>
               <h4 className="font-semibold mb-3">Checklist do Avaliador</h4>
               <OsceChecklistBuilder stationId={station.id} />
+            </div>
+
+            <div>
+              <OsceStationMaterials stationId={station.id} />
             </div>
           </CardContent>
         </CollapsibleContent>

@@ -6,9 +6,10 @@ interface Props {
   stations: any[];
   evaluations: any[];
   currentRotation: number;
+  circuitStudents?: any[];
 }
 
-export function OsceCircuitGrid({ stations, evaluations, currentRotation }: Props) {
+export function OsceCircuitGrid({ stations, evaluations, currentRotation, circuitStudents = [] }: Props) {
   const clinicalStations = stations.filter((s) => !s.is_rest_station);
 
   // Group evaluations by station
@@ -31,25 +32,30 @@ export function OsceCircuitGrid({ stations, evaluations, currentRotation }: Prop
             const stationEvals = evalsByStation[station.id] || [];
             const currentEval = stationEvals.find((e: any) => e.rotation === currentRotation);
             const completedCount = stationEvals.filter((e: any) => e.finished_at).length;
+            const assignedStudent = circuitStudents.find(s => s.current_station_id === station.id && s.status === "in_station");
 
             return (
               <div
                 key={station.id}
                 className={`rounded-xl border-2 p-4 transition-colors ${
-                  currentEval && !currentEval.finished_at
+                  assignedStudent
                     ? "border-primary bg-primary/5"
                     : currentEval?.finished_at
-                    ? "border-green-300 bg-green-50"
+                    ? "border-green-300 bg-green-50 dark:bg-green-950/20"
                     : "border-border"
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <Badge variant="secondary" className="text-xs">{station.position}</Badge>
                   {currentEval?.finished_at && <CheckCircle className="h-4 w-4 text-green-600" />}
-                  {currentEval && !currentEval.finished_at && <Clock className="h-4 w-4 text-primary animate-pulse" />}
+                  {assignedStudent && !currentEval?.finished_at && <Clock className="h-4 w-4 text-primary animate-pulse" />}
                 </div>
                 <h4 className="font-medium text-sm mb-1 truncate">{station.title}</h4>
-                {currentEval ? (
+                {assignedStudent ? (
+                  <p className="text-xs text-primary font-medium truncate">
+                    {assignedStudent.student_name}
+                  </p>
+                ) : currentEval ? (
                   <p className="text-xs text-muted-foreground truncate">
                     {currentEval.student_name}
                     {currentEval.finished_at && ` — ${currentEval.total_score}/${currentEval.max_score}`}

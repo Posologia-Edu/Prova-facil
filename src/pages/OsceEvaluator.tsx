@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Stethoscope, ClipboardCheck, BookOpen, BarChart3, Mic, MicOff, LogIn } from "lucide-react";
+import { Stethoscope, ClipboardCheck, BookOpen, BarChart3, Mic, MicOff, LogIn, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { OsceTimer } from "@/components/osce/OsceTimer";
 import { OsceEvaluatorChecklist } from "@/components/osce/OsceEvaluatorChecklist";
@@ -19,8 +19,7 @@ export default function OsceEvaluator() {
   const queryClient = useQueryClient();
   const [authenticated, setAuthenticated] = useState(false);
   const [evaluatorName, setEvaluatorName] = useState("");
-  const [studentName, setStudentName] = useState("");
-  const [selectedStation, setSelectedStation] = useState<string | null>(null);
+  const [evaluatorEmail, setEvaluatorEmail] = useState("");
   const [evaluationId, setEvaluationId] = useState<string | null>(null);
   const [observations, setObservations] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -42,61 +41,108 @@ export default function OsceEvaluator() {
     enabled: !!accessCode && authenticated,
   });
 
-  // Fetch stations for this exam
-  const { data: stations } = useQuery({
-    queryKey: ["osce-stations-eval", circuit?.osce_exam_id],
+  // Fetch evaluator's assigned station
+  const { data: assignedEvaluator } = useQuery({
+    queryKey: ["osce-evaluator-assignment", circuit?.osce_exam_id, evaluatorEmail],
+    queryFn: async () => {
+      // Get all stations for the exam, then find evaluator assignment
+      const { data: stationData, error: stError } = await supabase
+        .from("osce_stations")
+        .select("id")
+        .eq("osce_exam_id", circuit!.osce_exam_id);
+      if (stError) throw stError;
+      const stationIds = stationData.map(s => s.id);
+      if (stationIds.length === 0) return null;
+
+      const { data, error } = await supabase
+        .from("osce_station_evaluators")
+        .select("*")
+        .in("station_id", stationIds)
+        .eq("evaluator_email", evaluatorEmail.toLowerCase())
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!circuit?.osce_exam_id && !!evaluatorEmail && authenticated,
+  });
+
+  const selectedStationId = assignedEvaluator?.station_id || null;
+
+  // Fetch station details
+  const { data: currentStation } = useQuery({
+    queryKey: ["osce-station-eval", selectedStationId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("osce_stations")
         .select("*")
-        .eq("osce_exam_id", circuit!.osce_exam_id)
-        .eq("is_rest_station", false)
-        .order("position");
+        .eq("id", selectedStationId!)
+        .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!circuit?.osce_exam_id,
+    enabled: !!selectedStationId,
   });
 
-  // Fetch checklist items for selected station
+  // Fetch current student assigned to this station in this rotation
+  const { data: currentStudent } = useQuery({
+    queryKey: ["osce-current-student", circuit?.id, selectedStationId, circuit?.current_rotation],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("osce_circuit_students")
+        .select("*")
+        .eq("circuit_id", circuit!.id)
+        .eq("current_station_id", selectedStationId!)
+        .eq("status", "in_station")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!circuit?.id && !!selectedStationId,
+    refetchInterval: 3000,
+  });
+
+  // Fetch checklist items for assigned station
   const { data: checklistItems } = useQuery({
-    queryKey: ["osce-checklist-eval", selectedStation],
+    queryKey: ["osce-checklist-eval", selectedStationId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("osce_checklist_items")
         .select("*")
-        .eq("station_id", selectedStation!)
+        .eq("station_id", selectedStationId!)
         .order("position");
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedStation,
+    enabled: !!selectedStationId,
   });
 
-  // Selected station data
-  const currentStation = stations?.find((s: any) => s.id === selectedStation);
-
-  // Realtime subscription for circuit updates (timer sync)
+  // Realtime subscription for circuit updates
   useEffect(() => {
     if (!circuit?.id) return;
     const channel = supabase
-      .channel(`circuit-${circuit.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "osce_circuits", filter: `id=eq.${circuit.id}` }, (payload) => {
+      .channel(`eval-circuit-${circuit.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "osce_circuits", filter: `id=eq.${circuit.id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["osce-circuit-eval", accessCode] });
+        queryClient.invalidateQueries({ queryKey: ["osce-current-student"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "osce_circuit_students", filter: `circuit_id=eq.${circuit.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["osce-current-student"] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [circuit?.id]);
 
+  // Auto-create evaluation when student appears
   const createEvaluation = useMutation({
     mutationFn: async () => {
-      if (!circuit || !selectedStation || !studentName.trim()) throw new Error("Dados incompletos");
+      if (!circuit || !selectedStationId || !currentStudent) throw new Error("Dados incompletos");
       const { data, error } = await supabase
         .from("osce_evaluations")
         .insert([{
           circuit_id: circuit.id,
-          station_id: selectedStation,
-          student_name: studentName.trim(),
+          station_id: selectedStationId,
+          student_name: currentStudent.student_name,
+          student_email: currentStudent.student_email,
           rotation: circuit.current_rotation || 0,
         }])
         .select()
@@ -122,7 +168,12 @@ export default function OsceEvaluator() {
         finished_at: new Date().toISOString(),
       }).eq("id", evaluationId);
     },
-    onSuccess: () => toast.success("Avaliação finalizada!"),
+    onSuccess: () => {
+      toast.success("Avaliação finalizada!");
+      setEvaluationId(null);
+      setObservations("");
+      setScoreInfo({ total: 0, max: 0, passed: true });
+    },
   });
 
   // Voice-to-text
@@ -131,10 +182,7 @@ export default function OsceEvaluator() {
       toast.error("Navegador não suporta ditado por voz");
       return;
     }
-    if (isRecording) {
-      setIsRecording(false);
-      return;
-    }
+    if (isRecording) { setIsRecording(false); return; }
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
@@ -145,7 +193,7 @@ export default function OsceEvaluator() {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript;
       }
-      setObservations((prev) => prev + " " + transcript);
+      setObservations(prev => prev + " " + transcript);
     };
     recognition.onerror = () => setIsRecording(false);
     recognition.onend = () => setIsRecording(false);
@@ -166,9 +214,16 @@ export default function OsceEvaluator() {
           <CardContent className="space-y-4">
             <div>
               <Label>Seu Nome</Label>
-              <Input value={evaluatorName} onChange={(e) => setEvaluatorName(e.target.value)} placeholder="Nome do avaliador" className="h-12 text-lg" />
+              <Input value={evaluatorName} onChange={e => setEvaluatorName(e.target.value)} placeholder="Nome do avaliador" className="h-12 text-lg" />
             </div>
-            <Button className="w-full h-12 text-lg gap-2" onClick={() => { if (evaluatorName.trim()) setAuthenticated(true); else toast.error("Informe seu nome"); }}>
+            <div>
+              <Label>Seu Email</Label>
+              <Input value={evaluatorEmail} onChange={e => setEvaluatorEmail(e.target.value)} placeholder="email@instituicao.edu" type="email" className="h-12 text-lg" />
+            </div>
+            <Button className="w-full h-12 text-lg gap-2" onClick={() => {
+              if (!evaluatorName.trim() || !evaluatorEmail.trim()) { toast.error("Informe nome e email"); return; }
+              setAuthenticated(true);
+            }}>
               <LogIn className="h-5 w-5" /> Entrar
             </Button>
           </CardContent>
@@ -177,46 +232,69 @@ export default function OsceEvaluator() {
     );
   }
 
-  // Station selection
-  if (!selectedStation || !evaluationId) {
+  // Loading / no assignment
+  if (!circuit) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <div className="text-center">
-            <h1 className="text-xl font-bold">Avaliador: {evaluatorName}</h1>
-            <p className="text-muted-foreground text-sm">{(circuit as any)?.osce_exams?.title || "Exame OSCE"}</p>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-          {!selectedStation ? (
-            <>
-              <h2 className="font-semibold">Selecione a Estação</h2>
-              <div className="grid gap-3">
-                {stations?.map((s: any) => (
-                  <Button key={s.id} variant="outline" className="h-16 text-lg justify-start gap-3" onClick={() => setSelectedStation(s.id)}>
-                    <Badge variant="secondary">{s.position}</Badge>
-                    {s.title}
-                  </Button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <Card className="p-6 space-y-4">
-              <h2 className="font-semibold">Nome do Aluno</h2>
-              <Input value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Nome completo do aluno" className="h-12 text-lg" />
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setSelectedStation(null)}>Voltar</Button>
-                <Button className="flex-1 h-12 text-lg" onClick={() => createEvaluation.mutate()} disabled={!studentName.trim()}>
-                  Iniciar Avaliação
-                </Button>
-              </div>
-            </Card>
-          )}
-        </div>
+  if (authenticated && !assignedEvaluator && circuit) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center p-8">
+          <Stethoscope className="h-10 w-10 mx-auto text-destructive mb-4" />
+          <h2 className="text-lg font-bold mb-2">Sem Estação Atribuída</h2>
+          <p className="text-muted-foreground text-sm">
+            O email <strong>{evaluatorEmail}</strong> não está vinculado a nenhuma estação neste circuito.
+            Entre em contato com o administrador.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  // Waiting for student
+  if (!currentStudent && !evaluationId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center p-8">
+          <div className="space-y-4">
+            <h2 className="text-lg font-bold">Estação: {currentStation?.title}</h2>
+            <p className="text-muted-foreground">Avaliador: {evaluatorName}</p>
+            <div className="py-6">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mt-3">Aguardando aluno nesta estação...</p>
+            </div>
+            <Badge variant="outline">Rotação: {circuit.current_rotation || 0}</Badge>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Student arrived but no evaluation yet — show start button
+  if (currentStudent && !evaluationId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md p-6 space-y-4 text-center">
+          <h2 className="text-lg font-bold">Estação: {currentStation?.title}</h2>
+          <div className="bg-primary/5 rounded-lg p-4">
+            <p className="text-sm text-muted-foreground">Aluno na estação:</p>
+            <p className="text-xl font-bold mt-1">{currentStudent.student_name}</p>
+          </div>
+          <Button className="w-full h-12 text-lg" onClick={() => createEvaluation.mutate()}>
+            Iniciar Avaliação
+          </Button>
+        </Card>
       </div>
     );
   }
 
   const examData = circuit as any;
+  const studentName = currentStudent?.student_name || "";
   const durationMin = currentStation?.duration_minutes || examData?.osce_exams?.station_duration_minutes || 5;
 
   return (
@@ -246,7 +324,7 @@ export default function OsceEvaluator() {
           </TabsList>
 
           <TabsContent value="checklist" className="mt-4">
-            {checklistItems && (
+            {checklistItems && evaluationId && (
               <OsceEvaluatorChecklist
                 checklistItems={checklistItems}
                 evaluationId={evaluationId}
@@ -298,7 +376,7 @@ export default function OsceEvaluator() {
               <CardContent>
                 <Textarea
                   value={observations}
-                  onChange={(e) => setObservations(e.target.value)}
+                  onChange={e => setObservations(e.target.value)}
                   placeholder="Feedback qualitativo sobre o aluno..."
                   rows={5}
                   className="text-base"

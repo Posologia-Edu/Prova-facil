@@ -38,6 +38,7 @@ import OsceCircuitControl from "./pages/OsceCircuitControl";
 import OsceEvaluator from "./pages/OsceEvaluator";
 import OsceResults from "./pages/OsceResults";
 import OsceVirtualPatient from "./pages/OsceVirtualPatient";
+import OsceStudentPortal from "./pages/OsceStudentPortal";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
 import PublicContact from "./pages/PublicContact";
@@ -226,6 +227,7 @@ const App = () => (
             {/* Public OSCE routes (no auth required) */}
             <Route path="/osce/evaluate/:accessCode" element={<OsceEvaluator />} />
             <Route path="/osce/patient/:stationId" element={<OsceVirtualPatient />} />
+            <Route path="/osce/student/:accessCode" element={<OsceStudentPortal />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
