@@ -70,6 +70,7 @@ export function AppSidebar() {
     { title: t("nav_questions"), url: "/questions", icon: Library },
     { title: t("nav_composer"), url: "/composer", icon: FileEdit },
     { title: t("sidebar_my_exams"), url: "/exams", icon: BookOpen },
+    { title: "OSCE", url: "/osce", icon: Stethoscope },
   ];
 
   const managementNav = [
