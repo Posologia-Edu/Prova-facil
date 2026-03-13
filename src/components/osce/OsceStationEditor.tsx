@@ -155,6 +155,10 @@ export function OsceStationEditor({ station, examId, defaultDuration }: Props) {
               <h4 className="font-semibold mb-3">Checklist do Avaliador</h4>
               <OsceChecklistBuilder stationId={station.id} />
             </div>
+
+            <div>
+              <OsceStationMaterials stationId={station.id} />
+            </div>
           </CardContent>
         </CollapsibleContent>
       </Card>

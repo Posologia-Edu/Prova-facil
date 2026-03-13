@@ -227,6 +227,7 @@ const App = () => (
             {/* Public OSCE routes (no auth required) */}
             <Route path="/osce/evaluate/:accessCode" element={<OsceEvaluator />} />
             <Route path="/osce/patient/:stationId" element={<OsceVirtualPatient />} />
+            <Route path="/osce/student/:accessCode" element={<OsceStudentPortal />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
