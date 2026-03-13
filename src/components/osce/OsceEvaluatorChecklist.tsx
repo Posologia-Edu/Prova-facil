@@ -14,6 +14,7 @@ interface ChecklistItem {
   description: string;
   type: string;
   likert_max: number;
+  max_points: number;
   weight: number;
   is_critical: boolean;
   category: string;
