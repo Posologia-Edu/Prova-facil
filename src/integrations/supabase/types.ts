@@ -585,6 +585,57 @@ export type Database = {
           },
         ]
       }
+      osce_circuit_students: {
+        Row: {
+          circuit_id: string
+          created_at: string
+          current_rotation: number
+          current_station_id: string | null
+          id: string
+          status: string
+          student_email: string | null
+          student_name: string
+          student_registration: string | null
+        }
+        Insert: {
+          circuit_id: string
+          created_at?: string
+          current_rotation?: number
+          current_station_id?: string | null
+          id?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+          student_registration?: string | null
+        }
+        Update: {
+          circuit_id?: string
+          created_at?: string
+          current_rotation?: number
+          current_station_id?: string | null
+          id?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+          student_registration?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "osce_circuit_students_circuit_id_fkey"
+            columns: ["circuit_id"]
+            isOneToOne: false
+            referencedRelation: "osce_circuits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "osce_circuit_students_current_station_id_fkey"
+            columns: ["current_station_id"]
+            isOneToOne: false
+            referencedRelation: "osce_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       osce_circuits: {
         Row: {
           access_code: string
@@ -746,10 +797,12 @@ export type Database = {
       }
       osce_exams: {
         Row: {
+          class_id: string | null
           created_at: string
           deleted_at: string | null
           description: string | null
           id: string
+          is_online: boolean
           station_duration_minutes: number
           status: string
           title: string
@@ -758,10 +811,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          class_id?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
           id?: string
+          is_online?: boolean
           station_duration_minutes?: number
           status?: string
           title?: string
@@ -770,10 +825,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          class_id?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
           id?: string
+          is_online?: boolean
           station_duration_minutes?: number
           status?: string
           title?: string
@@ -781,7 +838,88 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "osce_exams_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      osce_station_evaluators: {
+        Row: {
+          created_at: string
+          evaluator_email: string
+          evaluator_name: string
+          id: string
+          station_id: string
+        }
+        Insert: {
+          created_at?: string
+          evaluator_email?: string
+          evaluator_name?: string
+          id?: string
+          station_id: string
+        }
+        Update: {
+          created_at?: string
+          evaluator_email?: string
+          evaluator_name?: string
+          id?: string
+          station_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "osce_station_evaluators_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "osce_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      osce_station_materials: {
+        Row: {
+          content: string | null
+          created_at: string
+          file_url: string | null
+          id: string
+          position: number
+          station_id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          position?: number
+          station_id: string
+          title?: string
+          type?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          position?: number
+          station_id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "osce_station_materials_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "osce_stations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       osce_stations: {
         Row: {
