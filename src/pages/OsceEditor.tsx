@@ -107,6 +107,12 @@ export default function OsceEditor() {
         <Button variant="outline" className="gap-2" onClick={() => setShowAI(true)}>
           <Sparkles className="h-4 w-4" /> Gerar com IA
         </Button>
+        <Button variant="outline" className="gap-2" onClick={() => createCircuit.mutate()}>
+          <Play className="h-4 w-4" /> Iniciar Circuito
+        </Button>
+        <Button variant="outline" className="gap-2" onClick={() => navigate(`/osce/${id}/results`)}>
+          <BarChart3 className="h-4 w-4" /> Resultados
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
