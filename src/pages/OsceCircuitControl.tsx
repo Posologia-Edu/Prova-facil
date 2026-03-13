@@ -5,18 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Play, Pause, SkipForward, Copy, Users } from "lucide-react";
+import { ArrowLeft, Play, Pause, SkipForward, Copy, Users, Globe, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { OsceTimer } from "@/components/osce/OsceTimer";
 import { OsceCircuitGrid } from "@/components/osce/OsceCircuitGrid";
+import { OsceChatMonitor } from "@/components/osce/OsceChatMonitor";
 
 export default function OsceCircuitControl() {
   const { circuitId } = useParams<{ circuitId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showCycleBanner, setShowCycleBanner] = useState(false);
 
   const { data: circuit } = useQuery({
     queryKey: ["osce-circuit", circuitId],
@@ -60,6 +59,20 @@ export default function OsceCircuitControl() {
     enabled: !!circuitId,
   });
 
+  const { data: circuitStudents } = useQuery({
+    queryKey: ["osce-circuit-students", circuitId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("osce_circuit_students")
+        .select("*")
+        .eq("circuit_id", circuitId!)
+        .order("student_name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!circuitId,
+  });
+
   // Realtime
   useEffect(() => {
     if (!circuitId) return;
@@ -69,6 +82,9 @@ export default function OsceCircuitControl() {
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "osce_evaluations", filter: `circuit_id=eq.${circuitId}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["osce-evaluations-circuit", circuitId] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "osce_circuit_students", filter: `circuit_id=eq.${circuitId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["osce-circuit-students", circuitId] });
       })
       .subscribe();
     return () => { supabase.removeChannel(ch1); };
@@ -82,9 +98,83 @@ export default function OsceCircuitControl() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["osce-circuit", circuitId] }),
   });
 
-  const startExam = () => {
-    updateCircuit.mutate({ status: "running", started_at: new Date().toISOString(), current_rotation: 1 });
-    toast.success("Exame iniciado!");
+  // Shuffle and assign students to stations
+  const shuffleStudents = async (rotation: number) => {
+    if (!circuitStudents || !stations) return;
+    const clinicalStations = stations.filter(s => !s.is_rest_station);
+    const numStations = clinicalStations.length;
+    if (numStations === 0) return;
+
+    // Get waiting students
+    const waitingStudents = circuitStudents.filter(s => s.status === "waiting");
+    
+    // Also get students currently in_station to rotate them
+    const activeStudents = circuitStudents.filter(s => s.status === "in_station");
+    
+    if (rotation === 1) {
+      // First rotation — shuffle waiting students, pick first N
+      const shuffled = [...waitingStudents].sort(() => Math.random() - 0.5);
+      const toAssign = shuffled.slice(0, numStations);
+      
+      for (let i = 0; i < toAssign.length; i++) {
+        await supabase.from("osce_circuit_students").update({
+          current_station_id: clinicalStations[i].id,
+          current_rotation: rotation,
+          status: "in_station",
+        }).eq("id", toAssign[i].id);
+      }
+    } else {
+      // Subsequent rotations — circular shift active students
+      if (activeStudents.length > 0) {
+        // Find each student's current station index and shift
+        for (const student of activeStudents) {
+          const currentIdx = clinicalStations.findIndex(s => s.id === student.current_station_id);
+          const nextIdx = (currentIdx + 1) % numStations;
+          
+          // If student has visited all stations, mark as completed
+          if (student.current_rotation >= numStations) {
+            await supabase.from("osce_circuit_students").update({
+              status: "completed",
+              current_station_id: null,
+            }).eq("id", student.id);
+          } else {
+            await supabase.from("osce_circuit_students").update({
+              current_station_id: clinicalStations[nextIdx].id,
+              current_rotation: rotation,
+            }).eq("id", student.id);
+          }
+        }
+
+        // Check if any active student completed — fill with waiting students
+        const completedCount = activeStudents.filter(s => s.current_rotation >= numStations).length;
+        if (completedCount > 0) {
+          const newWaiting = circuitStudents.filter(s => s.status === "waiting");
+          const toFill = newWaiting.slice(0, completedCount);
+          const emptyStations = clinicalStations.filter(s => 
+            !activeStudents.some(a => a.current_rotation < numStations && 
+              clinicalStations[(clinicalStations.findIndex(cs => cs.id === a.current_station_id) + 1) % numStations].id === s.id
+            )
+          );
+          for (let i = 0; i < Math.min(toFill.length, emptyStations.length); i++) {
+            await supabase.from("osce_circuit_students").update({
+              current_station_id: emptyStations[i].id,
+              current_rotation: rotation,
+              status: "in_station",
+            }).eq("id", toFill[i].id);
+          }
+        }
+      }
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ["osce-circuit-students", circuitId] });
+  };
+
+  const startExam = async () => {
+    await updateCircuit.mutateAsync({ status: "running", started_at: new Date().toISOString(), current_rotation: 1 });
+    await shuffleStudents(1);
+    toast.success("Exame iniciado! Alunos sorteados para as estações.");
+    setShowCycleBanner(true);
+    setTimeout(() => setShowCycleBanner(false), 5000);
   };
 
   const pauseExam = () => {
@@ -92,13 +182,22 @@ export default function OsceCircuitControl() {
     toast.info("Exame pausado");
   };
 
-  const nextRotation = () => {
+  const nextRotation = async () => {
     const next = (circuit?.current_rotation || 0) + 1;
-    updateCircuit.mutate({ current_rotation: next, started_at: new Date().toISOString() });
+    await updateCircuit.mutateAsync({ current_rotation: next, started_at: new Date().toISOString() });
+    await shuffleStudents(next);
     toast.success(`Rotação ${next} iniciada`);
+    setShowCycleBanner(true);
+    setTimeout(() => setShowCycleBanner(false), 5000);
   };
 
-  const completeExam = () => {
+  const completeExam = async () => {
+    // Mark all active students as completed
+    if (circuitStudents) {
+      for (const s of circuitStudents.filter(s => s.status !== "completed")) {
+        await supabase.from("osce_circuit_students").update({ status: "completed", current_station_id: null }).eq("id", s.id);
+      }
+    }
     updateCircuit.mutate({ status: "completed" });
     toast.success("Exame concluído!");
   };
@@ -106,16 +205,37 @@ export default function OsceCircuitControl() {
   const copyAccessLink = () => {
     const url = `${window.location.origin}/osce/evaluate/${circuit?.access_code}`;
     navigator.clipboard.writeText(url);
-    toast.success("Link copiado!");
+    toast.success("Link do avaliador copiado!");
+  };
+
+  const copyStudentLink = () => {
+    const url = `${window.location.origin}/osce/student/${circuit?.access_code}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link do aluno copiado!");
   };
 
   if (!circuit) return <div className="p-8 text-muted-foreground">Carregando...</div>;
 
   const examData = circuit as any;
   const durationMin = examData?.osce_exams?.station_duration_minutes || 5;
+  const isOnline = examData?.osce_exams?.is_online || false;
+  const waitingCount = circuitStudents?.filter(s => s.status === "waiting").length || 0;
+  const activeCount = circuitStudents?.filter(s => s.status === "in_station").length || 0;
+  const completedCount = circuitStudents?.filter(s => s.status === "completed").length || 0;
 
   return (
     <div className="space-y-6">
+      {/* Cycle banner */}
+      {showCycleBanner && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground py-4 text-center animate-pulse">
+          <div className="text-xl font-bold flex items-center justify-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            NOVO CICLO — Rotação {circuit.current_rotation}
+          </div>
+          <p className="text-sm opacity-80">Alunos foram redistribuídos para as estações</p>
+        </div>
+      )}
+
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/osce")}>
           <ArrowLeft className="h-5 w-5" />
@@ -127,7 +247,35 @@ export default function OsceCircuitControl() {
         <Badge variant={circuit.status === "running" ? "default" : circuit.status === "completed" ? "outline" : "secondary"}>
           {circuit.status === "running" ? "Em andamento" : circuit.status === "completed" ? "Concluído" : circuit.status === "paused" ? "Pausado" : "Pendente"}
         </Badge>
+        {isOnline && <Badge variant="outline" className="gap-1"><Globe className="h-3 w-3" /> Online</Badge>}
       </div>
+
+      {/* Students summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> Alunos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 flex-wrap">
+            <div className="text-center">
+              <div className="text-2xl font-bold">{circuitStudents?.length || 0}</div>
+              <p className="text-xs text-muted-foreground">Total</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-600">{waitingCount}</div>
+              <p className="text-xs text-muted-foreground">Aguardando</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{activeCount}</div>
+              <p className="text-xs text-muted-foreground">Nas estações</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{completedCount}</div>
+              <p className="text-xs text-muted-foreground">Concluídos</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Timer + Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -169,13 +317,32 @@ export default function OsceCircuitControl() {
             <Button variant="outline" onClick={copyAccessLink} className="w-full gap-2">
               <Copy className="h-4 w-4" /> Copiar Link do Avaliador
             </Button>
+            {isOnline && (
+              <Button variant="outline" onClick={copyStudentLink} className="w-full gap-2">
+                <Globe className="h-4 w-4" /> Copiar Link do Aluno
+              </Button>
+            )}
             <p className="text-xs text-muted-foreground text-center">Código: <strong>{circuit.access_code}</strong></p>
           </CardContent>
         </Card>
       </div>
 
       {/* Grid */}
-      <OsceCircuitGrid stations={stations || []} evaluations={evaluations || []} currentRotation={circuit.current_rotation || 0} />
+      <OsceCircuitGrid
+        stations={stations || []}
+        evaluations={evaluations || []}
+        currentRotation={circuit.current_rotation || 0}
+        circuitStudents={circuitStudents || []}
+      />
+
+      {/* Online monitoring */}
+      {isOnline && circuitStudents && (
+        <OsceChatMonitor
+          circuitId={circuitId!}
+          stations={stations || []}
+          circuitStudents={circuitStudents}
+        />
+      )}
     </div>
   );
 }

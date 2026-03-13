@@ -12,12 +12,14 @@ import { ArrowLeft, Plus, Sparkles, Settings, Coffee, Play, BarChart3 } from "lu
 import { toast } from "sonner";
 import { OsceStationEditor } from "@/components/osce/OsceStationEditor";
 import { OsceAIGenerator } from "@/components/osce/OsceAIGenerator";
+import { OsceCircuitSetupDialog } from "@/components/osce/OsceCircuitSetupDialog";
 
 export default function OsceEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showAI, setShowAI] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
   const [activeTab, setActiveTab] = useState("stations");
 
   const { data: exam, isLoading: examLoading } = useQuery({
@@ -69,25 +71,6 @@ export default function OsceEditor() {
     },
   });
 
-  const createCircuit = useMutation({
-    mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-      const { data, error } = await supabase
-        .from("osce_circuits")
-        .insert([{ osce_exam_id: id!, user_id: session.user.id }])
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      toast.success("Circuito criado!");
-      navigate(`/osce/${data.id}/control`);
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
   if (examLoading) return <div className="p-8 text-muted-foreground">Carregando...</div>;
   if (!exam) return <div className="p-8 text-destructive">Exame não encontrado</div>;
 
@@ -107,7 +90,7 @@ export default function OsceEditor() {
         <Button variant="outline" className="gap-2" onClick={() => setShowAI(true)}>
           <Sparkles className="h-4 w-4" /> Gerar com IA
         </Button>
-        <Button variant="outline" className="gap-2" onClick={() => createCircuit.mutate()}>
+        <Button variant="outline" className="gap-2" onClick={() => setShowSetup(true)}>
           <Play className="h-4 w-4" /> Iniciar Circuito
         </Button>
         <Button variant="outline" className="gap-2" onClick={() => navigate(`/osce/${id}/results`)}>
@@ -178,6 +161,13 @@ export default function OsceEditor() {
         onOpenChange={setShowAI}
         examId={id!}
         onGenerated={() => queryClient.invalidateQueries({ queryKey: ["osce-stations", id] })}
+      />
+
+      <OsceCircuitSetupDialog
+        open={showSetup}
+        onOpenChange={setShowSetup}
+        examId={id!}
+        stations={stations || []}
       />
     </div>
   );
