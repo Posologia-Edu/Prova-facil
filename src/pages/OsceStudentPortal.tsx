@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Stethoscope, LogIn, Loader2, Clock, Send } from "lucide-react";
+import { Stethoscope, LogIn, Loader2, Clock, Send, Mic, MicOff, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { OsceTimer } from "@/components/osce/OsceTimer";
 import { OsceMaterialViewer } from "@/components/osce/OsceMaterialViewer";
+import { useOsceAudio } from "@/hooks/use-osce-audio";
 
 export default function OsceStudentPortal() {
   const { accessCode } = useParams<{ accessCode: string }>();
@@ -21,6 +22,7 @@ export default function OsceStudentPortal() {
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [timeUp, setTimeUp] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch circuit
@@ -85,6 +87,15 @@ export default function OsceStudentPortal() {
     enabled: !!myStudent?.current_station_id,
   });
 
+  // Audio hook
+  const isInStation = myStudent?.status === "in_station" && !timeUp;
+  const { isMuted, isConnected, toggleMute } = useOsceAudio({
+    circuitId: circuit?.id,
+    stationId: myStudent?.current_station_id ?? undefined,
+    role: "student",
+    enabled: isInStation && !!circuit?.id && !!myStudent?.current_station_id,
+  });
+
   // Realtime subscription for circuit and student updates
   useEffect(() => {
     if (!circuit?.id) return;
@@ -104,14 +115,20 @@ export default function OsceStudentPortal() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Reset messages when station changes
+  // Reset messages and timeUp when station changes
   useEffect(() => {
     setMessages([]);
+    setTimeUp(false);
   }, [myStudent?.current_station_id]);
 
   const handleLogin = () => {
     if (!email.trim()) { toast.error("Informe seu email"); return; }
     setAuthenticated(true);
+  };
+
+  const handleTimeUp = () => {
+    setTimeUp(true);
+    toast.info("Tempo esgotado! Aguarde a próxima estação.");
   };
 
   const persistMessage = async (role: string, content: string) => {
@@ -130,14 +147,13 @@ export default function OsceStudentPortal() {
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || !currentStation) return;
+    if (!input.trim() || !currentStation || timeUp) return;
     const userMsg = { role: "user", content: input.trim() };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
     setSending(true);
 
-    // Persist user message
     await persistMessage("user", userMsg.content);
 
     try {
@@ -151,7 +167,6 @@ export default function OsceStudentPortal() {
       const data = res.data;
       const text = data?.response || (typeof data === "string" ? data : null) || "Desculpe, não consegui responder.";
       setMessages(prev => [...prev, { role: "assistant", content: text }]);
-      // Persist assistant message
       await persistMessage("assistant", text);
     } catch (e: any) {
       toast.error("Erro ao enviar mensagem");
@@ -262,6 +277,23 @@ export default function OsceStudentPortal() {
     );
   }
 
+  // Time's up screen — student is expelled from the room
+  if (timeUp) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center p-8">
+          <Clock className="h-12 w-12 mx-auto text-destructive mb-4" />
+          <h2 className="text-xl font-bold mb-2">Tempo Esgotado</h2>
+          <p className="text-muted-foreground mb-4">
+            O tempo desta estação terminou. Aguarde enquanto o avaliador finaliza sua avaliação. 
+            Você será redirecionado automaticamente para a próxima estação.
+          </p>
+          <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+        </Card>
+      </div>
+    );
+  }
+
   // Active station view
   const durationMin = currentStation?.duration_minutes || examData?.osce_exams?.station_duration_minutes || 5;
 
@@ -274,10 +306,23 @@ export default function OsceStudentPortal() {
             durationMinutes={durationMin}
             isRunning={circuit?.status === "running"}
             startedAt={circuit?.started_at}
+            onTimeUp={handleTimeUp}
           />
           <div className="flex items-center justify-between mt-2 text-sm">
             <span className="font-medium">{currentStation?.title}</span>
-            <Badge variant="secondary">Rotação {myStudent.current_rotation}</Badge>
+            <div className="flex items-center gap-2">
+              {/* Audio controls */}
+              <Button
+                size="sm"
+                variant={isMuted ? "destructive" : "outline"}
+                onClick={toggleMute}
+                className="gap-1 h-7 px-2"
+              >
+                {isMuted ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
+                {isConnected && <Phone className="h-3 w-3 text-green-500" />}
+              </Button>
+              <Badge variant="secondary">Rotação {myStudent.current_rotation}</Badge>
+            </div>
           </div>
         </div>
       </div>

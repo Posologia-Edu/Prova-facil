@@ -10,11 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Stethoscope, ClipboardCheck, BookOpen, BarChart3, Eye, Mic, MicOff, LogIn, Loader2 } from "lucide-react";
+import { Stethoscope, ClipboardCheck, BookOpen, BarChart3, Eye, Mic, MicOff, Phone, LogIn, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { OsceTimer } from "@/components/osce/OsceTimer";
 import { OsceEvaluatorChecklist } from "@/components/osce/OsceEvaluatorChecklist";
 import { OsceMaterialViewer } from "@/components/osce/OsceMaterialViewer";
+import { useOsceAudio } from "@/hooks/use-osce-audio";
 
 export default function OsceEvaluator() {
   const { accessCode } = useParams<{ accessCode: string }>();
@@ -28,6 +29,7 @@ export default function OsceEvaluator() {
   const [activeTab, setActiveTab] = useState("checklist");
   const [scoreInfo, setScoreInfo] = useState({ total: 0, max: 0, passed: true });
   const [chatMessages, setChatMessages] = useState<{ role: string; content: string; created_at: string }[]>([]);
+  const [studentTimeUp, setStudentTimeUp] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch circuit by access code
@@ -49,7 +51,6 @@ export default function OsceEvaluator() {
   const { data: assignedEvaluator, isLoading: assignmentLoading } = useQuery({
     queryKey: ["osce-evaluator-assignment", circuit?.osce_exam_id, evaluatorEmail],
     queryFn: async () => {
-      // Get all stations for the exam, then find evaluator assignment
       const { data: stationData, error: stError } = await supabase
         .from("osce_stations")
         .select("id")
@@ -64,7 +65,6 @@ export default function OsceEvaluator() {
         .in("station_id", stationIds)
         .ilike("evaluator_email", evaluatorEmail.trim());
       if (error) throw error;
-      // Return first match (evaluator may be assigned to one station)
       return data && data.length > 0 ? data[0] : null;
     },
     enabled: !!circuit?.osce_exam_id && !!evaluatorEmail && authenticated,
@@ -135,6 +135,15 @@ export default function OsceEvaluator() {
     enabled: !!selectedStationId,
   });
 
+  // Audio hook
+  const audioEnabled = !!evaluationId && !!circuit?.id && !!selectedStationId;
+  const { isMuted, isConnected, hasRemoteAudio, toggleMute } = useOsceAudio({
+    circuitId: circuit?.id,
+    stationId: selectedStationId ?? undefined,
+    role: "evaluator",
+    enabled: audioEnabled,
+  });
+
   // Fetch existing chat messages for current student
   useEffect(() => {
     if (!circuit?.id || !selectedStationId || !currentStudent?.id) {
@@ -181,6 +190,17 @@ export default function OsceEvaluator() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
+  // Handle time up — student is expelled but evaluator stays
+  const handleTimeUp = () => {
+    setStudentTimeUp(true);
+    toast.info("Tempo esgotado! O aluno foi desconectado. Finalize a avaliação.");
+  };
+
+  // Reset studentTimeUp when student changes
+  useEffect(() => {
+    setStudentTimeUp(false);
+  }, [currentStudent?.id]);
+
   // Auto-create evaluation when student appears
   const createEvaluation = useMutation({
     mutationFn: async () => {
@@ -206,9 +226,11 @@ export default function OsceEvaluator() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Finalize evaluation and move to next student
   const saveObservations = useMutation({
     mutationFn: async () => {
       if (!evaluationId) return;
+      // Save evaluation
       await supabase.from("osce_evaluations").update({
         observations,
         total_score: scoreInfo.total,
@@ -216,12 +238,60 @@ export default function OsceEvaluator() {
         passed: scoreInfo.passed,
         finished_at: new Date().toISOString(),
       }).eq("id", evaluationId);
+
+      // Move current student out — mark as waiting for next rotation or completed
+      if (currentStudent && circuit) {
+        // Get all clinical stations to determine if student completed all
+        const { data: allStations } = await supabase
+          .from("osce_stations")
+          .select("id")
+          .eq("osce_exam_id", circuit.osce_exam_id)
+          .eq("is_rest_station", false);
+        
+        const numStations = allStations?.length || 1;
+        const studentRotation = currentStudent.current_rotation || 0;
+
+        if (studentRotation >= numStations) {
+          // Student completed all stations
+          await supabase.from("osce_circuit_students").update({
+            status: "completed",
+            current_station_id: null,
+          }).eq("id", currentStudent.id);
+        } else {
+          // Student goes to waiting for next rotation
+          await supabase.from("osce_circuit_students").update({
+            status: "waiting",
+            current_station_id: null,
+          }).eq("id", currentStudent.id);
+        }
+
+        // Try to assign next waiting student to this station
+        const { data: waitingStudents } = await supabase
+          .from("osce_circuit_students")
+          .select("*")
+          .eq("circuit_id", circuit.id)
+          .eq("status", "waiting")
+          .order("created_at")
+          .limit(1);
+        
+        if (waitingStudents && waitingStudents.length > 0) {
+          const nextStudent = waitingStudents[0];
+          await supabase.from("osce_circuit_students").update({
+            current_station_id: selectedStationId,
+            current_rotation: (nextStudent.current_rotation || 0) + 1,
+            status: "in_station",
+          }).eq("id", nextStudent.id);
+        }
+      }
     },
     onSuccess: () => {
-      toast.success("Avaliação finalizada!");
+      toast.success("Avaliação finalizada! Aguardando próximo aluno.");
       setEvaluationId(null);
       setObservations("");
       setScoreInfo({ total: 0, max: 0, passed: true });
+      setStudentTimeUp(false);
+      setChatMessages([]);
+      queryClient.invalidateQueries({ queryKey: ["osce-current-student"] });
     },
   });
 
@@ -365,6 +435,15 @@ export default function OsceEvaluator() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Time up banner for evaluator */}
+      {studentTimeUp && (
+        <div className="bg-destructive/10 border-b border-destructive/30 px-4 py-2 text-center">
+          <p className="text-sm font-medium text-destructive">
+            ⏰ Tempo esgotado — O aluno foi desconectado. Finalize a avaliação para chamar o próximo aluno.
+          </p>
+        </div>
+      )}
+
       {/* Fixed timer header */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b p-3">
         <div className="max-w-2xl mx-auto">
@@ -372,10 +451,25 @@ export default function OsceEvaluator() {
             durationMinutes={durationMin}
             isRunning={circuit?.status === "running"}
             startedAt={circuit?.started_at}
+            onTimeUp={handleTimeUp}
           />
           <div className="flex items-center justify-between mt-2 text-sm">
             <span className="font-medium">{currentStation?.title}</span>
-            <span className="text-muted-foreground">Aluno: {studentName}</span>
+            <div className="flex items-center gap-2">
+              {/* Audio controls */}
+              <Button
+                size="sm"
+                variant={isMuted ? "destructive" : "outline"}
+                onClick={toggleMute}
+                className="gap-1 h-7 px-2"
+              >
+                {isMuted ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
+                {isConnected && <Phone className="h-3 w-3 text-green-500" />}
+              </Button>
+              <span className="text-muted-foreground">
+                Aluno: {studentName} {studentTimeUp && "(desconectado)"}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -405,6 +499,11 @@ export default function OsceEvaluator() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Eye className="h-4 w-4" /> Chat do Aluno em Tempo Real
+                  {hasRemoteAudio && (
+                    <Badge variant="outline" className="gap-1 ml-auto">
+                      <Phone className="h-3 w-3 text-green-500" /> Áudio conectado
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
