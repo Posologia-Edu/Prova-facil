@@ -69,6 +69,25 @@ export default function OsceEditor() {
     },
   });
 
+  const createCircuit = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const { data, error } = await supabase
+        .from("osce_circuits")
+        .insert([{ osce_exam_id: id!, user_id: session.user.id }])
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success("Circuito criado!");
+      navigate(`/osce/${data.id}/control`);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   if (examLoading) return <div className="p-8 text-muted-foreground">Carregando...</div>;
   if (!exam) return <div className="p-8 text-destructive">Exame não encontrado</div>;
 
