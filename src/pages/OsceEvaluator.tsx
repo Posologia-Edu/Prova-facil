@@ -232,16 +232,33 @@ export default function OsceEvaluator() {
     );
   }
 
-  // Loading / no assignment
-  if (!circuit) {
+  // Loading
+  if (circuitLoading || assignmentLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground text-sm">Conectando ao exame...</p>
+        </div>
       </div>
     );
   }
 
-  if (authenticated && !assignedEvaluator && circuit) {
+  if (!circuit) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center p-8">
+          <Stethoscope className="h-10 w-10 mx-auto text-destructive mb-4" />
+          <h2 className="text-lg font-bold mb-2">Circuito Não Encontrado</h2>
+          <p className="text-muted-foreground text-sm">
+            O código <strong>{accessCode}</strong> não corresponde a nenhum circuito OSCE ativo.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!assignedEvaluator) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center p-8">
