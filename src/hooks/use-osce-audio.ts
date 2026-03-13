@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+interface AudioDevice {
+  deviceId: string;
+  label: string;
+}
+
 interface UseOsceAudioProps {
   circuitId: string | undefined;
   stationId: string | undefined;
@@ -12,6 +17,8 @@ export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAud
   const [isMuted, setIsMuted] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [hasRemoteAudio, setHasRemoteAudio] = useState(false);
+  const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -19,6 +26,52 @@ export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAud
   const isInitiatorRef = useRef(role === "evaluator");
 
   const roomId = circuitId && stationId ? `osce-audio-${circuitId}-${stationId}` : null;
+
+  // Enumerate audio input devices
+  const refreshDevices = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices
+        .filter(d => d.kind === "audioinput")
+        .map(d => ({ deviceId: d.deviceId, label: d.label || `Microfone ${d.deviceId.slice(0, 5)}` }));
+      setAudioDevices(audioInputs);
+      if (!selectedDeviceId && audioInputs.length > 0) {
+        setSelectedDeviceId(audioInputs[0].deviceId);
+      }
+    } catch (e) {
+      console.error("Error enumerating devices:", e);
+    }
+  }, [selectedDeviceId]);
+
+  // Switch microphone without re-creating the peer connection
+  const switchMicrophone = useCallback(async (deviceId: string) => {
+    setSelectedDeviceId(deviceId);
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: { exact: deviceId } },
+        video: false,
+      });
+      const newTrack = newStream.getAudioTracks()[0];
+
+      // Preserve mute state
+      newTrack.enabled = !isMuted;
+
+      // Replace track in peer connection
+      const pc = peerConnectionRef.current;
+      if (pc) {
+        const sender = pc.getSenders().find(s => s.track?.kind === "audio");
+        if (sender) {
+          await sender.replaceTrack(newTrack);
+        }
+      }
+
+      // Stop old tracks and update ref
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
+      localStreamRef.current = newStream;
+    } catch (e) {
+      console.error("Error switching microphone:", e);
+    }
+  }, [isMuted]);
 
   const cleanup = useCallback(() => {
     peerConnectionRef.current?.close();
@@ -46,10 +99,17 @@ export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAud
 
     const start = async () => {
       try {
-        // Get microphone
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        // Get microphone (use selected device if available)
+        const constraints: MediaStreamConstraints = {
+          audio: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
+          video: false,
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
         localStreamRef.current = stream;
+
+        // Refresh device list after getting permission
+        await refreshDevices();
 
         // Create peer connection with STUN servers
         const pc = new RTCPeerConnection({
@@ -127,7 +187,6 @@ export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAud
           }
         });
 
-        // When a peer joins, the evaluator re-sends an offer
         channel.on("broadcast", { event: "join" }, async ({ payload }) => {
           if (payload.from === role) return;
           if (isInitiatorRef.current) {
@@ -147,7 +206,6 @@ export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAud
 
         await channel.subscribe();
 
-        // Announce presence
         setTimeout(() => {
           channel.send({
             type: "broadcast",
@@ -156,9 +214,7 @@ export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAud
           });
         }, 500);
 
-        // If evaluator (initiator), create offer
         if (isInitiatorRef.current) {
-          // Small delay to let peer subscribe
           setTimeout(async () => {
             try {
               const offer = await pc.createOffer();
@@ -184,6 +240,7 @@ export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAud
       cancelled = true;
       cleanup();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, roomId, role, cleanup]);
 
   const toggleMute = useCallback(() => {
@@ -196,5 +253,5 @@ export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAud
     }
   }, []);
 
-  return { isMuted, isConnected, hasRemoteAudio, toggleMute };
+  return { isMuted, isConnected, hasRemoteAudio, toggleMute, audioDevices, selectedDeviceId, switchMicrophone };
 }
