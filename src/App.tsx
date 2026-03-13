@@ -32,6 +32,8 @@ import Contact from "./pages/Contact";
 import Trash from "./pages/Trash";
 import ResetPassword from "./pages/ResetPassword";
 import Marketplace from "./pages/Marketplace";
+import OsceExams from "./pages/OsceExams";
+import OsceEditor from "./pages/OsceEditor";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
 import PublicContact from "./pages/PublicContact";
@@ -182,6 +184,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><Marketplace /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/osce"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><OsceExams /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/osce/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><OsceEditor /></AppLayout>
                 </ProtectedRoute>
               }
             />
