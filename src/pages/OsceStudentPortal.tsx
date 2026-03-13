@@ -89,7 +89,7 @@ export default function OsceStudentPortal() {
 
   // Audio hook
   const isInStation = myStudent?.status === "in_station" && !timeUp;
-  const { isMuted, isConnected, toggleMute } = useOsceAudio({
+  const { isMuted, isConnected, toggleMute, audioDevices, selectedDeviceId, switchMicrophone } = useOsceAudio({
     circuitId: circuit?.id,
     stationId: myStudent?.current_station_id ?? undefined,
     role: "student",

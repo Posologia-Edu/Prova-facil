@@ -137,7 +137,7 @@ export default function OsceEvaluator() {
 
   // Audio hook
   const audioEnabled = !!evaluationId && !!circuit?.id && !!selectedStationId;
-  const { isMuted, isConnected, hasRemoteAudio, toggleMute } = useOsceAudio({
+  const { isMuted, isConnected, hasRemoteAudio, toggleMute, audioDevices, selectedDeviceId, switchMicrophone } = useOsceAudio({
     circuitId: circuit?.id,
     stationId: selectedStationId ?? undefined,
     role: "evaluator",
