@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   BookOpen, Brain, FileText, BarChart3, Shield, Zap, 
-  CheckCircle, ArrowRight, Star, Users, GraduationCap, Globe
+  CheckCircle, ArrowRight, Star, Users, GraduationCap, Globe,
+  Stethoscope, Store, MonitorPlay
 } from "lucide-react";
 import FloatingAuth from "@/components/FloatingAuth";
 import { LandingFooter } from "@/components/LandingFooter";
