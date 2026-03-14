@@ -14,7 +14,7 @@ interface UseOsceAudioProps {
 }
 
 export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAudioProps) {
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Start muted by default
   const [isConnected, setIsConnected] = useState(false);
   const [hasRemoteAudio, setHasRemoteAudio] = useState(false);
   const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([]);
@@ -106,6 +106,8 @@ export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAud
         };
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+        // Start muted by default
+        stream.getAudioTracks().forEach(t => { t.enabled = false; });
         localStreamRef.current = stream;
 
         // Refresh device list after getting permission
