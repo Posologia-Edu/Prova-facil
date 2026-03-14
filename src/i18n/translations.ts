@@ -939,7 +939,7 @@ const en: TranslationKeys = {
   landing_hero_title_1: "Create ",
   landing_hero_title_2: "professional",
   landing_hero_title_3: " exams in minutes, not hours.",
-  landing_hero_subtitle: "The intelligent platform every teacher deserves. AI question bank, visual composer and analytics — all in one place.",
+  landing_hero_subtitle: "The intelligent platform every teacher deserves. Traditional exams and OSCE with AI, visual composer, marketplace, and analytics — all in one place.",
   landing_start_free: "Get started — it's free",
   landing_see_features: "See features",
   landing_ai_badge: "Now with AI question generation",
