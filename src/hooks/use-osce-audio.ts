@@ -14,7 +14,7 @@ interface UseOsceAudioProps {
 }
 
 export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAudioProps) {
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Start muted by default
   const [isConnected, setIsConnected] = useState(false);
   const [hasRemoteAudio, setHasRemoteAudio] = useState(false);
   const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([]);
