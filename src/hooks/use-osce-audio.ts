@@ -106,6 +106,8 @@ export function useOsceAudio({ circuitId, stationId, role, enabled }: UseOsceAud
         };
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+        // Start muted by default
+        stream.getAudioTracks().forEach(t => { t.enabled = false; });
         localStreamRef.current = stream;
 
         // Refresh device list after getting permission
