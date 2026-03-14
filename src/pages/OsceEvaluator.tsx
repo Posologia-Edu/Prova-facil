@@ -87,9 +87,9 @@ export default function OsceEvaluator() {
     enabled: !!selectedStationId,
   });
 
-  // Fetch current student assigned to this station in this rotation
+  // Fetch current student assigned to this station
   const { data: currentStudent } = useQuery({
-    queryKey: ["osce-current-student", circuit?.id, selectedStationId, circuit?.current_rotation],
+    queryKey: ["osce-current-student", circuit?.id, selectedStationId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("osce_circuit_students")
@@ -103,6 +103,22 @@ export default function OsceEvaluator() {
     },
     enabled: !!circuit?.id && !!selectedStationId,
     refetchInterval: 3000,
+  });
+
+  // Fetch all clinical stations for rotation logic
+  const { data: allClinicalStations } = useQuery({
+    queryKey: ["osce-all-stations", circuit?.osce_exam_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("osce_stations")
+        .select("id, position")
+        .eq("osce_exam_id", circuit!.osce_exam_id)
+        .eq("is_rest_station", false)
+        .order("position");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!circuit?.osce_exam_id,
   });
 
   // Fetch checklist items for assigned station
@@ -212,7 +228,7 @@ export default function OsceEvaluator() {
           station_id: selectedStationId,
           student_name: currentStudent.student_name,
           student_email: currentStudent.student_email,
-          rotation: circuit.current_rotation || 0,
+          rotation: currentStudent.current_rotation || 0,
         }])
         .select()
         .single();
@@ -226,10 +242,11 @@ export default function OsceEvaluator() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Finalize evaluation and move to next student
+  // Finalize evaluation and handle rotation
   const saveObservations = useMutation({
     mutationFn: async () => {
-      if (!evaluationId) return;
+      if (!evaluationId || !circuit || !selectedStationId) return;
+
       // Save evaluation
       await supabase.from("osce_evaluations").update({
         observations,
@@ -239,50 +256,62 @@ export default function OsceEvaluator() {
         finished_at: new Date().toISOString(),
       }).eq("id", evaluationId);
 
-      // Move current student out — mark as waiting for next rotation or completed
-      if (currentStudent && circuit) {
-        // Get all clinical stations to determine if student completed all
-        const { data: allStations } = await supabase
-          .from("osce_stations")
-          .select("id")
-          .eq("osce_exam_id", circuit.osce_exam_id)
-          .eq("is_rest_station", false);
-        
-        const numStations = allStations?.length || 1;
-        const studentRotation = currentStudent.current_rotation || 0;
+      if (!currentStudent || !allClinicalStations) return;
 
-        if (studentRotation >= numStations) {
-          // Student completed all stations
+      const stationIds = allClinicalStations.map(s => s.id);
+      const numStations = stationIds.length;
+      const visitedStations: string[] = [
+        ...((currentStudent as any).visited_stations || []),
+        selectedStationId,
+      ];
+      // Deduplicate
+      const uniqueVisited = [...new Set(visitedStations)];
+
+      // Check if student completed all stations
+      if (uniqueVisited.length >= numStations) {
+        // Student is done with the OSCE
+        await supabase.from("osce_circuit_students").update({
+          status: "completed",
+          current_station_id: null,
+          visited_stations: uniqueVisited,
+        }).eq("id", currentStudent.id);
+      } else {
+        // Find unvisited stations
+        const unvisited = stationIds.filter(id => !uniqueVisited.includes(id));
+        
+        // Check which unvisited stations are free (no student in_station there)
+        const { data: occupiedStudents } = await supabase
+          .from("osce_circuit_students")
+          .select("current_station_id")
+          .eq("circuit_id", circuit.id)
+          .eq("status", "in_station")
+          .neq("id", currentStudent.id);
+        
+        const occupiedStationIds = new Set((occupiedStudents || []).map(s => s.current_station_id).filter(Boolean));
+        const freeUnvisited = unvisited.filter(id => !occupiedStationIds.has(id));
+
+        if (freeUnvisited.length > 0) {
+          // Assign student to first free unvisited station
+          const nextStationId = freeUnvisited[0];
           await supabase.from("osce_circuit_students").update({
-            status: "completed",
-            current_station_id: null,
+            status: "in_station",
+            current_station_id: nextStationId,
+            station_entered_at: new Date().toISOString(),
+            visited_stations: uniqueVisited,
+            current_rotation: uniqueVisited.length + 1,
           }).eq("id", currentStudent.id);
         } else {
-          // Student goes to waiting for next rotation
+          // All unvisited stations are occupied — student waits
           await supabase.from("osce_circuit_students").update({
             status: "waiting",
             current_station_id: null,
+            visited_stations: uniqueVisited,
           }).eq("id", currentStudent.id);
         }
-
-        // Try to assign next waiting student to this station
-        const { data: waitingStudents } = await supabase
-          .from("osce_circuit_students")
-          .select("*")
-          .eq("circuit_id", circuit.id)
-          .eq("status", "waiting")
-          .order("created_at")
-          .limit(1);
-        
-        if (waitingStudents && waitingStudents.length > 0) {
-          const nextStudent = waitingStudents[0];
-          await supabase.from("osce_circuit_students").update({
-            current_station_id: selectedStationId,
-            current_rotation: (nextStudent.current_rotation || 0) + 1,
-            status: "in_station",
-          }).eq("id", nextStudent.id);
-        }
       }
+
+      // Now this station is free — check if any waiting student needs it
+      await assignWaitingStudentToStation(selectedStationId, circuit.id, stationIds);
     },
     onSuccess: () => {
       toast.success("Avaliação finalizada! Aguardando próximo aluno.");
@@ -294,6 +323,32 @@ export default function OsceEvaluator() {
       queryClient.invalidateQueries({ queryKey: ["osce-current-student"] });
     },
   });
+
+  // Helper: assign a waiting student to a free station
+  const assignWaitingStudentToStation = async (stationId: string, circuitId: string, allStationIds: string[]) => {
+    const { data: waitingStudents } = await supabase
+      .from("osce_circuit_students")
+      .select("*")
+      .eq("circuit_id", circuitId)
+      .eq("status", "waiting")
+      .order("created_at");
+
+    if (!waitingStudents || waitingStudents.length === 0) return;
+
+    // Find first waiting student who hasn't visited this station
+    for (const student of waitingStudents) {
+      const visited: string[] = (student as any).visited_stations || [];
+      if (!visited.includes(stationId)) {
+        await supabase.from("osce_circuit_students").update({
+          status: "in_station",
+          current_station_id: stationId,
+          station_entered_at: new Date().toISOString(),
+          current_rotation: visited.length + 1,
+        }).eq("id", student.id);
+        return;
+      }
+    }
+  };
 
   // Voice-to-text
   const toggleVoice = () => {
@@ -404,7 +459,6 @@ export default function OsceEvaluator() {
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
               <p className="text-sm text-muted-foreground mt-3">Aguardando aluno nesta estação...</p>
             </div>
-            <Badge variant="outline">Rotação: {circuit.current_rotation || 0}</Badge>
           </div>
         </Card>
       </div>
@@ -432,6 +486,8 @@ export default function OsceEvaluator() {
   const examData = circuit as any;
   const studentName = currentStudent?.student_name || "";
   const durationMin = currentStation?.duration_minutes || examData?.osce_exams?.station_duration_minutes || 5;
+  // Use per-student station_entered_at for timer
+  const studentEnteredAt = (currentStudent as any)?.station_entered_at;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -449,8 +505,8 @@ export default function OsceEvaluator() {
         <div className="max-w-2xl mx-auto">
           <OsceTimer
             durationMinutes={durationMin}
-            isRunning={circuit?.status === "running"}
-            startedAt={circuit?.started_at}
+            isRunning={!!studentEnteredAt}
+            startedAt={studentEnteredAt}
             onTimeUp={handleTimeUp}
           />
           <div className="flex items-center justify-between mt-2 text-sm">

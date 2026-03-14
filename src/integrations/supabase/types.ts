@@ -644,10 +644,12 @@ export type Database = {
           current_rotation: number
           current_station_id: string | null
           id: string
+          station_entered_at: string | null
           status: string
           student_email: string | null
           student_name: string
           student_registration: string | null
+          visited_stations: string[] | null
         }
         Insert: {
           circuit_id: string
@@ -655,10 +657,12 @@ export type Database = {
           current_rotation?: number
           current_station_id?: string | null
           id?: string
+          station_entered_at?: string | null
           status?: string
           student_email?: string | null
           student_name?: string
           student_registration?: string | null
+          visited_stations?: string[] | null
         }
         Update: {
           circuit_id?: string
@@ -666,10 +670,12 @@ export type Database = {
           current_rotation?: number
           current_station_id?: string | null
           id?: string
+          station_entered_at?: string | null
           status?: string
           student_email?: string | null
           student_name?: string
           student_registration?: string | null
+          visited_stations?: string[] | null
         }
         Relationships: [
           {
