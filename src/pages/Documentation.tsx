@@ -86,6 +86,24 @@ const Documentation = () => {
       content: t("docs_student_portal_content"),
     },
     {
+      id: "osce",
+      icon: Stethoscope,
+      title: t("docs_osce"),
+      content: t("docs_osce_content"),
+    },
+    {
+      id: "marketplace",
+      icon: Store,
+      title: t("docs_marketplace"),
+      content: t("docs_marketplace_content"),
+    },
+    {
+      id: "ai-tutor",
+      icon: Bot,
+      title: t("docs_ai_tutor"),
+      content: t("docs_ai_tutor_content"),
+    },
+    {
       id: "plans",
       icon: CreditCard,
       title: t("docs_plans"),
