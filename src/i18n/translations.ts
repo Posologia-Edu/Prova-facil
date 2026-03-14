@@ -1387,6 +1387,8 @@ const es: TranslationKeys = {
   docs_faq_a4: "Sí. En el Compositor de Exámenes, haga clic en 'Encabezado' para configurar nombre de la institución, profesor, fecha del examen e instrucciones personalizadas.",
   docs_faq_q5: "¿La corrección por IA funciona para preguntas de ensayo?",
   docs_faq_a5: "¡Sí! En el plan Premium, la IA analiza las respuestas de ensayo y asigna nota y retroalimentación automáticamente. El profesor puede revisar y ajustar la nota si es necesario.",
+  docs_faq_q6: "¿Cómo funciona la rotación de alumnos en OSCE?",
+  docs_faq_a6: "El sistema asigna aleatoriamente alumnos a las estaciones clínicas y realiza la rotación circular automáticamente. Cada alumno recibe el tiempo integral de la estación y, al finalizar, es dirigido a la siguiente estación disponible hasta completar el circuito.",
 
   settings_title: "Configuración",
   settings_subtitle: "Gestione sus credenciales de acceso.",
