@@ -1299,7 +1299,7 @@ const es: TranslationKeys = {
   landing_hero_title_1: "Cree exámenes ",
   landing_hero_title_2: "profesionales",
   landing_hero_title_3: " en minutos, no en horas.",
-  landing_hero_subtitle: "La plataforma inteligente que todo profesor merece. Banco de preguntas con IA, compositor visual y análisis — todo en un solo lugar.",
+  landing_hero_subtitle: "La plataforma inteligente que todo profesor merece. Exámenes tradicionales y OSCE con IA, compositor visual, marketplace y análisis — todo en un solo lugar.",
   landing_start_free: "Empezar ahora — es gratis",
   landing_see_features: "Ver funcionalidades",
   landing_ai_badge: "Ahora con generación de preguntas por IA",
