@@ -248,7 +248,6 @@ const App = () => (
         </BrowserRouter>
       </SubscriptionProvider>
     </TooltipProvider>
-    </LanguageProvider>
   </QueryClientProvider>
 );
 
