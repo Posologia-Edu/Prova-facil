@@ -6,7 +6,7 @@ import {
   GraduationCap, ArrowLeft, BookOpen, Brain, FileText, BarChart3,
   Users, Calendar, Shield, Zap, HelpCircle, Settings, Upload,
   Download, Eye, Shuffle, LayoutTemplate, Globe, CreditCard,
-  MonitorPlay, CheckCircle, Search
+  MonitorPlay, CheckCircle, Search, Stethoscope, Store, Bot
 } from "lucide-react";
 import {
   Accordion,
