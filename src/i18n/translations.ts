@@ -226,6 +226,12 @@ type TranslationKeys = {
   landing_feat_security_desc: string;
   landing_feat_fast_title: string;
   landing_feat_fast_desc: string;
+  landing_feat_osce_title: string;
+  landing_feat_osce_desc: string;
+  landing_feat_marketplace_title: string;
+  landing_feat_marketplace_desc: string;
+  landing_feat_online_title: string;
+  landing_feat_online_desc: string;
   landing_features_heading: string;
   landing_features_sub: string;
   landing_how_heading: string;
@@ -272,6 +278,12 @@ type TranslationKeys = {
   docs_calendar_content: string;
   docs_student_portal: string;
   docs_student_portal_content: string;
+  docs_osce: string;
+  docs_osce_content: string;
+  docs_marketplace: string;
+  docs_marketplace_content: string;
+  docs_ai_tutor: string;
+  docs_ai_tutor_content: string;
   docs_plans: string;
   docs_plans_content: string;
   docs_security: string;
@@ -287,6 +299,8 @@ type TranslationKeys = {
   docs_faq_a4: string;
   docs_faq_q5: string;
   docs_faq_a5: string;
+  docs_faq_q6: string;
+  docs_faq_a6: string;
 
   // Settings
   settings_title: string;
