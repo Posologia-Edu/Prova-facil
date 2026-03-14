@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Pause, SkipForward, Copy, Users, Globe, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Play, Pause, Copy, Users, Globe, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { OsceTimer } from "@/components/osce/OsceTimer";
 import { OsceCircuitGrid } from "@/components/osce/OsceCircuitGrid";
@@ -98,80 +98,29 @@ export default function OsceCircuitControl() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["osce-circuit", circuitId] }),
   });
 
-  // Shuffle and assign students to stations
-  const shuffleStudents = async (rotation: number) => {
+  // Initial assignment: shuffle students, assign first N to N stations
+  const startExam = async () => {
     if (!circuitStudents || !stations) return;
     const clinicalStations = stations.filter(s => !s.is_rest_station);
     const numStations = clinicalStations.length;
-    if (numStations === 0) return;
+    if (numStations === 0) { toast.error("Nenhuma estação clínica"); return; }
 
-    // Get waiting students
     const waitingStudents = circuitStudents.filter(s => s.status === "waiting");
-    
-    // Also get students currently in_station to rotate them
-    const activeStudents = circuitStudents.filter(s => s.status === "in_station");
-    
-    if (rotation === 1) {
-      // First rotation — shuffle waiting students, pick first N
-      const shuffled = [...waitingStudents].sort(() => Math.random() - 0.5);
-      const toAssign = shuffled.slice(0, numStations);
-      
-      for (let i = 0; i < toAssign.length; i++) {
-        await supabase.from("osce_circuit_students").update({
-          current_station_id: clinicalStations[i].id,
-          current_rotation: rotation,
-          status: "in_station",
-        }).eq("id", toAssign[i].id);
-      }
-    } else {
-      // Subsequent rotations — circular shift active students
-      if (activeStudents.length > 0) {
-        // Find each student's current station index and shift
-        for (const student of activeStudents) {
-          const currentIdx = clinicalStations.findIndex(s => s.id === student.current_station_id);
-          const nextIdx = (currentIdx + 1) % numStations;
-          
-          // If student has visited all stations, mark as completed
-          if (student.current_rotation >= numStations) {
-            await supabase.from("osce_circuit_students").update({
-              status: "completed",
-              current_station_id: null,
-            }).eq("id", student.id);
-          } else {
-            await supabase.from("osce_circuit_students").update({
-              current_station_id: clinicalStations[nextIdx].id,
-              current_rotation: rotation,
-            }).eq("id", student.id);
-          }
-        }
+    const shuffled = [...waitingStudents].sort(() => Math.random() - 0.5);
+    const toAssign = shuffled.slice(0, numStations);
+    const now = new Date().toISOString();
 
-        // Check if any active student completed — fill with waiting students
-        const completedCount = activeStudents.filter(s => s.current_rotation >= numStations).length;
-        if (completedCount > 0) {
-          const newWaiting = circuitStudents.filter(s => s.status === "waiting");
-          const toFill = newWaiting.slice(0, completedCount);
-          const emptyStations = clinicalStations.filter(s => 
-            !activeStudents.some(a => a.current_rotation < numStations && 
-              clinicalStations[(clinicalStations.findIndex(cs => cs.id === a.current_station_id) + 1) % numStations].id === s.id
-            )
-          );
-          for (let i = 0; i < Math.min(toFill.length, emptyStations.length); i++) {
-            await supabase.from("osce_circuit_students").update({
-              current_station_id: emptyStations[i].id,
-              current_rotation: rotation,
-              status: "in_station",
-            }).eq("id", toFill[i].id);
-          }
-        }
-      }
+    for (let i = 0; i < toAssign.length; i++) {
+      await supabase.from("osce_circuit_students").update({
+        current_station_id: clinicalStations[i].id,
+        current_rotation: 1,
+        status: "in_station",
+        station_entered_at: now,
+        visited_stations: [],
+      }).eq("id", toAssign[i].id);
     }
-    
-    queryClient.invalidateQueries({ queryKey: ["osce-circuit-students", circuitId] });
-  };
 
-  const startExam = async () => {
-    await updateCircuit.mutateAsync({ status: "running", started_at: new Date().toISOString(), current_rotation: 1 });
-    await shuffleStudents(1);
+    await updateCircuit.mutateAsync({ status: "running", started_at: now, current_rotation: 1 });
     toast.success("Exame iniciado! Alunos sorteados para as estações.");
     setShowCycleBanner(true);
     setTimeout(() => setShowCycleBanner(false), 5000);
@@ -182,17 +131,7 @@ export default function OsceCircuitControl() {
     toast.info("Exame pausado");
   };
 
-  const nextRotation = async () => {
-    const next = (circuit?.current_rotation || 0) + 1;
-    await updateCircuit.mutateAsync({ current_rotation: next, started_at: new Date().toISOString() });
-    await shuffleStudents(next);
-    toast.success(`Rotação ${next} iniciada`);
-    setShowCycleBanner(true);
-    setTimeout(() => setShowCycleBanner(false), 5000);
-  };
-
   const completeExam = async () => {
-    // Mark all active students as completed
     if (circuitStudents) {
       for (const s of circuitStudents.filter(s => s.status !== "completed")) {
         await supabase.from("osce_circuit_students").update({ status: "completed", current_station_id: null }).eq("id", s.id);
@@ -230,9 +169,9 @@ export default function OsceCircuitControl() {
         <div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground py-4 text-center animate-pulse">
           <div className="text-xl font-bold flex items-center justify-center gap-2">
             <AlertTriangle className="h-5 w-5" />
-            NOVO CICLO — Rotação {circuit.current_rotation}
+            EXAME INICIADO
           </div>
-          <p className="text-sm opacity-80">Alunos foram redistribuídos para as estações</p>
+          <p className="text-sm opacity-80">Alunos foram distribuídos para as estações</p>
         </div>
       )}
 
@@ -290,8 +229,8 @@ export default function OsceCircuitControl() {
           <CardHeader><CardTitle className="text-base">Controles</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Rotação atual:</span>
-              <Badge variant="outline" className="text-lg px-3">{circuit.current_rotation || 0}</Badge>
+              <span className="text-muted-foreground">Status:</span>
+              <Badge variant="outline">{circuit.status}</Badge>
             </div>
 
             <div className="flex gap-2 flex-wrap">
@@ -299,10 +238,7 @@ export default function OsceCircuitControl() {
                 <Button onClick={startExam} className="gap-2 flex-1"><Play className="h-4 w-4" /> Iniciar</Button>
               )}
               {circuit.status === "running" && (
-                <>
-                  <Button variant="outline" onClick={pauseExam} className="gap-2"><Pause className="h-4 w-4" /> Pausar</Button>
-                  <Button onClick={nextRotation} className="gap-2 flex-1"><SkipForward className="h-4 w-4" /> Próxima Rotação</Button>
-                </>
+                <Button variant="outline" onClick={pauseExam} className="gap-2"><Pause className="h-4 w-4" /> Pausar</Button>
               )}
               {circuit.status === "paused" && (
                 <Button onClick={() => updateCircuit.mutate({ status: "running", started_at: new Date().toISOString() })} className="gap-2 flex-1">

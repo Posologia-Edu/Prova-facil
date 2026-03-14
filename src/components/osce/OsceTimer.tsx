@@ -10,9 +10,12 @@ interface Props {
 export function OsceTimer({ durationMinutes, isRunning, onTimeUp, startedAt }: Props) {
   const [remaining, setRemaining] = useState(durationMinutes * 60);
   const onTimeUpRef = useRef(onTimeUp);
+  const firedRef = useRef(false);
   onTimeUpRef.current = onTimeUp;
 
+  // Reset when startedAt changes (new student enters)
   useEffect(() => {
+    firedRef.current = false;
     if (startedAt && isRunning) {
       const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
       const r = Math.max(0, durationMinutes * 60 - elapsed);
@@ -24,14 +27,20 @@ export function OsceTimer({ durationMinutes, isRunning, onTimeUp, startedAt }: P
 
   useEffect(() => {
     if (!isRunning || remaining <= 0) {
-      if (remaining <= 0 && isRunning) onTimeUpRef.current?.();
+      if (remaining <= 0 && isRunning && !firedRef.current) {
+        firedRef.current = true;
+        onTimeUpRef.current?.();
+      }
       return;
     }
     const interval = setInterval(() => {
       setRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          onTimeUpRef.current?.();
+          if (!firedRef.current) {
+            firedRef.current = true;
+            onTimeUpRef.current?.();
+          }
           return 0;
         }
         return prev - 1;

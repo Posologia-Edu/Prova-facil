@@ -18,7 +18,6 @@ export default function OsceStudentPortal() {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
-  const [studentRecord, setStudentRecord] = useState<any>(null);
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -259,7 +258,9 @@ export default function OsceStudentPortal() {
             Você está na fila de espera. O sistema irá encaminhá-lo automaticamente para sua estação.
           </p>
           <p className="text-sm font-medium">{myStudent.student_name}</p>
-          <Badge variant="secondary" className="mt-2">Rotação: {myStudent.current_rotation || "—"}</Badge>
+          <Badge variant="secondary" className="mt-2">
+            Estações visitadas: {(myStudent as any).visited_stations?.length || 0}
+          </Badge>
         </Card>
       </div>
     );
@@ -294,18 +295,19 @@ export default function OsceStudentPortal() {
     );
   }
 
-  // Active station view
+  // Active station view — use station_entered_at for timer
   const durationMin = currentStation?.duration_minutes || examData?.osce_exams?.station_duration_minutes || 5;
+  const studentEnteredAt = (myStudent as any).station_entered_at;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Timer header */}
+      {/* Timer header — uses per-student station_entered_at */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b p-3">
         <div className="max-w-2xl mx-auto">
           <OsceTimer
             durationMinutes={durationMin}
-            isRunning={circuit?.status === "running"}
-            startedAt={circuit?.started_at}
+            isRunning={!!studentEnteredAt}
+            startedAt={studentEnteredAt}
             onTimeUp={handleTimeUp}
           />
           <div className="flex items-center justify-between mt-2 text-sm">
@@ -332,7 +334,9 @@ export default function OsceStudentPortal() {
                 {isMuted ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
                 {isConnected && <Phone className="h-3 w-3 text-green-500" />}
               </Button>
-              <Badge variant="secondary">Rotação {myStudent.current_rotation}</Badge>
+              <Badge variant="secondary">
+                Estação {((myStudent as any).visited_stations?.length || 0) + 1}
+              </Badge>
             </div>
           </div>
         </div>
