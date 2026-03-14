@@ -6,7 +6,7 @@ import {
   GraduationCap, ArrowLeft, BookOpen, Brain, FileText, BarChart3,
   Users, Calendar, Shield, Zap, HelpCircle, Settings, Upload,
   Download, Eye, Shuffle, LayoutTemplate, Globe, CreditCard,
-  MonitorPlay, CheckCircle, Search
+  MonitorPlay, CheckCircle, Search, Stethoscope, Store, Bot
 } from "lucide-react";
 import {
   Accordion,
@@ -86,6 +86,24 @@ const Documentation = () => {
       content: t("docs_student_portal_content"),
     },
     {
+      id: "osce",
+      icon: Stethoscope,
+      title: t("docs_osce"),
+      content: t("docs_osce_content"),
+    },
+    {
+      id: "marketplace",
+      icon: Store,
+      title: t("docs_marketplace"),
+      content: t("docs_marketplace_content"),
+    },
+    {
+      id: "ai-tutor",
+      icon: Bot,
+      title: t("docs_ai_tutor"),
+      content: t("docs_ai_tutor_content"),
+    },
+    {
       id: "plans",
       icon: CreditCard,
       title: t("docs_plans"),
@@ -105,6 +123,7 @@ const Documentation = () => {
     { q: t("docs_faq_q3"), a: t("docs_faq_a3") },
     { q: t("docs_faq_q4"), a: t("docs_faq_a4") },
     { q: t("docs_faq_q5"), a: t("docs_faq_a5") },
+    { q: t("docs_faq_q6"), a: t("docs_faq_a6") },
   ];
 
   return (

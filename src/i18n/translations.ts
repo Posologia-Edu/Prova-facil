@@ -226,6 +226,12 @@ type TranslationKeys = {
   landing_feat_security_desc: string;
   landing_feat_fast_title: string;
   landing_feat_fast_desc: string;
+  landing_feat_osce_title: string;
+  landing_feat_osce_desc: string;
+  landing_feat_marketplace_title: string;
+  landing_feat_marketplace_desc: string;
+  landing_feat_online_title: string;
+  landing_feat_online_desc: string;
   landing_features_heading: string;
   landing_features_sub: string;
   landing_how_heading: string;
@@ -272,6 +278,12 @@ type TranslationKeys = {
   docs_calendar_content: string;
   docs_student_portal: string;
   docs_student_portal_content: string;
+  docs_osce: string;
+  docs_osce_content: string;
+  docs_marketplace: string;
+  docs_marketplace_content: string;
+  docs_ai_tutor: string;
+  docs_ai_tutor_content: string;
   docs_plans: string;
   docs_plans_content: string;
   docs_security: string;
@@ -287,6 +299,8 @@ type TranslationKeys = {
   docs_faq_a4: string;
   docs_faq_q5: string;
   docs_faq_a5: string;
+  docs_faq_q6: string;
+  docs_faq_a6: string;
 
   // Settings
   settings_title: string;
@@ -565,7 +579,7 @@ const pt: TranslationKeys = {
   landing_hero_title_1: "Crie provas ",
   landing_hero_title_2: "profissionais",
   landing_hero_title_3: " em minutos, não em horas.",
-  landing_hero_subtitle: "A plataforma inteligente que todo professor merece. Banco de questões com IA, compositor visual e análises — tudo em um só lugar.",
+  landing_hero_subtitle: "A plataforma inteligente que todo professor merece. Provas tradicionais e OSCE com IA, compositor visual, marketplace e análises — tudo em um só lugar.",
   landing_start_free: "Começar agora — é grátis",
   landing_see_features: "Ver funcionalidades",
   landing_ai_badge: "Agora com geração de questões por IA",
@@ -581,6 +595,12 @@ const pt: TranslationKeys = {
   landing_feat_security_desc: "Suas provas e questões ficam protegidas. Apenas você tem acesso ao seu conteúdo.",
   landing_feat_fast_title: "Rápido e Eficiente",
   landing_feat_fast_desc: "Reduza em até 80% o tempo gasto na criação de provas. Mais tempo para o que importa: ensinar.",
+  landing_feat_osce_title: "Exames OSCE Completos",
+  landing_feat_osce_desc: "Crie e aplique exames clínicos estruturados com estações, checklists, rodízio automático, paciente virtual com IA e áudio bidirecional em tempo real.",
+  landing_feat_marketplace_title: "Marketplace de Provas",
+  landing_feat_marketplace_desc: "Compartilhe e descubra provas criadas por outros professores. Avalie, comente e importe com um clique.",
+  landing_feat_online_title: "Provas Online com Monitoramento",
+  landing_feat_online_desc: "Publique provas digitais com código de acesso, limite de tempo, correção automática e acompanhamento em tempo real dos alunos.",
   landing_features_heading: "Tudo que você precisa para criar provas perfeitas",
   landing_features_sub: "Ferramentas poderosas pensadas por professores, para professores.",
   landing_how_heading: "Simples como 1, 2, 3",
@@ -626,13 +646,19 @@ const pt: TranslationKeys = {
   docs_calendar_content: "Visualize todas as suas provas agendadas em um calendário interativo.\n\n• Veja provas publicadas organizadas por data.\n• Identifique rapidamente provas ativas e inativas.\n• Acesse o monitoramento diretamente pelo calendário.\n• Receba lembretes sobre provas próximas.",
   docs_student_portal: "Portal do Aluno",
   docs_student_portal_content: "Os alunos têm um portal dedicado para realizar provas online.\n\n• Acesso: os alunos entram com nome e código da prova.\n• Realização: respondem a prova dentro do tempo limite configurado.\n• Envio: ao finalizar, as respostas são enviadas automaticamente.\n• Resultados: após correção, os alunos podem consultar suas notas e feedback.",
+  docs_osce: "Exames OSCE",
+  docs_osce_content: "O módulo OSCE (Exame Clínico Objetivo Estruturado) permite criar e aplicar avaliações clínicas completas.\n\n• Estações: crie estações clínicas com instruções, caso clínico e materiais de apoio (prescrições, exames laboratoriais, imagens).\n• Checklists: monte checklists com itens binários, Likert ou por pontuação, com pesos e itens críticos.\n• Rodízio Automático: o sistema sorteia alunos para as estações e realiza o rodízio circular automaticamente.\n• Cronômetro Individual: cada aluno recebe o tempo integral da estação, com reinício automático a cada entrada.\n• Paciente Virtual com IA: alunos podem conversar com um paciente virtual alimentado por IA durante a estação.\n• Áudio Bidirecional: comunicação por voz em tempo real entre professor e aluno via WebRTC.\n• Painel de Controle: acompanhe cronômetros individuais e progresso dos checklists de cada estação em tempo real.\n• Resultados: gráficos de radar por competência, histórico de aplicações e análise detalhada por aluno e estação.",
+  docs_marketplace: "Marketplace de Provas",
+  docs_marketplace_content: "Compartilhe e descubra provas criadas pela comunidade de professores.\n\n• Publique suas provas para que outros professores possam utilizá-las.\n• Busque provas por disciplina, tags ou avaliação.\n• Avalie e comente provas de outros professores.\n• Importe provas do marketplace para seu acervo com um clique.\n• Acompanhe o número de downloads e a avaliação média das suas provas publicadas.",
+  docs_ai_tutor: "Tutor de IA",
+  docs_ai_tutor_content: "O Tutor de IA é um assistente inteligente integrado ao sistema.\n\n• Tire dúvidas sobre pedagogia, elaboração de questões e boas práticas de avaliação.\n• Peça sugestões de questões sobre qualquer tema.\n• Obtenha ajuda para melhorar o nível taxonômico das suas questões.\n• Disponível diretamente no painel do professor.",
   docs_plans: "Planos e Assinatura",
-  docs_plans_content: "O ProvaFácil oferece planos para atender diferentes necessidades.\n\n• Gratuito: crie até 5 provas/mês, 10 questões com IA/mês, exportação PDF básica.\n• Premium (R$ 29,90/mês): provas ilimitadas, questões com IA ilimitadas, provas online com monitoramento, correção por IA, até 200 alunos por prova e suporte prioritário.\n• Gerencie sua assinatura a qualquer momento na página de Planos.",
+  docs_plans_content: "O ProvaFácil oferece planos para atender diferentes necessidades.\n\n• Gratuito: crie até 5 provas/mês, 10 questões com IA/mês, exportação PDF básica.\n• Premium (R$ 29,90/mês): provas ilimitadas, questões com IA ilimitadas, provas online com monitoramento, correção por IA, OSCE completo, até 200 alunos por prova e suporte prioritário.\n• Gerencie sua assinatura a qualquer momento na página de Planos.",
   docs_security: "Segurança e Privacidade",
   docs_security_content: "Seus dados são protegidos com as melhores práticas de segurança.\n\n• Cada professor só tem acesso às suas próprias questões e provas.\n• Autenticação segura com verificação de e-mail.\n• Dados criptografados em trânsito e em repouso.\n• Controle de acesso baseado em papéis (professor, aluno, administrador).\n• Backups automáticos para garantir a integridade dos dados.",
   docs_faq_title: "Perguntas Frequentes",
   docs_faq_q1: "Posso usar o ProvaFácil gratuitamente?",
-  docs_faq_a1: "Sim! O plano gratuito permite criar até 5 provas por mês e gerar até 10 questões com IA. Para funcionalidades avançadas como provas online e correção por IA, assine o plano Premium.",
+  docs_faq_a1: "Sim! O plano gratuito permite criar até 5 provas por mês e gerar até 10 questões com IA. Para funcionalidades avançadas como provas online, OSCE e correção por IA, assine o plano Premium.",
   docs_faq_q2: "Como importo questões de outros sistemas?",
   docs_faq_a2: "Vá ao Banco de Questões, clique em 'Nova Questão' e selecione 'Importar CSV/JSON'. O arquivo deve conter os campos: question_text, type, difficulty e tags.",
   docs_faq_q3: "Os alunos precisam criar conta para fazer provas online?",
@@ -641,6 +667,8 @@ const pt: TranslationKeys = {
   docs_faq_a4: "Sim. No Compositor de Provas, clique em 'Cabeçalho' para configurar nome da instituição, professor, data da prova e instruções personalizadas.",
   docs_faq_q5: "A correção por IA funciona para questões dissertativas?",
   docs_faq_a5: "Sim! No plano Premium, a IA analisa as respostas dissertativas e atribui nota e feedback automaticamente. O professor pode revisar e ajustar a nota se necessário.",
+  docs_faq_q6: "Como funciona o rodízio de alunos no OSCE?",
+  docs_faq_a6: "O sistema sorteia alunos para as estações clínicas e realiza o rodízio circular automaticamente. Cada aluno recebe o tempo integral da estação e, ao finalizar, é encaminhado para a próxima estação disponível até completar o circuito.",
 
   settings_title: "Configurações",
   settings_subtitle: "Gerencie suas credenciais de acesso.",
@@ -911,7 +939,7 @@ const en: TranslationKeys = {
   landing_hero_title_1: "Create ",
   landing_hero_title_2: "professional",
   landing_hero_title_3: " exams in minutes, not hours.",
-  landing_hero_subtitle: "The intelligent platform every teacher deserves. AI question bank, visual composer and analytics — all in one place.",
+  landing_hero_subtitle: "The intelligent platform every teacher deserves. Traditional exams and OSCE with AI, visual composer, marketplace, and analytics — all in one place.",
   landing_start_free: "Get started — it's free",
   landing_see_features: "See features",
   landing_ai_badge: "Now with AI question generation",
@@ -927,6 +955,12 @@ const en: TranslationKeys = {
   landing_feat_security_desc: "Your exams and questions are protected. Only you have access to your content.",
   landing_feat_fast_title: "Fast & Efficient",
   landing_feat_fast_desc: "Reduce exam creation time by up to 80%. More time for what matters: teaching.",
+  landing_feat_osce_title: "Complete OSCE Exams",
+  landing_feat_osce_desc: "Create and apply structured clinical exams with stations, checklists, automatic rotation, AI virtual patient, and real-time bidirectional audio.",
+  landing_feat_marketplace_title: "Exam Marketplace",
+  landing_feat_marketplace_desc: "Share and discover exams created by other teachers. Rate, comment, and import with one click.",
+  landing_feat_online_title: "Online Exams with Monitoring",
+  landing_feat_online_desc: "Publish digital exams with access codes, time limits, automatic grading, and real-time student tracking.",
   landing_features_heading: "Everything you need to create perfect exams",
   landing_features_sub: "Powerful tools designed by teachers, for teachers.",
   landing_how_heading: "Simple as 1, 2, 3",
@@ -972,13 +1006,19 @@ const en: TranslationKeys = {
   docs_calendar_content: "View all your scheduled exams in an interactive calendar.\n\n• See published exams organized by date.\n• Quickly identify active and inactive exams.\n• Access monitoring directly from the calendar.\n• Receive reminders about upcoming exams.",
   docs_student_portal: "Student Portal",
   docs_student_portal_content: "Students have a dedicated portal to take online exams.\n\n• Access: students enter with their name and exam access code.\n• Taking: they answer the exam within the configured time limit.\n• Submission: upon completion, answers are submitted automatically.\n• Results: after grading, students can check their grades and feedback.",
+  docs_osce: "OSCE Exams",
+  docs_osce_content: "The OSCE (Objective Structured Clinical Examination) module allows you to create and apply complete clinical assessments.\n\n• Stations: create clinical stations with instructions, case summaries, and supporting materials (prescriptions, lab results, images).\n• Checklists: build checklists with binary, Likert, or score-based items, with weights and critical items.\n• Automatic Rotation: the system randomly assigns students to stations and performs circular rotation automatically.\n• Individual Timer: each student gets the full station time, with automatic reset on entry.\n• AI Virtual Patient: students can chat with an AI-powered virtual patient during the station.\n• Bidirectional Audio: real-time voice communication between teacher and student via WebRTC.\n• Control Panel: monitor individual timers and checklist progress for each station in real time.\n• Results: radar charts by competency, application history, and detailed analysis by student and station.",
+  docs_marketplace: "Exam Marketplace",
+  docs_marketplace_content: "Share and discover exams created by the teacher community.\n\n• Publish your exams for other teachers to use.\n• Search exams by subject, tags, or rating.\n• Rate and comment on other teachers' exams.\n• Import marketplace exams to your collection with one click.\n• Track download counts and average ratings for your published exams.",
+  docs_ai_tutor: "AI Tutor",
+  docs_ai_tutor_content: "The AI Tutor is an intelligent assistant integrated into the system.\n\n• Ask questions about pedagogy, question design, and assessment best practices.\n• Request question suggestions on any topic.\n• Get help improving the taxonomic level of your questions.\n• Available directly in the teacher dashboard.",
   docs_plans: "Plans & Subscription",
-  docs_plans_content: "ProvaFácil offers plans to meet different needs.\n\n• Free: create up to 5 exams/month, 10 AI questions/month, basic PDF export.\n• Premium ($29.90/month): unlimited exams, unlimited AI questions, online exams with monitoring, AI grading, up to 200 students per exam, and priority support.\n• Manage your subscription anytime on the Plans page.",
+  docs_plans_content: "ProvaFácil offers plans to meet different needs.\n\n• Free: create up to 5 exams/month, 10 AI questions/month, basic PDF export.\n• Premium ($29.90/month): unlimited exams, unlimited AI questions, online exams with monitoring, AI grading, full OSCE, up to 200 students per exam, and priority support.\n• Manage your subscription anytime on the Plans page.",
   docs_security: "Security & Privacy",
   docs_security_content: "Your data is protected with industry-best security practices.\n\n• Each teacher only has access to their own questions and exams.\n• Secure authentication with email verification.\n• Data encrypted in transit and at rest.\n• Role-based access control (teacher, student, administrator).\n• Automatic backups to ensure data integrity.",
   docs_faq_title: "Frequently Asked Questions",
   docs_faq_q1: "Can I use ProvaFácil for free?",
-  docs_faq_a1: "Yes! The free plan allows you to create up to 5 exams per month and generate up to 10 AI questions. For advanced features like online exams and AI grading, subscribe to the Premium plan.",
+  docs_faq_a1: "Yes! The free plan allows you to create up to 5 exams per month and generate up to 10 AI questions. For advanced features like online exams, OSCE, and AI grading, subscribe to the Premium plan.",
   docs_faq_q2: "How do I import questions from other systems?",
   docs_faq_a2: "Go to the Question Bank, click 'New Question' and select 'Import CSV/JSON'. The file must contain the fields: question_text, type, difficulty, and tags.",
   docs_faq_q3: "Do students need to create an account to take online exams?",
@@ -987,6 +1027,8 @@ const en: TranslationKeys = {
   docs_faq_a4: "Yes. In the Exam Composer, click 'Header' to configure institution name, teacher, exam date, and custom instructions.",
   docs_faq_q5: "Does AI grading work for essay questions?",
   docs_faq_a5: "Yes! On the Premium plan, AI analyzes essay answers and assigns grades and feedback automatically. The teacher can review and adjust the grade if needed.",
+  docs_faq_q6: "How does student rotation work in OSCE?",
+  docs_faq_a6: "The system randomly assigns students to clinical stations and performs circular rotation automatically. Each student gets the full station time and, upon completion, is directed to the next available station until the circuit is complete.",
 
   settings_title: "Settings",
   settings_subtitle: "Manage your access credentials.",
@@ -1257,7 +1299,7 @@ const es: TranslationKeys = {
   landing_hero_title_1: "Cree exámenes ",
   landing_hero_title_2: "profesionales",
   landing_hero_title_3: " en minutos, no en horas.",
-  landing_hero_subtitle: "La plataforma inteligente que todo profesor merece. Banco de preguntas con IA, compositor visual y análisis — todo en un solo lugar.",
+  landing_hero_subtitle: "La plataforma inteligente que todo profesor merece. Exámenes tradicionales y OSCE con IA, compositor visual, marketplace y análisis — todo en un solo lugar.",
   landing_start_free: "Empezar ahora — es gratis",
   landing_see_features: "Ver funcionalidades",
   landing_ai_badge: "Ahora con generación de preguntas por IA",
@@ -1273,6 +1315,12 @@ const es: TranslationKeys = {
   landing_feat_security_desc: "Sus exámenes y preguntas están protegidos. Solo usted tiene acceso a su contenido.",
   landing_feat_fast_title: "Rápido y Eficiente",
   landing_feat_fast_desc: "Reduzca hasta un 80% el tiempo en la creación de exámenes. Más tiempo para lo que importa: enseñar.",
+  landing_feat_osce_title: "Exámenes OSCE Completos",
+  landing_feat_osce_desc: "Cree y aplique exámenes clínicos estructurados con estaciones, checklists, rotación automática, paciente virtual con IA y audio bidireccional en tiempo real.",
+  landing_feat_marketplace_title: "Marketplace de Exámenes",
+  landing_feat_marketplace_desc: "Comparta y descubra exámenes creados por otros profesores. Califique, comente e importe con un clic.",
+  landing_feat_online_title: "Exámenes en Línea con Monitoreo",
+  landing_feat_online_desc: "Publique exámenes digitales con código de acceso, límite de tiempo, corrección automática y seguimiento en tiempo real de los alumnos.",
   landing_features_heading: "Todo lo que necesita para crear exámenes perfectos",
   landing_features_sub: "Herramientas poderosas pensadas por profesores, para profesores.",
   landing_how_heading: "Sencillo como 1, 2, 3",
@@ -1318,13 +1366,19 @@ const es: TranslationKeys = {
   docs_calendar_content: "Visualice todos sus exámenes programados en un calendario interactivo.\n\n• Vea exámenes publicados organizados por fecha.\n• Identifique rápidamente exámenes activos e inactivos.\n• Acceda al monitoreo directamente desde el calendario.\n• Reciba recordatorios sobre exámenes próximos.",
   docs_student_portal: "Portal del Alumno",
   docs_student_portal_content: "Los alumnos tienen un portal dedicado para realizar exámenes en línea.\n\n• Acceso: los alumnos ingresan con su nombre y código del examen.\n• Realización: responden el examen dentro del tiempo límite configurado.\n• Envío: al finalizar, las respuestas se envían automáticamente.\n• Resultados: después de la corrección, los alumnos pueden consultar sus notas y retroalimentación.",
+  docs_osce: "Exámenes OSCE",
+  docs_osce_content: "El módulo OSCE (Examen Clínico Objetivo Estructurado) permite crear y aplicar evaluaciones clínicas completas.\n\n• Estaciones: cree estaciones clínicas con instrucciones, resumen de caso y materiales de apoyo (recetas, resultados de laboratorio, imágenes).\n• Checklists: construya checklists con ítems binarios, Likert o por puntuación, con pesos e ítems críticos.\n• Rotación Automática: el sistema asigna aleatoriamente alumnos a estaciones y realiza la rotación circular automáticamente.\n• Cronómetro Individual: cada alumno recibe el tiempo integral de la estación, con reinicio automático al entrar.\n• Paciente Virtual con IA: los alumnos pueden conversar con un paciente virtual alimentado por IA durante la estación.\n• Audio Bidireccional: comunicación por voz en tiempo real entre profesor y alumno vía WebRTC.\n• Panel de Control: monitoree cronómetros individuales y progreso de checklists de cada estación en tiempo real.\n• Resultados: gráficos de radar por competencia, historial de aplicaciones y análisis detallado por alumno y estación.",
+  docs_marketplace: "Marketplace de Exámenes",
+  docs_marketplace_content: "Comparta y descubra exámenes creados por la comunidad de profesores.\n\n• Publique sus exámenes para que otros profesores los utilicen.\n• Busque exámenes por disciplina, etiquetas o calificación.\n• Califique y comente exámenes de otros profesores.\n• Importe exámenes del marketplace a su colección con un clic.\n• Acompañe el número de descargas y la calificación promedio de sus exámenes publicados.",
+  docs_ai_tutor: "Tutor de IA",
+  docs_ai_tutor_content: "El Tutor de IA es un asistente inteligente integrado al sistema.\n\n• Haga preguntas sobre pedagogía, diseño de preguntas y buenas prácticas de evaluación.\n• Solicite sugerencias de preguntas sobre cualquier tema.\n• Obtenga ayuda para mejorar el nivel taxonómico de sus preguntas.\n• Disponible directamente en el panel del profesor.",
   docs_plans: "Planes y Suscripción",
-  docs_plans_content: "ProvaFácil ofrece planes para atender diferentes necesidades.\n\n• Gratuito: cree hasta 5 exámenes/mes, 10 preguntas con IA/mes, exportación PDF básica.\n• Premium ($29.90/mes): exámenes ilimitados, preguntas con IA ilimitadas, exámenes en línea con monitoreo, corrección por IA, hasta 200 alumnos por examen y soporte prioritario.\n• Gestione su suscripción en cualquier momento en la página de Planes.",
+  docs_plans_content: "ProvaFácil ofrece planes para atender diferentes necesidades.\n\n• Gratuito: cree hasta 5 exámenes/mes, 10 preguntas con IA/mes, exportación PDF básica.\n• Premium ($29.90/mes): exámenes ilimitados, preguntas con IA ilimitadas, exámenes en línea con monitoreo, corrección por IA, OSCE completo, hasta 200 alumnos por examen y soporte prioritario.\n• Gestione su suscripción en cualquier momento en la página de Planes.",
   docs_security: "Seguridad y Privacidad",
   docs_security_content: "Sus datos están protegidos con las mejores prácticas de seguridad.\n\n• Cada profesor solo tiene acceso a sus propias preguntas y exámenes.\n• Autenticación segura con verificación de correo.\n• Datos cifrados en tránsito y en reposo.\n• Control de acceso basado en roles (profesor, alumno, administrador).\n• Copias de seguridad automáticas para garantizar la integridad de los datos.",
   docs_faq_title: "Preguntas Frecuentes",
   docs_faq_q1: "¿Puedo usar ProvaFácil gratuitamente?",
-  docs_faq_a1: "¡Sí! El plan gratuito permite crear hasta 5 exámenes por mes y generar hasta 10 preguntas con IA. Para funcionalidades avanzadas como exámenes en línea y corrección por IA, suscríbase al plan Premium.",
+  docs_faq_a1: "¡Sí! El plan gratuito permite crear hasta 5 exámenes por mes y generar hasta 10 preguntas con IA. Para funcionalidades avanzadas como exámenes en línea, OSCE y corrección por IA, suscríbase al plan Premium.",
   docs_faq_q2: "¿Cómo importo preguntas de otros sistemas?",
   docs_faq_a2: "Vaya al Banco de Preguntas, haga clic en 'Nueva Pregunta' y seleccione 'Importar CSV/JSON'. El archivo debe contener los campos: question_text, type, difficulty y tags.",
   docs_faq_q3: "¿Los alumnos necesitan crear cuenta para hacer exámenes en línea?",
@@ -1333,6 +1387,8 @@ const es: TranslationKeys = {
   docs_faq_a4: "Sí. En el Compositor de Exámenes, haga clic en 'Encabezado' para configurar nombre de la institución, profesor, fecha del examen e instrucciones personalizadas.",
   docs_faq_q5: "¿La corrección por IA funciona para preguntas de ensayo?",
   docs_faq_a5: "¡Sí! En el plan Premium, la IA analiza las respuestas de ensayo y asigna nota y retroalimentación automáticamente. El profesor puede revisar y ajustar la nota si es necesario.",
+  docs_faq_q6: "¿Cómo funciona la rotación de alumnos en OSCE?",
+  docs_faq_a6: "El sistema asigna aleatoriamente alumnos a las estaciones clínicas y realiza la rotación circular automáticamente. Cada alumno recibe el tiempo integral de la estación y, al finalizar, es dirigido a la siguiente estación disponible hasta completar el circuito.",
 
   settings_title: "Configuración",
   settings_subtitle: "Gestione sus credenciales de acceso.",

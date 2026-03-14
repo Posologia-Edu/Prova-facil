@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   BookOpen, Brain, FileText, BarChart3, Shield, Zap, 
-  CheckCircle, ArrowRight, Star, Users, GraduationCap, Globe
+  CheckCircle, ArrowRight, Star, Users, GraduationCap, Globe,
+  Stethoscope, Store, MonitorPlay
 } from "lucide-react";
 import FloatingAuth from "@/components/FloatingAuth";
 import { LandingFooter } from "@/components/LandingFooter";
@@ -33,9 +34,12 @@ const Index = () => {
 
   const features = [
     { icon: Brain, title: t("landing_feat_ai_title"), description: t("landing_feat_ai_desc") },
+    { icon: Stethoscope, title: t("landing_feat_osce_title"), description: t("landing_feat_osce_desc") },
+    { icon: MonitorPlay, title: t("landing_feat_online_title"), description: t("landing_feat_online_desc") },
     { icon: FileText, title: t("landing_feat_wysiwyg_title"), description: t("landing_feat_wysiwyg_desc") },
     { icon: BookOpen, title: t("landing_feat_bank_title"), description: t("landing_feat_bank_desc") },
     { icon: BarChart3, title: t("landing_feat_analytics_title"), description: t("landing_feat_analytics_desc") },
+    { icon: Store, title: t("landing_feat_marketplace_title"), description: t("landing_feat_marketplace_desc") },
     { icon: Shield, title: t("landing_feat_security_title"), description: t("landing_feat_security_desc") },
     { icon: Zap, title: t("landing_feat_fast_title"), description: t("landing_feat_fast_desc") },
   ];
