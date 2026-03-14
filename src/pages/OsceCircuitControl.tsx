@@ -262,6 +262,9 @@ export default function OsceCircuitControl() {
         evaluations={evaluations || []}
         currentRotation={circuit.current_rotation || 0}
         circuitStudents={circuitStudents || []}
+        circuitId={circuitId}
+        durationMinutes={durationMin}
+        isRunning={circuit.status === "running"}
       />
 
       {/* Online monitoring */}
