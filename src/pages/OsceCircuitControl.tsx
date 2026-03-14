@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Play, Pause, Copy, Users, Globe, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { OsceTimer } from "@/components/osce/OsceTimer";
+
 import { OsceCircuitGrid } from "@/components/osce/OsceCircuitGrid";
 import { OsceChatMonitor } from "@/components/osce/OsceChatMonitor";
 
