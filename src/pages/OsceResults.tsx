@@ -7,13 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Download, BarChart3, Users, AlertTriangle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, BarChart3, Users, AlertTriangle, Calendar } from "lucide-react";
 import { OsceRadarChart } from "@/components/osce/OsceRadarChart";
 
 export default function OsceResults() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [selectedCircuitId, setSelectedCircuitId] = useState<string>("all");
 
   const { data: exam } = useQuery({
     queryKey: ["osce-exam-results", id],
@@ -45,15 +47,18 @@ export default function OsceResults() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("osce_circuits")
-        .select("id")
-        .eq("osce_exam_id", id!);
+        .select("id, access_code, created_at, status, class_id")
+        .eq("osce_exam_id", id!)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
     enabled: !!id,
   });
 
-  const circuitIds = circuits?.map((c: any) => c.id) || [];
+  const circuitIds = selectedCircuitId === "all"
+    ? (circuits?.map((c: any) => c.id) || [])
+    : [selectedCircuitId];
 
   const { data: evaluations } = useQuery({
     queryKey: ["osce-evaluations-results", circuitIds],
@@ -67,6 +72,12 @@ export default function OsceResults() {
     },
     enabled: circuitIds.length > 0,
   });
+
+  // Reset selected student when circuit changes
+  const handleCircuitChange = (value: string) => {
+    setSelectedCircuitId(value);
+    setSelectedStudent(null);
+  };
 
   // Group by student
   const studentMap = (evaluations || []).reduce((acc: Record<string, any[]>, ev: any) => {
@@ -118,6 +129,12 @@ export default function OsceResults() {
     return { ...station, avgScore: avg, avgMax: avgMax, count: stationEvals.length, failCount };
   });
 
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("pt-BR", {
+      day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
+    });
+  };
+
   if (!exam) return <div className="p-8 text-muted-foreground">Carregando...</div>;
 
   return (
@@ -131,6 +148,31 @@ export default function OsceResults() {
           <p className="text-sm text-muted-foreground">{students.length} alunos • {stations?.length || 0} estações</p>
         </div>
       </div>
+
+      {/* Circuit selector */}
+      {circuits && circuits.length > 1 && (
+        <Card>
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Aplicação:</span>
+              <Select value={selectedCircuitId} onValueChange={handleCircuitChange}>
+                <SelectTrigger className="w-[340px]">
+                  <SelectValue placeholder="Selecione uma aplicação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as aplicações ({circuits.length})</SelectItem>
+                  {circuits.map((c: any, idx: number) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      Aplicação {circuits.length - idx} — {formatDate(c.created_at)} ({c.access_code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="students">
         <TabsList>
