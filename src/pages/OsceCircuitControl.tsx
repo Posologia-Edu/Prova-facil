@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Play, Pause, Copy, Users, Globe, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { OsceTimer } from "@/components/osce/OsceTimer";
+
 import { OsceCircuitGrid } from "@/components/osce/OsceCircuitGrid";
 import { OsceChatMonitor } from "@/components/osce/OsceChatMonitor";
 
@@ -216,15 +216,8 @@ export default function OsceCircuitControl() {
         </CardContent>
       </Card>
 
-      {/* Timer + Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <OsceTimer
-          durationMinutes={durationMin}
-          isRunning={circuit.status === "running"}
-          startedAt={circuit.started_at}
-          onTimeUp={() => toast.info("Tempo da estação esgotado!")}
-        />
-
+      {/* Controls */}
+      <div className="grid grid-cols-1 gap-4">
         <Card>
           <CardHeader><CardTitle className="text-base">Controles</CardTitle></CardHeader>
           <CardContent className="space-y-3">
@@ -269,6 +262,9 @@ export default function OsceCircuitControl() {
         evaluations={evaluations || []}
         currentRotation={circuit.current_rotation || 0}
         circuitStudents={circuitStudents || []}
+        circuitId={circuitId}
+        durationMinutes={durationMin}
+        isRunning={circuit.status === "running"}
       />
 
       {/* Online monitoring */}
