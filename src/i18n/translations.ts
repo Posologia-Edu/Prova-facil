@@ -579,7 +579,7 @@ const pt: TranslationKeys = {
   landing_hero_title_1: "Crie provas ",
   landing_hero_title_2: "profissionais",
   landing_hero_title_3: " em minutos, não em horas.",
-  landing_hero_subtitle: "A plataforma inteligente que todo professor merece. Banco de questões com IA, compositor visual e análises — tudo em um só lugar.",
+  landing_hero_subtitle: "A plataforma inteligente que todo professor merece. Provas tradicionais e OSCE com IA, compositor visual, marketplace e análises — tudo em um só lugar.",
   landing_start_free: "Começar agora — é grátis",
   landing_see_features: "Ver funcionalidades",
   landing_ai_badge: "Agora com geração de questões por IA",
