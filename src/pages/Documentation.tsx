@@ -123,6 +123,7 @@ const Documentation = () => {
     { q: t("docs_faq_q3"), a: t("docs_faq_a3") },
     { q: t("docs_faq_q4"), a: t("docs_faq_a4") },
     { q: t("docs_faq_q5"), a: t("docs_faq_a5") },
+    { q: t("docs_faq_q6"), a: t("docs_faq_a6") },
   ];
 
   return (
