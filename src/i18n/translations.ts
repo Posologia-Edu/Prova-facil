@@ -288,6 +288,25 @@ type TranslationKeys = {
   docs_plans_content: string;
   docs_security: string;
   docs_security_content: string;
+  // Technical docs
+  docs_tech_header: string;
+  docs_tech_header_subtitle: string;
+  docs_tech_stack: string;
+  docs_tech_stack_content: string;
+  docs_tech_architecture: string;
+  docs_tech_architecture_content: string;
+  docs_tech_database: string;
+  docs_tech_database_content: string;
+  docs_tech_api: string;
+  docs_tech_api_content: string;
+  docs_tech_auth: string;
+  docs_tech_auth_content: string;
+  docs_tech_edge_functions: string;
+  docs_tech_edge_functions_content: string;
+  docs_tech_storage: string;
+  docs_tech_storage_content: string;
+  docs_tech_realtime: string;
+  docs_tech_realtime_content: string;
   docs_faq_title: string;
   docs_faq_q1: string;
   docs_faq_a1: string;
