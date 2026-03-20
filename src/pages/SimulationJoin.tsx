@@ -985,7 +985,20 @@ export default function SimulationJoin() {
           <CardContent className="space-y-4">
             {assignment?.assigned_role === "patient" ? (
               <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
-                {(form.content_json as any)?.[0]?.label || t("sim_no_script")}
+                {(() => {
+                  const caseIdx = assignment?.case_index ?? 0;
+                  const assignedCase = clinicalCases[caseIdx];
+                  if (assignedCase) {
+                    return (
+                      <div>
+                        <p className="font-semibold mb-2">{assignedCase.title}</p>
+                        <div>{assignedCase.script}</div>
+                      </div>
+                    );
+                  }
+                  // Fallback to old format
+                  return (form.content_json as any)?.[0]?.label || t("sim_no_script");
+                })()}
               </div>
             ) : (
               <>
