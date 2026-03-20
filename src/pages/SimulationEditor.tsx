@@ -138,6 +138,26 @@ export default function SimulationEditor() {
     refetchParticipants();
   };
 
+  const startEditing = (p: any) => {
+    setEditingId(p.id);
+    setEditName(p.student_name);
+    setEditEmail(p.student_email || "");
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editName.trim()) return;
+    if (editEmail && !isValidEmail(editEmail)) {
+      toast({ title: t("sim_invalid_email"), variant: "destructive" });
+      return;
+    }
+    await supabase.from("simulation_participants").update({
+      student_name: editName,
+      student_email: editEmail,
+    }).eq("id", id);
+    setEditingId(null);
+    refetchParticipants();
+  };
+
   const formTypes = [
     { value: "anamnesis", label: t("sim_form_anamnesis") },
     { value: "patient_script", label: t("sim_form_patient_script") },
