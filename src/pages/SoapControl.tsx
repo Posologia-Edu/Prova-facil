@@ -66,6 +66,24 @@ export default function SoapControl() {
     enabled: !!roomId,
   });
 
+  // Build a label map from all soap_forms fields
+  const fieldLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+    forms.forEach((f: any) => {
+      const fields = f.content_json as any[];
+      if (Array.isArray(fields)) {
+        fields.forEach((field: any) => {
+          if (field.id && field.label) {
+            labels[field.id] = field.label;
+          }
+        });
+      }
+    });
+    return labels;
+  }, [forms]);
+
+  const resolveLabel = (key: string) => fieldLabels[key] || key;
+
   const [selectedResponse, setSelectedResponse] = useState<any>(null);
   const [adminScore, setAdminScore] = useState<string>("");
   const [adminFeedback, setAdminFeedback] = useState("");
