@@ -38,19 +38,22 @@ export function generateRounds(pairs: Participant[][], numCases?: number): Round
   const rounds: RoundDef[] = [];
   const numPairs = pairs.length;
   let roundNumber = 1;
+  let caseCounter = 0;
 
   for (let cycle = 1; cycle <= 2; cycle++) {
     for (let i = 0; i < numPairs; i++) {
       const assignments: Assignment[] = [];
       const activePair = pairs[i];
 
-      // Determine professional and patient based on cycle
       const professional = activePair.find(
         (p) => p.pair_position === (cycle === 1 ? "A" : "B")
       );
       const patient = activePair.find(
         (p) => p.pair_position === (cycle === 1 ? "B" : "A")
       );
+
+      const caseIndex = numCases && numCases > 0 ? caseCounter % numCases : 0;
+      caseCounter++;
 
       if (professional) {
         assignments.push({
@@ -65,14 +68,13 @@ export function generateRounds(pairs: Participant[][], numCases?: number): Round
           participantId: patient.id,
           role: "patient",
           pairIndex: i,
+          caseIndex,
         });
       }
 
-      // Select observer from another pair (circular)
       const observerPairIndex = (i + 1) % numPairs;
       if (observerPairIndex !== i) {
         const observerPair = pairs[observerPairIndex];
-        // Pick the student who is position A in cycle 1, B in cycle 2
         const observer = observerPair.find(
           (p) => p.pair_position === (cycle === 1 ? "A" : "B")
         ) || observerPair[0];
