@@ -139,8 +139,9 @@ export default function SoapEditor() {
       student_name: p.student_name,
       student_email: p.student_email || "",
       anamnesis_participant_id: p.id,
+      participant_role: p.participant_role || "student",
     }));
-    const { error: insertErr } = await supabase.from("soap_participants").insert(inserts);
+    const { error: insertErr } = await supabase.from("soap_participants").insert(inserts as any);
     if (insertErr) { toast({ title: "Erro", description: insertErr.message, variant: "destructive" }); return; }
     const studentCount = simParticipants.filter(p => p.participant_role === "student").length;
     const teacherCount = simParticipants.filter(p => p.participant_role !== "student").length;
