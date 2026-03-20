@@ -129,10 +129,9 @@ export default function SoapEditor() {
     const { data: simParticipants, error } = await supabase
       .from("simulation_participants")
       .select("*")
-      .eq("room_id", selectedImportRoom)
-      .eq("participant_role", "student");
+      .eq("room_id", selectedImportRoom);
     if (error || !simParticipants?.length) {
-      toast({ title: "Erro", description: "Nenhum aluno encontrado na sala de anamnese.", variant: "destructive" });
+      toast({ title: "Erro", description: "Nenhum participante encontrado na sala de anamnese.", variant: "destructive" });
       return;
     }
     const inserts = simParticipants.map((p) => ({
@@ -143,7 +142,9 @@ export default function SoapEditor() {
     }));
     const { error: insertErr } = await supabase.from("soap_participants").insert(inserts);
     if (insertErr) { toast({ title: "Erro", description: insertErr.message, variant: "destructive" }); return; }
-    toast({ title: "Importado", description: `${inserts.length} alunos importados.` });
+    const studentCount = simParticipants.filter(p => p.participant_role === "student").length;
+    const teacherCount = simParticipants.filter(p => p.participant_role !== "student").length;
+    toast({ title: "Importado", description: `${studentCount} aluno(s) e ${teacherCount} professor(es) importados.` });
     setImportDialogOpen(false);
     refetchParticipants();
   };
