@@ -16,6 +16,7 @@ import {
   Settings,
   Trash2,
   Store,
+  HeartPulse,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
