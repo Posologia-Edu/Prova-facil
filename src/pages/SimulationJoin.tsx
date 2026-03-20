@@ -295,23 +295,61 @@ export default function SimulationJoin() {
   };
 
   const [generatingRounds, setGeneratingRounds] = useState(false);
+  const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
+
+  // Get unpaired and paired students
+  const unpairedStudents = allParticipants.filter((p: any) => p.participant_role === "student" && (p.pair_index === -1 || p.pair_position === "X"));
+  const pairedStudents = allParticipants.filter((p: any) => p.participant_role === "student" && p.pair_index >= 0 && p.pair_position !== "X");
+  const pairsMap: Record<number, any[]> = {};
+  pairedStudents.forEach((s: any) => {
+    if (!pairsMap[s.pair_index]) pairsMap[s.pair_index] = [];
+    pairsMap[s.pair_index].push(s);
+  });
+  const formedPairs = Object.entries(pairsMap).filter(([_, ps]) => ps.length === 2);
+  const nextPairIdx = formedPairs.length > 0 ? Math.max(...formedPairs.map(([idx]) => Number(idx))) + 1 : 0;
+
+  const toggleStudentForPairing = (id: string) => {
+    setSelectedForPairing((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 2) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const formPair = async () => {
+    if (selectedForPairing.length !== 2) return;
+    const [a, b] = selectedForPairing;
+    await supabase.from("simulation_participants").update({ pair_index: nextPairIdx, pair_position: "A" }).eq("id", a);
+    await supabase.from("simulation_participants").update({ pair_index: nextPairIdx, pair_position: "B" }).eq("id", b);
+    setSelectedForPairing([]);
+    // Refresh participants
+    const { data } = await supabase.from("simulation_participants").select("*").eq("room_id", room.id);
+    setAllParticipants(data || []);
+    toast({ title: t("sim_pair_formed") });
+  };
+
+  const clearAllPairs = async () => {
+    const studentIds = allParticipants.filter((p: any) => p.participant_role === "student").map((p: any) => p.id);
+    if (!studentIds.length) return;
+    for (const id of studentIds) {
+      await supabase.from("simulation_participants").update({ pair_index: -1, pair_position: "X" }).eq("id", id);
+    }
+    const { data } = await supabase.from("simulation_participants").select("*").eq("room_id", room.id);
+    setAllParticipants(data || []);
+    toast({ title: t("sim_clear_pairs") });
+  };
 
   const generateRoundsForRoom = async () => {
     if (!room || !allParticipants.length) return;
+
+    if (formedPairs.length === 0) {
+      toast({ title: t("sim_need_pairs"), variant: "destructive" });
+      return;
+    }
+
     setGeneratingRounds(true);
     try {
-      const students = allParticipants.filter((p: any) => p.participant_role === "student");
-      const pairsMap: Record<number, any[]> = {};
-      students.forEach((s: any) => {
-        if (!pairsMap[s.pair_index]) pairsMap[s.pair_index] = [];
-        pairsMap[s.pair_index].push(s);
-      });
-      const pairsList = Object.values(pairsMap).filter(p => p.length >= 2);
-
-      if (pairsList.length === 0) {
-        toast({ title: "Erro", description: "É necessário pelo menos uma dupla de alunos.", variant: "destructive" });
-        return;
-      }
+      const pairsList = formedPairs.map(([_, ps]) => ps);
 
       const rounds = generateRounds(pairsList);
 
