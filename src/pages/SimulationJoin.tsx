@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw } from "lucide-react";
+import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { generateRounds } from "@/lib/simulation-distribution";
 
@@ -37,11 +37,15 @@ export default function SimulationJoin() {
   const [assignment, setAssignment] = useState<any>(null);
   const [forms, setForms] = useState<any[]>([]);
   const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [feedback, setFeedback] = useState("");
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [allRounds, setAllRounds] = useState<any[]>([]);
   const [completedResponses, setCompletedResponses] = useState<any[]>([]);
   const [allParticipants, setAllParticipants] = useState<any[]>([]);
+  const [allAssignments, setAllAssignments] = useState<any[]>([]);
+  const [materialsReady, setMaterialsReady] = useState(false);
+  const [studentsReady, setStudentsReady] = useState<string[]>([]);
 
   // Auto-join if redirected from StudentAuth
   useEffect(() => {
@@ -110,17 +114,26 @@ export default function SimulationJoin() {
 
   const isProfessor = participant?.participant_role === "professor";
 
-  // Poll for active round & all rounds (for professor)
+  // Poll for active round & all rounds
   useEffect(() => {
     if (!joined || !room) return;
     const poll = async () => {
-      // Get all rounds for professor view
       const { data: roundsAll } = await supabase
         .from("simulation_rounds")
         .select("*")
         .eq("room_id", room.id)
         .order("round_number", { ascending: true });
       setAllRounds(roundsAll || []);
+
+      // Load all assignments for all rounds
+      if (roundsAll && roundsAll.length > 0) {
+        const roundIds = roundsAll.map((r: any) => r.id);
+        const { data: assignsAll } = await supabase
+          .from("simulation_round_assignments")
+          .select("*")
+          .in("round_id", roundIds);
+        setAllAssignments(assignsAll || []);
+      }
 
       const activeR = roundsAll?.find((r: any) => r.status === "active") || null;
       setActiveRound(activeR);
@@ -143,10 +156,7 @@ export default function SimulationJoin() {
           .limit(1);
         setSubmitted(!!resp?.length);
       } else {
-        // Find next pending round for professor assignment
-        if (isProfessor && !activeR) {
-          setAssignment(null);
-        }
+        setAssignment(null);
         setSubmitted(false);
       }
 
@@ -215,7 +225,7 @@ export default function SimulationJoin() {
       round_id: activeRound.id,
       participant_id: participant.id,
       form_id: form.id,
-      answers_json: answers,
+      answers_json: { ...answers, _feedback: feedback },
       score,
       submitted_at: new Date().toISOString(),
     });
@@ -228,26 +238,60 @@ export default function SimulationJoin() {
     }
   };
 
-  // Professor controls
+  // Determine if current round is first round of its cycle
+  const isFirstRoundOfCycle = (round: any) => {
+    if (!round) return false;
+    const sameRoundsInCycle = allRounds.filter((r: any) => r.cycle === round.cycle);
+    sameRoundsInCycle.sort((a: any, b: any) => a.round_number - b.round_number);
+    return sameRoundsInCycle.length > 0 && sameRoundsInCycle[0].id === round.id;
+  };
+
+  // Check if the next pending round needs material release
+  const nextPendingRound = allRounds.find((r: any) => r.status === "pending");
+  const needsMaterialRelease = nextPendingRound && isFirstRoundOfCycle(nextPendingRound) && !nextPendingRound.materials_released;
+
+  // Professor: release materials
+  const releaseMaterials = async () => {
+    if (!nextPendingRound) return;
+    await supabase.from("simulation_rounds").update({
+      materials_released: true,
+    }).eq("id", nextPendingRound.id);
+    toast({ title: t("sim_materials_released") });
+  };
+
+  // Professor: start simulation (release round after materials)
   const releaseRound = async () => {
-    const nextPending = allRounds.find((r: any) => r.status === "pending");
-    if (!nextPending) return;
+    if (!nextPendingRound) return;
     await supabase.from("simulation_rounds").update({
       status: "active",
       started_at: new Date().toISOString(),
       released_by: participant?.student_name || "professor",
-    }).eq("id", nextPending.id);
+    }).eq("id", nextPendingRound.id);
     setAnswers({});
+    setFeedback("");
     toast({ title: t("sim_round_released") });
   };
 
   const endRound = async () => {
     if (!activeRound) return;
+    // Check if professor submitted evaluation
+    if (isProfessor && !submitted) {
+      toast({ title: t("sim_must_submit_first"), variant: "destructive" });
+      return;
+    }
     await supabase.from("simulation_rounds").update({
       status: "completed",
       finished_at: new Date().toISOString(),
     }).eq("id", activeRound.id);
     toast({ title: t("sim_round_ended") });
+  };
+
+  // Student: mark materials as studied
+  const markMaterialsReady = () => {
+    if (participant) {
+      setMaterialsReady(true);
+      // Store locally - in a real scenario this could be saved to DB
+    }
   };
 
   const [generatingRounds, setGeneratingRounds] = useState(false);
@@ -257,7 +301,6 @@ export default function SimulationJoin() {
     setGeneratingRounds(true);
     try {
       const students = allParticipants.filter((p: any) => p.participant_role === "student");
-      // Group into pairs
       const pairsMap: Record<number, any[]> = {};
       students.forEach((s: any) => {
         if (!pairsMap[s.pair_index]) pairsMap[s.pair_index] = [];
@@ -294,7 +337,6 @@ export default function SimulationJoin() {
         await supabase.from("simulation_round_assignments").insert(assignments);
       }
 
-      // Update room status to active if still draft
       if (room.status === "draft") {
         await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
       }
@@ -321,10 +363,19 @@ export default function SimulationJoin() {
     professor: t("sim_professor"),
   };
 
-  // Helper to get participant name by id
+  const roleBadgeColors: Record<string, string> = {
+    professional: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    patient: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    observer: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  };
+
   const getParticipantName = (id: string) => allParticipants.find((p: any) => p.id === id)?.student_name || id;
 
-  // Helper to render anamnesis response read-only
+  // Get assignments for a specific round
+  const getAssignmentsForRound = (roundId: string) => {
+    return allAssignments.filter((a: any) => a.round_id === roundId);
+  };
+
   const renderResponseReadOnly = (response: any) => {
     const anamnesisForm = forms.find((f: any) => f.form_type === "anamnesis");
     if (!anamnesisForm) return <p className="text-sm text-muted-foreground">{t("sim_no_script")}</p>;
@@ -344,6 +395,38 @@ export default function SimulationJoin() {
             </p>
           </div>
         ))}
+        {answersData._feedback && (
+          <div className="space-y-1 border-t pt-2">
+            <p className="text-sm font-medium text-foreground">{t("sim_feedback_label")}</p>
+            <p className="text-sm text-muted-foreground bg-muted p-2 rounded">{answersData._feedback}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render participant list for a round
+  const renderRoundParticipants = (roundId: string) => {
+    const roundAssignments = getAssignmentsForRound(roundId);
+    if (roundAssignments.length === 0) return null;
+
+    return (
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-foreground">{t("sim_participants_in_round")}</p>
+        <div className="space-y-1">
+          {roundAssignments.map((a: any) => {
+            const Icon = roleIcons[a.assigned_role] || Users;
+            return (
+              <div key={a.id} className="flex items-center gap-2 text-sm">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{getParticipantName(a.participant_id)}</span>
+                <Badge variant="outline" className={`text-xs ${roleBadgeColors[a.assigned_role] || ""}`}>
+                  {roleLabels[a.assigned_role] || a.assigned_role}
+                </Badge>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -380,8 +463,19 @@ export default function SimulationJoin() {
   const form = getFormForRole();
   const isActive = !!activeRound;
   const canFill = isActive && !submitted && assignment?.assigned_role !== "patient";
-  const nextPendingRound = allRounds.find((r: any) => r.status === "pending");
   const completedRoundsList = allRounds.filter((r: any) => r.status === "completed");
+
+  // Check if student participates in active round
+  const participatesInActiveRound = isActive && !!assignment;
+
+  // Material release stage check
+  const isMaterialStage = isActive && activeRound && !activeRound.started_at && activeRound.materials_released;
+  // Actually, we need a different approach: materials_released=true but round status is still "pending" means material stage
+  // When professor clicks "start simulation" it becomes "active"
+  // Let me rethink: the round has status "pending" → professor releases materials → materials_released=true, status still "pending"
+  // → professor starts simulation → status becomes "active", started_at set
+  // But we already use "active" status... Let me handle it differently:
+  // The material release phase is when the next pending round needs materials AND materials are released but round not started yet
 
   return (
     <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto space-y-4">
@@ -393,7 +487,7 @@ export default function SimulationJoin() {
         </div>
         <div className="flex items-center gap-3">
           {isProfessor && (
-            <Badge variant="secondary" className="text-sm py-1 px-3">
+            <Badge variant="secondary" className="text-sm py-1 px-3 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
               <GraduationCap className="h-4 w-4 mr-1" />
               {t("sim_professor")}
             </Badge>
@@ -420,14 +514,25 @@ export default function SimulationJoin() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{t("sim_round")}: {activeRound?.round_number || "—"}</span>
+              <span>{t("sim_round")}: {activeRound?.round_number || nextPendingRound?.round_number || "—"}</span>
               <span>•</span>
-              <span>{t("sim_cycle")}: {activeRound?.cycle || (nextPendingRound?.cycle || "—")}</span>
+              <span>{t("sim_cycle")}: {activeRound?.cycle || nextPendingRound?.cycle || "—"}</span>
             </div>
+
+            {/* Show participants for current/next round */}
+            {(activeRound || nextPendingRound) && renderRoundParticipants((activeRound || nextPendingRound).id)}
+
             <div className="flex gap-2">
-              {!isActive && nextPendingRound && (
+              {/* Material release stage - first round of cycle only */}
+              {!isActive && nextPendingRound && needsMaterialRelease && (
+                <Button onClick={releaseMaterials} className="flex-1" variant="outline">
+                  <BookOpen className="h-4 w-4 mr-1" />{t("sim_release_materials")}
+                </Button>
+              )}
+              {/* Start simulation - after materials released OR not first round of cycle */}
+              {!isActive && nextPendingRound && !needsMaterialRelease && (
                 <Button onClick={releaseRound} className="flex-1">
-                  <Play className="h-4 w-4 mr-1" />{t("sim_release")} {nextPendingRound.round_number}
+                  <Play className="h-4 w-4 mr-1" />{t("sim_start_simulation")} — {t("sim_round")} {nextPendingRound.round_number}
                 </Button>
               )}
               {isActive && (
@@ -440,8 +545,8 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Waiting state (non-professor) */}
-      {!isActive && !isProfessor && (
+      {/* Waiting state for students: no active round */}
+      {!isActive && !isProfessor && !nextPendingRound?.materials_released && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Clock className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
@@ -451,7 +556,53 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Waiting state (professor, no rounds at all - need to generate) */}
+      {/* Material study phase for students */}
+      {!isActive && !isProfessor && nextPendingRound?.materials_released && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              {t("sim_release_materials")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Show all forms for study */}
+            {forms.map((form: any) => {
+              const fields = form.content_json as FormField[];
+              return (
+                <div key={form.id} className="border rounded-lg p-3 space-y-2">
+                  <p className="text-sm font-medium">{form.title || form.form_type}</p>
+                  {fields.map((field) => (
+                    <p key={field.id} className="text-sm text-muted-foreground">• {field.label}</p>
+                  ))}
+                </div>
+              );
+            })}
+            {!materialsReady ? (
+              <Button onClick={markMaterialsReady} className="w-full">
+                <CheckCircle className="h-4 w-4 mr-1" />{t("sim_materials_ready")}
+              </Button>
+            ) : (
+              <div className="flex flex-col items-center py-4">
+                <CheckCircle className="h-8 w-8 text-primary mb-2" />
+                <p className="text-sm text-muted-foreground">{t("sim_waiting_professor")}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Student not participating in active round */}
+      {isActive && !isProfessor && !participatesInActiveRound && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Clock className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
+            <h3 className="text-lg font-medium">{t("sim_waiting_your_round")}</h3>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Waiting state (professor, no rounds - need to generate) */}
       {!isActive && isProfessor && !nextPendingRound && allRounds.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
@@ -465,11 +616,11 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* All rounds truly completed */}
+      {/* All rounds completed */}
       {!isActive && isProfessor && !nextPendingRound && allRounds.length > 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8">
-            <p className="text-muted-foreground">{t("sim_all_rounds_completed") || "Todas as rodadas foram concluídas."}</p>
+            <p className="text-muted-foreground">{t("sim_all_rounds_completed")}</p>
           </CardContent>
         </Card>
       )}
@@ -556,6 +707,18 @@ export default function SimulationJoin() {
                     )}
                   </div>
                 ))}
+
+                {/* Feedback field */}
+                <div className="space-y-2 border-t pt-4">
+                  <Label className="font-medium">{t("sim_feedback_label")}</Label>
+                  <Textarea
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    placeholder={t("sim_feedback_placeholder")}
+                    rows={4}
+                  />
+                </div>
+
                 <Button onClick={async () => {
                   let score = 0;
                   fields.forEach((field) => {
@@ -565,7 +728,7 @@ export default function SimulationJoin() {
                     round_id: activeRound.id,
                     participant_id: participant.id,
                     form_id: profForm.id,
-                    answers_json: answers,
+                    answers_json: { ...answers, _feedback: feedback },
                     score,
                     submitted_at: new Date().toISOString(),
                   });
@@ -585,7 +748,7 @@ export default function SimulationJoin() {
       )}
 
       {/* Non-professor form display */}
-      {isActive && !submitted && !isProfessor && form && (
+      {isActive && !submitted && !isProfessor && participatesInActiveRound && form && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -689,6 +852,10 @@ export default function SimulationJoin() {
                       {t("sim_round")} {round.round_number} — {t("sim_cycle")} {round.cycle}
                     </AccordionTrigger>
                     <AccordionContent>
+                      {/* Show participants */}
+                      <div className="mb-3">
+                        {renderRoundParticipants(round.id)}
+                      </div>
                       {roundResponses.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Nenhuma resposta de anamnese nesta rodada.</p>
                       ) : (
