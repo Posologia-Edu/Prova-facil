@@ -22,6 +22,9 @@ type FormField = {
   max_score?: number;
 };
 
+const normalizeParticipantEmail = (value: string) => value.trim().toLowerCase();
+const normalizeAccessCode = (value: string) => value.trim().toLowerCase();
+
 export default function SimulationJoin() {
   const { t } = useLanguage();
   const [pin, setPin] = useState(() => sessionStorage.getItem("sim_pin") || "");
@@ -53,23 +56,35 @@ export default function SimulationJoin() {
   }, []);
 
   const joinRoomWithCredentials = async (pinVal: string, emailVal: string) => {
+    const normalizedPin = normalizeAccessCode(pinVal);
+    const normalizedEmail = normalizeParticipantEmail(emailVal);
+
     const { data: roomData, error: roomErr } = await supabase
       .from("simulation_rooms")
       .select("*")
-      .eq("access_code", pinVal.trim().toLowerCase())
-      .single();
+      .eq("access_code", normalizedPin)
+      .maybeSingle();
+
     if (roomErr || !roomData) {
       toast({ title: t("student_error"), description: t("sim_room_not_found"), variant: "destructive" });
       return;
     }
 
-    const { data: partData, error: partErr } = await supabase
+    const { data: participantsData, error: participantsErr } = await supabase
       .from("simulation_participants")
       .select("*")
-      .eq("room_id", roomData.id)
-      .eq("student_email", emailVal.trim().toLowerCase())
-      .single();
-    if (partErr || !partData) {
+      .eq("room_id", roomData.id);
+
+    if (participantsErr) {
+      toast({ title: t("student_error"), description: t("student_connection_error"), variant: "destructive" });
+      return;
+    }
+
+    const matchedParticipant = (participantsData || []).find(
+      (currentParticipant: any) => normalizeParticipantEmail(currentParticipant.student_email || "") === normalizedEmail
+    );
+
+    if (!matchedParticipant) {
       toast({ title: t("student_access_denied"), description: t("sim_not_registered"), variant: "destructive" });
       return;
     }
@@ -79,13 +94,10 @@ export default function SimulationJoin() {
       .select("*")
       .eq("room_id", roomData.id);
 
-    const { data: participantsData } = await supabase
-      .from("simulation_participants")
-      .select("*")
-      .eq("room_id", roomData.id);
-
+    setPin(normalizedPin);
+    setEmail(normalizedEmail);
     setRoom(roomData);
-    setParticipant(partData);
+    setParticipant(matchedParticipant);
     setForms(formsData || []);
     setAllParticipants(participantsData || []);
     setJoined(true);
