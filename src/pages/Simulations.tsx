@@ -30,7 +30,7 @@ const modules = [
     title: "SOAP",
     description: "Transcrição estruturada da anamnese no formato SOAP com avaliação entre pares.",
     icon: ClipboardList,
-    route: "/simulations/soap",
+    tab: "soap",
     color: "text-chart-2",
     bgColor: "bg-chart-2/10",
   },
@@ -39,7 +39,7 @@ const modules = [
     title: "Reconciliação",
     description: "Reconciliação em duplas com casos clínicos, ficha de reconciliação e correção por IA.",
     icon: Handshake,
-    route: "/simulations/reconciliation",
+    tab: "reconciliation",
     color: "text-chart-3",
     bgColor: "bg-chart-3/10",
   },
@@ -48,7 +48,7 @@ const modules = [
     title: "Documentação",
     description: "Encaminhamento e quadro resumo de medicamentos com correção por IA e manual.",
     icon: FileText,
-    route: "/simulations/documentation",
+    tab: "documentation",
     color: "text-chart-4",
     bgColor: "bg-chart-4/10",
   },
@@ -81,6 +81,51 @@ export default function Simulations() {
       if (!session) return [];
       const { data, error } = await supabase
         .from("simulation_rooms")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: soapRooms, isLoading: soapLoading } = useQuery({
+    queryKey: ["soap-rooms-list"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data, error } = await supabase
+        .from("soap_rooms")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: reconciliationRooms, isLoading: reconciliationLoading } = useQuery({
+    queryKey: ["reconciliation-rooms-list"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data, error } = await supabase
+        .from("reconciliation_rooms")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: documentationRooms, isLoading: documentationLoading } = useQuery({
+    queryKey: ["documentation-rooms-list"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data, error } = await supabase
+        .from("documentation_rooms")
         .select("*")
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false });
@@ -163,12 +208,21 @@ export default function Simulations() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="modules">
             <HeartPulse className="h-4 w-4 mr-1" />Módulos
           </TabsTrigger>
           <TabsTrigger value="anamnesis">
             <Stethoscope className="h-4 w-4 mr-1" />Salas de Anamnese
+          </TabsTrigger>
+          <TabsTrigger value="soap">
+            <ClipboardList className="h-4 w-4 mr-1" />Salas de SOAP
+          </TabsTrigger>
+          <TabsTrigger value="reconciliation">
+            <Handshake className="h-4 w-4 mr-1" />Salas de Reconciliação
+          </TabsTrigger>
+          <TabsTrigger value="documentation">
+            <FileText className="h-4 w-4 mr-1" />Salas de Documentação
           </TabsTrigger>
         </TabsList>
 
@@ -203,7 +257,11 @@ export default function Simulations() {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <Badge variant="outline" className="text-xs">
-                    {mod.id === "anamnesis" ? `${rooms?.length || 0} salas` : "Acessar módulo"}
+                    {mod.id === "anamnesis" ? `${rooms?.length || 0} salas`
+                      : mod.id === "soap" ? `${soapRooms?.length || 0} salas`
+                      : mod.id === "reconciliation" ? `${reconciliationRooms?.length || 0} salas`
+                      : mod.id === "documentation" ? `${documentationRooms?.length || 0} salas`
+                      : "Acessar módulo"}
                   </Badge>
                 </CardContent>
               </Card>
@@ -300,6 +358,165 @@ export default function Simulations() {
                   </Card>
                 );
               })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* SOAP rooms */}
+        <TabsContent value="soap" className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => navigate("/simulations/soap")}>
+              <Plus className="h-4 w-4 mr-2" />Nova Sala SOAP
+            </Button>
+          </div>
+          {soapLoading ? (
+            <p className="text-muted-foreground">{t("loading")}</p>
+          ) : !soapRooms?.length ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala SOAP</h3>
+                <p className="text-muted-foreground mb-4">Crie uma sala SOAP a partir do módulo.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {soapRooms.map((room) => (
+                <Card key={room.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{room.title}</CardTitle>
+                        {room.description && <CardDescription>{room.description}</CardDescription>}
+                      </div>
+                      <Badge className={statusColor[room.status] || ""}>
+                        {statusLabel[room.status] || room.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                      <span className="font-mono text-xs">PIN: {room.access_code}</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/${room.id}/edit`)}>
+                        <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
+                      </Button>
+                      {room.status === "active" && (
+                        <Button size="sm" onClick={() => navigate(`/simulations/soap/${room.id}/control`)}>
+                          <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Reconciliation rooms */}
+        <TabsContent value="reconciliation" className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => navigate("/simulations/reconciliation")}>
+              <Plus className="h-4 w-4 mr-2" />Nova Sala de Reconciliação
+            </Button>
+          </div>
+          {reconciliationLoading ? (
+            <p className="text-muted-foreground">{t("loading")}</p>
+          ) : !reconciliationRooms?.length ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Handshake className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala de Reconciliação</h3>
+                <p className="text-muted-foreground mb-4">Crie uma sala de Reconciliação a partir do módulo.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {reconciliationRooms.map((room) => (
+                <Card key={room.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{room.title}</CardTitle>
+                        {room.description && <CardDescription>{room.description}</CardDescription>}
+                      </div>
+                      <Badge className={statusColor[room.status] || ""}>
+                        {statusLabel[room.status] || room.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                      <span className="font-mono text-xs">PIN: {room.access_code}</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/reconciliation/${room.id}/edit`)}>
+                        <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
+                      </Button>
+                      {room.status === "active" && (
+                        <Button size="sm" onClick={() => navigate(`/simulations/reconciliation/${room.id}/control`)}>
+                          <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Documentation rooms */}
+        <TabsContent value="documentation" className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => navigate("/simulations/documentation")}>
+              <Plus className="h-4 w-4 mr-2" />Nova Sala de Documentação
+            </Button>
+          </div>
+          {documentationLoading ? (
+            <p className="text-muted-foreground">{t("loading")}</p>
+          ) : !documentationRooms?.length ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala de Documentação</h3>
+                <p className="text-muted-foreground mb-4">Crie uma sala de Documentação a partir do módulo.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {documentationRooms.map((room) => (
+                <Card key={room.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{room.title}</CardTitle>
+                        {room.description && <CardDescription>{room.description}</CardDescription>}
+                      </div>
+                      <Badge className={statusColor[room.status] || ""}>
+                        {statusLabel[room.status] || room.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                      <span className="font-mono text-xs">PIN: {room.access_code}</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/documentation/${room.id}/edit`)}>
+                        <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
+                      </Button>
+                      {room.status === "active" && (
+                        <Button size="sm" onClick={() => navigate(`/simulations/documentation/${room.id}/control`)}>
+                          <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
