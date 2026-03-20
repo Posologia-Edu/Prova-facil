@@ -308,12 +308,14 @@ export default function SimulationJoin() {
     toast({ title: t("sim_round_ended") });
   };
 
-  // Student: mark materials as studied
-  const markMaterialsReady = () => {
-    if (participant) {
-      setMaterialsReady(true);
-      // Store locally - in a real scenario this could be saved to DB
-    }
+  // Student: mark materials as studied — persist to DB so professor can see
+  const markMaterialsReady = async () => {
+    if (!participant) return;
+    setMaterialsReady(true);
+    await supabase
+      .from("simulation_participants")
+      .update({ status: "ready" })
+      .eq("id", participant.id);
   };
 
   const [generatingRounds, setGeneratingRounds] = useState(false);
