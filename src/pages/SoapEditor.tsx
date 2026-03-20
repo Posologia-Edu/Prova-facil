@@ -318,69 +318,34 @@ export default function SoapEditor() {
             </DialogContent>
           </Dialog>
 
-          {(() => {
-            const teachers = participants.filter((p: any) => p.participant_role === "teacher");
-            const students = participants.filter((p: any) => p.participant_role !== "teacher");
-            return (
-              <>
-                {teachers.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        Professor(es)
-                        <Badge variant="secondary">{teachers.length}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <div className="space-y-2">
-                        {teachers.map((p) => (
-                          <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-primary/5 border border-primary/10">
-                            <div>
-                              <span className="font-medium">{p.student_name}</span>
-                              {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
-                              <Badge variant="outline" className="ml-2 text-xs">Professor</Badge>
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => removeParticipant(p.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
+          {participants.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  Alunos
+                  <Badge variant="secondary">{participants.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="space-y-2">
+                  {participants.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+                      <div>
+                        <span className="font-medium">{p.student_name}</span>
+                        {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
+                        {p.pair_index >= 0 && (
+                          <Badge variant="outline" className="ml-2">Dupla {p.pair_index} ({p.pair_position})</Badge>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {students.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        Alunos
-                        <Badge variant="secondary">{students.length}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <div className="space-y-2">
-                        {students.map((p) => (
-                          <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                            <div>
-                              <span className="font-medium">{p.student_name}</span>
-                              {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
-                              {p.pair_index >= 0 && (
-                                <Badge variant="outline" className="ml-2">Dupla {p.pair_index} ({p.pair_position})</Badge>
-                              )}
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => removeParticipant(p.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            );
-          })()}
+                      <Button variant="ghost" size="icon" onClick={() => removeParticipant(p.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Forms Tab */}
