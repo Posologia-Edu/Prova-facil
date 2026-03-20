@@ -682,9 +682,11 @@ export default function SimulationJoin() {
       {!isActive && !isProfessor && cycleMaterialsReleased && (
         (() => {
           // Determine student's role across ALL rounds in the current cycle
+          // Prioritize professional/patient over observer since a student can be observer in one round and active in another
           const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
           const cycleAssigns = allAssignments.filter((a: any) => cycleRoundIds.includes(a.round_id));
-          const myAssign = cycleAssigns.find((a: any) => a.participant_id === participant?.id);
+          const myAssigns = cycleAssigns.filter((a: any) => a.participant_id === participant?.id);
+          const myAssign = myAssigns.find((a: any) => a.assigned_role === "professional" || a.assigned_role === "patient") || myAssigns[0];
           const myRole = myAssign?.assigned_role;
 
           // Professionals see anamnesis form
