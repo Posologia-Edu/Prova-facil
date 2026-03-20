@@ -208,12 +208,21 @@ export default function Simulations() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="modules">
             <HeartPulse className="h-4 w-4 mr-1" />Módulos
           </TabsTrigger>
           <TabsTrigger value="anamnesis">
             <Stethoscope className="h-4 w-4 mr-1" />Salas de Anamnese
+          </TabsTrigger>
+          <TabsTrigger value="soap">
+            <ClipboardList className="h-4 w-4 mr-1" />Salas de SOAP
+          </TabsTrigger>
+          <TabsTrigger value="reconciliation">
+            <Handshake className="h-4 w-4 mr-1" />Salas de Reconciliação
+          </TabsTrigger>
+          <TabsTrigger value="documentation">
+            <FileText className="h-4 w-4 mr-1" />Salas de Documentação
           </TabsTrigger>
         </TabsList>
 
