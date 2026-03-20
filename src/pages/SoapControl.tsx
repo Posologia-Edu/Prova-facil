@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +65,24 @@ export default function SoapControl() {
     },
     enabled: !!roomId,
   });
+
+  // Build a label map from all soap_forms fields
+  const fieldLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+    forms.forEach((f: any) => {
+      const fields = f.content_json as any[];
+      if (Array.isArray(fields)) {
+        fields.forEach((field: any) => {
+          if (field.id && field.label) {
+            labels[field.id] = field.label;
+          }
+        });
+      }
+    });
+    return labels;
+  }, [forms]);
+
+  const resolveLabel = (key: string) => fieldLabels[key] || key;
 
   const [selectedResponse, setSelectedResponse] = useState<any>(null);
   const [adminScore, setAdminScore] = useState<string>("");
@@ -255,7 +273,7 @@ export default function SoapControl() {
                 <div className="space-y-2">
                   {Object.entries(r.answers_json as Record<string, any>).map(([key, val]) => (
                     <div key={key} className="p-2 bg-muted/50 rounded text-sm">
-                      <span className="text-muted-foreground">{key}: </span>
+                      <span className="text-muted-foreground">{resolveLabel(key)}: </span>
                       <span>{typeof val === "object" ? JSON.stringify(val) : String(val)}</span>
                     </div>
                   ))}
@@ -279,7 +297,7 @@ export default function SoapControl() {
                 <div className="space-y-2">
                   {Object.entries(r.answers_json as Record<string, any>).map(([key, val]) => (
                     <div key={key} className="p-2 bg-muted/50 rounded text-sm">
-                      <span className="text-muted-foreground">{key}: </span>
+                      <span className="text-muted-foreground">{resolveLabel(key)}: </span>
                       <span>{typeof val === "object" ? JSON.stringify(val) : String(val)}</span>
                     </div>
                   ))}

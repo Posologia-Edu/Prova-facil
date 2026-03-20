@@ -537,6 +537,9 @@ export default function SoapEditor() {
                         {field.type === "scale" && (
                           <Input type="number" placeholder="Nota máx" value={field.max_score || ""} onChange={(e) => updateField(idx, { max_score: Number(e.target.value) })} className="w-24" />
                         )}
+                        {field.type !== "scale" && formType === "peer_evaluation" && (
+                          <Input type="number" placeholder="Pontuação" value={field.max_score || ""} onChange={(e) => updateField(idx, { max_score: Number(e.target.value) || undefined })} className="w-24" title="Pontuação máxima deste item" />
+                        )}
                       </div>
                       {(field.type === "radio" || field.type === "checkbox") && (
                         <Input placeholder="Opções (separadas por vírgula)" value={field.options?.join(", ") || ""} onChange={(e) => updateField(idx, { options: e.target.value.split(",").map(s => s.trim()) })} />
