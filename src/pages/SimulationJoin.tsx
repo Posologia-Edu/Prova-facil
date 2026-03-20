@@ -250,6 +250,63 @@ export default function SimulationJoin() {
     toast({ title: t("sim_round_ended") });
   };
 
+  const [generatingRounds, setGeneratingRounds] = useState(false);
+
+  const generateRoundsForRoom = async () => {
+    if (!room || !allParticipants.length) return;
+    setGeneratingRounds(true);
+    try {
+      const students = allParticipants.filter((p: any) => p.participant_role === "student");
+      // Group into pairs
+      const pairsMap: Record<number, any[]> = {};
+      students.forEach((s: any) => {
+        if (!pairsMap[s.pair_index]) pairsMap[s.pair_index] = [];
+        pairsMap[s.pair_index].push(s);
+      });
+      const pairsList = Object.values(pairsMap).filter(p => p.length >= 2);
+
+      if (pairsList.length === 0) {
+        toast({ title: "Erro", description: "É necessário pelo menos uma dupla de alunos.", variant: "destructive" });
+        return;
+      }
+
+      const rounds = generateRounds(pairsList);
+
+      for (const round of rounds) {
+        const { data: roundData, error: roundError } = await supabase
+          .from("simulation_rounds")
+          .insert({
+            room_id: room.id,
+            round_number: round.roundNumber,
+            cycle: round.cycle,
+            status: "pending",
+          })
+          .select()
+          .single();
+        if (roundError) continue;
+
+        const assignments = round.assignments.map((a: any) => ({
+          round_id: roundData.id,
+          participant_id: a.participantId,
+          assigned_role: a.role,
+          pair_index: a.pairIndex,
+        }));
+        await supabase.from("simulation_round_assignments").insert(assignments);
+      }
+
+      // Update room status to active if still draft
+      if (room.status === "draft") {
+        await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
+      }
+
+      toast({ title: t("sim_started") || "Rodadas geradas com sucesso!" });
+    } catch (err) {
+      toast({ title: "Erro", description: "Falha ao gerar rodadas.", variant: "destructive" });
+    } finally {
+      setGeneratingRounds(false);
+    }
+  };
+
   const roleIcons: Record<string, any> = {
     professional: Stethoscope,
     patient: Users,
