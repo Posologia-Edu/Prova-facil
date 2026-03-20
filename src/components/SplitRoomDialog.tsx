@@ -125,7 +125,7 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
         for (const studentId of sr.studentIds) {
           await supabase
             .from("simulation_participants")
-            .update({ room_id: newRoom.id, status: "waiting", assigned_role: "waiting" })
+            .update({ room_id: newRoom.id, status: "waiting", assigned_role: "waiting", pair_index: -1, pair_position: "X" })
             .eq("id", studentId);
         }
 
