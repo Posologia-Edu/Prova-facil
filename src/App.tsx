@@ -292,6 +292,33 @@ const App = () => (
             <Route path="/simulation/join" element={<SimulationJoin />} />
             {/* Public SOAP route */}
             <Route path="/simulation/soap/join" element={<SoapJoin />} />
+            {/* Public Reconciliation route */}
+            <Route path="/simulation/reconciliation/join" element={<ReconciliationJoin />} />
+            {/* Reconciliation routes */}
+            <Route
+              path="/simulations/reconciliation"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><ReconciliationRooms /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simulations/reconciliation/editor/:roomId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><ReconciliationEditor /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simulations/reconciliation/control/:roomId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><ReconciliationControl /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
