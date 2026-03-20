@@ -91,6 +91,8 @@ export default function SimulationEditor() {
 
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [profName, setProfName] = useState("");
+  const [profEmail, setProfEmail] = useState("");
 
   const pairs = participants.reduce((acc: Record<number, any[]>, p: any) => {
     if (!acc[p.pair_index]) acc[p.pair_index] = [];
@@ -102,14 +104,16 @@ export default function SimulationEditor() {
   const nextPairIndex = students.length > 0 ? Math.floor(students.length / 2) : 0;
 
   const addParticipant = async (role: string) => {
-    if (!newName.trim()) return;
+    const name = role === "professor" ? profName : newName;
+    const email = role === "professor" ? profEmail : newEmail;
+    if (!name.trim()) return;
     const pairIndex = role === "professor" ? -1 : nextPairIndex;
     const pairPosition = role === "professor" ? "P" : (students.filter((s: any) => s.pair_index === nextPairIndex).length === 0 ? "A" : "B");
 
     const { error } = await supabase.from("simulation_participants").insert({
       room_id: roomId!,
-      student_name: newName,
-      student_email: newEmail,
+      student_name: name,
+      student_email: email,
       pair_index: pairIndex,
       pair_position: pairPosition,
       participant_role: role,
@@ -117,8 +121,13 @@ export default function SimulationEditor() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      setNewName("");
-      setNewEmail("");
+      if (role === "professor") {
+        setProfName("");
+        setProfEmail("");
+      } else {
+        setNewName("");
+        setNewEmail("");
+      }
       refetchParticipants();
     }
   };
@@ -488,9 +497,9 @@ export default function SimulationEditor() {
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <Input placeholder={t("sim_name_placeholder")} value={newName} onChange={(e) => setNewName(e.target.value)} />
-                  <Input placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-                  <Button onClick={() => addParticipant("professor")} disabled={!newName.trim()}>
+                  <Input placeholder={t("sim_name_placeholder")} value={profName} onChange={(e) => setProfName(e.target.value)} />
+                  <Input placeholder="Email" value={profEmail} onChange={(e) => setProfEmail(e.target.value)} />
+                  <Button onClick={() => addParticipant("professor")} disabled={!profName.trim()}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
