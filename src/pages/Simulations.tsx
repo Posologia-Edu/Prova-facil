@@ -198,6 +198,7 @@ export default function Simulations() {
                 <p className="text-sm text-muted-foreground">Novos módulos em breve</p>
               </CardContent>
             </Card>
+
           </div>
         </TabsContent>
 
