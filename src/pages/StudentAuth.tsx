@@ -47,13 +47,19 @@ export default function StudentAuth() {
       // Check if PIN belongs to a SOAP room
       const { data: soapRoom } = await supabase
         .from("soap_rooms")
-        .select("id, access_code")
+        .select("id, access_code, status")
         .eq("access_code", pin.trim().toLowerCase())
-        .eq("status", "active")
         .limit(1)
         .maybeSingle();
 
+      console.log("[StudentAuth] SOAP room check:", { pin: pin.trim().toLowerCase(), soapRoom });
+
       if (soapRoom) {
+        if (soapRoom.status !== "active") {
+          toast({ title: "Sala não disponível", description: "Esta sala SOAP ainda não foi ativada pelo professor.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
         sessionStorage.setItem("soap_pin", pin.trim().toLowerCase());
         sessionStorage.setItem("soap_email", email.trim().toLowerCase());
         navigate("/simulations/soap/join");
