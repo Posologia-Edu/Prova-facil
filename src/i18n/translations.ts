@@ -674,7 +674,7 @@ const pt: TranslationKeys = {
   auth_error_signup: "Erro ao cadastrar",
   auth_signup_success_title: "Cadastro realizado!",
   auth_signup_success_desc: "Verifique seu e-mail para confirmar a conta. Após confirmação, seu acesso será analisado pelo administrador.",
-  auth_student: "Sou Aluno",
+  auth_student: "Acessar Avaliação",
 
   landing_enter: "Entrar",
   landing_create_free: "Criar conta grátis",
