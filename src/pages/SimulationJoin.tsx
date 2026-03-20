@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle } from "lucide-react";
+import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { generateRounds } from "@/lib/simulation-distribution";
 
@@ -295,23 +295,61 @@ export default function SimulationJoin() {
   };
 
   const [generatingRounds, setGeneratingRounds] = useState(false);
+  const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
+
+  // Get unpaired and paired students
+  const unpairedStudents = allParticipants.filter((p: any) => p.participant_role === "student" && (p.pair_index === -1 || p.pair_position === "X"));
+  const pairedStudents = allParticipants.filter((p: any) => p.participant_role === "student" && p.pair_index >= 0 && p.pair_position !== "X");
+  const pairsMap: Record<number, any[]> = {};
+  pairedStudents.forEach((s: any) => {
+    if (!pairsMap[s.pair_index]) pairsMap[s.pair_index] = [];
+    pairsMap[s.pair_index].push(s);
+  });
+  const formedPairs = Object.entries(pairsMap).filter(([_, ps]) => ps.length === 2);
+  const nextPairIdx = formedPairs.length > 0 ? Math.max(...formedPairs.map(([idx]) => Number(idx))) + 1 : 0;
+
+  const toggleStudentForPairing = (id: string) => {
+    setSelectedForPairing((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 2) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const formPair = async () => {
+    if (selectedForPairing.length !== 2) return;
+    const [a, b] = selectedForPairing;
+    await supabase.from("simulation_participants").update({ pair_index: nextPairIdx, pair_position: "A" }).eq("id", a);
+    await supabase.from("simulation_participants").update({ pair_index: nextPairIdx, pair_position: "B" }).eq("id", b);
+    setSelectedForPairing([]);
+    // Refresh participants
+    const { data } = await supabase.from("simulation_participants").select("*").eq("room_id", room.id);
+    setAllParticipants(data || []);
+    toast({ title: t("sim_pair_formed") });
+  };
+
+  const clearAllPairs = async () => {
+    const studentIds = allParticipants.filter((p: any) => p.participant_role === "student").map((p: any) => p.id);
+    if (!studentIds.length) return;
+    for (const id of studentIds) {
+      await supabase.from("simulation_participants").update({ pair_index: -1, pair_position: "X" }).eq("id", id);
+    }
+    const { data } = await supabase.from("simulation_participants").select("*").eq("room_id", room.id);
+    setAllParticipants(data || []);
+    toast({ title: t("sim_clear_pairs") });
+  };
 
   const generateRoundsForRoom = async () => {
     if (!room || !allParticipants.length) return;
+
+    if (formedPairs.length === 0) {
+      toast({ title: t("sim_need_pairs"), variant: "destructive" });
+      return;
+    }
+
     setGeneratingRounds(true);
     try {
-      const students = allParticipants.filter((p: any) => p.participant_role === "student");
-      const pairsMap: Record<number, any[]> = {};
-      students.forEach((s: any) => {
-        if (!pairsMap[s.pair_index]) pairsMap[s.pair_index] = [];
-        pairsMap[s.pair_index].push(s);
-      });
-      const pairsList = Object.values(pairsMap).filter(p => p.length >= 2);
-
-      if (pairsList.length === 0) {
-        toast({ title: "Erro", description: "É necessário pelo menos uma dupla de alunos.", variant: "destructive" });
-        return;
-      }
+      const pairsList = formedPairs.map(([_, ps]) => ps);
 
       const rounds = generateRounds(pairsList);
 
@@ -602,16 +640,76 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Waiting state (professor, no rounds - need to generate) */}
+      {/* Waiting state (professor, no rounds - need to form pairs and generate) */}
       {!isActive && isProfessor && !nextPendingRound && allRounds.length === 0 && (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
-            <RefreshCw className="h-10 w-10 text-muted-foreground/50" />
-            <p className="text-muted-foreground">{"Nenhuma rodada encontrada. Gere as rodadas para iniciar a simulação."}</p>
-            <Button onClick={generateRoundsForRoom} disabled={generatingRounds}>
-              {generatingRounds ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
-              {"Gerar Rodadas"}
-            </Button>
+          <CardHeader>
+            <CardTitle className="text-base">{t("sim_form_pairs")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Formed pairs */}
+            {formedPairs.length > 0 && (
+              <div className="space-y-2">
+                {formedPairs.map(([idx, ps]) => (
+                  <div key={idx} className="p-3 bg-muted rounded-lg">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">{t("sim_pair")} {Number(idx) + 1}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{ps[0]?.student_name}</span>
+                      <span className="text-xs text-muted-foreground">&</span>
+                      <span className="text-sm font-medium">{ps[1]?.student_name}</span>
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={clearAllPairs}>
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />{t("sim_clear_pairs")}
+                </Button>
+              </div>
+            )}
+
+            {/* Unpaired students */}
+            {unpairedStudents.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {t("sim_unpaired_students")} ({unpairedStudents.length}) — {t("sim_select_pair")}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {unpairedStudents.map((s: any) => {
+                    const isSelected = selectedForPairing.includes(s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => toggleStudentForPairing(s.id)}
+                        className={`p-2 rounded-lg border text-left text-sm transition-colors ${
+                          isSelected
+                            ? "border-primary bg-primary/10 ring-2 ring-primary"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <span className="font-medium">{s.student_name}</span>
+                        {s.student_email && <p className="text-xs text-muted-foreground">{s.student_email}</p>}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedForPairing.length === 2 && (
+                  <Button onClick={formPair} className="w-full" size="sm">
+                    <Users className="h-4 w-4 mr-1" />{t("sim_form_pairs")}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {unpairedStudents.length === 0 && formedPairs.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t("sim_need_students")}</p>
+            )}
+
+            {/* Generate rounds button */}
+            <div className="border-t pt-4">
+              <Button onClick={generateRoundsForRoom} disabled={generatingRounds || formedPairs.length === 0} className="w-full">
+                {generatingRounds ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
+                {"Gerar Rodadas"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

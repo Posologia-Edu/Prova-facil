@@ -15,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download, AlertTriangle, CheckCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { generateRounds } from "@/lib/simulation-distribution";
+
 
 type Participant = {
   id?: string;
@@ -94,28 +94,26 @@ export default function SimulationEditor() {
   const [profName, setProfName] = useState("");
   const [profEmail, setProfEmail] = useState("");
 
-  const pairs = participants.reduce((acc: Record<number, any[]>, p: any) => {
-    if (!acc[p.pair_index]) acc[p.pair_index] = [];
-    acc[p.pair_index].push(p);
-    return acc;
-  }, {});
   const professor = participants.find((p: any) => p.participant_role === "professor");
   const students = participants.filter((p: any) => p.participant_role === "student");
-  const nextPairIndex = students.length > 0 ? Math.floor(students.length / 2) : 0;
+
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const addParticipant = async (role: string) => {
     const name = role === "professor" ? profName : newName;
     const email = role === "professor" ? profEmail : newEmail;
     if (!name.trim()) return;
-    const pairIndex = role === "professor" ? -1 : nextPairIndex;
-    const pairPosition = role === "professor" ? "P" : (students.filter((s: any) => s.pair_index === nextPairIndex).length === 0 ? "A" : "B");
+    if (email && !isValidEmail(email)) {
+      toast({ title: t("sim_invalid_email"), variant: "destructive" });
+      return;
+    }
 
     const { error } = await supabase.from("simulation_participants").insert({
       room_id: roomId!,
       student_name: name,
       student_email: email,
-      pair_index: pairIndex,
-      pair_position: pairPosition,
+      pair_index: -1,
+      pair_position: "X",
       participant_role: role,
     });
     if (error) {
@@ -371,31 +369,7 @@ export default function SimulationEditor() {
       return;
     }
 
-    const pairsList = Object.values(pairs).filter(p => p[0]?.participant_role === "student");
-    const rounds = generateRounds(pairsList as any[]);
-
-    for (const round of rounds) {
-      const { data: roundData, error: roundError } = await supabase
-        .from("simulation_rounds")
-        .insert({
-          room_id: roomId!,
-          round_number: round.roundNumber,
-          cycle: round.cycle,
-          status: "pending",
-        })
-        .select()
-        .single();
-      if (roundError) continue;
-
-      const assignments = round.assignments.map((a: any) => ({
-        round_id: roundData.id,
-        participant_id: a.participantId,
-        assigned_role: a.role,
-        pair_index: a.pairIndex,
-      }));
-      await supabase.from("simulation_round_assignments").insert(assignments);
-    }
-
+    // Just activate the room - professor will form pairs and generate rounds in the room
     await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", roomId!);
     queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
     toast({ title: t("sim_started") });
@@ -498,7 +472,7 @@ export default function SimulationEditor() {
               ) : (
                 <div className="flex gap-2">
                   <Input placeholder={t("sim_name_placeholder")} value={profName} onChange={(e) => setProfName(e.target.value)} />
-                  <Input placeholder="Email" value={profEmail} onChange={(e) => setProfEmail(e.target.value)} />
+                  <Input placeholder="Email" value={profEmail} onChange={(e) => setProfEmail(e.target.value)} type="email" />
                   <Button onClick={() => addParticipant("professor")} disabled={!profName.trim()}>
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -509,34 +483,32 @@ export default function SimulationEditor() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("sim_pairs")}</CardTitle>
+              <CardTitle className="text-base">{t("sim_students_list")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(pairs)
-                .filter(([_, ps]) => (ps as any[])[0]?.participant_role === "student")
-                .map(([idx, ps]) => (
-                  <div key={idx} className="p-3 bg-muted rounded-lg space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">{t("sim_pair")} {Number(idx) + 1}</p>
-                    {(ps as any[]).map((p) => (
-                      <div key={p.id} className="flex items-center justify-between">
-                        <div>
-                          <span className="font-medium">{p.student_name}</span>
-                          <span className="text-sm text-muted-foreground ml-2">({p.pair_position})</span>
-                          {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => removeParticipant(p.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+              {students.length > 0 ? (
+                <div className="space-y-2">
+                  {students.map((p: any) => (
+                    <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                      <div>
+                        <span className="font-medium">{p.student_name}</span>
+                        {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
                       </div>
-                    ))}
-                  </div>
-                ))}
+                      <Button variant="ghost" size="sm" onClick={() => removeParticipant(p.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">{t("sim_add_student")}</p>
+              )}
 
               <div className="border-t pt-4">
                 <p className="text-sm text-muted-foreground mb-2">{t("sim_add_student")}</p>
                 <div className="flex gap-2">
                   <Input placeholder={t("sim_name_placeholder")} value={newName} onChange={(e) => setNewName(e.target.value)} />
-                  <Input placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                  <Input placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} type="email" />
                   <Button onClick={() => addParticipant("student")} disabled={!newName.trim()}>
                     <Plus className="h-4 w-4" />
                   </Button>

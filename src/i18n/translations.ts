@@ -492,7 +492,14 @@ type TranslationKeys = {
   sim_analytics_score: string;
   sim_analytics_avg: string;
   sim_analytics_responses: string;
-
+  sim_invalid_email: string;
+  sim_students_list: string;
+  sim_form_pairs: string;
+  sim_unpaired_students: string;
+  sim_select_pair: string;
+  sim_pair_formed: string;
+  sim_clear_pairs: string;
+  sim_need_pairs: string;
 
   empty_questions_hint: string;
 
@@ -967,6 +974,14 @@ const pt: TranslationKeys = {
   sim_analytics_score: "Nota",
   sim_analytics_avg: "Média",
   sim_analytics_responses: "Respostas enviadas",
+  sim_invalid_email: "Por favor, insira um e-mail válido.",
+  sim_students_list: "Alunos",
+  sim_form_pairs: "Formar Duplas",
+  sim_unpaired_students: "Alunos sem dupla",
+  sim_select_pair: "Selecione 2 alunos para formar uma dupla",
+  sim_pair_formed: "Dupla formada!",
+  sim_clear_pairs: "Desfazer Duplas",
+  sim_need_pairs: "É necessário formar pelo menos uma dupla antes de gerar as rodadas.",
 
   cancel: "Cancelar",
   save: "Salvar",
@@ -1438,6 +1453,14 @@ const en: TranslationKeys = {
   sim_analytics_score: "Score",
   sim_analytics_avg: "Average",
   sim_analytics_responses: "Submitted responses",
+  sim_invalid_email: "Please enter a valid email address.",
+  sim_students_list: "Students",
+  sim_form_pairs: "Form Pairs",
+  sim_unpaired_students: "Unpaired students",
+  sim_select_pair: "Select 2 students to form a pair",
+  sim_pair_formed: "Pair formed!",
+  sim_clear_pairs: "Clear Pairs",
+  sim_need_pairs: "You must form at least one pair before generating rounds.",
 
   cancel: "Cancel",
   save: "Save",
@@ -1909,6 +1932,14 @@ const es: TranslationKeys = {
   sim_analytics_score: "Nota",
   sim_analytics_avg: "Promedio",
   sim_analytics_responses: "Respuestas enviadas",
+  sim_invalid_email: "Por favor, ingrese un correo electrónico válido.",
+  sim_students_list: "Alumnos",
+  sim_form_pairs: "Formar Duplas",
+  sim_unpaired_students: "Alumnos sin dupla",
+  sim_select_pair: "Seleccione 2 alumnos para formar una dupla",
+  sim_pair_formed: "¡Dupla formada!",
+  sim_clear_pairs: "Deshacer Duplas",
+  sim_need_pairs: "Es necesario formar al menos una dupla antes de generar las rondas.",
 
   cancel: "Cancelar",
   save: "Guardar",
