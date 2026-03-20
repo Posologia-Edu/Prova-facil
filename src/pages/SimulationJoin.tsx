@@ -312,6 +312,29 @@ export default function SimulationJoin() {
   const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
   const [distributionGenerated, setDistributionGenerated] = useState(false);
   const [localRounds, setLocalRounds] = useState<any[]>([]);
+  const [showPairingMode, setShowPairingMode] = useState(false);
+
+  // Check if all existing rounds are still pending (never started)
+  const allRoundsPending = allRounds.length > 0 && allRounds.every((r: any) => r.status === "pending");
+  const hasStartedRounds = allRounds.some((r: any) => r.status === "active" || r.status === "completed");
+  // Professor should see pairing UI when no rounds exist OR when explicitly in pairing mode
+  const shouldShowPairingUI = isProfessor && !isActive && (allRounds.length === 0 || showPairingMode);
+
+  // Reset rounds - delete all pending rounds and assignments
+  const resetRounds = async () => {
+    if (!room) return;
+    const roundIds = allRounds.map((r: any) => r.id);
+    if (roundIds.length > 0) {
+      await supabase.from("simulation_round_assignments").delete().in("round_id", roundIds);
+      await supabase.from("simulation_rounds").delete().in("id", roundIds);
+    }
+    setAllRounds([]);
+    setAllAssignments([]);
+    setDistributionGenerated(false);
+    setLocalRounds([]);
+    setShowPairingMode(false);
+    toast({ title: "Rodadas resetadas" });
+  };
 
   // Get unpaired and paired students
   const unpairedStudents = allParticipants.filter((p: any) => p.participant_role === "student" && (p.pair_index === -1 || p.pair_position === "X"));
