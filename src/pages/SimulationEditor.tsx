@@ -497,9 +497,9 @@ export default function SimulationEditor() {
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <Input placeholder={t("sim_name_placeholder")} value={newName} onChange={(e) => setNewName(e.target.value)} />
-                  <Input placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-                  <Button onClick={() => addParticipant("professor")} disabled={!newName.trim()}>
+                  <Input placeholder={t("sim_name_placeholder")} value={profName} onChange={(e) => setProfName(e.target.value)} />
+                  <Input placeholder="Email" value={profEmail} onChange={(e) => setProfEmail(e.target.value)} />
+                  <Button onClick={() => addParticipant("professor")} disabled={!profName.trim()}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
