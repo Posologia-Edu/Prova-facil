@@ -361,6 +361,165 @@ export default function Simulations() {
             </div>
           )}
         </TabsContent>
+
+        {/* SOAP rooms */}
+        <TabsContent value="soap" className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => navigate("/simulations/soap")}>
+              <Plus className="h-4 w-4 mr-2" />Nova Sala SOAP
+            </Button>
+          </div>
+          {soapLoading ? (
+            <p className="text-muted-foreground">{t("loading")}</p>
+          ) : !soapRooms?.length ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala SOAP</h3>
+                <p className="text-muted-foreground mb-4">Crie uma sala SOAP a partir do módulo.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {soapRooms.map((room) => (
+                <Card key={room.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{room.title}</CardTitle>
+                        {room.description && <CardDescription>{room.description}</CardDescription>}
+                      </div>
+                      <Badge className={statusColor[room.status] || ""}>
+                        {statusLabel[room.status] || room.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                      <span className="font-mono text-xs">PIN: {room.access_code}</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/${room.id}/edit`)}>
+                        <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
+                      </Button>
+                      {room.status === "active" && (
+                        <Button size="sm" onClick={() => navigate(`/simulations/soap/${room.id}/control`)}>
+                          <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Reconciliation rooms */}
+        <TabsContent value="reconciliation" className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => navigate("/simulations/reconciliation")}>
+              <Plus className="h-4 w-4 mr-2" />Nova Sala de Reconciliação
+            </Button>
+          </div>
+          {reconciliationLoading ? (
+            <p className="text-muted-foreground">{t("loading")}</p>
+          ) : !reconciliationRooms?.length ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Handshake className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala de Reconciliação</h3>
+                <p className="text-muted-foreground mb-4">Crie uma sala de Reconciliação a partir do módulo.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {reconciliationRooms.map((room) => (
+                <Card key={room.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{room.title}</CardTitle>
+                        {room.description && <CardDescription>{room.description}</CardDescription>}
+                      </div>
+                      <Badge className={statusColor[room.status] || ""}>
+                        {statusLabel[room.status] || room.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                      <span className="font-mono text-xs">PIN: {room.access_code}</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/reconciliation/${room.id}/edit`)}>
+                        <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
+                      </Button>
+                      {room.status === "active" && (
+                        <Button size="sm" onClick={() => navigate(`/simulations/reconciliation/${room.id}/control`)}>
+                          <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Documentation rooms */}
+        <TabsContent value="documentation" className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => navigate("/simulations/documentation")}>
+              <Plus className="h-4 w-4 mr-2" />Nova Sala de Documentação
+            </Button>
+          </div>
+          {documentationLoading ? (
+            <p className="text-muted-foreground">{t("loading")}</p>
+          ) : !documentationRooms?.length ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala de Documentação</h3>
+                <p className="text-muted-foreground mb-4">Crie uma sala de Documentação a partir do módulo.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {documentationRooms.map((room) => (
+                <Card key={room.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{room.title}</CardTitle>
+                        {room.description && <CardDescription>{room.description}</CardDescription>}
+                      </div>
+                      <Badge className={statusColor[room.status] || ""}>
+                        {statusLabel[room.status] || room.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                      <span className="font-mono text-xs">PIN: {room.access_code}</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/documentation/${room.id}/edit`)}>
+                        <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
+                      </Button>
+                      {room.status === "active" && (
+                        <Button size="sm" onClick={() => navigate(`/simulations/documentation/${room.id}/control`)}>
+                          <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
 
       {splitRoomId && (
