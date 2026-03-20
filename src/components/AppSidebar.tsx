@@ -74,6 +74,7 @@ export function AppSidebar() {
     { title: t("sidebar_my_exams"), url: "/exams", icon: BookOpen },
     { title: "OSCE", url: "/osce", icon: Stethoscope },
     { title: t("sim_nav"), url: "/simulations", icon: HeartPulse },
+    { title: "SOAP", url: "/simulations/soap", icon: ClipboardList },
   ];
 
   const managementNav = [
