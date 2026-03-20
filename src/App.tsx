@@ -261,6 +261,8 @@ const App = () => (
             <Route path="/osce/student/:accessCode" element={<OsceStudentPortal />} />
             {/* Public Simulation route */}
             <Route path="/simulation/join" element={<SimulationJoin />} />
+            {/* Public SOAP route */}
+            <Route path="/simulation/soap/join" element={<SoapJoin />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
