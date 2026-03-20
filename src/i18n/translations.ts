@@ -461,6 +461,8 @@ type TranslationKeys = {
   sim_waiting_next_round: string;
   sim_submit: string;
   sim_no_script: string;
+  sim_view_anamnesis: string;
+  sim_all_rounds_completed: string;
   sim_import: string;
   sim_import_from: string;
   sim_import_select_room: string;
@@ -913,6 +915,8 @@ const pt: TranslationKeys = {
   sim_waiting_next_round: "Aguarde a próxima rodada.",
   sim_submit: "Enviar",
   sim_no_script: "Roteiro não configurado.",
+  sim_view_anamnesis: "Anamneses das rodadas concluídas",
+  sim_all_rounds_completed: "Todas as rodadas foram concluídas.",
   sim_import: "Importar",
   sim_import_from: "Importar de outra sala",
   sim_import_select_room: "Selecione a sala de origem",
@@ -1361,6 +1365,8 @@ const en: TranslationKeys = {
   sim_waiting_next_round: "Wait for the next round.",
   sim_submit: "Submit",
   sim_no_script: "Script not configured.",
+  sim_view_anamnesis: "Anamnesis from completed rounds",
+  sim_all_rounds_completed: "All rounds have been completed.",
   sim_import: "Import",
   sim_import_from: "Import from another room",
   sim_import_select_room: "Select source room",
@@ -1809,6 +1815,8 @@ const es: TranslationKeys = {
   sim_waiting_next_round: "Espere la próxima ronda.",
   sim_submit: "Enviar",
   sim_no_script: "Guion no configurado.",
+  sim_view_anamnesis: "Anamnesis de rondas completadas",
+  sim_all_rounds_completed: "Todas las rondas han sido completadas.",
   sim_import: "Importar",
   sim_import_from: "Importar de otra sala",
   sim_import_select_room: "Seleccione la sala de origen",
