@@ -312,6 +312,27 @@ export default function SimulationJoin() {
   const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
   const [distributionGenerated, setDistributionGenerated] = useState(false);
   const [localRounds, setLocalRounds] = useState<any[]>([]);
+  const [showPairingMode, setShowPairingMode] = useState(false);
+
+  // Check if all existing rounds are still pending (never started)
+  const allRoundsPending = allRounds.length > 0 && allRounds.every((r: any) => r.status === "pending");
+  const hasStartedRounds = allRounds.some((r: any) => r.status === "active" || r.status === "completed");
+
+  // Reset rounds - delete all pending rounds and assignments
+  const resetRounds = async () => {
+    if (!room) return;
+    const roundIds = allRounds.map((r: any) => r.id);
+    if (roundIds.length > 0) {
+      await supabase.from("simulation_round_assignments").delete().in("round_id", roundIds);
+      await supabase.from("simulation_rounds").delete().in("id", roundIds);
+    }
+    setAllRounds([]);
+    setAllAssignments([]);
+    setDistributionGenerated(false);
+    setLocalRounds([]);
+    setShowPairingMode(true);
+    toast({ title: "Rodadas resetadas" });
+  };
 
   // Get unpaired and paired students
   const unpairedStudents = allParticipants.filter((p: any) => p.participant_role === "student" && (p.pair_index === -1 || p.pair_position === "X"));
@@ -388,6 +409,12 @@ export default function SimulationJoin() {
     if (!room || localRounds.length === 0) return;
     setGeneratingRounds(true);
     try {
+      // Clear any existing rounds first
+      const existingRoundIds = allRounds.map((r: any) => r.id);
+      if (existingRoundIds.length > 0) {
+        await supabase.from("simulation_round_assignments").delete().in("round_id", existingRoundIds);
+        await supabase.from("simulation_rounds").delete().in("id", existingRoundIds);
+      }
       for (const round of localRounds) {
         const { data: roundData, error: roundError } = await supabase
           .from("simulation_rounds")
@@ -415,6 +442,9 @@ export default function SimulationJoin() {
         await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
       }
 
+      setShowPairingMode(false);
+      setDistributionGenerated(false);
+      setLocalRounds([]);
       toast({ title: t("sim_started") || "Rodadas geradas com sucesso!" });
     } catch (err) {
       toast({ title: "Erro", description: "Falha ao gerar rodadas.", variant: "destructive" });
@@ -542,6 +572,9 @@ export default function SimulationJoin() {
   // Check if student participates in active round
   const participatesInActiveRound = isActive && !!assignment;
 
+  // Professor should see pairing UI when no rounds exist or explicitly in pairing mode (after reset)
+  const shouldShowPairingUI = isProfessor && !isActive && (allRounds.length === 0 || showPairingMode);
+
   // Material release stage check
   const isMaterialStage = isActive && activeRound && !activeRound.started_at && activeRound.materials_released;
   // Actually, we need a different approach: materials_released=true but round status is still "pending" means material stage
@@ -580,8 +613,8 @@ export default function SimulationJoin() {
         </div>
       </div>
 
-      {/* Professor Controls */}
-      {isProfessor && (
+      {/* Professor Controls - only when rounds are confirmed and not in pairing mode */}
+      {isProfessor && !shouldShowPairingUI && allRounds.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("sim_round")} — {t("sim_professor")}</CardTitle>
@@ -615,6 +648,13 @@ export default function SimulationJoin() {
                 </Button>
               )}
             </div>
+
+            {/* Reset button when all rounds are still pending */}
+            {allRoundsPending && !isActive && (
+              <Button variant="outline" size="sm" onClick={resetRounds} className="w-full">
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />Redistribuir
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
@@ -736,8 +776,8 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Waiting state (professor, no rounds - need to form pairs and generate) */}
-      {!isActive && isProfessor && !nextPendingRound && allRounds.length === 0 && (
+      {/* Waiting state (professor, need to form pairs and generate) */}
+      {shouldShowPairingUI && !nextPendingRound && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{distributionGenerated ? t("sim_distribution_title") : t("sim_form_pairs")}</CardTitle>
