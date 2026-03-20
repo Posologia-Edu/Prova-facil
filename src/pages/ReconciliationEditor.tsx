@@ -124,7 +124,7 @@ export default function ReconciliationEditor() {
     return acc;
   }, {});
 
-  // Import students from SOAP room
+  // Import students from SOAP room (unpaired, admin forms pairs manually)
   const importFromSoap = async (soapRoomId: string) => {
     const { data: soapParticipants } = await supabase
       .from("soap_participants")
@@ -141,8 +141,8 @@ export default function ReconciliationEditor() {
       room_id: roomId!,
       student_name: sp.student_name,
       student_email: sp.student_email,
-      pair_index: sp.pair_index,
-      pair_position: sp.pair_position,
+      pair_index: -1,
+      pair_position: "X",
       soap_participant_id: sp.id,
       participant_role: "student" as const,
     }));
@@ -153,7 +153,7 @@ export default function ReconciliationEditor() {
       return;
     }
 
-    toast({ title: "Importado", description: `${inserts.length} alunos importados do SOAP.` });
+    toast({ title: "Importado", description: `${inserts.length} alunos importados do SOAP. Forme as duplas manualmente.` });
     refetchParticipants();
   };
 
