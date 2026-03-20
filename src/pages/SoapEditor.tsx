@@ -137,6 +137,7 @@ export default function SoapEditor() {
   const [importFormDialogOpen, setImportFormDialogOpen] = useState(false);
   const [selectedFormImportRoom, setSelectedFormImportRoom] = useState("");
   const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
 
   // Add participant
   const addParticipant = async () => {
