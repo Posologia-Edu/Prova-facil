@@ -649,6 +649,24 @@ export default function SimulationJoin() {
             {/* Show participants for current/next round */}
             {(activeRound || nextPendingRound) && renderRoundParticipants((activeRound || nextPendingRound).id)}
 
+            {/* Ready count when materials are released but round not started */}
+            {!isActive && cycleMaterialsReleased && (() => {
+              const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
+              const cycleParticipantIds = allAssignments
+                .filter((a: any) => cycleRoundIds.includes(a.round_id) && a.assigned_role !== "observer")
+                .map((a: any) => a.participant_id);
+              const uniqueIds = [...new Set(cycleParticipantIds)];
+              const readyCount = uniqueIds.filter(id => allParticipants.find((p: any) => p.id === id)?.status === "ready").length;
+              return (
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle className={`h-4 w-4 ${readyCount === uniqueIds.length ? "text-green-600" : "text-muted-foreground"}`} />
+                  <span className="text-muted-foreground">
+                    {readyCount}/{uniqueIds.length} alunos prontos
+                  </span>
+                </div>
+              );
+            })()}
+
             <div className="flex gap-2">
               {/* Material release stage - first round of cycle only */}
               {!isActive && nextPendingRound && needsMaterialRelease && (
