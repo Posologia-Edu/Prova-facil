@@ -1,65 +1,141 @@
 
-# Auditoria Completa: Planos, Travas e Stripe
 
-## 1. Configuracao no Stripe -- OK
+# Plano: Simulação Realística de Anamnese
 
-| Item | Status | Detalhe |
-|------|--------|---------|
-| Produto | OK | `prod_U1kTkTPojtC3x4` - "ExamCraft Premium" |
-| Preco | OK | `price_1T3gyOCtn5J7o2AoDHYVPrDq` - R$ 29,90/mes (BRL, recorrente mensal) |
-| Edge Function `create-checkout` | OK | Usa o price_id correto, modo subscription |
-| Edge Function `check-subscription` | OK | Verifica product_id correto, suporta convites admin |
-| Edge Function `cancel-subscription` | OK | Existe e e chamada na UI |
-| Frontend `use-subscription` | OK | Verifica `PREMIUM_PRODUCT_ID` correto, auto-refresh a cada 60s |
+## Visão Geral
 
-## 2. Funcionalidades listadas na pagina de Planos -- TRAVAS NAO IMPLEMENTADAS
+Nova funcionalidade na seção "Conteúdo" do sidebar, ao lado de OSCE. O admin cria salas de simulação com duplas de alunos e um professor. O sistema distribui automaticamente os papéis (Profissional Simulado, Paciente Simulado, Observador) em rodadas, com cronômetro e liberação pelo professor.
 
-A pagina de Pricing **exibe** corretamente as 8 funcionalidades comparativas, porem **nenhuma trava esta implementada no codigo**. O `useSubscription()` e `FREE_LIMITS` so sao usados na pagina de Pricing para exibicao. Nenhuma outra pagina ou componente importa ou verifica `isPremium` ou `FREE_LIMITS`.
+---
 
-### Detalhamento das travas ausentes:
+## Modelo de Dados (6 novas tabelas)
 
-| Funcionalidade | Gratuito | Premium | Trava implementada? |
-|----------------|----------|---------|---------------------|
-| Questoes com IA por mes | 5 | Ilimitado | **NAO** - `AIQuestionGenerator.tsx` nao verifica limite |
-| Provas por mes | 1 | Ilimitado | **NAO** - `ExamEditor.tsx` e `Exams.tsx` nao verificam |
-| Exportacao PDF | Bloqueado | Liberado | **NAO** - `ExamPDFExporter.tsx` nao verifica `isPremium` |
-| Provas online | Bloqueado | Liberado | **NAO** - `PublishExamDialog.tsx` nao verifica |
-| Alunos por prova | 10 | Ilimitado | **NAO** - nenhuma verificacao de limite |
-| Correcao por IA | Bloqueado | Liberado | **NAO** - `grade-exam` nao verifica plano |
-| Monitoramento em tempo real | Bloqueado | Liberado | **NAO** - `ExamMonitoring.tsx` nao verifica |
-| Suporte prioritario | Nao | Sim | N/A (nao e uma trava tecnica) |
+```text
+simulation_rooms
+├── id, user_id, title, description, status (draft/active/completed)
+├── duration_minutes, access_code (PIN), current_round, current_cycle (1 ou 2)
+├── created_at, updated_at
 
-## 3. Plano de Implementacao
+simulation_participants
+├── id, room_id, student_name, student_email
+├── pair_index (0,1,2...), pair_position (A ou B)
+├── current_role (professional/patient/observer/professor)
+├── status (waiting/active/completed)
 
-### Tarefa 1: Criar hook/utilitario de verificacao de limites
-- Adicionar funcao `checkUsageLimit` em `use-subscription.tsx` que consulta o banco para contar uso mensal (questoes geradas, provas criadas)
-- Exportar constantes `FREE_LIMITS` ja existentes para uso em todo o app
+simulation_forms
+├── id, room_id, form_type (anamnesis/observer_eval/professor_eval/patient_script)
+├── title, content_json (estrutura estilo Google Forms: seções, campos, pontuações)
+├── created_at
 
-### Tarefa 2: Bloquear Questoes com IA (limite 5/mes no gratuito)
-- Em `AIQuestionGenerator.tsx`: importar `useSubscription`, contar questoes geradas no mes atual via query na `question_bank`, bloquear se >= 5 e nao premium
-- Mostrar mensagem com link para upgrade
+simulation_rounds
+├── id, room_id, round_number, cycle (1 ou 2)
+├── status (pending/active/completed), started_at, finished_at
+├── released_by (professor user ref)
 
-### Tarefa 3: Bloquear criacao de provas (limite 1/mes no gratuito)
-- Em `Exams.tsx` / `ExamEditor.tsx`: verificar contagem de provas criadas no mes, bloquear se >= 1 e nao premium
+simulation_round_assignments
+├── id, round_id, participant_id, role (professional/patient/observer)
+├── pair_index (qual dupla está ativa nesta rodada)
 
-### Tarefa 4: Bloquear Exportacao PDF (so premium)
-- Em `ExamPDFExporter.tsx`: verificar `isPremium`, mostrar dialog de upgrade se gratuito
+simulation_responses
+├── id, round_id, participant_id, form_id
+├── answers_json, score, submitted_at
+```
 
-### Tarefa 5: Bloquear Provas Online (so premium)
-- Em `PublishExamDialog.tsx`: verificar `isPremium`, impedir publicacao se gratuito
+### Lógica de Distribuição Automática
 
-### Tarefa 6: Limitar alunos por prova (10 no gratuito)
-- Em `PublishExamDialog.tsx` ou no edge function `student-exam-access`: verificar contagem de sessoes ativas vs limite
+```text
+Exemplo: 6 alunos → 3 duplas (A1+A2, B1+B2, C1+C2)
 
-### Tarefa 7: Bloquear Correcao por IA (so premium)
-- No edge function `grade-exam` e na UI de monitoramento: verificar plano antes de permitir correcao automatica
+Ciclo 1 (3 rodadas):
+  Rodada 1: A1=profissional, A2=paciente, B1=observador
+  Rodada 2: B1=profissional, B2=paciente, C1=observador
+  Rodada 3: C1=profissional, C2=paciente, A1=observador
 
-### Tarefa 8: Bloquear Monitoramento em Tempo Real (so premium)
-- Em `ExamMonitoring.tsx`: verificar `isPremium`, redirecionar ou mostrar paywall se gratuito
+Ciclo 2 (3 rodadas) — inverte dentro da dupla:
+  Rodada 4: A2=profissional, A1=paciente, B2=observador
+  Rodada 5: B2=profissional, B1=paciente, C2=observador
+  Rodada 6: C2=profissional, C1=paciente, A2=observador
+```
 
-## Resumo
+O observador é sempre um aluno de outra dupla, selecionado por rotação circular.
 
-- **Stripe**: Produto, preco e funcoes de checkout/verificacao estao **corretos e funcionais**
-- **Exibicao dos planos**: A pagina de Pricing exibe todas as funcionalidades corretamente
-- **Travas de plano**: **NENHUMA das 7 travas tecnicas esta implementada** - qualquer usuario gratuito pode usar todas as funcionalidades sem restricao
-- **Acao necessaria**: Implementar as verificacoes de `isPremium` e contagem de uso em cada componente/funcao relevante
+---
+
+## Páginas e Componentes
+
+### 1. Lista de Simulações (`/simulations`)
+- Card list das salas criadas (similar a OsceExams)
+- Botão "Nova Simulação" → dialog de criação (título, descrição, duração)
+
+### 2. Editor da Sala (`/simulations/:roomId/edit`)
+- **Aba Participantes**: cadastro de alunos em duplas (nome + email) + professor (nome + email). Importação de turma existente.
+- **Aba Formulários**: 4 sub-abas para criar cada formulário no estilo Google Forms:
+  - Anamnese (profissional): campos de texto, radio, checkbox, textarea
+  - Roteiro do Paciente: editor de texto rico
+  - Avaliação do Observador: campos com pontuação atribuível
+  - Avaliação + Feedback do Professor: campos com pontuação + campo de feedback
+- **Aba Configurações**: duração da rodada, gerar PIN
+
+### 3. Painel de Controle Admin (`/simulations/:roomId/control`)
+- Visão geral de todas as rodadas e ciclos
+- Status de cada dupla (quem é quem)
+- Cronômetro da rodada ativa (reutiliza `OsceTimer`)
+- Progresso de preenchimento dos formulários em tempo real
+- Notas/pontuações consolidadas por aluno
+
+### 4. Portal do Participante (`/simulation/join`)
+- Entrada via PIN + email (sem necessidade de conta, similar ao portal do aluno OSCE)
+- Após entrar, exibe a interface do papel atribuído:
+  - **Profissional**: formulário de anamnese (desabilitado até professor liberar)
+  - **Paciente**: roteiro do caso clínico (read-only)
+  - **Observador**: formulário de avaliação (desabilitado até professor liberar)
+  - **Professor**: formulário de avaliação + feedback + botão "Liberar Rodada" + botão "Encerrar Rodada"
+- Cronômetro visível para todos
+- Formulários habilitam apenas após liberação pelo professor
+
+---
+
+## Etapas de Implementação
+
+### Etapa 1 — Banco de Dados
+- Criar as 6 tabelas com migração SQL
+- Adicionar RLS policies (owner-based para admin, open select para participantes via access_code)
+- Habilitar Realtime nas tabelas `simulation_rounds` e `simulation_responses`
+
+### Etapa 2 — CRUD de Salas e Formulários
+- Página de listagem `/simulations`
+- Editor de sala com abas (participantes, formulários, configurações)
+- Builder de formulários dinâmicos (Google Forms-like) com pontuação por item
+- Adicionar rota no sidebar na seção "Conteúdo"
+
+### Etapa 3 — Motor de Distribuição
+- Função TypeScript que calcula os assignments de todas as rodadas com base nas duplas
+- Gera `simulation_rounds` e `simulation_round_assignments` ao iniciar a sala
+- Lógica de ciclo 1 (posição A = profissional) e ciclo 2 (posição B = profissional)
+
+### Etapa 4 — Portal do Participante
+- Página de login via PIN + email
+- Renderização condicional por papel (profissional/paciente/observador/professor)
+- Formulários desabilitados por padrão, habilitados quando `round.status = 'active'`
+- Professor: botões de controle (liberar/encerrar rodada)
+- Cronômetro sincronizado via `started_at` da rodada
+
+### Etapa 5 — Painel de Controle Admin
+- Dashboard com cards por rodada mostrando duplas e papéis
+- Progresso de preenchimento em tempo real (polling ou Realtime)
+- Consolidação de notas por aluno
+
+### Etapa 6 — Traduções e Sidebar
+- Adicionar todas as strings em PT/EN/ES no `translations.ts`
+- Adicionar item "Simulação Realística" no `contentNav` do sidebar
+- Atualizar rotas no `App.tsx`
+
+---
+
+## Seção Técnica
+
+- **Reutilização**: `OsceTimer` para cronômetros, padrões de query/mutation do OSCE, portal de acesso via PIN
+- **RLS**: Admin (owner) tem ALL; participantes (anon) têm SELECT via access_code e INSERT/UPDATE nas responses
+- **Realtime**: `simulation_rounds` e `simulation_responses` adicionadas à publicação Realtime
+- **Formulários dinâmicos**: `content_json` armazena array de seções com campos tipados (text, radio, checkbox, textarea, scale) com `max_score` por campo
+
