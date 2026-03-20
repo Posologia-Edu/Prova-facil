@@ -461,6 +461,8 @@ type TranslationKeys = {
   sim_waiting_next_round: string;
   sim_submit: string;
   sim_no_script: string;
+  sim_view_anamnesis: string;
+  sim_all_rounds_completed: string;
   sim_import: string;
   sim_import_from: string;
   sim_import_select_room: string;
