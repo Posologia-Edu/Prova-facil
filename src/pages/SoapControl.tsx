@@ -444,6 +444,9 @@ export default function SoapControl() {
                   <CardTitle className="text-base">
                     Avaliar: {selectedResponse ? getParticipantName(selectedResponse.participant_id) : "Selecione uma resposta"}
                   </CardTitle>
+                  {selectedResponse && (patientNames as Record<string, string>)[selectedResponse.participant_id] && (
+                    <p className="text-sm text-muted-foreground">Paciente simulado: <strong>{(patientNames as Record<string, string>)[selectedResponse.participant_id]}</strong></p>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {selectedResponse ? (
