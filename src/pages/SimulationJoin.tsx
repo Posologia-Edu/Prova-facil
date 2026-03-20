@@ -105,6 +105,7 @@ export default function SimulationJoin() {
     setParticipant(matchedParticipant);
     setForms(formsData || []);
     setAllParticipants(participantsData || []);
+    setMaterialsReady(matchedParticipant.status === "ready");
     setJoined(true);
   };
 
