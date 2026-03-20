@@ -481,8 +481,19 @@ type TranslationKeys = {
   sim_import_success: string;
   sim_import_nothing: string;
   sim_no_other_rooms: string;
+  sim_score_total: string;
+  sim_score_warning_low: string;
+  sim_score_warning_high: string;
+  sim_score_valid: string;
+  sim_tab_analytics: string;
+  sim_analytics_no_data: string;
+  sim_analytics_student: string;
+  sim_analytics_role: string;
+  sim_analytics_score: string;
+  sim_analytics_avg: string;
+  sim_analytics_responses: string;
 
-  // Empty states
+
   empty_questions_hint: string;
 
   // Common
@@ -945,6 +956,17 @@ const pt: TranslationKeys = {
   sim_import_success: "Importação realizada com sucesso!",
   sim_import_nothing: "Selecione ao menos um item para importar.",
   sim_no_other_rooms: "Não há outras salas de simulação disponíveis.",
+  sim_score_total: "Nota total (Professor + Observador)",
+  sim_score_warning_low: "A soma das notas é inferior a 10. Ajuste as pontuações.",
+  sim_score_warning_high: "A soma das notas é superior a 10. Ajuste as pontuações.",
+  sim_score_valid: "Nota total: 10 ✓",
+  sim_tab_analytics: "Resultados",
+  sim_analytics_no_data: "Nenhuma resposta encontrada ainda.",
+  sim_analytics_student: "Aluno",
+  sim_analytics_role: "Papel",
+  sim_analytics_score: "Nota",
+  sim_analytics_avg: "Média",
+  sim_analytics_responses: "Respostas enviadas",
 
   cancel: "Cancelar",
   save: "Salvar",
@@ -1405,6 +1427,17 @@ const en: TranslationKeys = {
   sim_import_success: "Import completed successfully!",
   sim_import_nothing: "Select at least one item to import.",
   sim_no_other_rooms: "No other simulation rooms available.",
+  sim_score_total: "Total score (Professor + Observer)",
+  sim_score_warning_low: "The total score is less than 10. Adjust the scores.",
+  sim_score_warning_high: "The total score is greater than 10. Adjust the scores.",
+  sim_score_valid: "Total score: 10 ✓",
+  sim_tab_analytics: "Results",
+  sim_analytics_no_data: "No responses found yet.",
+  sim_analytics_student: "Student",
+  sim_analytics_role: "Role",
+  sim_analytics_score: "Score",
+  sim_analytics_avg: "Average",
+  sim_analytics_responses: "Submitted responses",
 
   cancel: "Cancel",
   save: "Save",
@@ -1865,6 +1898,17 @@ const es: TranslationKeys = {
   sim_import_success: "¡Importación realizada con éxito!",
   sim_import_nothing: "Seleccione al menos un elemento para importar.",
   sim_no_other_rooms: "No hay otras salas de simulación disponibles.",
+  sim_score_total: "Nota total (Profesor + Observador)",
+  sim_score_warning_low: "La suma de las notas es inferior a 10. Ajuste las puntuaciones.",
+  sim_score_warning_high: "La suma de las notas es superior a 10. Ajuste las puntuaciones.",
+  sim_score_valid: "Nota total: 10 ✓",
+  sim_tab_analytics: "Resultados",
+  sim_analytics_no_data: "No se encontraron respuestas aún.",
+  sim_analytics_student: "Alumno",
+  sim_analytics_role: "Rol",
+  sim_analytics_score: "Nota",
+  sim_analytics_avg: "Promedio",
+  sim_analytics_responses: "Respuestas enviadas",
 
   cancel: "Cancelar",
   save: "Guardar",
