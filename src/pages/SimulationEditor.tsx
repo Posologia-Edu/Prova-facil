@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download, AlertTriangle, CheckCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateRounds } from "@/lib/simulation-distribution";
@@ -50,7 +50,6 @@ export default function SimulationEditor() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Fetch room
   const { data: room, isLoading: roomLoading } = useQuery({
     queryKey: ["simulation-room", roomId],
     queryFn: async () => {
@@ -61,7 +60,6 @@ export default function SimulationEditor() {
     enabled: !!roomId,
   });
 
-  // Fetch participants
   const { data: participants = [], refetch: refetchParticipants } = useQuery({
     queryKey: ["simulation-participants", roomId],
     queryFn: async () => {
@@ -77,7 +75,6 @@ export default function SimulationEditor() {
     enabled: !!roomId,
   });
 
-  // Fetch forms
   const { data: forms = [], refetch: refetchForms } = useQuery({
     queryKey: ["simulation-forms", roomId],
     queryFn: async () => {
@@ -92,11 +89,9 @@ export default function SimulationEditor() {
     enabled: !!roomId,
   });
 
-  // State for adding participants
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
 
-  // Get pairs
   const pairs = participants.reduce((acc: Record<number, any[]>, p: any) => {
     if (!acc[p.pair_index]) acc[p.pair_index] = [];
     acc[p.pair_index].push(p);
@@ -133,7 +128,6 @@ export default function SimulationEditor() {
     refetchParticipants();
   };
 
-  // Forms management
   const formTypes = [
     { value: "anamnesis", label: t("sim_form_anamnesis") },
     { value: "patient_script", label: t("sim_form_patient_script") },
@@ -163,10 +157,48 @@ export default function SimulationEditor() {
     }
   }, [activeForm, activeFormType]);
 
+  // Calculate total scores for professor and observer forms
+  const scoreValidation = useMemo(() => {
+    const profForm = forms.find((f: any) => f.form_type === "professor_eval");
+    const obsForm = forms.find((f: any) => f.form_type === "observer_eval");
+
+    let profTotal = 0;
+    let obsTotal = 0;
+
+    if (profForm && Array.isArray(profForm.content_json)) {
+      (profForm.content_json as FormField[]).forEach(f => { profTotal += (f.max_score || 0); });
+    }
+    if (obsForm && Array.isArray(obsForm.content_json)) {
+      (obsForm.content_json as FormField[]).forEach(f => { obsTotal += (f.max_score || 0); });
+    }
+
+    // If currently editing one of these forms, use the local formFields
+    if (activeFormType === "professor_eval") {
+      profTotal = formFields.reduce((sum, f) => sum + (f.max_score || 0), 0);
+    } else if (activeFormType === "observer_eval") {
+      obsTotal = formFields.reduce((sum, f) => sum + (f.max_score || 0), 0);
+    }
+
+    const total = profTotal + obsTotal;
+    return { profTotal, obsTotal, total };
+  }, [forms, formFields, activeFormType]);
+
   const saveForm = async () => {
     const contentJson = activeFormType === "patient_script"
       ? [{ id: "script", label: patientScript, type: "textarea" as const }]
       : formFields;
+
+    // Validate score if saving professor or observer eval
+    if (activeFormType === "professor_eval" || activeFormType === "observer_eval") {
+      if (scoreValidation.total !== 10 && scoreValidation.total > 0) {
+        toast({
+          title: t("sim_score_total"),
+          description: scoreValidation.total < 10 ? t("sim_score_warning_low") : t("sim_score_warning_high"),
+          variant: "destructive",
+        });
+        // Still allow saving but warn
+      }
+    }
 
     if (activeForm) {
       await supabase.from("simulation_forms").update({
@@ -205,7 +237,6 @@ export default function SimulationEditor() {
     setFormFields(formFields.filter((_, i) => i !== index));
   };
 
-  // Room settings
   const [roomTitle, setRoomTitle] = useState("");
   const [roomDesc, setRoomDesc] = useState("");
   const [roomDuration, setRoomDuration] = useState(10);
@@ -321,11 +352,19 @@ export default function SimulationEditor() {
       return;
     }
 
-    // Generate rounds
+    // Validate scores before starting
+    if (scoreValidation.total !== 10 && scoreValidation.total > 0) {
+      toast({
+        title: t("sim_score_total"),
+        description: scoreValidation.total < 10 ? t("sim_score_warning_low") : t("sim_score_warning_high"),
+        variant: "destructive",
+      });
+      return;
+    }
+
     const pairsList = Object.values(pairs).filter(p => p[0]?.participant_role === "student");
     const rounds = generateRounds(pairsList as any[]);
 
-    // Insert rounds and assignments
     for (const round of rounds) {
       const { data: roundData, error: roundError } = await supabase
         .from("simulation_rounds")
@@ -348,7 +387,6 @@ export default function SimulationEditor() {
       await supabase.from("simulation_round_assignments").insert(assignments);
     }
 
-    // Activate room
     await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", roomId!);
     queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
     toast({ title: t("sim_started") });
@@ -357,6 +395,8 @@ export default function SimulationEditor() {
 
   if (roomLoading) return <p className="p-6 text-muted-foreground">{t("loading")}</p>;
   if (!room) return <p className="p-6 text-destructive">Sala não encontrada</p>;
+
+  const isEvalForm = activeFormType === "observer_eval" || activeFormType === "professor_eval";
 
   return (
     <div className="space-y-6">
@@ -431,7 +471,6 @@ export default function SimulationEditor() {
 
         {/* Participants Tab */}
         <TabsContent value="participants" className="space-y-6">
-          {/* Professor */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t("sim_professor")}</CardTitle>
@@ -459,7 +498,6 @@ export default function SimulationEditor() {
             </CardContent>
           </Card>
 
-          {/* Student Pairs */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t("sim_pairs")}</CardTitle>
@@ -514,6 +552,38 @@ export default function SimulationEditor() {
             ))}
           </div>
 
+          {/* Score validation banner */}
+          {isEvalForm && (
+            <Card className={`border-2 ${scoreValidation.total === 10 ? "border-green-500/50" : scoreValidation.total === 0 ? "border-muted" : "border-destructive/50"}`}>
+              <CardContent className="py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {scoreValidation.total === 10 ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : scoreValidation.total > 0 ? (
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                    ) : null}
+                    <span className="text-sm font-medium">{t("sim_score_total")}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-muted-foreground">{t("sim_form_professor_eval")}: <strong>{scoreValidation.profTotal}</strong></span>
+                    <span className="text-muted-foreground">+</span>
+                    <span className="text-muted-foreground">{t("sim_form_observer_eval")}: <strong>{scoreValidation.obsTotal}</strong></span>
+                    <span className="text-muted-foreground">=</span>
+                    <span className={`font-bold ${scoreValidation.total === 10 ? "text-green-600" : scoreValidation.total > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                      {scoreValidation.total}/10
+                    </span>
+                  </div>
+                </div>
+                {scoreValidation.total > 0 && scoreValidation.total !== 10 && (
+                  <p className="text-xs text-destructive mt-1">
+                    {scoreValidation.total < 10 ? t("sim_score_warning_low") : t("sim_score_warning_high")}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
@@ -560,7 +630,7 @@ export default function SimulationEditor() {
                             <SelectItem value="scale">Escala</SelectItem>
                           </SelectContent>
                         </Select>
-                        {(activeFormType === "observer_eval" || activeFormType === "professor_eval") && (
+                        {isEvalForm && (
                           <div className="flex items-center gap-1">
                             <Label className="text-xs whitespace-nowrap">{t("sim_max_score")}</Label>
                             <Input
@@ -569,6 +639,7 @@ export default function SimulationEditor() {
                               onChange={(e) => updateField(i, { max_score: Number(e.target.value) })}
                               className="w-16"
                               min={0}
+                              step={0.5}
                             />
                           </div>
                         )}
