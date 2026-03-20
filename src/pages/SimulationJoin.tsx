@@ -651,17 +651,14 @@ export default function SimulationJoin() {
 
             {/* Ready count when materials are released but round not started */}
             {!isActive && cycleMaterialsReleased && (() => {
-              const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
-              const cycleParticipantIds = allAssignments
-                .filter((a: any) => cycleRoundIds.includes(a.round_id) && a.assigned_role !== "observer")
-                .map((a: any) => a.participant_id);
-              const uniqueIds = [...new Set(cycleParticipantIds)];
-              const readyCount = uniqueIds.filter(id => allParticipants.find((p: any) => p.id === id)?.status === "ready").length;
+              // All students (not professors) should have materials
+              const students = allParticipants.filter((p: any) => p.participant_role === "student");
+              const readyCount = students.filter((p: any) => p.status === "ready").length;
               return (
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className={`h-4 w-4 ${readyCount === uniqueIds.length ? "text-green-600" : "text-muted-foreground"}`} />
+                  <CheckCircle className={`h-4 w-4 ${readyCount === students.length ? "text-green-600" : "text-muted-foreground"}`} />
                   <span className="text-muted-foreground">
-                    {readyCount}/{uniqueIds.length} alunos prontos
+                    {readyCount}/{students.length} alunos prontos
                   </span>
                 </div>
               );
