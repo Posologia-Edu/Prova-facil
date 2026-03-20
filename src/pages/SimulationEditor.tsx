@@ -490,15 +490,33 @@ export default function SimulationEditor() {
             </CardHeader>
             <CardContent>
               {professor ? (
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <div>
-                    <p className="font-medium">{(professor as any).student_name}</p>
-                    <p className="text-sm text-muted-foreground">{(professor as any).student_email}</p>
+                editingId === (professor as any).id ? (
+                  <div className="flex gap-2 items-center p-3 bg-muted rounded-lg">
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="flex-1" />
+                    <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email" className="flex-1" />
+                    <Button variant="ghost" size="sm" onClick={() => saveEdit((professor as any).id)}>
+                      <Check className="h-4 w-4 text-green-600" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => removeParticipant((professor as any).id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div>
+                      <p className="font-medium">{(professor as any).student_name}</p>
+                      <p className="text-sm text-muted-foreground">{(professor as any).student_email}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => startEditing(professor)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => removeParticipant((professor as any).id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )
               ) : (
                 <div className="flex gap-2">
                   <Input placeholder={t("sim_name_placeholder")} value={profName} onChange={(e) => setProfName(e.target.value)} />
