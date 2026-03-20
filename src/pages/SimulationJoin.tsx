@@ -105,6 +105,7 @@ export default function SimulationJoin() {
     setParticipant(matchedParticipant);
     setForms(formsData || []);
     setAllParticipants(participantsData || []);
+    setMaterialsReady(matchedParticipant.status === "ready");
     setJoined(true);
   };
 
@@ -308,12 +309,14 @@ export default function SimulationJoin() {
     toast({ title: t("sim_round_ended") });
   };
 
-  // Student: mark materials as studied
-  const markMaterialsReady = () => {
-    if (participant) {
-      setMaterialsReady(true);
-      // Store locally - in a real scenario this could be saved to DB
-    }
+  // Student: mark materials as studied — persist to DB so professor can see
+  const markMaterialsReady = async () => {
+    if (!participant) return;
+    setMaterialsReady(true);
+    await supabase
+      .from("simulation_participants")
+      .update({ status: "ready" })
+      .eq("id", participant.id);
   };
 
   const [generatingRounds, setGeneratingRounds] = useState(false);
@@ -517,7 +520,7 @@ export default function SimulationJoin() {
     );
   };
 
-  // Render participant list for a round
+  // Render participant list for a round (with ready status for professor)
   const renderRoundParticipants = (roundId: string) => {
     const roundAssignments = getAssignmentsForRound(roundId);
     if (roundAssignments.length === 0) return null;
@@ -528,6 +531,8 @@ export default function SimulationJoin() {
         <div className="space-y-1">
           {roundAssignments.map((a: any) => {
             const Icon = roleIcons[a.assigned_role] || Users;
+            const participantData = allParticipants.find((p: any) => p.id === a.participant_id);
+            const isReady = participantData?.status === "ready";
             return (
               <div key={a.id} className="flex items-center gap-2 text-sm">
                 <Icon className="h-4 w-4 text-muted-foreground" />
@@ -535,6 +540,13 @@ export default function SimulationJoin() {
                 <Badge variant="outline" className={`text-xs ${roleBadgeColors[a.assigned_role] || ""}`}>
                   {roleLabels[a.assigned_role] || a.assigned_role}
                 </Badge>
+                {isProfessor && cycleMaterialsReleased && !isActive && (
+                  isReady ? (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Clock className="h-4 w-4 text-muted-foreground/50" />
+                  )
+                )}
               </div>
             );
           })}
@@ -636,6 +648,24 @@ export default function SimulationJoin() {
 
             {/* Show participants for current/next round */}
             {(activeRound || nextPendingRound) && renderRoundParticipants((activeRound || nextPendingRound).id)}
+
+            {/* Ready count when materials are released but round not started */}
+            {!isActive && cycleMaterialsReleased && (() => {
+              const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
+              const cycleParticipantIds = allAssignments
+                .filter((a: any) => cycleRoundIds.includes(a.round_id) && a.assigned_role !== "observer")
+                .map((a: any) => a.participant_id);
+              const uniqueIds = [...new Set(cycleParticipantIds)];
+              const readyCount = uniqueIds.filter(id => allParticipants.find((p: any) => p.id === id)?.status === "ready").length;
+              return (
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle className={`h-4 w-4 ${readyCount === uniqueIds.length ? "text-green-600" : "text-muted-foreground"}`} />
+                  <span className="text-muted-foreground">
+                    {readyCount}/{uniqueIds.length} alunos prontos
+                  </span>
+                </div>
+              );
+            })()}
 
             <div className="flex gap-2">
               {/* Material release stage - first round of cycle only */}
