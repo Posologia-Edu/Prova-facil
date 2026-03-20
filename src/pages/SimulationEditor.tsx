@@ -369,31 +369,7 @@ export default function SimulationEditor() {
       return;
     }
 
-    const pairsList = Object.values(pairs).filter(p => p[0]?.participant_role === "student");
-    const rounds = generateRounds(pairsList as any[]);
-
-    for (const round of rounds) {
-      const { data: roundData, error: roundError } = await supabase
-        .from("simulation_rounds")
-        .insert({
-          room_id: roomId!,
-          round_number: round.roundNumber,
-          cycle: round.cycle,
-          status: "pending",
-        })
-        .select()
-        .single();
-      if (roundError) continue;
-
-      const assignments = round.assignments.map((a: any) => ({
-        round_id: roundData.id,
-        participant_id: a.participantId,
-        assigned_role: a.role,
-        pair_index: a.pairIndex,
-      }));
-      await supabase.from("simulation_round_assignments").insert(assignments);
-    }
-
+    // Just activate the room - professor will form pairs and generate rounds in the room
     await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", roomId!);
     queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
     toast({ title: t("sim_started") });
