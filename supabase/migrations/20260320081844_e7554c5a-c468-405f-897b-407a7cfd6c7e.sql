@@ -1,0 +1,1 @@
+ALTER TABLE public.simulation_rounds ADD COLUMN IF NOT EXISTS materials_released boolean NOT NULL DEFAULT false;

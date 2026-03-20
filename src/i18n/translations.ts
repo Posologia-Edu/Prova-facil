@@ -463,6 +463,16 @@ type TranslationKeys = {
   sim_no_script: string;
   sim_view_anamnesis: string;
   sim_all_rounds_completed: string;
+  sim_release_materials: string;
+  sim_materials_released: string;
+  sim_materials_waiting: string;
+  sim_materials_ready: string;
+  sim_start_simulation: string;
+  sim_feedback_label: string;
+  sim_feedback_placeholder: string;
+  sim_must_submit_first: string;
+  sim_waiting_your_round: string;
+  sim_participants_in_round: string;
   sim_import: string;
   sim_import_from: string;
   sim_import_select_room: string;
@@ -664,7 +674,7 @@ const pt: TranslationKeys = {
   auth_error_signup: "Erro ao cadastrar",
   auth_signup_success_title: "Cadastro realizado!",
   auth_signup_success_desc: "Verifique seu e-mail para confirmar a conta. Após confirmação, seu acesso será analisado pelo administrador.",
-  auth_student: "Sou Aluno",
+  auth_student: "Acessar Avaliação",
 
   landing_enter: "Entrar",
   landing_create_free: "Criar conta grátis",
@@ -839,13 +849,13 @@ const pt: TranslationKeys = {
   protected_back_dashboard: "Voltar ao Painel",
 
   student_portal_title: "Portal de Avaliação",
-  student_portal_desc: "Digite seu e-mail cadastrado pelo professor e o PIN da avaliação",
+  student_portal_desc: "Digite seu e-mail cadastrado pelo administrador e o PIN da avaliação",
   student_email_label: "E-mail cadastrado",
   student_email_placeholder: "seu.email@universidade.br",
-  student_pin_label: "PIN da prova",
+  student_pin_label: "PIN da avaliação",
   student_pin_placeholder: "Ex: abc123",
-  student_access_btn: "Acessar Prova",
-  student_help_text: "Seu professor deve ter cadastrado seu e-mail na turma. Caso não consiga acessar, entre em contato com ele.",
+  student_access_btn: "Acessar Avaliação",
+  student_help_text: "O administrador deve ter cadastrado seu e-mail na turma. Caso não consiga acessar, entre em contato com ele.",
   student_back_home: "Voltar ao início",
   student_access_denied: "Acesso negado",
   student_unknown_error: "Erro desconhecido.",
@@ -917,6 +927,16 @@ const pt: TranslationKeys = {
   sim_no_script: "Roteiro não configurado.",
   sim_view_anamnesis: "Anamneses das rodadas concluídas",
   sim_all_rounds_completed: "Todas as rodadas foram concluídas.",
+  sim_release_materials: "Liberar Materiais",
+  sim_materials_released: "Materiais liberados!",
+  sim_materials_waiting: "Aguardando liberação dos materiais de estudo...",
+  sim_materials_ready: "Já estudei o material",
+  sim_start_simulation: "Iniciar Simulação",
+  sim_feedback_label: "Feedback para o aluno",
+  sim_feedback_placeholder: "Escreva aqui o feedback para o aluno avaliado...",
+  sim_must_submit_first: "Você precisa enviar a avaliação antes de encerrar a rodada.",
+  sim_waiting_your_round: "Você não participa desta rodada. Aguarde a próxima.",
+  sim_participants_in_round: "Participantes desta rodada",
   sim_import: "Importar",
   sim_import_from: "Importar de outra sala",
   sim_import_select_room: "Selecione a sala de origem",
@@ -1114,7 +1134,7 @@ const en: TranslationKeys = {
   auth_error_signup: "Signup error",
   auth_signup_success_title: "Registration complete!",
   auth_signup_success_desc: "Check your email to confirm your account. After confirmation, your access will be reviewed by an admin.",
-  auth_student: "I'm a Student",
+  auth_student: "Access Assessment",
 
   landing_enter: "Sign In",
   landing_create_free: "Create free account",
@@ -1289,13 +1309,13 @@ const en: TranslationKeys = {
   protected_back_dashboard: "Back to Dashboard",
 
   student_portal_title: "Assessment Portal",
-  student_portal_desc: "Enter your email registered by the teacher and the assessment PIN",
+  student_portal_desc: "Enter your email registered by the administrator and the assessment PIN",
   student_email_label: "Registered email",
   student_email_placeholder: "your.email@university.edu",
-  student_pin_label: "Exam PIN",
+  student_pin_label: "Assessment PIN",
   student_pin_placeholder: "e.g.: abc123",
-  student_access_btn: "Access Exam",
-  student_help_text: "Your teacher must have registered your email in the class. If you can't access, contact them.",
+  student_access_btn: "Access Assessment",
+  student_help_text: "The administrator must have registered your email in the class. If you can't access, contact them.",
   student_back_home: "Back to home",
   student_access_denied: "Access denied",
   student_unknown_error: "Unknown error.",
@@ -1367,6 +1387,16 @@ const en: TranslationKeys = {
   sim_no_script: "Script not configured.",
   sim_view_anamnesis: "Anamnesis from completed rounds",
   sim_all_rounds_completed: "All rounds have been completed.",
+  sim_release_materials: "Release Materials",
+  sim_materials_released: "Materials released!",
+  sim_materials_waiting: "Waiting for study materials to be released...",
+  sim_materials_ready: "I've studied the material",
+  sim_start_simulation: "Start Simulation",
+  sim_feedback_label: "Feedback for the student",
+  sim_feedback_placeholder: "Write feedback for the evaluated student here...",
+  sim_must_submit_first: "You need to submit the evaluation before ending the round.",
+  sim_waiting_your_round: "You are not participating in this round. Wait for the next one.",
+  sim_participants_in_round: "Participants in this round",
   sim_import: "Import",
   sim_import_from: "Import from another room",
   sim_import_select_room: "Select source room",
@@ -1564,7 +1594,7 @@ const es: TranslationKeys = {
   auth_error_signup: "Error al registrarse",
   auth_signup_success_title: "¡Registro completado!",
   auth_signup_success_desc: "Revise su correo para confirmar la cuenta. Después de la confirmación, su acceso será analizado por el administrador.",
-  auth_student: "Soy Alumno",
+  auth_student: "Acceder a Evaluación",
 
   landing_enter: "Iniciar sesión",
   landing_create_free: "Crear cuenta gratis",
@@ -1739,13 +1769,13 @@ const es: TranslationKeys = {
   protected_back_dashboard: "Volver al Panel",
 
   student_portal_title: "Portal de Evaluación",
-  student_portal_desc: "Ingrese su correo registrado por el profesor y el PIN de la evaluación",
+  student_portal_desc: "Ingrese su correo registrado por el administrador y el PIN de la evaluación",
   student_email_label: "Correo registrado",
   student_email_placeholder: "su.correo@universidad.edu",
-  student_pin_label: "PIN del examen",
+  student_pin_label: "PIN de la evaluación",
   student_pin_placeholder: "Ej: abc123",
-  student_access_btn: "Acceder al Examen",
-  student_help_text: "Su profesor debe haber registrado su correo en la clase. Si no puede acceder, contáctelo.",
+  student_access_btn: "Acceder a la Evaluación",
+  student_help_text: "El administrador debe haber registrado su correo en la clase. Si no puede acceder, contáctelo.",
   student_back_home: "Volver al inicio",
   student_access_denied: "Acceso denegado",
   student_unknown_error: "Error desconocido.",
@@ -1817,6 +1847,16 @@ const es: TranslationKeys = {
   sim_no_script: "Guion no configurado.",
   sim_view_anamnesis: "Anamnesis de rondas completadas",
   sim_all_rounds_completed: "Todas las rondas han sido completadas.",
+  sim_release_materials: "Liberar Materiales",
+  sim_materials_released: "¡Materiales liberados!",
+  sim_materials_waiting: "Esperando la liberación de los materiales de estudio...",
+  sim_materials_ready: "Ya estudié el material",
+  sim_start_simulation: "Iniciar Simulación",
+  sim_feedback_label: "Feedback para el alumno",
+  sim_feedback_placeholder: "Escriba aquí el feedback para el alumno evaluado...",
+  sim_must_submit_first: "Debe enviar la evaluación antes de finalizar la ronda.",
+  sim_waiting_your_round: "No participa en esta ronda. Espere la próxima.",
+  sim_participants_in_round: "Participantes de esta ronda",
   sim_import: "Importar",
   sim_import_from: "Importar de otra sala",
   sim_import_select_room: "Seleccione la sala de origen",

@@ -1343,6 +1343,7 @@ export type Database = {
           cycle: number
           finished_at: string | null
           id: string
+          materials_released: boolean
           released_by: string | null
           room_id: string
           round_number: number
@@ -1354,6 +1355,7 @@ export type Database = {
           cycle?: number
           finished_at?: string | null
           id?: string
+          materials_released?: boolean
           released_by?: string | null
           room_id: string
           round_number?: number
@@ -1365,6 +1367,7 @@ export type Database = {
           cycle?: number
           finished_at?: string | null
           id?: string
+          materials_released?: boolean
           released_by?: string | null
           room_id?: string
           round_number?: number
