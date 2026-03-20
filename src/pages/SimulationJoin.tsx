@@ -572,8 +572,8 @@ export default function SimulationJoin() {
   // Check if student participates in active round
   const participatesInActiveRound = isActive && !!assignment;
 
-  // Professor should see pairing UI when no rounds exist, all rounds pending, or explicitly in pairing mode
-  const shouldShowPairingUI = isProfessor && !isActive && (allRounds.length === 0 || (allRoundsPending && !showPairingMode) || showPairingMode);
+  // Professor should see pairing UI when no rounds exist or explicitly in pairing mode (after reset)
+  const shouldShowPairingUI = isProfessor && !isActive && (allRounds.length === 0 || showPairingMode);
 
   // Material release stage check
   const isMaterialStage = isActive && activeRound && !activeRound.started_at && activeRound.materials_released;
