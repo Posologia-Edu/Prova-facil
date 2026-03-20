@@ -17,7 +17,6 @@ import {
   Trash2,
   Store,
   HeartPulse,
-  ClipboardList,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
