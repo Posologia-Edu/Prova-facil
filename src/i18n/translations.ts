@@ -463,6 +463,16 @@ type TranslationKeys = {
   sim_no_script: string;
   sim_view_anamnesis: string;
   sim_all_rounds_completed: string;
+  sim_release_materials: string;
+  sim_materials_released: string;
+  sim_materials_waiting: string;
+  sim_materials_ready: string;
+  sim_start_simulation: string;
+  sim_feedback_label: string;
+  sim_feedback_placeholder: string;
+  sim_must_submit_first: string;
+  sim_waiting_your_round: string;
+  sim_participants_in_round: string;
   sim_import: string;
   sim_import_from: string;
   sim_import_select_room: string;
