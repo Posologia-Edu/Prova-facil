@@ -93,6 +93,9 @@ export default function SimulationEditor() {
   const [newEmail, setNewEmail] = useState("");
   const [profName, setProfName] = useState("");
   const [profEmail, setProfEmail] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
 
   const professor = participants.find((p: any) => p.participant_role === "professor");
   const students = participants.filter((p: any) => p.participant_role === "student");
