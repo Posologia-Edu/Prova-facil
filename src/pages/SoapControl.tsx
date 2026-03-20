@@ -141,7 +141,7 @@ export default function SoapControl() {
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{room.title} — Controle</h1>
-          <p className="text-muted-foreground text-sm">PIN: {room.access_code} • {participants.length} alunos</p>
+          <p className="text-muted-foreground text-sm">PIN: {room.access_code} • {studentsOnly.length} alunos</p>
         </div>
         {room.status === "active" && (
           <Button variant="outline" onClick={completeRoom}>
