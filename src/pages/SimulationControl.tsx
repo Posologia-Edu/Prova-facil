@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,8 +6,11 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Square, Users, Clock, CheckCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function SimulationControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -38,6 +41,19 @@ export default function SimulationControl() {
     },
     enabled: !!roomId,
     refetchInterval: 5000,
+  });
+
+  const { data: participants = [] } = useQuery({
+    queryKey: ["simulation-participants", roomId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("simulation_participants")
+        .select("*")
+        .eq("room_id", roomId!);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!roomId,
   });
 
   const { data: assignments = [] } = useQuery({
@@ -72,8 +88,20 @@ export default function SimulationControl() {
     refetchInterval: 5000,
   });
 
+  const { data: forms = [] } = useQuery({
+    queryKey: ["simulation-forms", roomId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("simulation_forms")
+        .select("*")
+        .eq("room_id", roomId!);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!roomId,
+  });
+
   const activeRound = rounds.find((r: any) => r.status === "active");
-  const nextPending = rounds.find((r: any) => r.status === "pending");
 
   // Timer
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -91,24 +119,6 @@ export default function SimulationControl() {
     return () => clearInterval(interval);
   }, [activeRound, room]);
 
-  const releaseRound = async (roundId: string) => {
-    await supabase.from("simulation_rounds").update({
-      status: "active",
-      started_at: new Date().toISOString(),
-    }).eq("id", roundId);
-    queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
-    toast({ title: t("sim_round_released") });
-  };
-
-  const endRound = async (roundId: string) => {
-    await supabase.from("simulation_rounds").update({
-      status: "completed",
-      finished_at: new Date().toISOString(),
-    }).eq("id", roundId);
-    queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
-    toast({ title: t("sim_round_ended") });
-  };
-
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -119,12 +129,103 @@ export default function SimulationControl() {
     professional: t("sim_role_professional"),
     patient: t("sim_role_patient"),
     observer: t("sim_role_observer"),
+    professor: t("sim_professor"),
   };
 
   const roleColors: Record<string, string> = {
     professional: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
     patient: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     observer: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  };
+
+  // Analytics computations
+  const getParticipantName = (id: string) => participants.find((p: any) => p.id === id)?.student_name || id;
+
+  const analyticsData = useMemo(() => {
+    const completedRounds = rounds.filter((r: any) => r.status === "completed");
+    const profForm = forms.find((f: any) => f.form_type === "professor_eval");
+    const obsForm = forms.find((f: any) => f.form_type === "observer_eval");
+    const anamnesisForm = forms.find((f: any) => f.form_type === "anamnesis");
+
+    // Group responses by round
+    const roundAnalytics = completedRounds.map((round: any) => {
+      const roundAssigns = assignments.filter((a: any) => a.round_id === round.id);
+      const roundResponses = responses.filter((r: any) => r.round_id === round.id);
+
+      // Get the professional for this round
+      const professionalAssign = roundAssigns.find((a: any) => a.assigned_role === "professional");
+      const patientAssign = roundAssigns.find((a: any) => a.assigned_role === "patient");
+      const observerAssign = roundAssigns.find((a: any) => a.assigned_role === "observer");
+
+      // Find professor and observer scores
+      const profResponse = roundResponses.find((r: any) => r.form_id === profForm?.id);
+      const obsResponse = roundResponses.find((r: any) => r.form_id === obsForm?.id);
+      const anamnesisResponse = roundResponses.find((r: any) => r.form_id === anamnesisForm?.id);
+
+      const profScore = profResponse?.score || 0;
+      const obsScore = obsResponse?.score || 0;
+      const totalScore = profScore + obsScore;
+
+      return {
+        round,
+        professionalName: professionalAssign ? getParticipantName(professionalAssign.participant_id) : "—",
+        patientName: patientAssign ? getParticipantName(patientAssign.participant_id) : "—",
+        observerName: observerAssign ? getParticipantName(observerAssign.participant_id) : "—",
+        profScore,
+        obsScore,
+        totalScore,
+        profFeedback: profResponse?.answers_json?._feedback || null,
+        obsFeedback: obsResponse?.answers_json?._feedback || null,
+        anamnesisResponse,
+        profResponse,
+        obsResponse,
+        responseCount: roundResponses.filter((r: any) => r.submitted_at).length,
+      };
+    });
+
+    // Per-student summary
+    const studentMap: Record<string, { name: string; scores: number[]; roundCount: number }> = {};
+    roundAnalytics.forEach((ra) => {
+      if (ra.professionalName !== "—") {
+        if (!studentMap[ra.professionalName]) studentMap[ra.professionalName] = { name: ra.professionalName, scores: [], roundCount: 0 };
+        studentMap[ra.professionalName].scores.push(ra.totalScore);
+        studentMap[ra.professionalName].roundCount++;
+      }
+    });
+
+    const studentSummaries = Object.values(studentMap).map(s => ({
+      ...s,
+      avg: s.scores.length > 0 ? (s.scores.reduce((a, b) => a + b, 0) / s.scores.length).toFixed(1) : "—",
+    }));
+
+    return { roundAnalytics, studentSummaries };
+  }, [rounds, responses, assignments, forms, participants]);
+
+  const renderFormResponseReadOnly = (response: any, form: any) => {
+    if (!response || !form) return null;
+    const fields = Array.isArray(form.content_json) ? form.content_json : [];
+    const answersData = response.answers_json || {};
+
+    return (
+      <div className="space-y-2">
+        {fields.map((field: any) => (
+          <div key={field.id} className="space-y-1">
+            <p className="text-xs font-medium text-foreground">{field.label}</p>
+            <p className="text-xs text-muted-foreground bg-muted p-1.5 rounded">
+              {Array.isArray(answersData[field.id])
+                ? answersData[field.id].join(", ")
+                : answersData[field.id] || "—"}
+            </p>
+          </div>
+        ))}
+        {answersData._feedback && (
+          <div className="space-y-1 border-t pt-2">
+            <p className="text-xs font-medium text-foreground">{t("sim_feedback_label")}</p>
+            <p className="text-xs text-muted-foreground bg-muted p-1.5 rounded">{answersData._feedback}</p>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -151,50 +252,185 @@ export default function SimulationControl() {
         {t("sim_control_admin_hint") || "A liberação das rodadas é realizada pelo professor na sala virtual."}
       </p>
 
-      {/* Rounds (read-only monitoring) */}
-      <div className="grid gap-4">
-        {rounds.map((round: any) => {
-          const roundAssignments = assignments.filter((a: any) => a.round_id === round.id);
-          const roundResponses = responses.filter((r: any) => r.round_id === round.id);
-          const isActive = round.status === "active";
-          const isCompleted = round.status === "completed";
-          const isPending = round.status === "pending";
+      <Tabs defaultValue="monitoring">
+        <TabsList>
+          <TabsTrigger value="monitoring"><Users className="h-4 w-4 mr-1" />{t("sim_round")}</TabsTrigger>
+          <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1" />{t("sim_tab_analytics")}</TabsTrigger>
+        </TabsList>
 
-          return (
-            <Card key={round.id} className={isActive ? "ring-2 ring-primary" : ""}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    {t("sim_round")} {round.round_number} — {t("sim_cycle")} {round.cycle}
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    {isCompleted && <Badge variant="secondary"><CheckCircle className="h-3 w-3 mr-1" />{t("sim_status_completed")}</Badge>}
-                    {isActive && <Badge className="bg-green-600">{t("sim_status_active")}</Badge>}
-                    {isPending && <Badge variant="outline">{t("sim_status_pending")}</Badge>}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-3">
-                  {roundAssignments.map((a: any) => (
-                    <div key={a.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                      <Badge className={roleColors[a.assigned_role] || ""}>
-                        {roleLabels[a.assigned_role] || a.assigned_role}
-                      </Badge>
-                      <span className="text-sm font-medium">
-                        {a.simulation_participants?.student_name || "—"}
-                      </span>
-                      {roundResponses.some((r: any) => r.participant_id === a.participant_id && r.submitted_at) && (
-                        <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                      )}
+        {/* Monitoring Tab */}
+        <TabsContent value="monitoring" className="space-y-4">
+          {rounds.map((round: any) => {
+            const roundAssignments = assignments.filter((a: any) => a.round_id === round.id);
+            const roundResponses = responses.filter((r: any) => r.round_id === round.id);
+            const isActive = round.status === "active";
+            const isCompleted = round.status === "completed";
+            const isPending = round.status === "pending";
+
+            return (
+              <Card key={round.id} className={isActive ? "ring-2 ring-primary" : ""}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">
+                      {t("sim_round")} {round.round_number} — {t("sim_cycle")} {round.cycle}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      {isCompleted && <Badge variant="secondary"><CheckCircle className="h-3 w-3 mr-1" />{t("sim_status_completed")}</Badge>}
+                      {isActive && <Badge className="bg-green-600">{t("sim_status_active")}</Badge>}
+                      {isPending && <Badge variant="outline">{t("sim_status_pending")}</Badge>}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-3">
+                    {roundAssignments.map((a: any) => (
+                      <div key={a.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                        <Badge className={roleColors[a.assigned_role] || ""}>
+                          {roleLabels[a.assigned_role] || a.assigned_role}
+                        </Badge>
+                        <span className="text-sm font-medium">
+                          {a.simulation_participants?.student_name || "—"}
+                        </span>
+                        {roundResponses.some((r: any) => r.participant_id === a.participant_id && r.submitted_at) && (
+                          <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-6">
+          {/* Student Summary */}
+          {analyticsData.studentSummaries.length > 0 ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">{t("sim_analytics_avg")} — {t("sim_analytics_student")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("sim_analytics_student")}</TableHead>
+                        <TableHead className="text-center">{t("sim_round")}</TableHead>
+                        <TableHead className="text-center">{t("sim_analytics_avg")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {analyticsData.studentSummaries.map((s) => (
+                        <TableRow key={s.name}>
+                          <TableCell className="font-medium">{s.name}</TableCell>
+                          <TableCell className="text-center">{s.roundCount}</TableCell>
+                          <TableCell className="text-center font-bold">{s.avg}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Detailed per-round */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">{t("sim_analytics_responses")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Accordion type="single" collapsible className="w-full">
+                    {analyticsData.roundAnalytics.map((ra) => (
+                      <AccordionItem key={ra.round.id} value={ra.round.id}>
+                        <AccordionTrigger className="text-sm">
+                          <div className="flex items-center gap-3">
+                            <span>{t("sim_round")} {ra.round.round_number} — {t("sim_cycle")} {ra.round.cycle}</span>
+                            <Badge variant="outline" className="text-xs">
+                              <Stethoscope className="h-3 w-3 mr-1" />{ra.professionalName}
+                            </Badge>
+                            <span className="font-bold">{ra.totalScore.toFixed(1)}/10</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="space-y-4">
+                          {/* Participants */}
+                          <div className="grid grid-cols-3 gap-2 text-sm">
+                            <div className="flex items-center gap-1">
+                              <Stethoscope className="h-4 w-4 text-blue-600" />
+                              <span>{ra.professionalName}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Users className="h-4 w-4 text-green-600" />
+                              <span>{ra.patientName}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-4 w-4 text-yellow-600" />
+                              <span>{ra.observerName}</span>
+                            </div>
+                          </div>
+
+                          {/* Scores */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <Card className="p-3">
+                              <p className="text-xs text-muted-foreground">{t("sim_form_professor_eval")}</p>
+                              <p className="text-lg font-bold">{ra.profScore.toFixed(1)}</p>
+                            </Card>
+                            <Card className="p-3">
+                              <p className="text-xs text-muted-foreground">{t("sim_form_observer_eval")}</p>
+                              <p className="text-lg font-bold">{ra.obsScore.toFixed(1)}</p>
+                            </Card>
+                            <Card className="p-3">
+                              <p className="text-xs text-muted-foreground">Total</p>
+                              <p className="text-lg font-bold text-primary">{ra.totalScore.toFixed(1)}/10</p>
+                            </Card>
+                          </div>
+
+                          {/* Anamnesis response */}
+                          {ra.anamnesisResponse && (
+                            <div className="border rounded-lg p-3">
+                              <p className="text-sm font-medium mb-2 flex items-center gap-1">
+                                <FileText className="h-4 w-4" /> {t("sim_form_anamnesis")}
+                              </p>
+                              {renderFormResponseReadOnly(ra.anamnesisResponse, forms.find((f: any) => f.form_type === "anamnesis"))}
+                            </div>
+                          )}
+
+                          {/* Professor evaluation */}
+                          {ra.profResponse && (
+                            <div className="border rounded-lg p-3">
+                              <p className="text-sm font-medium mb-2 flex items-center gap-1">
+                                <GraduationCap className="h-4 w-4" /> {t("sim_form_professor_eval")}
+                              </p>
+                              {renderFormResponseReadOnly(ra.profResponse, forms.find((f: any) => f.form_type === "professor_eval"))}
+                            </div>
+                          )}
+
+                          {/* Observer evaluation */}
+                          {ra.obsResponse && (
+                            <div className="border rounded-lg p-3">
+                              <p className="text-sm font-medium mb-2 flex items-center gap-1">
+                                <Eye className="h-4 w-4" /> {t("sim_form_observer_eval")}
+                              </p>
+                              {renderFormResponseReadOnly(ra.obsResponse, forms.find((f: any) => f.form_type === "observer_eval"))}
+                            </div>
+                          )}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <BarChart3 className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">{t("sim_analytics_no_data")}</p>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
