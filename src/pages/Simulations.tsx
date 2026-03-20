@@ -209,13 +209,6 @@ export default function Simulations() {
               </Card>
             ))}
 
-            {/* Placeholder for future modules */}
-            <Card className="border-dashed border-2 opacity-50">
-              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-                <Plus className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">Novos módulos em breve</p>
-              </CardContent>
-            </Card>
 
           </div>
         </TabsContent>

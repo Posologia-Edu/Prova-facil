@@ -299,6 +299,8 @@ const App = () => (
             <Route path="/simulation/soap/join" element={<SoapJoin />} />
             {/* Public Reconciliation route */}
             <Route path="/simulation/reconciliation/join" element={<ReconciliationJoin />} />
+            {/* Public Documentation route */}
+            <Route path="/simulation/documentation/join" element={<DocumentationJoin />} />
             {/* Reconciliation routes */}
             <Route
               path="/simulations/reconciliation"
@@ -321,6 +323,39 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><ReconciliationControl /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Documentation routes */}
+            <Route
+              path="/simulations/documentation"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><DocumentationRooms /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simulations/documentation/editor/:roomId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><DocumentationEditor /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simulations/documentation/control/:roomId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><DocumentationControl /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simulations/aggregator"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><SimulationAggregator /></AppLayout>
                 </ProtectedRoute>
               }
             />
