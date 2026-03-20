@@ -273,7 +273,7 @@ export default function SoapControl() {
                 <div className="space-y-2">
                   {Object.entries(r.answers_json as Record<string, any>).map(([key, val]) => (
                     <div key={key} className="p-2 bg-muted/50 rounded text-sm">
-                      <span className="text-muted-foreground">{key}: </span>
+                      <span className="text-muted-foreground">{resolveLabel(key)}: </span>
                       <span>{typeof val === "object" ? JSON.stringify(val) : String(val)}</span>
                     </div>
                   ))}
