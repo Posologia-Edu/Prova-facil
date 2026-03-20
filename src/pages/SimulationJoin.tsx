@@ -296,6 +296,8 @@ export default function SimulationJoin() {
 
   const [generatingRounds, setGeneratingRounds] = useState(false);
   const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
+  const [distributionGenerated, setDistributionGenerated] = useState(false);
+  const [localRounds, setLocalRounds] = useState<any[]>([]);
 
   // Get unpaired and paired students
   const unpairedStudents = allParticipants.filter((p: any) => p.participant_role === "student" && (p.pair_index === -1 || p.pair_position === "X"));
@@ -307,6 +309,20 @@ export default function SimulationJoin() {
   });
   const formedPairs = Object.entries(pairsMap).filter(([_, ps]) => ps.length === 2);
   const nextPairIdx = formedPairs.length > 0 ? Math.max(...formedPairs.map(([idx]) => Number(idx))) + 1 : 0;
+
+  // Get clinical cases from patient_script form
+  const patientScriptForm = forms.find((f: any) => f.form_type === "patient_script");
+  const clinicalCases: { id: string; title: string; script: string }[] = (() => {
+    if (!patientScriptForm) return [];
+    const content = patientScriptForm.content_json as any;
+    if (Array.isArray(content) && content.length > 0 && content[0]?.cases) {
+      return content[0].cases;
+    }
+    if (Array.isArray(content) && content.length > 0 && content[0]?.label) {
+      return [{ id: "legacy", title: "Caso 1", script: content[0].label }];
+    }
+    return [];
+  })();
 
   const toggleStudentForPairing = (id: string) => {
     setSelectedForPairing((prev) => {
@@ -322,7 +338,6 @@ export default function SimulationJoin() {
     await supabase.from("simulation_participants").update({ pair_index: nextPairIdx, pair_position: "A" }).eq("id", a);
     await supabase.from("simulation_participants").update({ pair_index: nextPairIdx, pair_position: "B" }).eq("id", b);
     setSelectedForPairing([]);
-    // Refresh participants
     const { data } = await supabase.from("simulation_participants").select("*").eq("room_id", room.id);
     setAllParticipants(data || []);
     toast({ title: t("sim_pair_formed") });
@@ -336,24 +351,30 @@ export default function SimulationJoin() {
     }
     const { data } = await supabase.from("simulation_participants").select("*").eq("room_id", room.id);
     setAllParticipants(data || []);
+    setDistributionGenerated(false);
+    setLocalRounds([]);
     toast({ title: t("sim_clear_pairs") });
   };
 
-  const generateRoundsForRoom = async () => {
-    if (!room || !allParticipants.length) return;
-
+  // Generate distribution preview (local only, not saved yet)
+  const generateDistributionPreview = () => {
     if (formedPairs.length === 0) {
       toast({ title: t("sim_need_pairs"), variant: "destructive" });
       return;
     }
+    const pairsList = formedPairs.map(([_, ps]) => ps);
+    const numCases = clinicalCases.length;
+    const rounds = generateRounds(pairsList, numCases > 0 ? numCases : undefined);
+    setLocalRounds(rounds);
+    setDistributionGenerated(true);
+  };
 
+  // Save rounds to DB
+  const generateRoundsForRoom = async () => {
+    if (!room || localRounds.length === 0) return;
     setGeneratingRounds(true);
     try {
-      const pairsList = formedPairs.map(([_, ps]) => ps);
-
-      const rounds = generateRounds(pairsList);
-
-      for (const round of rounds) {
+      for (const round of localRounds) {
         const { data: roundData, error: roundError } = await supabase
           .from("simulation_rounds")
           .insert({
@@ -371,6 +392,7 @@ export default function SimulationJoin() {
           participant_id: a.participantId,
           assigned_role: a.role,
           pair_index: a.pairIndex,
+          case_index: a.caseIndex ?? null,
         }));
         await supabase.from("simulation_round_assignments").insert(assignments);
       }
@@ -594,40 +616,100 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Material study phase for students */}
+      {/* Material study phase for students - role-specific */}
       {!isActive && !isProfessor && nextPendingRound?.materials_released && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              {t("sim_release_materials")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Show all forms for study */}
-            {forms.map((form: any) => {
-              const fields = form.content_json as FormField[];
-              return (
-                <div key={form.id} className="border rounded-lg p-3 space-y-2">
-                  <p className="text-sm font-medium">{form.title || form.form_type}</p>
-                  {fields.map((field) => (
-                    <p key={field.id} className="text-sm text-muted-foreground">• {field.label}</p>
-                  ))}
-                </div>
-              );
-            })}
-            {!materialsReady ? (
-              <Button onClick={markMaterialsReady} className="w-full">
-                <CheckCircle className="h-4 w-4 mr-1" />{t("sim_materials_ready")}
-              </Button>
-            ) : (
-              <div className="flex flex-col items-center py-4">
-                <CheckCircle className="h-8 w-8 text-primary mb-2" />
-                <p className="text-sm text-muted-foreground">{t("sim_waiting_professor")}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        (() => {
+          // Determine student's role in the next pending round
+          const nextRoundAssigns = allAssignments.filter((a: any) => a.round_id === nextPendingRound.id);
+          const myAssign = nextRoundAssigns.find((a: any) => a.participant_id === participant?.id);
+          const myRole = myAssign?.assigned_role;
+
+          // Professionals see anamnesis form
+          if (myRole === "professional") {
+            const anamnesisForm = forms.find((f: any) => f.form_type === "anamnesis");
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    {t("sim_release_materials")} — {roleLabels.professional}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {anamnesisForm ? (
+                    <div className="border rounded-lg p-3 space-y-2">
+                      <p className="text-sm font-medium">{anamnesisForm.title || t("sim_form_anamnesis")}</p>
+                      {Array.isArray(anamnesisForm.content_json) && (anamnesisForm.content_json as FormField[]).map((field) => (
+                        <p key={field.id} className="text-sm text-muted-foreground">• {field.label}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t("sim_no_script")}</p>
+                  )}
+                  {!materialsReady ? (
+                    <Button onClick={markMaterialsReady} className="w-full">
+                      <CheckCircle className="h-4 w-4 mr-1" />{t("sim_materials_ready")}
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col items-center py-4">
+                      <CheckCircle className="h-8 w-8 text-primary mb-2" />
+                      <p className="text-sm text-muted-foreground">{t("sim_waiting_professor")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          }
+
+          // Patients see their assigned clinical case
+          if (myRole === "patient") {
+            const caseIdx = myAssign?.case_index ?? 0;
+            const assignedCase = clinicalCases[caseIdx];
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    {t("sim_release_materials")} — {roleLabels.patient}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {assignedCase ? (
+                    <div className="border rounded-lg p-4 space-y-2">
+                      <p className="text-sm font-semibold">{assignedCase.title}</p>
+                      <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap text-sm">
+                        {assignedCase.script}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t("sim_no_cases")}</p>
+                  )}
+                  {!materialsReady ? (
+                    <Button onClick={markMaterialsReady} className="w-full">
+                      <CheckCircle className="h-4 w-4 mr-1" />{t("sim_materials_ready")}
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col items-center py-4">
+                      <CheckCircle className="h-8 w-8 text-primary mb-2" />
+                      <p className="text-sm text-muted-foreground">{t("sim_waiting_professor")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          }
+
+          // Observers wait - they only get their form when simulation starts
+          return (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Clock className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
+                <h3 className="text-lg font-medium">{t("sim_waiting_professor")}</h3>
+                <p className="text-sm text-muted-foreground">{t("sim_waiting_desc")}</p>
+              </CardContent>
+            </Card>
+          );
+        })()
       )}
 
       {/* Student not participating in active round */}
@@ -644,72 +726,118 @@ export default function SimulationJoin() {
       {!isActive && isProfessor && !nextPendingRound && allRounds.length === 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("sim_form_pairs")}</CardTitle>
+            <CardTitle className="text-base">{distributionGenerated ? t("sim_distribution_title") : t("sim_form_pairs")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Formed pairs */}
-            {formedPairs.length > 0 && (
-              <div className="space-y-2">
-                {formedPairs.map(([idx, ps]) => (
-                  <div key={idx} className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">{t("sim_pair")} {Number(idx) + 1}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{ps[0]?.student_name}</span>
-                      <span className="text-xs text-muted-foreground">&</span>
-                      <span className="text-sm font-medium">{ps[1]?.student_name}</span>
-                    </div>
+            {!distributionGenerated ? (
+              <>
+                {/* Formed pairs */}
+                {formedPairs.length > 0 && (
+                  <div className="space-y-2">
+                    {formedPairs.map(([idx, ps]) => (
+                      <div key={idx} className="p-3 bg-muted rounded-lg">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">{t("sim_pair")} {Number(idx) + 1}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{ps[0]?.student_name}</span>
+                          <span className="text-xs text-muted-foreground">&</span>
+                          <span className="text-sm font-medium">{ps[1]?.student_name}</span>
+                        </div>
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" onClick={clearAllPairs}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />{t("sim_clear_pairs")}
+                    </Button>
                   </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={clearAllPairs}>
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />{t("sim_clear_pairs")}
-                </Button>
-              </div>
-            )}
-
-            {/* Unpaired students */}
-            {unpairedStudents.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  {t("sim_unpaired_students")} ({unpairedStudents.length}) — {t("sim_select_pair")}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {unpairedStudents.map((s: any) => {
-                    const isSelected = selectedForPairing.includes(s.id);
-                    return (
-                      <button
-                        key={s.id}
-                        onClick={() => toggleStudentForPairing(s.id)}
-                        className={`p-2 rounded-lg border text-left text-sm transition-colors ${
-                          isSelected
-                            ? "border-primary bg-primary/10 ring-2 ring-primary"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <span className="font-medium">{s.student_name}</span>
-                        {s.student_email && <p className="text-xs text-muted-foreground">{s.student_email}</p>}
-                      </button>
-                    );
-                  })}
-                </div>
-                {selectedForPairing.length === 2 && (
-                  <Button onClick={formPair} className="w-full" size="sm">
-                    <Users className="h-4 w-4 mr-1" />{t("sim_form_pairs")}
-                  </Button>
                 )}
-              </div>
-            )}
 
-            {unpairedStudents.length === 0 && formedPairs.length === 0 && (
-              <p className="text-sm text-muted-foreground">{t("sim_need_students")}</p>
-            )}
+                {/* Unpaired students */}
+                {unpairedStudents.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {t("sim_unpaired_students")} ({unpairedStudents.length}) — {t("sim_select_pair")}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {unpairedStudents.map((s: any) => {
+                        const isSelected = selectedForPairing.includes(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => toggleStudentForPairing(s.id)}
+                            className={`p-2 rounded-lg border text-left text-sm transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary/10 ring-2 ring-primary"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <span className="font-medium">{s.student_name}</span>
+                            {s.student_email && <p className="text-xs text-muted-foreground">{s.student_email}</p>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedForPairing.length === 2 && (
+                      <Button onClick={formPair} className="w-full" size="sm">
+                        <Users className="h-4 w-4 mr-1" />{t("sim_form_pairs")}
+                      </Button>
+                    )}
+                  </div>
+                )}
 
-            {/* Generate rounds button */}
-            <div className="border-t pt-4">
-              <Button onClick={generateRoundsForRoom} disabled={generatingRounds || formedPairs.length === 0} className="w-full">
-                {generatingRounds ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
-                {"Gerar Rodadas"}
-              </Button>
-            </div>
+                {unpairedStudents.length === 0 && formedPairs.length === 0 && (
+                  <p className="text-sm text-muted-foreground">{t("sim_need_students")}</p>
+                )}
+
+                {/* Distribute button */}
+                <div className="border-t pt-4">
+                  <Button onClick={generateDistributionPreview} disabled={formedPairs.length === 0} className="w-full">
+                    <Play className="h-4 w-4 mr-1" />
+                    {t("sim_distribute")}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Distribution preview - like the image */}
+                <p className="text-xs text-muted-foreground">{t("sim_material_rule_hint")}</p>
+                <div className="space-y-3">
+                  {localRounds.map((round) => (
+                    <div key={round.roundNumber} className="p-4 border rounded-lg space-y-2">
+                      <p className="text-sm font-semibold">
+                        {t("sim_round")} {round.roundNumber} — {t("sim_cycle")} {round.cycle}
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        {round.assignments.map((a: any) => {
+                          const pName = allParticipants.find((p: any) => p.id === a.participantId)?.student_name || "—";
+                          return (
+                            <div key={a.participantId} className="flex items-center gap-2">
+                              <Badge className={roleBadgeColors[a.role] || ""}>
+                                {roleLabels[a.role] || a.role}
+                              </Badge>
+                              <span className="text-sm font-medium">{pName}</span>
+                              {a.role === "patient" && clinicalCases.length > 0 && a.caseIndex != null && (
+                                <span className="text-xs text-muted-foreground">
+                                  ({clinicalCases[a.caseIndex]?.title || `Caso ${a.caseIndex + 1}`})
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 border-t pt-4">
+                  <Button variant="outline" onClick={() => { setDistributionGenerated(false); setLocalRounds([]); }} className="flex-1">
+                    {t("pricing_back")}
+                  </Button>
+                  <Button onClick={generateRoundsForRoom} disabled={generatingRounds} className="flex-1">
+                    {generatingRounds ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                    {t("confirm")}
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
@@ -857,7 +985,20 @@ export default function SimulationJoin() {
           <CardContent className="space-y-4">
             {assignment?.assigned_role === "patient" ? (
               <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
-                {(form.content_json as any)?.[0]?.label || t("sim_no_script")}
+                {(() => {
+                  const caseIdx = assignment?.case_index ?? 0;
+                  const assignedCase = clinicalCases[caseIdx];
+                  if (assignedCase) {
+                    return (
+                      <div>
+                        <p className="font-semibold mb-2">{assignedCase.title}</p>
+                        <div>{assignedCase.script}</div>
+                      </div>
+                    );
+                  }
+                  // Fallback to old format
+                  return (form.content_json as any)?.[0]?.label || t("sim_no_script");
+                })()}
               </div>
             ) : (
               <>

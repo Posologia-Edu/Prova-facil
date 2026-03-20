@@ -500,6 +500,15 @@ type TranslationKeys = {
   sim_pair_formed: string;
   sim_clear_pairs: string;
   sim_need_pairs: string;
+  sim_add_case: string;
+  sim_case_number: string;
+  sim_remove_case: string;
+  sim_distribute: string;
+  sim_distribution_title: string;
+  sim_material_rule_hint: string;
+  sim_assigned_case: string;
+  sim_no_cases: string;
+  sim_control_admin_hint: string;
 
   empty_questions_hint: string;
 
@@ -982,6 +991,15 @@ const pt: TranslationKeys = {
   sim_pair_formed: "Dupla formada!",
   sim_clear_pairs: "Desfazer Duplas",
   sim_need_pairs: "É necessário formar pelo menos uma dupla antes de gerar as rodadas.",
+  sim_add_case: "Adicionar Caso Clínico",
+  sim_case_number: "Caso Clínico",
+  sim_remove_case: "Remover caso",
+  sim_distribute: "Distribuir Rodadas",
+  sim_distribution_title: "Distribuição das Rodadas",
+  sim_material_rule_hint: "Ao liberar materiais: profissionais recebem o formulário de anamnese, pacientes recebem o roteiro do caso clínico. Observadores recebem o formulário somente ao iniciar a simulação.",
+  sim_assigned_case: "Caso atribuído",
+  sim_no_cases: "Nenhum caso clínico cadastrado. Cadastre os casos no editor da simulação.",
+  sim_control_admin_hint: "A liberação das rodadas é realizada pelo professor na sala virtual.",
 
   cancel: "Cancelar",
   save: "Salvar",
@@ -1461,6 +1479,15 @@ const en: TranslationKeys = {
   sim_pair_formed: "Pair formed!",
   sim_clear_pairs: "Clear Pairs",
   sim_need_pairs: "You must form at least one pair before generating rounds.",
+  sim_add_case: "Add Clinical Case",
+  sim_case_number: "Clinical Case",
+  sim_remove_case: "Remove case",
+  sim_distribute: "Distribute Rounds",
+  sim_distribution_title: "Round Distribution",
+  sim_material_rule_hint: "When materials are released: professionals receive the anamnesis form, patients receive the clinical case script. Observers receive the form only when the simulation starts.",
+  sim_assigned_case: "Assigned case",
+  sim_no_cases: "No clinical cases registered. Register cases in the simulation editor.",
+  sim_control_admin_hint: "Round management is handled by the professor in the virtual room.",
 
   cancel: "Cancel",
   save: "Save",
@@ -1940,6 +1967,15 @@ const es: TranslationKeys = {
   sim_pair_formed: "¡Dupla formada!",
   sim_clear_pairs: "Deshacer Duplas",
   sim_need_pairs: "Es necesario formar al menos una dupla antes de generar las rondas.",
+  sim_add_case: "Agregar Caso Clínico",
+  sim_case_number: "Caso Clínico",
+  sim_remove_case: "Eliminar caso",
+  sim_distribute: "Distribuir Rondas",
+  sim_distribution_title: "Distribución de Rondas",
+  sim_material_rule_hint: "Al liberar materiales: profesionales reciben el formulario de anamnesis, pacientes reciben el guion del caso clínico. Observadores reciben el formulario solo al iniciar la simulación.",
+  sim_assigned_case: "Caso asignado",
+  sim_no_cases: "No hay casos clínicos registrados. Registre los casos en el editor de la simulación.",
+  sim_control_admin_hint: "La gestión de las rondas es realizada por el profesor en la sala virtual.",
 
   cancel: "Cancelar",
   save: "Guardar",

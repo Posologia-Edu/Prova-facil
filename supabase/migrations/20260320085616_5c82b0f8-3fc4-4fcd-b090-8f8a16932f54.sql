@@ -1,0 +1,1 @@
+ALTER TABLE public.simulation_round_assignments ADD COLUMN IF NOT EXISTS case_index integer DEFAULT NULL;

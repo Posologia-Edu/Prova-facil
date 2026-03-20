@@ -146,21 +146,28 @@ export default function SimulationEditor() {
   const activeForm = forms.find((f: any) => f.form_type === activeFormType);
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [formTitle, setFormTitle] = useState("");
-  const [patientScript, setPatientScript] = useState("");
+  const [clinicalCases, setClinicalCases] = useState<{ id: string; title: string; script: string }[]>([]);
 
   useEffect(() => {
     if (activeForm) {
       setFormTitle(activeForm.title || "");
       if (activeFormType === "patient_script") {
         const content = activeForm.content_json as any;
-        setPatientScript(typeof content === "string" ? content : (content?.[0]?.label || ""));
+        if (Array.isArray(content) && content.length > 0 && content[0]?.cases) {
+          setClinicalCases(content[0].cases);
+        } else if (Array.isArray(content) && content.length > 0 && content[0]?.label) {
+          // Migrate old single-case format
+          setClinicalCases([{ id: crypto.randomUUID(), title: `${t("sim_case_number")} 1`, script: content[0].label }]);
+        } else {
+          setClinicalCases([]);
+        }
       } else {
         setFormFields(Array.isArray(activeForm.content_json) ? activeForm.content_json as FormField[] : []);
       }
     } else {
       setFormTitle("");
       setFormFields([]);
-      setPatientScript("");
+      setClinicalCases([]);
     }
   }, [activeForm, activeFormType]);
 
@@ -192,7 +199,7 @@ export default function SimulationEditor() {
 
   const saveForm = async () => {
     const contentJson = activeFormType === "patient_script"
-      ? [{ id: "script", label: patientScript, type: "textarea" as const }]
+      ? [{ id: "cases_container", cases: clinicalCases, type: "cases" as const }]
       : formFields;
 
     // Validate score if saving professor or observer eval
@@ -578,14 +585,39 @@ export default function SimulationEditor() {
               </div>
 
               {activeFormType === "patient_script" ? (
-                <div>
-                  <Label>{t("sim_patient_script_label")}</Label>
-                  <Textarea
-                    value={patientScript}
-                    onChange={(e) => setPatientScript(e.target.value)}
-                    rows={12}
-                    placeholder={t("sim_patient_script_placeholder")}
-                  />
+                <div className="space-y-4">
+                  {clinicalCases.map((c, i) => (
+                    <div key={c.id} className="border rounded-lg p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-medium">{t("sim_case_number")} {i + 1}</Label>
+                        <Button variant="ghost" size="sm" onClick={() => setClinicalCases(clinicalCases.filter((_, idx) => idx !== i))}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <Input
+                        placeholder={`${t("sim_case_number")} ${i + 1}`}
+                        value={c.title}
+                        onChange={(e) => {
+                          const updated = [...clinicalCases];
+                          updated[i] = { ...updated[i], title: e.target.value };
+                          setClinicalCases(updated);
+                        }}
+                      />
+                      <Textarea
+                        value={c.script}
+                        onChange={(e) => {
+                          const updated = [...clinicalCases];
+                          updated[i] = { ...updated[i], script: e.target.value };
+                          setClinicalCases(updated);
+                        }}
+                        rows={8}
+                        placeholder={t("sim_patient_script_placeholder")}
+                      />
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => setClinicalCases([...clinicalCases, { id: crypto.randomUUID(), title: `${t("sim_case_number")} ${clinicalCases.length + 1}`, script: "" }])}>
+                    <Plus className="h-4 w-4 mr-1" />{t("sim_add_case")}
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
