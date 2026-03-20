@@ -451,8 +451,22 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Waiting state (professor, no active round) */}
-      {!isActive && isProfessor && !nextPendingRound && (
+      {/* Waiting state (professor, no rounds at all - need to generate) */}
+      {!isActive && isProfessor && !nextPendingRound && allRounds.length === 0 && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
+            <RefreshCw className="h-10 w-10 text-muted-foreground/50" />
+            <p className="text-muted-foreground">{"Nenhuma rodada encontrada. Gere as rodadas para iniciar a simulação."}</p>
+            <Button onClick={generateRoundsForRoom} disabled={generatingRounds}>
+              {generatingRounds ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
+              {"Gerar Rodadas"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* All rounds truly completed */}
+      {!isActive && isProfessor && !nextPendingRound && allRounds.length > 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8">
             <p className="text-muted-foreground">{t("sim_all_rounds_completed") || "Todas as rodadas foram concluídas."}</p>
