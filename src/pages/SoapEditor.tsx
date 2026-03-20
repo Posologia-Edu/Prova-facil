@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy, GraduationCap } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy, GraduationCap, Shuffle, RotateCcw } from "lucide-react";
 import SplitSoapRoomDialog from "@/components/SplitSoapRoomDialog";
 
 type FormField = {
@@ -349,6 +349,42 @@ export default function SoapEditor() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Pair formation buttons */}
+          {participants.length >= 2 && (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={async () => {
+                const unpaired = participants.filter(p => p.pair_index < 0);
+                if (unpaired.length < 2) {
+                  toast({ title: "Insuficiente", description: "Precisa de pelo menos 2 alunos sem dupla.", variant: "destructive" });
+                  return;
+                }
+                const paired = participants.filter(p => p.pair_index >= 0);
+                const maxPairIdx = paired.length > 0 ? Math.max(0, ...paired.map(p => p.pair_index)) + 1 : 0;
+                let pairIdx = maxPairIdx;
+                for (let i = 0; i < unpaired.length - 1; i += 2) {
+                  await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "A" } as any).eq("id", unpaired[i].id);
+                  await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "B" } as any).eq("id", unpaired[i + 1].id);
+                  pairIdx++;
+                }
+                refetchParticipants();
+                toast({ title: "Duplas formadas!" });
+              }}>
+                <Shuffle className="h-4 w-4 mr-2" />Formar Duplas
+              </Button>
+              {participants.some(p => p.pair_index >= 0) && (
+                <Button variant="outline" onClick={async () => {
+                  for (const p of participants) {
+                    await supabase.from("soap_participants").update({ pair_index: -1, pair_position: "X" } as any).eq("id", p.id);
+                  }
+                  refetchParticipants();
+                  toast({ title: "Duplas desfeitas" });
+                }}>
+                  <RotateCcw className="h-4 w-4 mr-2" />Desfazer Duplas
+                </Button>
+              )}
+            </div>
+          )}
 
           {participants.length > 0 && (
             <Card>
