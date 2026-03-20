@@ -264,12 +264,20 @@ export default function SimulationJoin() {
   const nextPendingRound = allRounds.find((r: any) => r.status === "pending");
   const needsMaterialRelease = nextPendingRound && isFirstRoundOfCycle(nextPendingRound) && !nextPendingRound.materials_released;
 
-  // Professor: release materials
+  // Check if materials are released for the current cycle (any round in cycle)
+  const currentCycle = nextPendingRound?.cycle || activeRound?.cycle;
+  const currentCycleRounds = allRounds.filter((r: any) => r.cycle === currentCycle);
+  const cycleMaterialsReleased = currentCycleRounds.some((r: any) => r.materials_released);
+
+  // Professor: release materials for ALL rounds in the cycle
   const releaseMaterials = async () => {
     if (!nextPendingRound) return;
-    await supabase.from("simulation_rounds").update({
-      materials_released: true,
-    }).eq("id", nextPendingRound.id);
+    const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
+    if (cycleRoundIds.length > 0) {
+      await supabase.from("simulation_rounds").update({
+        materials_released: true,
+      }).in("id", cycleRoundIds);
+    }
     toast({ title: t("sim_materials_released") });
   };
 
