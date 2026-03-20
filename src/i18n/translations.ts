@@ -399,6 +399,69 @@ type TranslationKeys = {
   student_error: string;
   student_connection_error: string;
 
+  // Simulation
+  sim_nav: string;
+  sim_title: string;
+  sim_subtitle: string;
+  sim_new: string;
+  sim_create_title: string;
+  sim_name: string;
+  sim_name_placeholder: string;
+  sim_description: string;
+  sim_duration: string;
+  sim_minutes: string;
+  sim_empty: string;
+  sim_empty_hint: string;
+  sim_edit: string;
+  sim_control: string;
+  sim_status_draft: string;
+  sim_status_active: string;
+  sim_status_completed: string;
+  sim_status_pending: string;
+  sim_tab_participants: string;
+  sim_tab_forms: string;
+  sim_professor: string;
+  sim_pairs: string;
+  sim_pair: string;
+  sim_add_student: string;
+  sim_form_anamnesis: string;
+  sim_form_patient_script: string;
+  sim_form_observer_eval: string;
+  sim_form_professor_eval: string;
+  sim_form_title: string;
+  sim_form_saved: string;
+  sim_patient_script_label: string;
+  sim_patient_script_placeholder: string;
+  sim_field_label: string;
+  sim_field_options: string;
+  sim_add_field: string;
+  sim_max_score: string;
+  sim_settings: string;
+  sim_start: string;
+  sim_start_hint: string;
+  sim_started: string;
+  sim_need_professor: string;
+  sim_need_students: string;
+  sim_round: string;
+  sim_cycle: string;
+  sim_release: string;
+  sim_end_round: string;
+  sim_round_released: string;
+  sim_round_ended: string;
+  sim_role_professional: string;
+  sim_role_patient: string;
+  sim_role_observer: string;
+  sim_join_title: string;
+  sim_join_desc: string;
+  sim_room_not_found: string;
+  sim_not_registered: string;
+  sim_waiting_professor: string;
+  sim_waiting_desc: string;
+  sim_submitted: string;
+  sim_waiting_next_round: string;
+  sim_submit: string;
+  sim_no_script: string;
+
   // Empty states
   empty_questions_hint: string;
 
@@ -781,6 +844,68 @@ const pt: TranslationKeys = {
 
   empty_questions_hint: "Comece criando questões com IA ou manualmente para montar suas provas.",
 
+  sim_nav: "Simulação Realística",
+  sim_title: "Simulações Realísticas",
+  sim_subtitle: "Crie e gerencie simulações de anamnese com distribuição automática de papéis.",
+  sim_new: "Nova Simulação",
+  sim_create_title: "Criar Nova Simulação",
+  sim_name: "Nome da Simulação",
+  sim_name_placeholder: "Ex: Simulação de Anamnese - Turma A",
+  sim_description: "Descrição",
+  sim_duration: "Duração da rodada",
+  sim_minutes: "minutos",
+  sim_empty: "Nenhuma simulação criada",
+  sim_empty_hint: "Crie sua primeira simulação de anamnese para começar.",
+  sim_edit: "Editar",
+  sim_control: "Painel de Controle",
+  sim_status_draft: "Rascunho",
+  sim_status_active: "Ativa",
+  sim_status_completed: "Concluída",
+  sim_status_pending: "Pendente",
+  sim_tab_participants: "Participantes",
+  sim_tab_forms: "Formulários",
+  sim_professor: "Professor",
+  sim_pairs: "Duplas de Alunos",
+  sim_pair: "Dupla",
+  sim_add_student: "Adicionar aluno",
+  sim_form_anamnesis: "Anamnese (Profissional)",
+  sim_form_patient_script: "Roteiro (Paciente)",
+  sim_form_observer_eval: "Avaliação (Observador)",
+  sim_form_professor_eval: "Avaliação (Professor)",
+  sim_form_title: "Título do formulário",
+  sim_form_saved: "Formulário salvo com sucesso.",
+  sim_patient_script_label: "Roteiro do caso clínico",
+  sim_patient_script_placeholder: "Descreva o caso clínico que o paciente simulado deve interpretar...",
+  sim_field_label: "Pergunta / Item",
+  sim_field_options: "Opções (separadas por vírgula)",
+  sim_add_field: "Adicionar campo",
+  sim_max_score: "Pts",
+  sim_settings: "Configurações da Sala",
+  sim_start: "Iniciar Simulação",
+  sim_start_hint: "Ao iniciar, as rodadas serão geradas automaticamente e os participantes poderão acessar a sala.",
+  sim_started: "Simulação iniciada!",
+  sim_need_professor: "É necessário cadastrar um professor.",
+  sim_need_students: "É necessário pelo menos 2 alunos (1 dupla).",
+  sim_round: "Rodada",
+  sim_cycle: "Ciclo",
+  sim_release: "Liberar",
+  sim_end_round: "Encerrar",
+  sim_round_released: "Rodada liberada!",
+  sim_round_ended: "Rodada encerrada.",
+  sim_role_professional: "Profissional Simulado",
+  sim_role_patient: "Paciente Simulado",
+  sim_role_observer: "Observador",
+  sim_join_title: "Simulação Realística",
+  sim_join_desc: "Digite seu e-mail e o PIN da sala para entrar na simulação.",
+  sim_room_not_found: "Sala não encontrada. Verifique o PIN.",
+  sim_not_registered: "Seu e-mail não está registrado nesta sala.",
+  sim_waiting_professor: "Aguardando o professor liberar a rodada",
+  sim_waiting_desc: "Quando o professor liberar, o formulário será habilitado automaticamente.",
+  sim_submitted: "Formulário enviado!",
+  sim_waiting_next_round: "Aguarde a próxima rodada.",
+  sim_submit: "Enviar",
+  sim_no_script: "Roteiro não configurado.",
+
   cancel: "Cancelar",
   save: "Salvar",
   create: "Criar",
@@ -1159,6 +1284,68 @@ const en: TranslationKeys = {
 
   empty_questions_hint: "Start creating questions with AI or manually to build your exams.",
 
+  sim_nav: "Realistic Simulation",
+  sim_title: "Realistic Simulations",
+  sim_subtitle: "Create and manage anamnesis simulations with automatic role distribution.",
+  sim_new: "New Simulation",
+  sim_create_title: "Create New Simulation",
+  sim_name: "Simulation Name",
+  sim_name_placeholder: "E.g.: Anamnesis Simulation - Class A",
+  sim_description: "Description",
+  sim_duration: "Round duration",
+  sim_minutes: "minutes",
+  sim_empty: "No simulations created",
+  sim_empty_hint: "Create your first anamnesis simulation to get started.",
+  sim_edit: "Edit",
+  sim_control: "Control Panel",
+  sim_status_draft: "Draft",
+  sim_status_active: "Active",
+  sim_status_completed: "Completed",
+  sim_status_pending: "Pending",
+  sim_tab_participants: "Participants",
+  sim_tab_forms: "Forms",
+  sim_professor: "Professor",
+  sim_pairs: "Student Pairs",
+  sim_pair: "Pair",
+  sim_add_student: "Add student",
+  sim_form_anamnesis: "Anamnesis (Professional)",
+  sim_form_patient_script: "Script (Patient)",
+  sim_form_observer_eval: "Evaluation (Observer)",
+  sim_form_professor_eval: "Evaluation (Professor)",
+  sim_form_title: "Form title",
+  sim_form_saved: "Form saved successfully.",
+  sim_patient_script_label: "Clinical case script",
+  sim_patient_script_placeholder: "Describe the clinical case the simulated patient should interpret...",
+  sim_field_label: "Question / Item",
+  sim_field_options: "Options (comma separated)",
+  sim_add_field: "Add field",
+  sim_max_score: "Pts",
+  sim_settings: "Room Settings",
+  sim_start: "Start Simulation",
+  sim_start_hint: "Once started, rounds will be generated automatically and participants can access the room.",
+  sim_started: "Simulation started!",
+  sim_need_professor: "A professor must be registered.",
+  sim_need_students: "At least 2 students (1 pair) are required.",
+  sim_round: "Round",
+  sim_cycle: "Cycle",
+  sim_release: "Release",
+  sim_end_round: "End",
+  sim_round_released: "Round released!",
+  sim_round_ended: "Round ended.",
+  sim_role_professional: "Simulated Professional",
+  sim_role_patient: "Simulated Patient",
+  sim_role_observer: "Observer",
+  sim_join_title: "Realistic Simulation",
+  sim_join_desc: "Enter your email and the room PIN to join the simulation.",
+  sim_room_not_found: "Room not found. Check the PIN.",
+  sim_not_registered: "Your email is not registered in this room.",
+  sim_waiting_professor: "Waiting for the professor to release the round",
+  sim_waiting_desc: "When the professor releases it, the form will be enabled automatically.",
+  sim_submitted: "Form submitted!",
+  sim_waiting_next_round: "Wait for the next round.",
+  sim_submit: "Submit",
+  sim_no_script: "Script not configured.",
+
   cancel: "Cancel",
   save: "Save",
   create: "Create",
@@ -1536,6 +1723,68 @@ const es: TranslationKeys = {
   student_connection_error: "No fue posible conectar al servidor.",
 
   empty_questions_hint: "Comience creando preguntas con IA o manualmente para armar sus exámenes.",
+
+  sim_nav: "Simulación Realista",
+  sim_title: "Simulaciones Realistas",
+  sim_subtitle: "Cree y gestione simulaciones de anamnesis con distribución automática de roles.",
+  sim_new: "Nueva Simulación",
+  sim_create_title: "Crear Nueva Simulación",
+  sim_name: "Nombre de la Simulación",
+  sim_name_placeholder: "Ej: Simulación de Anamnesis - Clase A",
+  sim_description: "Descripción",
+  sim_duration: "Duración de la ronda",
+  sim_minutes: "minutos",
+  sim_empty: "No hay simulaciones creadas",
+  sim_empty_hint: "Cree su primera simulación de anamnesis para comenzar.",
+  sim_edit: "Editar",
+  sim_control: "Panel de Control",
+  sim_status_draft: "Borrador",
+  sim_status_active: "Activa",
+  sim_status_completed: "Completada",
+  sim_status_pending: "Pendiente",
+  sim_tab_participants: "Participantes",
+  sim_tab_forms: "Formularios",
+  sim_professor: "Profesor",
+  sim_pairs: "Duplas de Alumnos",
+  sim_pair: "Dupla",
+  sim_add_student: "Agregar alumno",
+  sim_form_anamnesis: "Anamnesis (Profesional)",
+  sim_form_patient_script: "Guion (Paciente)",
+  sim_form_observer_eval: "Evaluación (Observador)",
+  sim_form_professor_eval: "Evaluación (Profesor)",
+  sim_form_title: "Título del formulario",
+  sim_form_saved: "Formulario guardado con éxito.",
+  sim_patient_script_label: "Guion del caso clínico",
+  sim_patient_script_placeholder: "Describa el caso clínico que el paciente simulado debe interpretar...",
+  sim_field_label: "Pregunta / Ítem",
+  sim_field_options: "Opciones (separadas por coma)",
+  sim_add_field: "Agregar campo",
+  sim_max_score: "Pts",
+  sim_settings: "Configuración de la Sala",
+  sim_start: "Iniciar Simulación",
+  sim_start_hint: "Al iniciar, las rondas se generarán automáticamente y los participantes podrán acceder a la sala.",
+  sim_started: "¡Simulación iniciada!",
+  sim_need_professor: "Es necesario registrar un profesor.",
+  sim_need_students: "Se necesitan al menos 2 alumnos (1 dupla).",
+  sim_round: "Ronda",
+  sim_cycle: "Ciclo",
+  sim_release: "Liberar",
+  sim_end_round: "Finalizar",
+  sim_round_released: "¡Ronda liberada!",
+  sim_round_ended: "Ronda finalizada.",
+  sim_role_professional: "Profesional Simulado",
+  sim_role_patient: "Paciente Simulado",
+  sim_role_observer: "Observador",
+  sim_join_title: "Simulación Realista",
+  sim_join_desc: "Ingrese su correo y el PIN de la sala para unirse a la simulación.",
+  sim_room_not_found: "Sala no encontrada. Verifique el PIN.",
+  sim_not_registered: "Su correo no está registrado en esta sala.",
+  sim_waiting_professor: "Esperando que el profesor libere la ronda",
+  sim_waiting_desc: "Cuando el profesor la libere, el formulario se habilitará automáticamente.",
+  sim_submitted: "¡Formulario enviado!",
+  sim_waiting_next_round: "Espere la próxima ronda.",
+  sim_submit: "Enviar",
+  sim_no_script: "Guion no configurado.",
 
   cancel: "Cancelar",
   save: "Guardar",

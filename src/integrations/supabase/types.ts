@@ -1116,6 +1116,271 @@ export type Database = {
         }
         Relationships: []
       }
+      simulation_forms: {
+        Row: {
+          content_json: Json
+          created_at: string
+          form_type: string
+          id: string
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_forms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      simulation_participants: {
+        Row: {
+          assigned_role: string
+          created_at: string
+          id: string
+          pair_index: number
+          pair_position: string
+          participant_role: string
+          room_id: string
+          status: string
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          assigned_role?: string
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Update: {
+          assigned_role?: string
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      simulation_responses: {
+        Row: {
+          answers_json: Json
+          created_at: string
+          form_id: string
+          id: string
+          participant_id: string
+          round_id: string
+          score: number | null
+          submitted_at: string | null
+        }
+        Insert: {
+          answers_json?: Json
+          created_at?: string
+          form_id: string
+          id?: string
+          participant_id: string
+          round_id: string
+          score?: number | null
+          submitted_at?: string | null
+        }
+        Update: {
+          answers_json?: Json
+          created_at?: string
+          form_id?: string
+          id?: string
+          participant_id?: string
+          round_id?: string
+          score?: number | null
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulation_responses_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulation_responses_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      simulation_rooms: {
+        Row: {
+          access_code: string
+          created_at: string
+          current_cycle: number
+          current_round: number
+          description: string | null
+          duration_minutes: number
+          id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          created_at?: string
+          current_cycle?: number
+          current_round?: number
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          current_cycle?: number
+          current_round?: number
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      simulation_round_assignments: {
+        Row: {
+          assigned_role: string
+          created_at: string
+          id: string
+          pair_index: number
+          participant_id: string
+          round_id: string
+        }
+        Insert: {
+          assigned_role?: string
+          created_at?: string
+          id?: string
+          pair_index?: number
+          participant_id: string
+          round_id: string
+        }
+        Update: {
+          assigned_role?: string
+          created_at?: string
+          id?: string
+          pair_index?: number
+          participant_id?: string
+          round_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_round_assignments_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulation_round_assignments_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      simulation_rounds: {
+        Row: {
+          created_at: string
+          cycle: number
+          finished_at: string | null
+          id: string
+          released_by: string | null
+          room_id: string
+          round_number: number
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          cycle?: number
+          finished_at?: string | null
+          id?: string
+          released_by?: string | null
+          room_id: string
+          round_number?: number
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          cycle?: number
+          finished_at?: string | null
+          id?: string
+          released_by?: string | null
+          room_id?: string
+          round_number?: number
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_rounds_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_answers: {
         Row: {
           ai_feedback: string | null

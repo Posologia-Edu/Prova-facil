@@ -38,6 +38,10 @@ import OsceEvaluator from "./pages/OsceEvaluator";
 import OsceResults from "./pages/OsceResults";
 import OsceVirtualPatient from "./pages/OsceVirtualPatient";
 import OsceStudentPortal from "./pages/OsceStudentPortal";
+import Simulations from "./pages/Simulations";
+import SimulationEditor from "./pages/SimulationEditor";
+import SimulationControl from "./pages/SimulationControl";
+import SimulationJoin from "./pages/SimulationJoin";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
 import PublicContact from "./pages/PublicContact";
@@ -222,10 +226,37 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Simulation routes */}
+            <Route
+              path="/simulations"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><Simulations /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simulations/:roomId/edit"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><SimulationEditor /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simulations/:roomId/control"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><SimulationControl /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
             {/* Public OSCE routes (no auth required) */}
             <Route path="/osce/evaluate/:accessCode" element={<OsceEvaluator />} />
             <Route path="/osce/patient/:stationId" element={<OsceVirtualPatient />} />
             <Route path="/osce/student/:accessCode" element={<OsceStudentPortal />} />
+            {/* Public Simulation route */}
+            <Route path="/simulation/join" element={<SimulationJoin />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
