@@ -196,7 +196,7 @@ export default function VirtualPatientChat() {
             </Button>
           )}
           {sessionCompleted && (
-            <Badge className="bg-green-100 text-green-800">Concluído</Badge>
+            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Concluído</Badge>
           )}
         </div>
       </div>
