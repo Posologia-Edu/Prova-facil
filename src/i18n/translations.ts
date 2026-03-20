@@ -481,8 +481,19 @@ type TranslationKeys = {
   sim_import_success: string;
   sim_import_nothing: string;
   sim_no_other_rooms: string;
+  sim_score_total: string;
+  sim_score_warning_low: string;
+  sim_score_warning_high: string;
+  sim_score_valid: string;
+  sim_tab_analytics: string;
+  sim_analytics_no_data: string;
+  sim_analytics_student: string;
+  sim_analytics_role: string;
+  sim_analytics_score: string;
+  sim_analytics_avg: string;
+  sim_analytics_responses: string;
 
-  // Empty states
+
   empty_questions_hint: string;
 
   // Common
