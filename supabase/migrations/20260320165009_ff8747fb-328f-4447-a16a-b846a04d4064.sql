@@ -1,0 +1,1 @@
+ALTER TABLE public.soap_participants ADD COLUMN participant_role text NOT NULL DEFAULT 'student';
