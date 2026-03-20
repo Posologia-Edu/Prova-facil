@@ -113,6 +113,7 @@ export default function ReconciliationEditor() {
   const [caseTitle, setCaseTitle] = useState("");
   const [caseContent, setCaseContent] = useState("");
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
+  const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
 
   const students = participants.filter(p => p.participant_role === "student");
   const pairs = students.reduce((acc: Record<number, any[]>, p) => {
