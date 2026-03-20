@@ -651,17 +651,14 @@ export default function SimulationJoin() {
 
             {/* Ready count when materials are released but round not started */}
             {!isActive && cycleMaterialsReleased && (() => {
-              const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
-              const cycleParticipantIds = allAssignments
-                .filter((a: any) => cycleRoundIds.includes(a.round_id) && a.assigned_role !== "observer")
-                .map((a: any) => a.participant_id);
-              const uniqueIds = [...new Set(cycleParticipantIds)];
-              const readyCount = uniqueIds.filter(id => allParticipants.find((p: any) => p.id === id)?.status === "ready").length;
+              // All students (not professors) should have materials
+              const students = allParticipants.filter((p: any) => p.participant_role === "student");
+              const readyCount = students.filter((p: any) => p.status === "ready").length;
               return (
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className={`h-4 w-4 ${readyCount === uniqueIds.length ? "text-green-600" : "text-muted-foreground"}`} />
+                  <CheckCircle className={`h-4 w-4 ${readyCount === students.length ? "text-green-600" : "text-muted-foreground"}`} />
                   <span className="text-muted-foreground">
-                    {readyCount}/{uniqueIds.length} alunos prontos
+                    {readyCount}/{students.length} alunos prontos
                   </span>
                 </div>
               );
@@ -708,16 +705,22 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Material study phase for students - role-specific, checks ALL rounds in cycle */}
+      {/* Material study phase for students - role based on pair_position + cycle, NOT round assignments */}
       {!isActive && !isProfessor && cycleMaterialsReleased && (
         (() => {
-          // Determine student's role across ALL rounds in the current cycle
-          // Prioritize professional/patient over observer since a student can be observer in one round and active in another
+          // Determine role from pair_position and current cycle
+          // Cycle 1: A=professional, B=patient
+          // Cycle 2: B=professional, A=patient
+          // This ensures ALL students get materials regardless of observer assignments
+          const pairPos = participant?.pair_position;
+          const myRole = currentCycle === 1
+            ? (pairPos === "A" ? "professional" : "patient")
+            : (pairPos === "B" ? "professional" : "patient");
+
+          // For patients, find the case_index from any assignment in the cycle
           const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
           const cycleAssigns = allAssignments.filter((a: any) => cycleRoundIds.includes(a.round_id));
-          const myAssigns = cycleAssigns.filter((a: any) => a.participant_id === participant?.id);
-          const myAssign = myAssigns.find((a: any) => a.assigned_role === "professional" || a.assigned_role === "patient") || myAssigns[0];
-          const myRole = myAssign?.assigned_role;
+          const myPatientAssign = cycleAssigns.find((a: any) => a.participant_id === participant?.id && a.assigned_role === "patient");
 
           // Professionals see anamnesis form
           if (myRole === "professional") {
@@ -758,7 +761,7 @@ export default function SimulationJoin() {
 
           // Patients see their assigned clinical case
           if (myRole === "patient") {
-            const caseIdx = myAssign?.case_index ?? 0;
+            const caseIdx = myPatientAssign?.case_index ?? 0;
             const assignedCase = clinicalCases[caseIdx];
             return (
               <Card>
@@ -794,16 +797,7 @@ export default function SimulationJoin() {
             );
           }
 
-          // Observers wait - they only get their form when simulation starts
-          return (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Clock className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
-                <h3 className="text-lg font-medium">{t("sim_waiting_professor")}</h3>
-                <p className="text-sm text-muted-foreground">{t("sim_waiting_desc")}</p>
-              </CardContent>
-            </Card>
-          );
+          return null;
         })()
       )}
 
