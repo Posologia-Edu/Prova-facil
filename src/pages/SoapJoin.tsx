@@ -357,6 +357,9 @@ export default function SoapJoin() {
           <div className="text-center">
             <h1 className="text-2xl font-bold">Formulário SOAP</h1>
             <p className="text-muted-foreground">Preencha com base nas informações da sua anamnese</p>
+            {patientName && (
+              <p className="text-sm mt-1">Paciente simulado atendido: <strong>{patientName}</strong></p>
+            )}
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
