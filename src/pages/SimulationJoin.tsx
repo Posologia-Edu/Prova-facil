@@ -23,8 +23,8 @@ type FormField = {
 
 export default function SimulationJoin() {
   const { t } = useLanguage();
-  const [pin, setPin] = useState("");
-  const [email, setEmail] = useState("");
+  const [pin, setPin] = useState(() => sessionStorage.getItem("sim_pin") || "");
+  const [email, setEmail] = useState(() => sessionStorage.getItem("sim_email") || "");
   const [joined, setJoined] = useState(false);
   const [room, setRoom] = useState<any>(null);
   const [participant, setParticipant] = useState<any>(null);
@@ -35,31 +35,42 @@ export default function SimulationJoin() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  const joinRoom = async () => {
-    // Find room by PIN
+  // Auto-join if redirected from StudentAuth
+  useEffect(() => {
+    const savedPin = sessionStorage.getItem("sim_pin");
+    const savedEmail = sessionStorage.getItem("sim_email");
+    if (savedPin && savedEmail) {
+      sessionStorage.removeItem("sim_pin");
+      sessionStorage.removeItem("sim_email");
+      // Auto-join after mount
+      setTimeout(() => {
+        joinRoomWithCredentials(savedPin, savedEmail);
+      }, 100);
+    }
+  }, []);
+
+  const joinRoomWithCredentials = async (pinVal: string, emailVal: string) => {
     const { data: roomData, error: roomErr } = await supabase
       .from("simulation_rooms")
       .select("*")
-      .eq("access_code", pin.trim().toLowerCase())
+      .eq("access_code", pinVal.trim().toLowerCase())
       .single();
     if (roomErr || !roomData) {
       toast({ title: t("student_error"), description: t("sim_room_not_found"), variant: "destructive" });
       return;
     }
 
-    // Find participant by email
     const { data: partData, error: partErr } = await supabase
       .from("simulation_participants")
       .select("*")
       .eq("room_id", roomData.id)
-      .eq("student_email", email.trim().toLowerCase())
+      .eq("student_email", emailVal.trim().toLowerCase())
       .single();
     if (partErr || !partData) {
       toast({ title: t("student_access_denied"), description: t("sim_not_registered"), variant: "destructive" });
       return;
     }
 
-    // Get forms
     const { data: formsData } = await supabase
       .from("simulation_forms")
       .select("*")
@@ -69,6 +80,10 @@ export default function SimulationJoin() {
     setParticipant(partData);
     setForms(formsData || []);
     setJoined(true);
+  };
+
+  const joinRoom = async () => {
+    await joinRoomWithCredentials(pin, email);
   };
 
   // Poll for active round

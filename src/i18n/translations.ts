@@ -461,6 +461,14 @@ type TranslationKeys = {
   sim_waiting_next_round: string;
   sim_submit: string;
   sim_no_script: string;
+  sim_import: string;
+  sim_import_from: string;
+  sim_import_select_room: string;
+  sim_import_participants: string;
+  sim_import_forms: string;
+  sim_import_success: string;
+  sim_import_nothing: string;
+  sim_no_other_rooms: string;
 
   // Empty states
   empty_questions_hint: string;
@@ -905,6 +913,14 @@ const pt: TranslationKeys = {
   sim_waiting_next_round: "Aguarde a próxima rodada.",
   sim_submit: "Enviar",
   sim_no_script: "Roteiro não configurado.",
+  sim_import: "Importar",
+  sim_import_from: "Importar de outra sala",
+  sim_import_select_room: "Selecione a sala de origem",
+  sim_import_participants: "Participantes",
+  sim_import_forms: "Formulários",
+  sim_import_success: "Importação realizada com sucesso!",
+  sim_import_nothing: "Selecione ao menos um item para importar.",
+  sim_no_other_rooms: "Não há outras salas de simulação disponíveis.",
 
   cancel: "Cancelar",
   save: "Salvar",
@@ -1345,6 +1361,14 @@ const en: TranslationKeys = {
   sim_waiting_next_round: "Wait for the next round.",
   sim_submit: "Submit",
   sim_no_script: "Script not configured.",
+  sim_import: "Import",
+  sim_import_from: "Import from another room",
+  sim_import_select_room: "Select source room",
+  sim_import_participants: "Participants",
+  sim_import_forms: "Forms",
+  sim_import_success: "Import completed successfully!",
+  sim_import_nothing: "Select at least one item to import.",
+  sim_no_other_rooms: "No other simulation rooms available.",
 
   cancel: "Cancel",
   save: "Save",
@@ -1785,6 +1809,14 @@ const es: TranslationKeys = {
   sim_waiting_next_round: "Espere la próxima ronda.",
   sim_submit: "Enviar",
   sim_no_script: "Guion no configurado.",
+  sim_import: "Importar",
+  sim_import_from: "Importar de otra sala",
+  sim_import_select_room: "Seleccione la sala de origen",
+  sim_import_participants: "Participantes",
+  sim_import_forms: "Formularios",
+  sim_import_success: "¡Importación realizada con éxito!",
+  sim_import_nothing: "Seleccione al menos un elemento para importar.",
+  sim_no_other_rooms: "No hay otras salas de simulación disponibles.",
 
   cancel: "Cancelar",
   save: "Guardar",

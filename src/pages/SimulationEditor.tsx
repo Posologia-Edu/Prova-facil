@@ -12,7 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { generateRounds } from "@/lib/simulation-distribution";
 
 type Participant = {
@@ -226,6 +228,89 @@ export default function SimulationEditor() {
     toast({ title: t("save") });
   };
 
+  // Import functionality
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRoomId, setImportRoomId] = useState("");
+  const [importParticipants, setImportParticipants] = useState(false);
+  const [importForms, setImportForms] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  const { data: otherRooms = [] } = useQuery({
+    queryKey: ["simulation-rooms-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("simulation_rooms")
+        .select("id, title, access_code")
+        .neq("id", roomId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: importOpen,
+  });
+
+  const handleImport = async () => {
+    if (!importRoomId) return;
+    if (!importParticipants && !importForms) {
+      toast({ title: t("sim_import_nothing"), variant: "destructive" });
+      return;
+    }
+    setImporting(true);
+
+    try {
+      if (importParticipants) {
+        const { data: srcParticipants } = await supabase
+          .from("simulation_participants")
+          .select("*")
+          .eq("room_id", importRoomId);
+        if (srcParticipants?.length) {
+          const newParticipants = srcParticipants.map(({ id, room_id, created_at, ...rest }) => ({
+            ...rest,
+            room_id: roomId!,
+          }));
+          await supabase.from("simulation_participants").insert(newParticipants);
+          refetchParticipants();
+        }
+      }
+
+      if (importForms) {
+        const { data: srcForms } = await supabase
+          .from("simulation_forms")
+          .select("*")
+          .eq("room_id", importRoomId);
+        if (srcForms?.length) {
+          for (const form of srcForms) {
+            const existing = forms.find((f: any) => f.form_type === form.form_type);
+            if (existing) {
+              await supabase.from("simulation_forms").update({
+                title: form.title,
+                content_json: form.content_json,
+              }).eq("id", existing.id);
+            } else {
+              await supabase.from("simulation_forms").insert({
+                room_id: roomId!,
+                form_type: form.form_type,
+                title: form.title,
+                content_json: form.content_json,
+              });
+            }
+          }
+          refetchForms();
+        }
+      }
+
+      toast({ title: t("sim_import_success") });
+      setImportOpen(false);
+      setImportRoomId("");
+      setImportParticipants(false);
+      setImportForms(false);
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const startSimulation = async () => {
     if (!professor) {
       toast({ title: "Erro", description: t("sim_need_professor"), variant: "destructive" });
@@ -275,14 +360,66 @@ export default function SimulationEditor() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/simulations")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />{t("pricing_back")}
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{room.title}</h1>
-          <p className="text-sm text-muted-foreground">PIN: <span className="font-mono">{room.access_code}</span></p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/simulations")}>
+            <ArrowLeft className="h-4 w-4 mr-1" />{t("pricing_back")}
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{room.title}</h1>
+            <p className="text-sm text-muted-foreground">PIN: <span className="font-mono">{room.access_code}</span></p>
+          </div>
         </div>
+        <Dialog open={importOpen} onOpenChange={setImportOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-1" />{t("sim_import")}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("sim_import_from")}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {otherRooms.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("sim_no_other_rooms")}</p>
+              ) : (
+                <>
+                  <div>
+                    <Label>{t("sim_import_select_room")}</Label>
+                    <Select value={importRoomId} onValueChange={setImportRoomId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("sim_import_select_room")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {otherRooms.map((r: any) => (
+                          <SelectItem key={r.id} value={r.id}>{r.title} ({r.access_code})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="import-participants" checked={importParticipants} onCheckedChange={(c) => setImportParticipants(!!c)} />
+                      <Label htmlFor="import-participants" className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />{t("sim_import_participants")}
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="import-forms" checked={importForms} onCheckedChange={(c) => setImportForms(!!c)} />
+                      <Label htmlFor="import-forms" className="flex items-center gap-1">
+                        <FileText className="h-4 w-4" />{t("sim_import_forms")}
+                      </Label>
+                    </div>
+                  </div>
+                  <Button onClick={handleImport} disabled={!importRoomId || importing} className="w-full">
+                    {importing ? t("loading") : t("sim_import")}
+                  </Button>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs defaultValue="participants">

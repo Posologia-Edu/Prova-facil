@@ -8,6 +8,7 @@ import { GraduationCap, Loader2, ArrowLeft, KeyRound, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
 
@@ -25,6 +26,35 @@ export default function StudentAuth() {
     setLoading(true);
 
     try {
+      // Check if PIN belongs to a simulation room first
+      const { data: simRoom } = await supabase
+        .from("simulation_rooms")
+        .select("id, access_code")
+        .eq("access_code", pin.trim().toLowerCase())
+        .limit(1)
+        .maybeSingle();
+
+      if (simRoom) {
+        // Redirect to simulation join with pre-filled data
+        sessionStorage.setItem("sim_pin", pin.trim().toLowerCase());
+        sessionStorage.setItem("sim_email", email.trim().toLowerCase());
+        navigate("/simulation/join");
+        return;
+      }
+
+      // Check if PIN belongs to an OSCE circuit
+      const { data: osceCircuit } = await supabase
+        .from("osce_circuits")
+        .select("id, access_code")
+        .eq("access_code", pin.trim().toLowerCase())
+        .limit(1)
+        .maybeSingle();
+
+      if (osceCircuit) {
+        navigate(`/osce/student/${pin.trim().toLowerCase()}`);
+        return;
+      }
+
       const res = await fetch(FUNCTION_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
