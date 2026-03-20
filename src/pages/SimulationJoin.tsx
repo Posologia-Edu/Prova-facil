@@ -519,7 +519,7 @@ export default function SimulationJoin() {
     );
   };
 
-  // Render participant list for a round
+  // Render participant list for a round (with ready status for professor)
   const renderRoundParticipants = (roundId: string) => {
     const roundAssignments = getAssignmentsForRound(roundId);
     if (roundAssignments.length === 0) return null;
@@ -530,6 +530,8 @@ export default function SimulationJoin() {
         <div className="space-y-1">
           {roundAssignments.map((a: any) => {
             const Icon = roleIcons[a.assigned_role] || Users;
+            const participantData = allParticipants.find((p: any) => p.id === a.participant_id);
+            const isReady = participantData?.status === "ready";
             return (
               <div key={a.id} className="flex items-center gap-2 text-sm">
                 <Icon className="h-4 w-4 text-muted-foreground" />
@@ -537,6 +539,13 @@ export default function SimulationJoin() {
                 <Badge variant="outline" className={`text-xs ${roleBadgeColors[a.assigned_role] || ""}`}>
                   {roleLabels[a.assigned_role] || a.assigned_role}
                 </Badge>
+                {isProfessor && cycleMaterialsReleased && !isActive && (
+                  isReady ? (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Clock className="h-4 w-4 text-muted-foreground/50" />
+                  )
+                )}
               </div>
             );
           })}
