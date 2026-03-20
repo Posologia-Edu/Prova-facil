@@ -317,8 +317,6 @@ export default function SimulationJoin() {
   // Check if all existing rounds are still pending (never started)
   const allRoundsPending = allRounds.length > 0 && allRounds.every((r: any) => r.status === "pending");
   const hasStartedRounds = allRounds.some((r: any) => r.status === "active" || r.status === "completed");
-  // Professor should see pairing UI when no rounds exist OR when explicitly in pairing mode
-  const shouldShowPairingUI = isProfessor && !isActive && (allRounds.length === 0 || showPairingMode);
 
   // Reset rounds - delete all pending rounds and assignments
   const resetRounds = async () => {
