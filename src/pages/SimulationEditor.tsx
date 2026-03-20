@@ -15,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download, AlertTriangle, CheckCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { generateRounds } from "@/lib/simulation-distribution";
+
 
 type Participant = {
   id?: string;
