@@ -500,6 +500,15 @@ type TranslationKeys = {
   sim_pair_formed: string;
   sim_clear_pairs: string;
   sim_need_pairs: string;
+  sim_add_case: string;
+  sim_case_number: string;
+  sim_remove_case: string;
+  sim_distribute: string;
+  sim_distribution_title: string;
+  sim_material_rule_hint: string;
+  sim_assigned_case: string;
+  sim_no_cases: string;
+  sim_control_admin_hint: string;
 
   empty_questions_hint: string;
 
