@@ -666,72 +666,118 @@ export default function SimulationJoin() {
       {!isActive && isProfessor && !nextPendingRound && allRounds.length === 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("sim_form_pairs")}</CardTitle>
+            <CardTitle className="text-base">{distributionGenerated ? t("sim_distribution_title") : t("sim_form_pairs")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Formed pairs */}
-            {formedPairs.length > 0 && (
-              <div className="space-y-2">
-                {formedPairs.map(([idx, ps]) => (
-                  <div key={idx} className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">{t("sim_pair")} {Number(idx) + 1}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{ps[0]?.student_name}</span>
-                      <span className="text-xs text-muted-foreground">&</span>
-                      <span className="text-sm font-medium">{ps[1]?.student_name}</span>
-                    </div>
+            {!distributionGenerated ? (
+              <>
+                {/* Formed pairs */}
+                {formedPairs.length > 0 && (
+                  <div className="space-y-2">
+                    {formedPairs.map(([idx, ps]) => (
+                      <div key={idx} className="p-3 bg-muted rounded-lg">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">{t("sim_pair")} {Number(idx) + 1}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{ps[0]?.student_name}</span>
+                          <span className="text-xs text-muted-foreground">&</span>
+                          <span className="text-sm font-medium">{ps[1]?.student_name}</span>
+                        </div>
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" onClick={clearAllPairs}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />{t("sim_clear_pairs")}
+                    </Button>
                   </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={clearAllPairs}>
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />{t("sim_clear_pairs")}
-                </Button>
-              </div>
-            )}
-
-            {/* Unpaired students */}
-            {unpairedStudents.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  {t("sim_unpaired_students")} ({unpairedStudents.length}) — {t("sim_select_pair")}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {unpairedStudents.map((s: any) => {
-                    const isSelected = selectedForPairing.includes(s.id);
-                    return (
-                      <button
-                        key={s.id}
-                        onClick={() => toggleStudentForPairing(s.id)}
-                        className={`p-2 rounded-lg border text-left text-sm transition-colors ${
-                          isSelected
-                            ? "border-primary bg-primary/10 ring-2 ring-primary"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <span className="font-medium">{s.student_name}</span>
-                        {s.student_email && <p className="text-xs text-muted-foreground">{s.student_email}</p>}
-                      </button>
-                    );
-                  })}
-                </div>
-                {selectedForPairing.length === 2 && (
-                  <Button onClick={formPair} className="w-full" size="sm">
-                    <Users className="h-4 w-4 mr-1" />{t("sim_form_pairs")}
-                  </Button>
                 )}
-              </div>
-            )}
 
-            {unpairedStudents.length === 0 && formedPairs.length === 0 && (
-              <p className="text-sm text-muted-foreground">{t("sim_need_students")}</p>
-            )}
+                {/* Unpaired students */}
+                {unpairedStudents.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {t("sim_unpaired_students")} ({unpairedStudents.length}) — {t("sim_select_pair")}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {unpairedStudents.map((s: any) => {
+                        const isSelected = selectedForPairing.includes(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => toggleStudentForPairing(s.id)}
+                            className={`p-2 rounded-lg border text-left text-sm transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary/10 ring-2 ring-primary"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <span className="font-medium">{s.student_name}</span>
+                            {s.student_email && <p className="text-xs text-muted-foreground">{s.student_email}</p>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedForPairing.length === 2 && (
+                      <Button onClick={formPair} className="w-full" size="sm">
+                        <Users className="h-4 w-4 mr-1" />{t("sim_form_pairs")}
+                      </Button>
+                    )}
+                  </div>
+                )}
 
-            {/* Generate rounds button */}
-            <div className="border-t pt-4">
-              <Button onClick={generateRoundsForRoom} disabled={generatingRounds || formedPairs.length === 0} className="w-full">
-                {generatingRounds ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
-                {"Gerar Rodadas"}
-              </Button>
-            </div>
+                {unpairedStudents.length === 0 && formedPairs.length === 0 && (
+                  <p className="text-sm text-muted-foreground">{t("sim_need_students")}</p>
+                )}
+
+                {/* Distribute button */}
+                <div className="border-t pt-4">
+                  <Button onClick={generateDistributionPreview} disabled={formedPairs.length === 0} className="w-full">
+                    <Play className="h-4 w-4 mr-1" />
+                    {t("sim_distribute")}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Distribution preview - like the image */}
+                <p className="text-xs text-muted-foreground">{t("sim_material_rule_hint")}</p>
+                <div className="space-y-3">
+                  {localRounds.map((round) => (
+                    <div key={round.roundNumber} className="p-4 border rounded-lg space-y-2">
+                      <p className="text-sm font-semibold">
+                        {t("sim_round")} {round.roundNumber} — {t("sim_cycle")} {round.cycle}
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        {round.assignments.map((a: any) => {
+                          const pName = allParticipants.find((p: any) => p.id === a.participantId)?.student_name || "—";
+                          return (
+                            <div key={a.participantId} className="flex items-center gap-2">
+                              <Badge className={roleBadgeColors[a.role] || ""}>
+                                {roleLabels[a.role] || a.role}
+                              </Badge>
+                              <span className="text-sm font-medium">{pName}</span>
+                              {a.role === "patient" && clinicalCases.length > 0 && a.caseIndex != null && (
+                                <span className="text-xs text-muted-foreground">
+                                  ({clinicalCases[a.caseIndex]?.title || `Caso ${a.caseIndex + 1}`})
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 border-t pt-4">
+                  <Button variant="outline" onClick={() => { setDistributionGenerated(false); setLocalRounds([]); }} className="flex-1">
+                    {t("pricing_back")}
+                  </Button>
+                  <Button onClick={generateRoundsForRoom} disabled={generatingRounds} className="flex-1">
+                    {generatingRounds ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                    {t("confirm")}
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
