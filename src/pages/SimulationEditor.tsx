@@ -199,7 +199,7 @@ export default function SimulationEditor() {
 
   const saveForm = async () => {
     const contentJson = activeFormType === "patient_script"
-      ? [{ id: "script", label: patientScript, type: "textarea" as const }]
+      ? [{ id: "cases_container", cases: clinicalCases, type: "cases" as const }]
       : formFields;
 
     // Validate score if saving professor or observer eval
