@@ -11,7 +11,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, Loader2 } from "lucide-react";
+import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, Loader2, RefreshCw } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { generateRounds } from "@/lib/simulation-distribution";
 import { toast } from "@/hooks/use-toast";
 
