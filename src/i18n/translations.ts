@@ -1134,7 +1134,7 @@ const en: TranslationKeys = {
   auth_error_signup: "Signup error",
   auth_signup_success_title: "Registration complete!",
   auth_signup_success_desc: "Check your email to confirm your account. After confirmation, your access will be reviewed by an admin.",
-  auth_student: "I'm a Student",
+  auth_student: "Access Assessment",
 
   landing_enter: "Sign In",
   landing_create_free: "Create free account",
