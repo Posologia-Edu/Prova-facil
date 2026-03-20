@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake } from "lucide-react";
+import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import SplitRoomDialog from "@/components/SplitRoomDialog";
 
@@ -42,6 +42,24 @@ const modules = [
     route: "/simulations/reconciliation",
     color: "text-chart-3",
     bgColor: "bg-chart-3/10",
+  },
+  {
+    id: "documentation",
+    title: "Documentação",
+    description: "Encaminhamento e quadro resumo de medicamentos com correção por IA e manual.",
+    icon: FileText,
+    route: "/simulations/documentation",
+    color: "text-chart-4",
+    bgColor: "bg-chart-4/10",
+  },
+  {
+    id: "aggregator",
+    title: "Agregador de Notas",
+    description: "Visão geral das notas de todos os módulos com média geral por aluno.",
+    icon: BarChart3,
+    route: "/simulations/aggregator",
+    color: "text-chart-5",
+    bgColor: "bg-chart-5/10",
   },
 ];
 
@@ -191,13 +209,6 @@ export default function Simulations() {
               </Card>
             ))}
 
-            {/* Placeholder for future modules */}
-            <Card className="border-dashed border-2 opacity-50">
-              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-                <Plus className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">Novos módulos em breve</p>
-              </CardContent>
-            </Card>
 
           </div>
         </TabsContent>

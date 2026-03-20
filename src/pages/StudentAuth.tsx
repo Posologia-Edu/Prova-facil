@@ -86,6 +86,26 @@ export default function StudentAuth() {
         return;
       }
 
+      // Check if PIN belongs to a Documentation room
+      const { data: docRoom } = await supabase
+        .from("documentation_rooms")
+        .select("id, access_code, status")
+        .eq("access_code", pin.trim().toLowerCase())
+        .limit(1)
+        .maybeSingle();
+
+      if (docRoom) {
+        if (docRoom.status !== "active") {
+          toast({ title: "Sala não disponível", description: "Esta sala de documentação ainda não foi ativada.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+        sessionStorage.setItem("doc_pin", pin.trim().toLowerCase());
+        sessionStorage.setItem("doc_email", email.trim().toLowerCase());
+        navigate("/simulation/documentation/join");
+        return;
+      }
+
       const { data: osceCircuit } = await supabase
         .from("osce_circuits")
         .select("id, access_code")
