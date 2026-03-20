@@ -537,15 +537,33 @@ export default function SimulationEditor() {
               {students.length > 0 ? (
                 <div className="space-y-2">
                   {students.map((p: any) => (
-                    <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                      <div>
-                        <span className="font-medium">{p.student_name}</span>
-                        {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
+                    editingId === p.id ? (
+                      <div key={p.id} className="flex gap-2 items-center p-2 bg-muted rounded-lg">
+                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="flex-1" />
+                        <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email" className="flex-1" />
+                        <Button variant="ghost" size="sm" onClick={() => saveEdit(p.id)}>
+                          <Check className="h-3.5 w-3.5 text-green-600" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => removeParticipant(p.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    ) : (
+                      <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                        <div>
+                          <span className="font-medium">{p.student_name}</span>
+                          {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => startEditing(p)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => removeParticipant(p.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    )
                   ))}
                 </div>
               ) : (
