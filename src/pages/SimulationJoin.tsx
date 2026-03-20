@@ -767,8 +767,8 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Waiting state (professor, no rounds - need to form pairs and generate) */}
-      {!isActive && isProfessor && !nextPendingRound && allRounds.length === 0 && (
+      {/* Waiting state (professor, need to form pairs and generate) */}
+      {shouldShowPairingUI && !nextPendingRound && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{distributionGenerated ? t("sim_distribution_title") : t("sim_form_pairs")}</CardTitle>
