@@ -264,12 +264,20 @@ export default function SimulationJoin() {
   const nextPendingRound = allRounds.find((r: any) => r.status === "pending");
   const needsMaterialRelease = nextPendingRound && isFirstRoundOfCycle(nextPendingRound) && !nextPendingRound.materials_released;
 
-  // Professor: release materials
+  // Check if materials are released for the current cycle (any round in cycle)
+  const currentCycle = nextPendingRound?.cycle || activeRound?.cycle;
+  const currentCycleRounds = allRounds.filter((r: any) => r.cycle === currentCycle);
+  const cycleMaterialsReleased = currentCycleRounds.some((r: any) => r.materials_released);
+
+  // Professor: release materials for ALL rounds in the cycle
   const releaseMaterials = async () => {
     if (!nextPendingRound) return;
-    await supabase.from("simulation_rounds").update({
-      materials_released: true,
-    }).eq("id", nextPendingRound.id);
+    const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
+    if (cycleRoundIds.length > 0) {
+      await supabase.from("simulation_rounds").update({
+        materials_released: true,
+      }).in("id", cycleRoundIds);
+    }
     toast({ title: t("sim_materials_released") });
   };
 
@@ -659,8 +667,8 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Waiting state for students: no active round */}
-      {!isActive && !isProfessor && !nextPendingRound?.materials_released && (
+      {/* Waiting state for students: no active round and no materials released for cycle */}
+      {!isActive && !isProfessor && !cycleMaterialsReleased && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Clock className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
@@ -670,12 +678,13 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Material study phase for students - role-specific */}
-      {!isActive && !isProfessor && nextPendingRound?.materials_released && (
+      {/* Material study phase for students - role-specific, checks ALL rounds in cycle */}
+      {!isActive && !isProfessor && cycleMaterialsReleased && (
         (() => {
-          // Determine student's role in the next pending round
-          const nextRoundAssigns = allAssignments.filter((a: any) => a.round_id === nextPendingRound.id);
-          const myAssign = nextRoundAssigns.find((a: any) => a.participant_id === participant?.id);
+          // Determine student's role across ALL rounds in the current cycle
+          const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
+          const cycleAssigns = allAssignments.filter((a: any) => cycleRoundIds.includes(a.round_id));
+          const myAssign = cycleAssigns.find((a: any) => a.participant_id === participant?.id);
           const myRole = myAssign?.assigned_role;
 
           // Professionals see anamnesis form
