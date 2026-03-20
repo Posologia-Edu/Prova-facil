@@ -296,6 +296,8 @@ export default function SimulationJoin() {
 
   const [generatingRounds, setGeneratingRounds] = useState(false);
   const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
+  const [distributionGenerated, setDistributionGenerated] = useState(false);
+  const [localRounds, setLocalRounds] = useState<any[]>([]);
 
   // Get unpaired and paired students
   const unpairedStudents = allParticipants.filter((p: any) => p.participant_role === "student" && (p.pair_index === -1 || p.pair_position === "X"));
@@ -307,6 +309,20 @@ export default function SimulationJoin() {
   });
   const formedPairs = Object.entries(pairsMap).filter(([_, ps]) => ps.length === 2);
   const nextPairIdx = formedPairs.length > 0 ? Math.max(...formedPairs.map(([idx]) => Number(idx))) + 1 : 0;
+
+  // Get clinical cases from patient_script form
+  const patientScriptForm = forms.find((f: any) => f.form_type === "patient_script");
+  const clinicalCases: { id: string; title: string; script: string }[] = (() => {
+    if (!patientScriptForm) return [];
+    const content = patientScriptForm.content_json as any;
+    if (Array.isArray(content) && content.length > 0 && content[0]?.cases) {
+      return content[0].cases;
+    }
+    if (Array.isArray(content) && content.length > 0 && content[0]?.label) {
+      return [{ id: "legacy", title: "Caso 1", script: content[0].label }];
+    }
+    return [];
+  })();
 
   const toggleStudentForPairing = (id: string) => {
     setSelectedForPairing((prev) => {
@@ -322,7 +338,6 @@ export default function SimulationJoin() {
     await supabase.from("simulation_participants").update({ pair_index: nextPairIdx, pair_position: "A" }).eq("id", a);
     await supabase.from("simulation_participants").update({ pair_index: nextPairIdx, pair_position: "B" }).eq("id", b);
     setSelectedForPairing([]);
-    // Refresh participants
     const { data } = await supabase.from("simulation_participants").select("*").eq("room_id", room.id);
     setAllParticipants(data || []);
     toast({ title: t("sim_pair_formed") });
@@ -336,24 +351,30 @@ export default function SimulationJoin() {
     }
     const { data } = await supabase.from("simulation_participants").select("*").eq("room_id", room.id);
     setAllParticipants(data || []);
+    setDistributionGenerated(false);
+    setLocalRounds([]);
     toast({ title: t("sim_clear_pairs") });
   };
 
-  const generateRoundsForRoom = async () => {
-    if (!room || !allParticipants.length) return;
-
+  // Generate distribution preview (local only, not saved yet)
+  const generateDistributionPreview = () => {
     if (formedPairs.length === 0) {
       toast({ title: t("sim_need_pairs"), variant: "destructive" });
       return;
     }
+    const pairsList = formedPairs.map(([_, ps]) => ps);
+    const numCases = clinicalCases.length;
+    const rounds = generateRounds(pairsList, numCases > 0 ? numCases : undefined);
+    setLocalRounds(rounds);
+    setDistributionGenerated(true);
+  };
 
+  // Save rounds to DB
+  const generateRoundsForRoom = async () => {
+    if (!room || localRounds.length === 0) return;
     setGeneratingRounds(true);
     try {
-      const pairsList = formedPairs.map(([_, ps]) => ps);
-
-      const rounds = generateRounds(pairsList);
-
-      for (const round of rounds) {
+      for (const round of localRounds) {
         const { data: roundData, error: roundError } = await supabase
           .from("simulation_rounds")
           .insert({
@@ -371,6 +392,7 @@ export default function SimulationJoin() {
           participant_id: a.participantId,
           assigned_role: a.role,
           pair_index: a.pairIndex,
+          case_index: a.caseIndex ?? null,
         }));
         await supabase.from("simulation_round_assignments").insert(assignments);
       }
