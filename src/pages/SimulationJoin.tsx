@@ -409,6 +409,12 @@ export default function SimulationJoin() {
     if (!room || localRounds.length === 0) return;
     setGeneratingRounds(true);
     try {
+      // Clear any existing rounds first
+      const existingRoundIds = allRounds.map((r: any) => r.id);
+      if (existingRoundIds.length > 0) {
+        await supabase.from("simulation_round_assignments").delete().in("round_id", existingRoundIds);
+        await supabase.from("simulation_rounds").delete().in("id", existingRoundIds);
+      }
       for (const round of localRounds) {
         const { data: roundData, error: roundError } = await supabase
           .from("simulation_rounds")
