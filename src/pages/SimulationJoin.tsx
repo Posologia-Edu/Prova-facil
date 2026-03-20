@@ -442,6 +442,9 @@ export default function SimulationJoin() {
         await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
       }
 
+      setShowPairingMode(false);
+      setDistributionGenerated(false);
+      setLocalRounds([]);
       toast({ title: t("sim_started") || "Rodadas geradas com sucesso!" });
     } catch (err) {
       toast({ title: "Erro", description: "Falha ao gerar rodadas.", variant: "destructive" });
