@@ -25,6 +25,7 @@ type Assignment = {
   participantId: string;
   role: "professional" | "patient" | "observer";
   pairIndex: number;
+  caseIndex?: number;
 };
 
 type RoundDef = {
@@ -33,7 +34,7 @@ type RoundDef = {
   assignments: Assignment[];
 };
 
-export function generateRounds(pairs: Participant[][]): RoundDef[] {
+export function generateRounds(pairs: Participant[][], numCases?: number): RoundDef[] {
   const rounds: RoundDef[] = [];
   const numPairs = pairs.length;
   let roundNumber = 1;
