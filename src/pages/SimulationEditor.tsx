@@ -94,28 +94,26 @@ export default function SimulationEditor() {
   const [profName, setProfName] = useState("");
   const [profEmail, setProfEmail] = useState("");
 
-  const pairs = participants.reduce((acc: Record<number, any[]>, p: any) => {
-    if (!acc[p.pair_index]) acc[p.pair_index] = [];
-    acc[p.pair_index].push(p);
-    return acc;
-  }, {});
   const professor = participants.find((p: any) => p.participant_role === "professor");
   const students = participants.filter((p: any) => p.participant_role === "student");
-  const nextPairIndex = students.length > 0 ? Math.floor(students.length / 2) : 0;
+
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const addParticipant = async (role: string) => {
     const name = role === "professor" ? profName : newName;
     const email = role === "professor" ? profEmail : newEmail;
     if (!name.trim()) return;
-    const pairIndex = role === "professor" ? -1 : nextPairIndex;
-    const pairPosition = role === "professor" ? "P" : (students.filter((s: any) => s.pair_index === nextPairIndex).length === 0 ? "A" : "B");
+    if (email && !isValidEmail(email)) {
+      toast({ title: t("sim_invalid_email"), variant: "destructive" });
+      return;
+    }
 
     const { error } = await supabase.from("simulation_participants").insert({
       room_id: roomId!,
       student_name: name,
       student_email: email,
-      pair_index: pairIndex,
-      pair_position: pairPosition,
+      pair_index: -1,
+      pair_position: "X",
       participant_role: role,
     });
     if (error) {
