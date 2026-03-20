@@ -91,6 +91,8 @@ export default function SimulationEditor() {
 
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [profName, setProfName] = useState("");
+  const [profEmail, setProfEmail] = useState("");
 
   const pairs = participants.reduce((acc: Record<number, any[]>, p: any) => {
     if (!acc[p.pair_index]) acc[p.pair_index] = [];
