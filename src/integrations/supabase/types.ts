@@ -1116,6 +1116,241 @@ export type Database = {
         }
         Relationships: []
       }
+      reconciliation_clinical_cases: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          position: number
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_clinical_cases_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_forms: {
+        Row: {
+          content_json: Json
+          created_at: string
+          form_type: string
+          id: string
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_forms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_participants: {
+        Row: {
+          created_at: string
+          id: string
+          pair_index: number
+          pair_position: string
+          participant_role: string
+          room_id: string
+          soap_participant_id: string | null
+          status: string
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id: string
+          soap_participant_id?: string | null
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id?: string
+          soap_participant_id?: string | null
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_participants_soap_participant_id_fkey"
+            columns: ["soap_participant_id"]
+            isOneToOne: false
+            referencedRelation: "soap_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_responses: {
+        Row: {
+          admin_feedback: string | null
+          admin_score: number | null
+          ai_feedback_json: Json | null
+          ai_score: number | null
+          answers_json: Json
+          clinical_case_id: string | null
+          created_at: string
+          form_id: string
+          id: string
+          pair_index: number
+          room_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id: string
+          id?: string
+          pair_index?: number
+          room_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id?: string
+          id?: string
+          pair_index?: number
+          room_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_responses_clinical_case_id_fkey"
+            columns: ["clinical_case_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_responses_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_rooms: {
+        Row: {
+          access_code: string
+          created_at: string
+          description: string | null
+          id: string
+          soap_room_id: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          soap_room_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          soap_room_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_rooms_soap_room_id_fkey"
+            columns: ["soap_room_id"]
+            isOneToOne: false
+            referencedRelation: "soap_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       simulation_forms: {
         Row: {
           content_json: Json

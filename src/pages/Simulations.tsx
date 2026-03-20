@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope } from "lucide-react";
+import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import SplitRoomDialog from "@/components/SplitRoomDialog";
 
@@ -33,6 +33,15 @@ const modules = [
     route: "/simulations/soap",
     color: "text-chart-2",
     bgColor: "bg-chart-2/10",
+  },
+  {
+    id: "reconciliation",
+    title: "Reconciliação",
+    description: "Reconciliação em duplas com casos clínicos, ficha de reconciliação e correção por IA.",
+    icon: Handshake,
+    route: "/simulations/reconciliation",
+    color: "text-chart-3",
+    bgColor: "bg-chart-3/10",
   },
 ];
 
@@ -189,6 +198,7 @@ export default function Simulations() {
                 <p className="text-sm text-muted-foreground">Novos módulos em breve</p>
               </CardContent>
             </Card>
+
           </div>
         </TabsContent>
 

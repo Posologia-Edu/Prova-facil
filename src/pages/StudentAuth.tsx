@@ -66,7 +66,26 @@ export default function StudentAuth() {
         return;
       }
 
-      // Check if PIN belongs to an OSCE circuit
+      // Check if PIN belongs to a Reconciliation room
+      const { data: reconRoom } = await supabase
+        .from("reconciliation_rooms")
+        .select("id, access_code, status")
+        .eq("access_code", pin.trim().toLowerCase())
+        .limit(1)
+        .maybeSingle();
+
+      if (reconRoom) {
+        if (reconRoom.status !== "active") {
+          toast({ title: "Sala não disponível", description: "Esta sala de reconciliação ainda não foi ativada.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+        sessionStorage.setItem("recon_pin", pin.trim().toLowerCase());
+        sessionStorage.setItem("recon_email", email.trim().toLowerCase());
+        navigate("/simulation/reconciliation/join");
+        return;
+      }
+
       const { data: osceCircuit } = await supabase
         .from("osce_circuits")
         .select("id, access_code")
