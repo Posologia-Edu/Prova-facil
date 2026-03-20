@@ -31,6 +31,7 @@ export default function SoapJoin() {
   const [participant, setParticipant] = useState<any>(null);
   const [partner, setPartner] = useState<any>(null);
   const [anamnesisAnswers, setAnamnesisAnswers] = useState<Record<string, any>>({});
+  const [anamnesisFieldLabels, setAnamnesisFieldLabels] = useState<Record<string, string>>({});
   const [soapForm, setSoapForm] = useState<any>(null);
   const [peerForm, setPeerForm] = useState<any>(null);
   const [soapAnswers, setSoapAnswers] = useState<Record<string, any>>({});
@@ -85,13 +86,35 @@ export default function SoapJoin() {
         .select("answers_json, form_id")
         .eq("participant_id", me.anamnesis_participant_id);
       if (responses?.length) {
-        // Merge all anamnesis answers
         const merged: Record<string, any> = {};
+        const formIds = [...new Set(responses.map((r) => r.form_id))];
         responses.forEach((r) => {
           const answers = r.answers_json as Record<string, any>;
           Object.assign(merged, answers);
         });
         setAnamnesisAnswers(merged);
+
+        // Load form field labels
+        if (formIds.length > 0) {
+          const { data: simForms } = await supabase
+            .from("simulation_forms")
+            .select("content_json")
+            .in("id", formIds);
+          if (simForms?.length) {
+            const labels: Record<string, string> = {};
+            simForms.forEach((f) => {
+              const fields = f.content_json as any[];
+              if (Array.isArray(fields)) {
+                fields.forEach((field: any) => {
+                  if (field.id && field.label) {
+                    labels[field.id] = field.label;
+                  }
+                });
+              }
+            });
+            setAnamnesisFieldLabels(labels);
+          }
+        }
       }
     }
 
@@ -326,9 +349,11 @@ export default function SoapJoin() {
               <CardContent>
                 {Object.keys(anamnesisAnswers).length > 0 ? (
                   <div className="space-y-3">
-                    {Object.entries(anamnesisAnswers).map(([key, value]) => (
+                    {Object.entries(anamnesisAnswers)
+                      .filter(([key]) => key !== "_feedback")
+                      .map(([key, value]) => (
                       <div key={key} className="p-3 bg-muted/50 rounded-lg">
-                        <p className="text-xs text-muted-foreground mb-1">{key}</p>
+                        <p className="text-xs text-muted-foreground mb-1 font-medium">{anamnesisFieldLabels[key] || key}</p>
                         <p className="text-sm">{typeof value === "object" ? JSON.stringify(value) : String(value)}</p>
                       </div>
                     ))}
