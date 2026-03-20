@@ -266,9 +266,11 @@ export default function SimulationJoin() {
   const needsMaterialRelease = nextPendingRound && isFirstRoundOfCycle(nextPendingRound) && !nextPendingRound.materials_released;
 
   // Check if materials are released for the current cycle (any round in cycle)
-  const currentCycle = nextPendingRound?.cycle || activeRound?.cycle;
+  // Fallback: if no pending/active round, use the first round's cycle (default to 1)
+  const currentCycle = nextPendingRound?.cycle || activeRound?.cycle || (allRounds.length > 0 ? allRounds[0].cycle : 1);
   const currentCycleRounds = allRounds.filter((r: any) => r.cycle === currentCycle);
-  const cycleMaterialsReleased = currentCycleRounds.some((r: any) => r.materials_released);
+  // Also check globally: if ANY round has materials_released, consider it released for robustness
+  const cycleMaterialsReleased = currentCycleRounds.some((r: any) => r.materials_released) || allRounds.some((r: any) => r.cycle === currentCycle && r.materials_released);
 
   // Professor: release materials for ALL rounds in the cycle
   const releaseMaterials = async () => {
