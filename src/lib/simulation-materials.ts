@@ -42,6 +42,12 @@ export function areCycleMaterialsReleased<T extends RoundLike>(rounds: T[], cycl
   return rounds.some((round) => round.cycle === cycle && round.materials_released);
 }
 
+export function hasCycleStarted<T extends RoundLike>(rounds: T[], cycle: number) {
+  return rounds.some(
+    (round) => round.cycle === cycle && (round.status === "active" || round.status === "completed"),
+  );
+}
+
 export function getStudyRole(pairPosition?: string, cycle = 1) {
   if (pairPosition === "A") return cycle === 1 ? "professional" : "patient";
   if (pairPosition === "B") return cycle === 1 ? "patient" : "professional";
@@ -100,15 +106,13 @@ export function canAccessCycleMaterials<T extends RoundLike, A extends Assignmen
   pairIndex?: number,
   activeRound?: T | null,
 ) {
+  void assignments;
+  void roundIds;
+  void participantId;
+  void pairIndex;
+
   if (!areCycleMaterialsReleased(rounds, cycle)) return false;
-  if (!activeRound) return true;
-  if (activeRound.cycle !== cycle) return false;
+  if (activeRound) return false;
 
-  const participantRoundId = getParticipantCycleRoundId(assignments, roundIds, participantId, pairIndex);
-  if (!participantRoundId) return true;
-
-  const participantRound = rounds.find((round) => round.id === participantRoundId);
-  if (!participantRound) return true;
-
-  return participantRound.status === "pending";
+  return !hasCycleStarted(rounds, cycle);
 }

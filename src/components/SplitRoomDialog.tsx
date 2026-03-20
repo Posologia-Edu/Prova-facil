@@ -27,8 +27,11 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
   const [room, setRoom] = useState<any>(null);
   const [participants, setParticipants] = useState<any[]>([]);
   const [forms, setForms] = useState<any[]>([]);
-  const [numNewRooms, setNumNewRooms] = useState(1);
-  const [subRooms, setSubRooms] = useState<SubRoom[]>([{ professorName: "", professorEmail: "", studentIds: [] }]);
+  const [numNewRooms, setNumNewRooms] = useState(2);
+  const [subRooms, setSubRooms] = useState<SubRoom[]>([
+    { professorName: "", professorEmail: "", studentIds: [] },
+    { professorName: "", professorEmail: "", studentIds: [] },
+  ]);
   const [saving, setSaving] = useState(false);
 
   const students = participants.filter((p) => p.participant_role === "student");
@@ -49,8 +52,8 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
   }, [open, roomId]);
 
   useEffect(() => {
-    setSubRooms(
-      Array.from({ length: numNewRooms }, (_, i) => subRooms[i] || { professorName: "", professorEmail: "", studentIds: [] })
+    setSubRooms((previousRooms) =>
+      Array.from({ length: numNewRooms }, (_, i) => previousRooms[i] || { professorName: "", professorEmail: "", studentIds: [] })
     );
   }, [numNewRooms]);
 
@@ -77,7 +80,7 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
     });
   };
 
-  const canSave = subRooms.every((sr) => sr.professorName.trim() && sr.studentIds.length > 0);
+  const canSave = subRooms.every((sr) => sr.professorName.trim() && sr.studentIds.length > 0) && remainingStudents.length === 0;
 
   const handleSplit = async () => {
     if (!room || !canSave) return;
@@ -85,6 +88,13 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
+
+      const { data: originalRounds } = await supabase
+        .from("simulation_rounds")
+        .select("id")
+        .eq("room_id", roomId);
+
+      const originalRoundIds = (originalRounds || []).map((round) => round.id);
 
       for (const sr of subRooms) {
         // Create new room
@@ -115,7 +125,7 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
         for (const studentId of sr.studentIds) {
           await supabase
             .from("simulation_participants")
-            .update({ room_id: newRoom.id })
+            .update({ room_id: newRoom.id, status: "waiting", assigned_role: "waiting" })
             .eq("id", studentId);
         }
 
@@ -129,6 +139,16 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
           pair_position: "X",
         });
       }
+
+      if (originalRoundIds.length > 0) {
+        await supabase.from("simulation_responses").delete().in("round_id", originalRoundIds);
+        await supabase.from("simulation_round_assignments").delete().in("round_id", originalRoundIds);
+        await supabase.from("simulation_rounds").delete().in("id", originalRoundIds);
+      }
+
+      await supabase.from("simulation_forms").delete().eq("room_id", roomId);
+      await supabase.from("simulation_participants").delete().eq("room_id", roomId);
+      await supabase.from("simulation_rooms").delete().eq("id", roomId);
 
       toast({ title: "Salas criadas com sucesso!" });
       onComplete();
@@ -148,13 +168,13 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
 
         <div className="space-y-4">
           <div>
-            <Label>Quantidade de novas salas</Label>
+            <Label>Quantidade de salas finais</Label>
             <Select value={String(numNewRooms)} onValueChange={(v) => setNumNewRooms(Number(v))}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[1, 2, 3, 4, 5].map((n) => (
+                {[2, 3, 4, 5].map((n) => (
                   <SelectItem key={n} value={String(n)}>{n}</SelectItem>
                 ))}
               </SelectContent>
@@ -162,7 +182,7 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
           </div>
 
           <div className="text-sm text-muted-foreground">
-            A sala original mantém seu PIN e os alunos não selecionados. Cada nova sala receberá um PIN próprio e cópias dos formulários.
+            A sala original será removida após a divisão. Cada sala nova receberá um PIN próprio e cópias dos formulários.
           </div>
 
           {subRooms.map((sr, idx) => (
@@ -214,7 +234,7 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
           {remainingStudents.length > 0 && (
             <div className="text-sm text-muted-foreground flex items-center gap-1">
               <Users className="h-4 w-4" />
-              {remainingStudents.length} aluno(s) permanecerão na sala original
+              Selecione todos os alunos antes de concluir ({remainingStudents.length} restante(s))
             </div>
           )}
         </div>
@@ -222,7 +242,7 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSplit} disabled={!canSave || saving}>
-            {saving ? "Criando..." : `Criar ${numNewRooms} nova(s) sala(s)`}
+            {saving ? "Criando..." : `Criar ${numNewRooms} sala(s)`}
           </Button>
         </DialogFooter>
       </DialogContent>
