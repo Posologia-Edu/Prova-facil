@@ -70,9 +70,10 @@ export default function SoapControl() {
   const [adminScore, setAdminScore] = useState<string>("");
   const [adminFeedback, setAdminFeedback] = useState("");
 
-  // Pair formation logic
-  const unpaired = participants.filter((p) => p.pair_index < 0);
-  const paired = participants.filter((p) => p.pair_index >= 0);
+  // Pair formation logic — only students (exclude teachers)
+  const studentsOnly = participants.filter((p: any) => (p as any).participant_role !== "teacher");
+  const unpaired = studentsOnly.filter((p) => p.pair_index < 0);
+  const paired = studentsOnly.filter((p) => p.pair_index >= 0);
 
   const formPairsAuto = async () => {
     if (unpaired.length < 2) {
@@ -140,7 +141,7 @@ export default function SoapControl() {
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{room.title} — Controle</h1>
-          <p className="text-muted-foreground text-sm">PIN: {room.access_code} • {participants.length} alunos</p>
+          <p className="text-muted-foreground text-sm">PIN: {room.access_code} • {studentsOnly.length} alunos</p>
         </div>
         {room.status === "active" && (
           <Button variant="outline" onClick={completeRoom}>

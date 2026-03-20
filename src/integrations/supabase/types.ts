@@ -1429,6 +1429,7 @@ export type Database = {
           id: string
           pair_index: number
           pair_position: string
+          participant_role: string
           room_id: string
           status: string
           student_email: string | null
@@ -1440,6 +1441,7 @@ export type Database = {
           id?: string
           pair_index?: number
           pair_position?: string
+          participant_role?: string
           room_id: string
           status?: string
           student_email?: string | null
@@ -1451,6 +1453,7 @@ export type Database = {
           id?: string
           pair_index?: number
           pair_position?: string
+          participant_role?: string
           room_id?: string
           status?: string
           student_email?: string | null
