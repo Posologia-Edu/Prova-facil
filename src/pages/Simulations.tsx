@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Clock, Play, Settings, Trash2 } from "lucide-react";
+import { Plus, Users, Clock, Play, Settings, Trash2, Scissors } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import SplitRoomDialog from "@/components/SplitRoomDialog";
 
 export default function Simulations() {
   const { t } = useLanguage();
@@ -21,6 +22,7 @@ export default function Simulations() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(10);
+  const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["simulation-rooms"],
@@ -34,6 +36,26 @@ export default function Simulations() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Fetch student counts per room
+  const { data: participantCounts } = useQuery({
+    queryKey: ["simulation-participant-counts"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return {};
+      const { data, error } = await supabase
+        .from("simulation_participants")
+        .select("room_id, participant_role");
+      if (error) return {};
+      const counts: Record<string, number> = {};
+      (data || []).forEach((p) => {
+        if (p.participant_role === "student") {
+          counts[p.room_id] = (counts[p.room_id] || 0) + 1;
+        }
+      });
+      return counts;
     },
   });
 
@@ -130,41 +152,63 @@ export default function Simulations() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {rooms.map((room) => (
-            <Card key={room.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{room.title}</CardTitle>
-                    {room.description && <CardDescription>{room.description}</CardDescription>}
+          {rooms.map((room) => {
+            const studentCount = participantCounts?.[room.id] || 0;
+            return (
+              <Card key={room.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg">{room.title}</CardTitle>
+                      {room.description && <CardDescription>{room.description}</CardDescription>}
+                    </div>
+                    <Badge className={statusColor[room.status] || ""}>
+                      {statusLabel[room.status] || room.status}
+                    </Badge>
                   </div>
-                  <Badge className={statusColor[room.status] || ""}>
-                    {statusLabel[room.status] || room.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                  <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{room.duration_minutes} min</span>
-                  <span className="font-mono text-xs">PIN: {room.access_code}</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/${room.id}/edit`)}>
-                    <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
-                  </Button>
-                  {room.status === "active" && (
-                    <Button size="sm" onClick={() => navigate(`/simulations/${room.id}/control`)}>
-                      <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                    <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{room.duration_minutes} min</span>
+                    <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{studentCount} alunos</span>
+                    <span className="font-mono text-xs">PIN: {room.access_code}</span>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/${room.id}/edit`)}>
+                      <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
                     </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    {room.status === "active" && (
+                      <Button size="sm" onClick={() => navigate(`/simulations/${room.id}/control`)}>
+                        <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                      </Button>
+                    )}
+                    {room.status === "draft" && studentCount > 0 && (
+                      <Button variant="outline" size="sm" onClick={() => setSplitRoomId(room.id)}>
+                        <Scissors className="h-3.5 w-3.5 mr-1" />Dividir
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+      )}
+
+      {splitRoomId && (
+        <SplitRoomDialog
+          roomId={splitRoomId}
+          open={!!splitRoomId}
+          onOpenChange={(open) => { if (!open) setSplitRoomId(null); }}
+          onComplete={() => {
+            setSplitRoomId(null);
+            queryClient.invalidateQueries({ queryKey: ["simulation-rooms"] });
+            queryClient.invalidateQueries({ queryKey: ["simulation-participant-counts"] });
+          }}
+        />
       )}
     </div>
   );
