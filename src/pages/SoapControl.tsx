@@ -70,9 +70,10 @@ export default function SoapControl() {
   const [adminScore, setAdminScore] = useState<string>("");
   const [adminFeedback, setAdminFeedback] = useState("");
 
-  // Pair formation logic
-  const unpaired = participants.filter((p) => p.pair_index < 0);
-  const paired = participants.filter((p) => p.pair_index >= 0);
+  // Pair formation logic — only students (exclude teachers)
+  const studentsOnly = participants.filter((p: any) => (p as any).participant_role !== "teacher");
+  const unpaired = studentsOnly.filter((p) => p.pair_index < 0);
+  const paired = studentsOnly.filter((p) => p.pair_index >= 0);
 
   const formPairsAuto = async () => {
     if (unpaired.length < 2) {
