@@ -360,14 +360,66 @@ export default function SimulationEditor() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/simulations")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />{t("pricing_back")}
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{room.title}</h1>
-          <p className="text-sm text-muted-foreground">PIN: <span className="font-mono">{room.access_code}</span></p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/simulations")}>
+            <ArrowLeft className="h-4 w-4 mr-1" />{t("pricing_back")}
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{room.title}</h1>
+            <p className="text-sm text-muted-foreground">PIN: <span className="font-mono">{room.access_code}</span></p>
+          </div>
         </div>
+        <Dialog open={importOpen} onOpenChange={setImportOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-1" />{t("sim_import")}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("sim_import_from")}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {otherRooms.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("sim_no_other_rooms")}</p>
+              ) : (
+                <>
+                  <div>
+                    <Label>{t("sim_import_select_room")}</Label>
+                    <Select value={importRoomId} onValueChange={setImportRoomId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("sim_import_select_room")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {otherRooms.map((r: any) => (
+                          <SelectItem key={r.id} value={r.id}>{r.title} ({r.access_code})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="import-participants" checked={importParticipants} onCheckedChange={(c) => setImportParticipants(!!c)} />
+                      <Label htmlFor="import-participants" className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />{t("sim_import_participants")}
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="import-forms" checked={importForms} onCheckedChange={(c) => setImportForms(!!c)} />
+                      <Label htmlFor="import-forms" className="flex items-center gap-1">
+                        <FileText className="h-4 w-4" />{t("sim_import_forms")}
+                      </Label>
+                    </div>
+                  </div>
+                  <Button onClick={handleImport} disabled={!importRoomId || importing} className="w-full">
+                    {importing ? t("loading") : t("sim_import")}
+                  </Button>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs defaultValue="participants">
