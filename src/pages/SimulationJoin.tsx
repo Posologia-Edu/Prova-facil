@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import { generateRounds } from "@/lib/simulation-distribution";
 import {
   areCycleMaterialsReleased,
+  canAccessCycleMaterials,
   getCycleCaseIndex,
   getMaterialCycle,
   getPendingRoundsSorted,
@@ -297,6 +298,15 @@ export default function SimulationJoin() {
   const materialCycleRounds = allRounds.filter((round: any) => round.cycle === materialCycle);
   const materialCycleRoundIds = materialCycleRounds.map((round: any) => round.id);
   const cycleMaterialsReleased = areCycleMaterialsReleased(allRounds, materialCycle);
+  const canSeeCycleMaterials = canAccessCycleMaterials(
+    allRounds,
+    allAssignments,
+    materialCycle,
+    materialCycleRoundIds,
+    participant?.id,
+    participant?.pair_index,
+    activeRound,
+  );
   const needsMaterialRelease = !activeRound && materialCycleRounds.length > 0 && !cycleMaterialsReleased;
 
   // Professor: release materials for ALL rounds in the cycle
@@ -722,7 +732,7 @@ export default function SimulationJoin() {
       )}
 
       {/* Waiting state for students: no active round and no materials released for cycle */}
-      {!isActive && !isProfessor && !cycleMaterialsReleased && (
+      {!isProfessor && !canSeeCycleMaterials && !participatesInActiveRound && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Clock className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
@@ -733,7 +743,7 @@ export default function SimulationJoin() {
       )}
 
       {/* Material study phase for students - role based on pair_position + cycle, NOT round assignments */}
-      {!isActive && !isProfessor && cycleMaterialsReleased && (
+      {!isProfessor && canSeeCycleMaterials && !participatesInActiveRound && (
         (() => {
           const cycleAssigns = allAssignments.filter((assignment: any) => materialCycleRoundIds.includes(assignment.round_id));
           const caseIdx = getCycleCaseIndex(
@@ -826,7 +836,7 @@ export default function SimulationJoin() {
       )}
 
       {/* Student not participating in active round */}
-      {isActive && !isProfessor && !participatesInActiveRound && (
+      {isActive && !isProfessor && !participatesInActiveRound && !canSeeCycleMaterials && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Clock className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
