@@ -492,7 +492,14 @@ type TranslationKeys = {
   sim_analytics_score: string;
   sim_analytics_avg: string;
   sim_analytics_responses: string;
-
+  sim_invalid_email: string;
+  sim_students_list: string;
+  sim_form_pairs: string;
+  sim_unpaired_students: string;
+  sim_select_pair: string;
+  sim_pair_formed: string;
+  sim_clear_pairs: string;
+  sim_need_pairs: string;
 
   empty_questions_hint: string;
 
