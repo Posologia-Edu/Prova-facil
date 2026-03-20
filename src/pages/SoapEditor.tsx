@@ -350,6 +350,42 @@ export default function SoapEditor() {
             </DialogContent>
           </Dialog>
 
+          {/* Pair formation buttons */}
+          {participants.length >= 2 && (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={async () => {
+                const unpaired = participants.filter(p => p.pair_index < 0);
+                if (unpaired.length < 2) {
+                  toast({ title: "Insuficiente", description: "Precisa de pelo menos 2 alunos sem dupla.", variant: "destructive" });
+                  return;
+                }
+                const paired = participants.filter(p => p.pair_index >= 0);
+                const maxPairIdx = paired.length > 0 ? Math.max(0, ...paired.map(p => p.pair_index)) + 1 : 0;
+                let pairIdx = maxPairIdx;
+                for (let i = 0; i < unpaired.length - 1; i += 2) {
+                  await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "A" } as any).eq("id", unpaired[i].id);
+                  await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "B" } as any).eq("id", unpaired[i + 1].id);
+                  pairIdx++;
+                }
+                refetchParticipants();
+                toast({ title: "Duplas formadas!" });
+              }}>
+                <Shuffle className="h-4 w-4 mr-2" />Formar Duplas
+              </Button>
+              {participants.some(p => p.pair_index >= 0) && (
+                <Button variant="outline" onClick={async () => {
+                  for (const p of participants) {
+                    await supabase.from("soap_participants").update({ pair_index: -1, pair_position: "X" } as any).eq("id", p.id);
+                  }
+                  refetchParticipants();
+                  toast({ title: "Duplas desfeitas" });
+                }}>
+                  <RotateCcw className="h-4 w-4 mr-2" />Desfazer Duplas
+                </Button>
+              )}
+            </div>
+          )}
+
           {participants.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
