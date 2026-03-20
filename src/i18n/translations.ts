@@ -1815,6 +1815,8 @@ const es: TranslationKeys = {
   sim_waiting_next_round: "Espere la próxima ronda.",
   sim_submit: "Enviar",
   sim_no_script: "Guion no configurado.",
+  sim_view_anamnesis: "Anamnesis de rondas completadas",
+  sim_all_rounds_completed: "Todas las rondas han sido completadas.",
   sim_import: "Importar",
   sim_import_from: "Importar de otra sala",
   sim_import_select_room: "Seleccione la sala de origen",
