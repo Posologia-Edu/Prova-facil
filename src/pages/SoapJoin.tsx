@@ -31,6 +31,7 @@ export default function SoapJoin() {
   const [participant, setParticipant] = useState<any>(null);
   const [partner, setPartner] = useState<any>(null);
   const [anamnesisAnswers, setAnamnesisAnswers] = useState<Record<string, any>>({});
+  const [anamnesisFieldLabels, setAnamnesisFieldLabels] = useState<Record<string, string>>({});
   const [soapForm, setSoapForm] = useState<any>(null);
   const [peerForm, setPeerForm] = useState<any>(null);
   const [soapAnswers, setSoapAnswers] = useState<Record<string, any>>({});
