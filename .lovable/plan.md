@@ -1,159 +1,86 @@
 
 
-## Plan: Módulo SOAP — Segundo Módulo de Simulação Realística
+# Plano: Módulo de Reconciliação (3º módulo da Simulação Realística)
 
-### Visão Geral
+## Visão Geral
 
-O módulo SOAP é uma continuação do módulo de Anamnese. Alunos que atuaram como "Profissional" na anamnese transcrevem suas respostas para um formulário SOAP. Depois, trocam formulários SOAP com seu par e avaliam o trabalho do colega via formulário de "Avaliação entre Pares".
+Novo módulo "Reconciliação" que segue o padrão do SOAP: salas virtuais com duplas, importação de alunos do SOAP, formulários configuráveis, casos clínicos distribuídos, ficha de reconciliação com espelho de respostas, e correção por IA + manual.
+
+## Banco de Dados
+
+Criar 4 novas tabelas seguindo o padrão existente (soap_rooms, soap_participants, soap_forms, soap_responses):
+
+**`reconciliation_rooms`** — Salas de reconciliação
+- `id`, `user_id`, `soap_room_id` (referência à sala SOAP de origem), `title`, `description`, `access_code`, `status` (draft/active/finished), `created_at`, `updated_at`
+
+**`reconciliation_participants`** — Duplas importadas do SOAP
+- `id`, `room_id`, `student_name`, `student_email`, `pair_index`, `pair_position` (A/B), `soap_participant_id` (referência), `participant_role` (student/teacher), `status` (waiting/ready/done), `created_at`
+
+**`reconciliation_forms`** — Formulários (ficha de reconciliação) + Espelho de respostas
+- `id`, `room_id`, `title`, `content_json` (campos do formulário com max_score por item), `form_type` ("reconciliation" | "answer_key"), `created_at`
+
+**`reconciliation_clinical_cases`** — Casos clínicos para distribuição entre duplas
+- `id`, `room_id`, `title`, `content` (texto do caso), `position`, `created_at`
+
+**`reconciliation_responses`** — Respostas das duplas + avaliação
+- `id`, `room_id`, `pair_index` (identifica a dupla), `form_id`, `clinical_case_id`, `answers_json`, `ai_score`, `ai_feedback_json` (feedback por item), `admin_score`, `admin_feedback`, `submitted_at`, `created_at`
+
+RLS: mesmo padrão dos módulos anteriores (anon pode select/insert/update; owner e admin têm ALL).
+
+## Páginas (Frontend)
+
+### 1. `ReconciliationRooms.tsx` — Lista de salas
+- Cards com título, PIN, status, nome do professor, contagem de duplas
+- Criar sala com importação de alunos do SOAP
+- Possibilidade de dividir sala entre dois professores
+
+### 2. `ReconciliationEditor.tsx` — Configuração da sala
+- **Aba Participantes**: Importar alunos do SOAP, exibir duplas formadas, edição inline
+- **Aba Formulários**: Cadastrar ficha de reconciliação (mesmo builder dos módulos anteriores com pontuação por item) + cadastrar espelho de respostas. Importar formulários de outras salas de reconciliação
+- **Aba Casos Clínicos**: Cadastrar/editar casos clínicos que serão distribuídos entre as duplas
+- Ativar sala (status → active)
+
+### 3. `ReconciliationJoin.tsx` — Portal do aluno (dupla)
+- Login via PIN + e-mail (ambos da dupla entram na mesma sala)
+- Aguarda até toda a dupla estar presente
+- Quando ativada: exibe caso clínico atribuído + ficha de reconciliação para preenchimento colaborativo
+- Envio da ficha preenchida pela dupla
+
+### 4. `ReconciliationControl.tsx` — Painel do admin
+- **Aba Participantes**: Status de cada dupla (waiting/ready/done)
+- **Aba Respostas**: Para cada dupla, exibição lado a lado:
+  - Esquerda: respostas da ficha de reconciliação da dupla
+  - Direita: espelho de respostas cadastrado pelo admin
+- **Botão "Corrigir com IA"**: Chama edge function que compara respostas vs espelho e gera score + feedback por item
+- Correção manual: admin pode alterar nota e feedback gerados pela IA ou fazer correção 100% manual
+
+## Edge Function
+
+### `grade-reconciliation/index.ts`
+- Recebe: `room_id`, `response_id`, `answers_json`, `answer_key_json`, `form_fields`
+- Usa Lovable AI (Gemini) para comparar respostas do aluno com o espelho
+- Retorna: score por item + feedback textual por item
+- Salva em `reconciliation_responses.ai_score` e `ai_feedback_json`
+
+## Rotas (App.tsx)
 
 ```text
-┌──────────────────────────────────────────────────────────┐
-│  FLUXO SOAP                                              │
-│                                                          │
-│  1. Admin cria sala SOAP (importa alunos da anamnese)    │
-│  2. Admin cadastra formulário SOAP + formulário Avaliação│
-│  3. Professor forma duplas                               │
-│  4. Cada aluno vê SUA anamnese + preenche SEU SOAP       │
-│  5. Aluno envia SOAP → colega da dupla recebe            │
-│  6. Colega abre formulário de Avaliação entre Pares      │
-│  7. Admin pode atribuir notas finais                     │
-│  8. Analytics enviados ao painel Admin                   │
-└──────────────────────────────────────────────────────────┘
+/simulations/reconciliation          → ReconciliationRooms
+/simulations/reconciliation/:roomId  → ReconciliationEditor
+/simulations/reconciliation/:roomId/control → ReconciliationControl
+/simulation/reconciliation/join      → ReconciliationJoin
 ```
 
----
+## Integração com módulo existente
 
-### 1. Banco de Dados — Novas Tabelas
+- Adicionar card "Reconciliação" no array `modules` em `Simulations.tsx`
+- Atualizar `StudentAuth.tsx` para detectar PIN de `reconciliation_rooms` e redirecionar para `/simulation/reconciliation/join`
 
-**Tabela `soap_rooms`** — Salas do módulo SOAP, vinculadas opcionalmente a uma sala de anamnese.
+## Detalhes Técnicos
 
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid PK | |
-| user_id | uuid | Dono (professor/admin) |
-| anamnesis_room_id | uuid nullable | Sala de anamnese de origem |
-| title | text | Nome da sala |
-| description | text | |
-| access_code | text | PIN 6 chars |
-| status | text | draft/active/completed |
-| created_at / updated_at | timestamptz | |
-
-**Tabela `soap_participants`** — Alunos do módulo SOAP (importados ou cadastrados).
-
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid PK | |
-| room_id | uuid FK→soap_rooms | |
-| student_name | text | |
-| student_email | text | |
-| pair_index | int | Dupla |
-| pair_position | text | A ou B |
-| anamnesis_participant_id | uuid nullable | Link ao participante original |
-| status | text | waiting/ready/submitted |
-
-**Tabela `soap_forms`** — Formulários (SOAP e Avaliação entre Pares).
-
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid PK | |
-| room_id | uuid FK→soap_rooms | |
-| form_type | text | `soap` ou `peer_evaluation` |
-| title | text | |
-| content_json | jsonb | Campos do formulário |
-
-**Tabela `soap_responses`** — Respostas dos alunos (SOAP preenchido + Avaliação).
-
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid PK | |
-| room_id | uuid FK→soap_rooms | |
-| participant_id | uuid FK→soap_participants | Quem respondeu |
-| target_participant_id | uuid nullable | Quem está sendo avaliado (para avaliação entre pares) |
-| form_id | uuid FK→soap_forms | Qual formulário |
-| answers_json | jsonb | Respostas |
-| admin_score | numeric nullable | Nota do admin |
-| admin_feedback | text nullable | Feedback do admin |
-| submitted_at | timestamptz | |
-
-**RLS**: Anon pode SELECT/INSERT/UPDATE (mesmo padrão das tabelas de simulação existentes). Owner (user_id) pode ALL.
-
----
-
-### 2. Páginas e Componentes
-
-**Novas páginas:**
-
-| Rota | Página | Descrição |
-|------|--------|-----------|
-| `/simulations/soap` | `SoapRooms.tsx` | Lista de salas SOAP (similar a `Simulations.tsx`) |
-| `/simulations/soap/editor/:roomId` | `SoapEditor.tsx` | Editor: participantes, formulários SOAP e Avaliação |
-| `/simulations/soap/join` | `SoapJoin.tsx` | Portal do aluno SOAP |
-| `/simulations/soap/control/:roomId` | `SoapControl.tsx` | Painel do professor + analytics |
-
-**Fluxo do aluno em `SoapJoin.tsx`:**
-1. Entra com PIN + email
-2. Sistema busca na `simulation_responses` (da sala de anamnese vinculada) as respostas de anamnese desse aluno (match por email)
-3. Exibe lado a lado: Respostas de anamnese (read-only) + Formulário SOAP (editável)
-4. Aluno preenche e submete o SOAP
-5. Sistema entrega o SOAP submetido ao colega da dupla
-6. Colega recebe: SOAP do parceiro (read-only) + Formulário de Avaliação entre Pares (editável)
-7. Aluno preenche avaliação e submete
-
-**Modificações em páginas existentes:**
-- `src/pages/Simulations.tsx` — Adicionar seção/tab para "Módulos" mostrando Anamnese e SOAP
-- `src/components/AppSidebar.tsx` — Adicionar sub-item SOAP no menu de Simulação Realística
-- `src/App.tsx` — Registrar as 4 novas rotas
-
----
-
-### 3. Importação de Alunos da Anamnese
-
-No `SoapEditor.tsx`, botão "Importar da Anamnese" que:
-1. Lista salas de anamnese do mesmo user_id
-2. Admin seleciona uma sala
-3. Copia todos os `simulation_participants` (role=student) para `soap_participants`, salvando o `anamnesis_participant_id` para rastrear a origem
-
----
-
-### 4. Vinculação Anamnese → SOAP
-
-Quando o aluno entra no SOAP:
-1. Busca `soap_participants` pelo email na sala SOAP
-2. Usa `anamnesis_participant_id` → busca `simulation_participants.id` original
-3. Busca `simulation_responses` onde `participant_id` = id original e o formulário é do tipo `anamnesis`
-4. Renderiza as respostas como campos read-only
-
----
-
-### 5. Fluxo de Duplas e Troca de SOAP
-
-- Professor forma duplas (pair_index/pair_position, mesmo mecanismo da anamnese)
-- Cada aluno preenche seu SOAP individualmente
-- Ao submeter, o sistema marca `status = 'submitted'`
-- O parceiro (mesmo pair_index, posição oposta) pode então ver o SOAP submetido
-- Quando ambos submeteram SOAP, abre-se o formulário de Avaliação entre Pares para cada um avaliar o outro
-
----
-
-### 6. Notas do Admin e Analytics
-
-- No `SoapControl.tsx`, o admin pode ver todas as respostas SOAP e avaliações
-- Pode atribuir `admin_score` e `admin_feedback` a cada resposta
-- Aba de Analytics com métricas: média de notas, distribuição, comparação entre duplas
-- Dados integrados ao painel Admin existente (`src/pages/Admin.tsx` / `AdminAnalytics.tsx`)
-
----
-
-### Resumo de Arquivos
-
-| Arquivo | Ação |
-|---------|------|
-| Migration SQL | Criar tabelas `soap_rooms`, `soap_participants`, `soap_forms`, `soap_responses` + RLS |
-| `src/pages/SoapRooms.tsx` | Nova — lista de salas SOAP |
-| `src/pages/SoapEditor.tsx` | Nova — editor com importação, formulários, duplas |
-| `src/pages/SoapJoin.tsx` | Nova — portal do aluno (anamnese + SOAP + avaliação) |
-| `src/pages/SoapControl.tsx` | Nova — painel professor + analytics |
-| `src/App.tsx` | Registrar 4 novas rotas |
-| `src/components/AppSidebar.tsx` | Adicionar link SOAP |
-| `src/pages/Simulations.tsx` | Adicionar navegação para módulo SOAP |
+- Distribuição de casos clínicos: round-robin por `pair_index % total_cases`
+- A ficha é preenchida por dupla (um registro por `pair_index`), não individual
+- O espelho é um formulário do tipo `answer_key` com as respostas esperadas salvas no `content_json`
+- A view lado a lado usa um grid de 2 colunas no painel do admin
+- A correção por IA utiliza tool calling para extrair scores estruturados por item
 
