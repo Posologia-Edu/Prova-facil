@@ -23,8 +23,8 @@ type FormField = {
 
 export default function SimulationJoin() {
   const { t } = useLanguage();
-  const [pin, setPin] = useState("");
-  const [email, setEmail] = useState("");
+  const [pin, setPin] = useState(() => sessionStorage.getItem("sim_pin") || "");
+  const [email, setEmail] = useState(() => sessionStorage.getItem("sim_email") || "");
   const [joined, setJoined] = useState(false);
   const [room, setRoom] = useState<any>(null);
   const [participant, setParticipant] = useState<any>(null);
@@ -34,6 +34,20 @@ export default function SimulationJoin() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+  // Auto-join if redirected from StudentAuth
+  useEffect(() => {
+    const savedPin = sessionStorage.getItem("sim_pin");
+    const savedEmail = sessionStorage.getItem("sim_email");
+    if (savedPin && savedEmail) {
+      sessionStorage.removeItem("sim_pin");
+      sessionStorage.removeItem("sim_email");
+      // Auto-join after mount
+      setTimeout(() => {
+        joinRoomWithCredentials(savedPin, savedEmail);
+      }, 100);
+    }
+  }, []);
 
   const joinRoom = async () => {
     // Find room by PIN
