@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw } from "lucide-react";
 
 type FormField = {
   id: string;
@@ -113,6 +113,7 @@ export default function ReconciliationEditor() {
   const [caseTitle, setCaseTitle] = useState("");
   const [caseContent, setCaseContent] = useState("");
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
+  const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
 
   const students = participants.filter(p => p.participant_role === "student");
   const pairs = students.reduce((acc: Record<number, any[]>, p) => {
@@ -123,7 +124,7 @@ export default function ReconciliationEditor() {
     return acc;
   }, {});
 
-  // Import students from SOAP room
+  // Import students from SOAP room (unpaired, admin forms pairs manually)
   const importFromSoap = async (soapRoomId: string) => {
     const { data: soapParticipants } = await supabase
       .from("soap_participants")
@@ -140,8 +141,8 @@ export default function ReconciliationEditor() {
       room_id: roomId!,
       student_name: sp.student_name,
       student_email: sp.student_email,
-      pair_index: sp.pair_index,
-      pair_position: sp.pair_position,
+      pair_index: -1,
+      pair_position: "X",
       soap_participant_id: sp.id,
       participant_role: "student" as const,
     }));
@@ -152,7 +153,7 @@ export default function ReconciliationEditor() {
       return;
     }
 
-    toast({ title: "Importado", description: `${inserts.length} alunos importados do SOAP.` });
+    toast({ title: "Importado", description: `${inserts.length} alunos importados do SOAP. Forme as duplas manualmente.` });
     refetchParticipants();
   };
 
@@ -350,46 +351,128 @@ export default function ReconciliationEditor() {
             </CardContent>
           </Card>
 
-          {Object.keys(pairs).length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              {Object.entries(pairs).map(([idx, pair]) => (
-                <Card key={idx}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Dupla {Number(idx) + 1}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1">
-                    {pair.map((p: any) => (
-                      <div key={p.id} className="flex items-center justify-between text-sm">
-                        <span>{p.student_name} <span className="text-muted-foreground">({p.student_email})</span></span>
-                        <Button variant="ghost" size="sm" onClick={() => deleteParticipant(p.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Nenhum participante importado ainda.</p>
-          )}
+          {/* Pair formation - same pattern as SOAP */}
+          {(() => {
+            const unpaired = students.filter(s => s.pair_index < 0);
+            const paired = students.filter(s => s.pair_index >= 0);
+            const pairGroups: Record<number, typeof paired> = {};
+            paired.forEach(p => { (pairGroups[p.pair_index] ||= []).push(p); });
+            const nextPairIdx = paired.length > 0 ? Math.max(0, ...paired.map(p => p.pair_index)) + 1 : 0;
 
-          {/* Unpaired students */}
-          {students.filter(s => s.pair_index < 0).length > 0 && (
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Sem dupla</CardTitle></CardHeader>
-              <CardContent>
-                {students.filter(s => s.pair_index < 0).map(p => (
-                  <div key={p.id} className="flex items-center justify-between text-sm">
-                    <span>{p.student_name}</span>
-                    <Button variant="ghost" size="sm" onClick={() => deleteParticipant(p.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+            const toggleSelect = (id: string) => {
+              setSelectedForPairing(prev => {
+                if (prev.includes(id)) return prev.filter(x => x !== id);
+                if (prev.length >= 2) return prev;
+                return [...prev, id];
+              });
+            };
+
+            const formPair = async () => {
+              if (selectedForPairing.length !== 2) return;
+              const [a, b] = selectedForPairing;
+              await supabase.from("reconciliation_participants").update({ pair_index: nextPairIdx, pair_position: "A" } as any).eq("id", a);
+              await supabase.from("reconciliation_participants").update({ pair_index: nextPairIdx, pair_position: "B" } as any).eq("id", b);
+              setSelectedForPairing([]);
+              refetchParticipants();
+              toast({ title: "Dupla formada!" });
+            };
+
+            const undoPair = async (pairIdx: number) => {
+              const members = pairGroups[pairIdx] || [];
+              for (const m of members) {
+                await supabase.from("reconciliation_participants").update({ pair_index: -1, pair_position: "X" } as any).eq("id", m.id);
+              }
+              refetchParticipants();
+              toast({ title: "Dupla desfeita" });
+            };
+
+            return (
+              <>
+                {/* Formed pairs */}
+                {Object.keys(pairGroups).length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        Duplas Formadas
+                        <Badge variant="secondary">{Object.keys(pairGroups).length}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="space-y-2">
+                        {Object.entries(pairGroups).map(([idx, members]) => (
+                          <div key={idx} className="flex items-center justify-between py-2 px-3 rounded-lg bg-primary/5 border border-primary/10">
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline">Dupla {Number(idx) + 1}</Badge>
+                              {members.map(m => (
+                                <span key={m.id} className="text-sm">
+                                  <span className="font-medium">{m.student_name}</span>
+                                  <span className="text-muted-foreground ml-1">({m.pair_position})</span>
+                                </span>
+                              ))}
+                            </div>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => undoPair(Number(idx))}>
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Unpaired students */}
+                {unpaired.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        Alunos sem dupla
+                        <Badge variant="secondary">{unpaired.length}</Badge>
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">Selecione 2 alunos para formar uma dupla</p>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="grid grid-cols-2 gap-2">
+                        {unpaired.map(p => {
+                          const isSelected = selectedForPairing.includes(p.id);
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => toggleSelect(p.id)}
+                              className={`p-3 rounded-lg border text-left text-sm transition-colors ${
+                                isSelected
+                                  ? "border-primary bg-primary/10 ring-2 ring-primary"
+                                  : "border-border hover:border-primary/50"
+                              }`}
+                            >
+                              <span className="font-medium">{p.student_name}</span>
+                              {p.student_email && <p className="text-xs text-muted-foreground">{p.student_email}</p>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedForPairing.length === 2 && (
+                        <Button onClick={formPair} className="w-full mt-3" size="sm">
+                          <Users className="h-4 w-4 mr-1" />Formar Dupla
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* All paired */}
+                {unpaired.length === 0 && paired.length > 0 && (
+                  <p className="text-sm text-muted-foreground">Todos os alunos estão em duplas.</p>
+                )}
+
+                {/* No students yet */}
+                {students.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Nenhum participante importado ainda.</p>
+                )}
+              </>
+            );
+          })()}
         </TabsContent>
 
         {/* Forms Tab */}
