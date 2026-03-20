@@ -351,8 +351,8 @@ export default function SimulationEditor() {
               <div className="border-t pt-4">
                 <p className="text-sm text-muted-foreground mb-2">{t("sim_add_student")}</p>
                 <div className="flex gap-2">
-                  <Input placeholder={t("sim_name_placeholder")} value={!professor ? "" : newName} onChange={(e) => setNewName(e.target.value)} />
-                  <Input placeholder="Email" value={!professor ? "" : newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                  <Input placeholder={t("sim_name_placeholder")} value={newName} onChange={(e) => setNewName(e.target.value)} />
+                  <Input placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
                   <Button onClick={() => addParticipant("student")} disabled={!newName.trim()}>
                     <Plus className="h-4 w-4" />
                   </Button>
