@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, Table2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, Table2, Copy, RotateCcw } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 type FormField = {
   id: string;
@@ -83,6 +84,56 @@ export default function DocumentationEditor() {
   const [medRowsScore, setMedRowsScore] = useState(1);
   const [medAnswerRows, setMedAnswerRows] = useState<Record<string, string>[]>([]);
   const [editingMedFormId, setEditingMedFormId] = useState<string | null>(null);
+  const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
+
+  // Reconciliation rooms for import
+  const { data: reconRooms } = useQuery({
+    queryKey: ["recon-rooms-for-doc-import"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data } = await supabase.from("reconciliation_rooms").select("id, title, access_code").eq("user_id", session.user.id).order("created_at", { ascending: false });
+      return data || [];
+    },
+  });
+
+  // Import students from reconciliation room (unpaired, admin forms pairs manually)
+  const importFromReconciliation = async (reconRoomId: string) => {
+    const { data: reconParticipants } = await supabase
+      .from("reconciliation_participants")
+      .select("*")
+      .eq("room_id", reconRoomId)
+      .eq("participant_role", "student");
+
+    if (!reconParticipants?.length) {
+      toast({ title: "Sem alunos", description: "Nenhum aluno encontrado nesta sala de Reconciliação.", variant: "destructive" });
+      return;
+    }
+
+    const inserts = reconParticipants.map(rp => ({
+      room_id: roomId!,
+      student_name: rp.student_name,
+      student_email: rp.student_email,
+      pair_index: -1,
+      pair_position: "X",
+      reconciliation_participant_id: rp.id,
+      participant_role: "student" as const,
+    }));
+
+    const { error } = await supabase.from("documentation_participants").insert(inserts);
+    if (error) {
+      toast({ title: "Erro", description: "Erro ao importar alunos.", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Importado", description: `${inserts.length} alunos importados. Forme as duplas manualmente.` });
+    refetchParticipants();
+  };
+
+  const deleteParticipant = async (id: string) => {
+    await supabase.from("documentation_participants").delete().eq("id", id);
+    refetchParticipants();
+  };
 
   const students = participants.filter(p => p.participant_role === "student");
   const pairs = students.reduce((acc: Record<number, any[]>, p) => {
@@ -232,24 +283,139 @@ export default function DocumentationEditor() {
           <TabsTrigger value="cases"><BookOpen className="h-4 w-4 mr-1" />Casos Clínicos</TabsTrigger>
         </TabsList>
 
-        {/* Participants - readonly from reconciliation */}
+        {/* Participants - manual pair formation like Reconciliation */}
         <TabsContent value="participants" className="space-y-4">
-          {Object.keys(pairs).length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              {Object.entries(pairs).map(([idx, pair]) => (
-                <Card key={idx}>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm">Dupla {Number(idx) + 1}</CardTitle></CardHeader>
-                  <CardContent className="space-y-1">
-                    {pair.map((p: any) => (
-                      <p key={p.id} className="text-sm">{p.student_name} <span className="text-muted-foreground">({p.student_email})</span></p>
-                    ))}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Nenhum participante. Crie a sala vinculada a uma Reconciliação para importar automaticamente.</p>
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Importar Alunos da Reconciliação</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 flex-wrap">
+                {reconRooms?.map(rr => (
+                  <Button key={rr.id} variant="outline" size="sm" onClick={() => importFromReconciliation(rr.id)}>
+                    <Copy className="h-3.5 w-3.5 mr-1" />{rr.title}
+                  </Button>
+                ))}
+                {!reconRooms?.length && <p className="text-sm text-muted-foreground">Nenhuma sala de Reconciliação encontrada</p>}
+              </div>
+            </CardContent>
+          </Card>
+
+          {(() => {
+            const unpaired = students.filter(s => s.pair_index < 0);
+            const paired = students.filter(s => s.pair_index >= 0);
+            const pairGroups: Record<number, typeof paired> = {};
+            paired.forEach(p => { (pairGroups[p.pair_index] ||= []).push(p); });
+            const nextPairIdx = paired.length > 0 ? Math.max(0, ...paired.map(p => p.pair_index)) + 1 : 0;
+
+            const toggleSelect = (id: string) => {
+              setSelectedForPairing(prev => {
+                if (prev.includes(id)) return prev.filter(x => x !== id);
+                if (prev.length >= 2) return prev;
+                return [...prev, id];
+              });
+            };
+
+            const formPair = async () => {
+              if (selectedForPairing.length !== 2) return;
+              const [a, b] = selectedForPairing;
+              await supabase.from("documentation_participants").update({ pair_index: nextPairIdx, pair_position: "A" } as any).eq("id", a);
+              await supabase.from("documentation_participants").update({ pair_index: nextPairIdx, pair_position: "B" } as any).eq("id", b);
+              setSelectedForPairing([]);
+              refetchParticipants();
+              toast({ title: "Dupla formada!" });
+            };
+
+            const undoPair = async (pairIdx: number) => {
+              const members = pairGroups[pairIdx] || [];
+              for (const m of members) {
+                await supabase.from("documentation_participants").update({ pair_index: -1, pair_position: "X" } as any).eq("id", m.id);
+              }
+              refetchParticipants();
+              toast({ title: "Dupla desfeita" });
+            };
+
+            return (
+              <>
+                {Object.keys(pairGroups).length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        Duplas Formadas
+                        <Badge variant="secondary">{Object.keys(pairGroups).length}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="space-y-2">
+                        {Object.entries(pairGroups).map(([idx, members]) => (
+                          <div key={idx} className="flex items-center justify-between py-2 px-3 rounded-lg bg-primary/5 border border-primary/10">
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline">Dupla {Number(idx) + 1}</Badge>
+                              {members.map(m => (
+                                <span key={m.id} className="text-sm">
+                                  <span className="font-medium">{m.student_name}</span>
+                                  <span className="text-muted-foreground ml-1">({m.pair_position})</span>
+                                </span>
+                              ))}
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => undoPair(Number(idx))}>
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {unpaired.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        Alunos sem dupla
+                        <Badge variant="secondary">{unpaired.length}</Badge>
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">Selecione 2 alunos para formar uma dupla</p>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="grid grid-cols-2 gap-2">
+                        {unpaired.map(p => {
+                          const isSelected = selectedForPairing.includes(p.id);
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => toggleSelect(p.id)}
+                              className={`p-3 rounded-lg border text-left text-sm transition-colors ${
+                                isSelected
+                                  ? "border-primary bg-primary/10 ring-2 ring-primary"
+                                  : "border-border hover:border-primary/50"
+                              }`}
+                            >
+                              <span className="font-medium">{p.student_name}</span>
+                              {p.student_email && <p className="text-xs text-muted-foreground">{p.student_email}</p>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedForPairing.length === 2 && (
+                        <Button onClick={formPair} className="w-full mt-3" size="sm">
+                          <Users className="h-4 w-4 mr-1" />Formar Dupla
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {unpaired.length === 0 && paired.length > 0 && (
+                  <p className="text-sm text-muted-foreground">Todos os alunos estão em duplas.</p>
+                )}
+
+                {students.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Nenhum participante importado ainda.</p>
+                )}
+              </>
+            );
+          })()}
         </TabsContent>
 
         {/* Referral form tab */}
