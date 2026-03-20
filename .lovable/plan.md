@@ -1,107 +1,111 @@
 
 
-# Plano: Módulo de Documentação (4º módulo) + Agregador de Notas
+# Plano: Pacientes Virtuais (Dor & Inflamação)
 
 ## Visão Geral
 
-Novo módulo "Documentação" vinculado à Reconciliação. Duplas importadas da Reconciliação preenchem uma ficha de encaminhamento (formulário) e um quadro resumo de medicamentos (tabela dinâmica) com base nos mesmos casos clínicos. Inclui espelho de respostas, correção IA/manual, e um painel agregador dos 4 módulos com notas de todos os alunos.
+Nova seção "Pacientes Virtuais" acessível pela sidebar e pela home. Dois módulos (Dor e Inflamação), cada um com 5 pacientes pré-configurados. Cada paciente é um chatbot IA com system prompt detalhado que simula 3 encontros clínicos. O estudante interage livremente, e ao final do 3º encontro preenche o MAI (Medication Appropriateness Index).
 
 ---
 
-## 1. Banco de Dados — 5 novas tabelas
+## 1. Banco de Dados — 3 novas tabelas
 
-**`documentation_rooms`**
-- `id`, `user_id`, `reconciliation_room_id` (ref), `title`, `description`, `access_code`, `status` (draft/active/finished), `created_at`, `updated_at`
+**`virtual_patient_sessions`**
+- `id` uuid PK, `user_id` uuid (nullable, para alunos autenticados ou null para anônimos), `patient_id` text (ex: "pain_helena"), `module` text ("pain" | "inflammation"), `current_encounter` int default 1 (1-3), `status` text ("in_progress" | "completed"), `mai_answers_json` jsonb nullable, `created_at`, `updated_at`
 
-**`documentation_participants`**
-- `id`, `room_id` (ref documentation_rooms), `student_name`, `student_email`, `pair_index`, `pair_position` (A/B), `reconciliation_participant_id` (ref), `participant_role`, `status` (waiting/ready/done), `created_at`
+**`virtual_patient_messages`**
+- `id` uuid PK, `session_id` uuid ref virtual_patient_sessions, `encounter` int (1-3), `role` text ("user" | "assistant"), `content` text, `created_at`
 
-**`documentation_forms`**
-- `id`, `room_id`, `title`, `content_json` (campos com max_score), `form_type` ("referral" | "referral_answer_key" | "medication_summary" | "medication_answer_key"), `created_at`
-- Para "medication_summary" e "medication_answer_key": `content_json` armazena `{ columns: [{id, label}], rows_score: number, answer_rows?: [{col_id: value}] }`
+**`virtual_patient_mai_scores`** (opcional, para tracking do admin)
+- `id` uuid PK, `session_id` uuid ref, `mai_json` jsonb, `total_score` numeric, `created_at`
 
-**`documentation_clinical_cases`**
-- `id`, `room_id`, `reconciliation_case_id` (ref, para manter vínculo), `title`, `content`, `position`, `created_at`
-- Importados automaticamente da sala de reconciliação vinculada
-
-**`documentation_responses`**
-- `id`, `room_id`, `pair_index`, `form_id`, `clinical_case_id`, `answers_json`, `ai_score`, `ai_feedback_json`, `admin_score`, `admin_feedback`, `submitted_at`, `created_at`
-- Usado tanto para ficha de encaminhamento quanto quadro resumo
-
-RLS: mesmo padrão (admin ALL, owner ALL via room, anon select/insert/update).
+RLS: autenticados podem CRUD próprias sessões/mensagens. Anon pode insert/select (para uso sem login, como nas simulações).
 
 ---
 
-## 2. Páginas Frontend
+## 2. Edge Function
 
-### `DocumentationRooms.tsx` — Lista de salas
-- Criar sala selecionando uma sala de Reconciliação como origem
-- Importa automaticamente participantes e casos clínicos da Reconciliação
-- Cards com título, PIN, status, contagem de duplas
-
-### `DocumentationEditor.tsx` — Configuração
-- **Aba Participantes**: Importados da Reconciliação (readonly, mesmas duplas)
-- **Aba Encaminhamento**: Builder de formulário (padrão existente) + espelho de respostas, com pontuação por item
-- **Aba Quadro Resumo**: Configurar colunas da tabela + pontuação por linha + espelho (tabela preenchida pelo admin)
-- **Aba Casos Clínicos**: Lista dos casos importados (readonly, herdados da Reconciliação)
-- Botão Ativar sala
-
-### `DocumentationJoin.tsx` — Portal do aluno (dupla)
-- Login via PIN + e-mail
-- Exibe caso clínico atribuído (mesmo da Reconciliação, round-robin por pair_index)
-- Formulário de encaminhamento para preenchimento
-- Tabela dinâmica (quadro resumo): colunas definidas pelo admin, aluno adiciona linhas e preenche
-- Envio conjunto
-
-### `DocumentationControl.tsx` — Painel do admin
-- **Aba Participantes**: Status das duplas
-- **Aba Respostas**: Lado a lado (resposta da dupla vs espelho) para encaminhamento e quadro resumo
-- **Botão "Corrigir com IA"**: Edge function compara respostas vs espelho
-- Correção manual: editar nota/feedback da IA ou preencher do zero
-
-### `SimulationAggregator.tsx` — Agregador dos 4 módulos (NOVO)
-- Tabela com todos os alunos que participaram em qualquer módulo
-- Colunas: Nome, Nota Anamnese, Nota SOAP, Nota Reconciliação, Nota Documentação, Média Geral
-- Consulta dados de `simulation_responses`, `soap_responses`, `reconciliation_responses`, `documentation_responses`
-- Agrupamento por aluno (via e-mail) cruzando os 4 módulos
-- Filtros por sala/módulo
+**`virtual-patient-chat/index.ts`**
+- Recebe `{ patientId, messages, encounter }` 
+- Busca o system prompt do paciente de um mapa hardcoded (os 10 prompts fornecidos)
+- Usa `callAiWithFallback` (mesmo padrão existente)
+- O system prompt inclui toda a personalidade, regras, dados clínicos e respostas condicionais
+- Retorna resposta não-streaming (como osce-virtual-patient)
 
 ---
 
-## 3. Edge Function
+## 3. Páginas Frontend
 
-### `grade-documentation/index.ts`
-- Mesma estrutura do `grade-reconciliation`
-- Recebe respostas do aluno + espelho (encaminhamento e quadro resumo)
-- Usa Lovable AI (Gemini) para comparar e gerar score + feedback por item
-- Salva em `documentation_responses`
+### `VirtualPatients.tsx` — Hub principal
+- Duas seções: "Dor" e "Inflamação" (cards ou tabs)
+- Cada módulo mostra 5 cards de paciente com: nome, idade, profissão, breve descrição
+- Botão "Iniciar Atendimento" → inicia sessão e vai para chat
+- Se sessão existente em andamento → "Continuar Atendimento"
+
+### `VirtualPatientChat.tsx` — Chat com paciente
+- Interface de chat (reutiliza padrão do OsceVirtualPatient)
+- Header com info do paciente (nome, idade, módulo)
+- Indicador de encontro atual (1, 2 ou 3)
+- Botão "Avançar para Encontro X" quando estudante decide
+- No Encontro 3, após conversa, botão "Preencher MAI"
+- Dialog/modal com formulário MAI (10 critérios do Medication Appropriateness Index)
+- Histórico de mensagens persistido por sessão/encontro
+
+### `VirtualPatientMAI.tsx` — Formulário MAI (componente)
+- 10 critérios do MAI com escala (Apropriado / Marginalmente Apropriado / Inapropriado)
+- Campos: Indicação, Efetividade, Dosagem, Direção correta, Direção prática, Interações medicamento-medicamento, Interações medicamento-doença, Duplicidade, Duração, Custo
+- Submissão salva em `virtual_patient_mai_scores`
 
 ---
 
-## 4. Rotas (App.tsx)
+## 4. Dados dos Pacientes (hardcoded no edge function)
+
+Os 10 system prompts serão armazenados como constantes no edge function. Cada prompt contém:
+- Identidade completa do paciente
+- Regras gerais de comportamento
+- Regras para exames
+- Dados dos 3 momentos com respostas condicionais
+- Respostas abertas para fármacos/exames não previstos
+
+### Enriquecimentos sugeridos para melhor performance:
+
+1. **Dados demográficos adicionais**: peso, altura (para cálculo de IMC quando relevante)
+2. **Alergias**: cada paciente deveria ter pelo menos uma alergia declarada ou "nega alergias" — informação crucial para farmacoterapia
+3. **Histórico familiar**: breve (ex: "mãe diabética", "pai com IAM aos 60") — ajuda na avaliação de risco
+4. **Adesão medicamentosa**: cada paciente deveria ter um perfil de adesão (ex: Helena esquece doses à noite, Rogério não segue dieta)
+5. **Expectativas do paciente**: frases que o paciente diz sobre o que espera do tratamento ("quero voltar a dormir", "preciso trabalhar sem dor")
+6. **Sinais vitais base**: PA, FC, temperatura — disponíveis se o estudante perguntar
+7. **Exame físico dirigido**: achados ao exame quando o estudante perguntar (ex: "dor à palpação em região X", "edema articular")
+8. **Contexto social**: tabagismo, etilismo, atividade física, dieta — relevantes para orientação não farmacológica
+9. **Função renal estimada (ClCr/TFG)**: para pacientes com IR, útil para ajuste de dose
+10. **Lista completa de medicamentos com posologia**: horários, via de administração
+
+Estes dados serão integrados aos prompts antes da implementação.
+
+---
+
+## 5. Rotas
 
 ```text
-/simulations/documentation                    → DocumentationRooms
-/simulations/documentation/editor/:roomId     → DocumentationEditor
-/simulations/documentation/control/:roomId    → DocumentationControl
-/simulation/documentation/join                → DocumentationJoin
-/simulations/aggregator                       → SimulationAggregator
+/virtual-patients                    → VirtualPatients (hub)
+/virtual-patients/chat/:patientId    → VirtualPatientChat
 ```
 
 ---
 
-## 5. Integrações
+## 6. Integrações
 
-- Adicionar card "Documentação" no array `modules` em `Simulations.tsx`
-- Adicionar card "Agregador de Notas" como botão especial em `Simulations.tsx`
-- Atualizar `StudentAuth.tsx` para detectar PIN de `documentation_rooms`
-- Atualizar `supabase/config.toml` com `[functions.grade-documentation]`
+- Adicionar "Pacientes Virtuais" na sidebar (`AppSidebar.tsx`) com ícone `UserRound` ou `HeartPulse`
+- Atualizar `App.tsx` com as novas rotas (protegidas por auth)
+- Atualizar `supabase/config.toml` com `[functions.virtual-patient-chat]`
+- O MAI será um componente reutilizável que poderá ser integrado futuramente a outros módulos
 
 ---
 
-## Detalhes Técnicos
+## 7. Detalhes Técnicos
 
-- Quadro resumo: `content_json` do form type "medication_summary" define as colunas; o aluno envia `answers_json` como array de objetos (linhas); o espelho ("medication_answer_key") contém as linhas esperadas
-- Casos clínicos são copiados da reconciliação na criação da sala (mesma distribuição round-robin por pair_index)
-- O agregador cruza alunos por `student_email` nos 4 módulos e calcula média ponderada
+- O controle de encontro (1→2→3) é feito pelo frontend: o estudante decide quando avançar
+- Ao avançar de encontro, uma mensagem de sistema é inserida no contexto ("O paciente retorna para o segundo encontro...")
+- Todo o histórico de mensagens dos encontros anteriores é enviado ao AI para manter coerência
+- O MAI é preenchido pelo estudante como autoavaliação do tratamento prescrito
 
