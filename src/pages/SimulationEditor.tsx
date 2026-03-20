@@ -146,21 +146,28 @@ export default function SimulationEditor() {
   const activeForm = forms.find((f: any) => f.form_type === activeFormType);
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [formTitle, setFormTitle] = useState("");
-  const [patientScript, setPatientScript] = useState("");
+  const [clinicalCases, setClinicalCases] = useState<{ id: string; title: string; script: string }[]>([]);
 
   useEffect(() => {
     if (activeForm) {
       setFormTitle(activeForm.title || "");
       if (activeFormType === "patient_script") {
         const content = activeForm.content_json as any;
-        setPatientScript(typeof content === "string" ? content : (content?.[0]?.label || ""));
+        if (Array.isArray(content) && content.length > 0 && content[0]?.cases) {
+          setClinicalCases(content[0].cases);
+        } else if (Array.isArray(content) && content.length > 0 && content[0]?.label) {
+          // Migrate old single-case format
+          setClinicalCases([{ id: crypto.randomUUID(), title: `${t("sim_case_number")} 1`, script: content[0].label }]);
+        } else {
+          setClinicalCases([]);
+        }
       } else {
         setFormFields(Array.isArray(activeForm.content_json) ? activeForm.content_json as FormField[] : []);
       }
     } else {
       setFormTitle("");
       setFormFields([]);
-      setPatientScript("");
+      setClinicalCases([]);
     }
   }, [activeForm, activeFormType]);
 
