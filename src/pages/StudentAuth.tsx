@@ -44,6 +44,22 @@ export default function StudentAuth() {
         return;
       }
 
+      // Check if PIN belongs to a SOAP room
+      const { data: soapRoom } = await supabase
+        .from("soap_rooms")
+        .select("id, access_code")
+        .eq("access_code", pin.trim().toLowerCase())
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+
+      if (soapRoom) {
+        sessionStorage.setItem("soap_pin", pin.trim().toLowerCase());
+        sessionStorage.setItem("soap_email", email.trim().toLowerCase());
+        navigate("/simulations/soap/join");
+        return;
+      }
+
       // Check if PIN belongs to an OSCE circuit
       const { data: osceCircuit } = await supabase
         .from("osce_circuits")
