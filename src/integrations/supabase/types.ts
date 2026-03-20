@@ -1298,6 +1298,7 @@ export type Database = {
       simulation_round_assignments: {
         Row: {
           assigned_role: string
+          case_index: number | null
           created_at: string
           id: string
           pair_index: number
@@ -1306,6 +1307,7 @@ export type Database = {
         }
         Insert: {
           assigned_role?: string
+          case_index?: number | null
           created_at?: string
           id?: string
           pair_index?: number
@@ -1314,6 +1316,7 @@ export type Database = {
         }
         Update: {
           assigned_role?: string
+          case_index?: number | null
           created_at?: string
           id?: string
           pair_index?: number
