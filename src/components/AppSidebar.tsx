@@ -17,6 +17,7 @@ import {
   Trash2,
   Store,
   HeartPulse,
+  UserRound,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,6 +74,7 @@ export function AppSidebar() {
     { title: t("sidebar_my_exams"), url: "/exams", icon: BookOpen },
     { title: "OSCE", url: "/osce", icon: Stethoscope },
     { title: t("sim_nav"), url: "/simulations", icon: HeartPulse },
+    { title: "Pacientes Virtuais", url: "/virtual-patients", icon: UserRound },
   ];
 
   const managementNav = [

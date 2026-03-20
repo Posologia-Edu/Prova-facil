@@ -2158,6 +2158,109 @@ export type Database = {
         }
         Relationships: []
       }
+      virtual_patient_mai_scores: {
+        Row: {
+          created_at: string
+          id: string
+          mai_json: Json
+          session_id: string
+          total_score: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mai_json?: Json
+          session_id: string
+          total_score?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mai_json?: Json
+          session_id?: string
+          total_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "virtual_patient_mai_scores_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_patient_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      virtual_patient_messages: {
+        Row: {
+          content: string
+          created_at: string
+          encounter: number
+          id: string
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          encounter?: number
+          id?: string
+          role?: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          encounter?: number
+          id?: string
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "virtual_patient_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_patient_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      virtual_patient_sessions: {
+        Row: {
+          created_at: string
+          current_encounter: number
+          id: string
+          mai_answers_json: Json | null
+          module: string
+          patient_id: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_encounter?: number
+          id?: string
+          mai_answers_json?: Json | null
+          module?: string
+          patient_id: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_encounter?: number
+          id?: string
+          mai_answers_json?: Json | null
+          module?: string
+          patient_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
