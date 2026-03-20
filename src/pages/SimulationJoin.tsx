@@ -114,10 +114,24 @@ export default function SimulationJoin() {
 
   const isProfessor = participant?.participant_role === "professor";
 
-  // Poll for active round & all rounds
+  // Poll for active round, all rounds, and participants
   useEffect(() => {
     if (!joined || !room) return;
     const poll = async () => {
+      // Refresh participants list (professor needs to see new arrivals)
+      const { data: participantsData } = await supabase
+        .from("simulation_participants")
+        .select("*")
+        .eq("room_id", room.id);
+      setAllParticipants(participantsData || []);
+
+      // Refresh forms (in case admin updates them)
+      const { data: formsData } = await supabase
+        .from("simulation_forms")
+        .select("*")
+        .eq("room_id", room.id);
+      if (formsData) setForms(formsData);
+
       const { data: roundsAll } = await supabase
         .from("simulation_rounds")
         .select("*")
