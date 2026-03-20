@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy, GraduationCap } from "lucide-react";
 import SplitSoapRoomDialog from "@/components/SplitSoapRoomDialog";
 
 type FormField = {
@@ -66,6 +66,35 @@ export default function SoapEditor() {
     },
     enabled: !!roomId,
   });
+  // Fetch professor name from linked anamnesis room
+  const { data: professorName } = useQuery({
+    queryKey: ["soap-professor", roomId, room?.anamnesis_room_id],
+    queryFn: async () => {
+      if (!room?.anamnesis_room_id) return null;
+      const { data } = await supabase
+        .from("simulation_participants")
+        .select("student_name")
+        .eq("room_id", room.anamnesis_room_id)
+        .eq("participant_role", "teacher")
+        .limit(1)
+        .maybeSingle();
+      return data?.student_name || null;
+    },
+    enabled: !!room?.anamnesis_room_id,
+  });
+
+  // Fallback: fetch logged-in user profile name
+  const { data: profileName } = useQuery({
+    queryKey: ["my-profile-name"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+      const { data } = await supabase.from("profiles").select("full_name").eq("user_id", session.user.id).maybeSingle();
+      return data?.full_name || null;
+    },
+  });
+
+  const displayProfessor = professorName || profileName || "Professor";
 
   // Anamnesis rooms for import
   const { data: anamnesisRooms } = useQuery({
@@ -134,18 +163,22 @@ export default function SoapEditor() {
       toast({ title: "Erro", description: "Nenhum participante encontrado na sala de anamnese.", variant: "destructive" });
       return;
     }
-    const inserts = simParticipants.map((p) => ({
+    // Only import students, not teachers
+    const students = simParticipants.filter(p => p.participant_role === "student");
+    if (!students.length) {
+      toast({ title: "Erro", description: "Nenhum aluno encontrado na sala de anamnese.", variant: "destructive" });
+      return;
+    }
+    const inserts = students.map((p) => ({
       room_id: roomId!,
       student_name: p.student_name,
       student_email: p.student_email || "",
       anamnesis_participant_id: p.id,
-      participant_role: p.participant_role || "student",
+      participant_role: "student",
     }));
     const { error: insertErr } = await supabase.from("soap_participants").insert(inserts as any);
     if (insertErr) { toast({ title: "Erro", description: insertErr.message, variant: "destructive" }); return; }
-    const studentCount = simParticipants.filter(p => p.participant_role === "student").length;
-    const teacherCount = simParticipants.filter(p => p.participant_role !== "student").length;
-    toast({ title: "Importado", description: `${studentCount} aluno(s) e ${teacherCount} professor(es) importados.` });
+    toast({ title: "Importado", description: `${students.length} aluno(s) importado(s).` });
     setImportDialogOpen(false);
     refetchParticipants();
   };
@@ -261,7 +294,10 @@ export default function SoapEditor() {
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{room.title}</h1>
-          <p className="text-muted-foreground text-sm">PIN: {room.access_code} • Status: {room.status}</p>
+          <p className="text-muted-foreground text-sm flex items-center gap-2">
+            PIN: {room.access_code} • Status: {room.status}
+            <span className="inline-flex items-center gap-1 ml-2"><GraduationCap className="h-3.5 w-3.5" />{displayProfessor}</span>
+          </p>
         </div>
         <div className="flex gap-2">
           {room.status === "draft" && (
@@ -314,69 +350,34 @@ export default function SoapEditor() {
             </DialogContent>
           </Dialog>
 
-          {(() => {
-            const teachers = participants.filter((p: any) => p.participant_role === "teacher");
-            const students = participants.filter((p: any) => p.participant_role !== "teacher");
-            return (
-              <>
-                {teachers.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        Professor(es)
-                        <Badge variant="secondary">{teachers.length}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <div className="space-y-2">
-                        {teachers.map((p) => (
-                          <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-primary/5 border border-primary/10">
-                            <div>
-                              <span className="font-medium">{p.student_name}</span>
-                              {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
-                              <Badge variant="outline" className="ml-2 text-xs">Professor</Badge>
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => removeParticipant(p.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
+          {participants.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  Alunos
+                  <Badge variant="secondary">{participants.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="space-y-2">
+                  {participants.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+                      <div>
+                        <span className="font-medium">{p.student_name}</span>
+                        {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
+                        {p.pair_index >= 0 && (
+                          <Badge variant="outline" className="ml-2">Dupla {p.pair_index} ({p.pair_position})</Badge>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {students.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        Alunos
-                        <Badge variant="secondary">{students.length}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <div className="space-y-2">
-                        {students.map((p) => (
-                          <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                            <div>
-                              <span className="font-medium">{p.student_name}</span>
-                              {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
-                              {p.pair_index >= 0 && (
-                                <Badge variant="outline" className="ml-2">Dupla {p.pair_index} ({p.pair_position})</Badge>
-                              )}
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => removeParticipant(p.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            );
-          })()}
+                      <Button variant="ghost" size="icon" onClick={() => removeParticipant(p.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Forms Tab */}
