@@ -66,6 +66,35 @@ export default function SoapEditor() {
     },
     enabled: !!roomId,
   });
+  // Fetch professor name from linked anamnesis room
+  const { data: professorName } = useQuery({
+    queryKey: ["soap-professor", roomId, room?.anamnesis_room_id],
+    queryFn: async () => {
+      if (!room?.anamnesis_room_id) return null;
+      const { data } = await supabase
+        .from("simulation_participants")
+        .select("student_name")
+        .eq("room_id", room.anamnesis_room_id)
+        .eq("participant_role", "teacher")
+        .limit(1)
+        .maybeSingle();
+      return data?.student_name || null;
+    },
+    enabled: !!room?.anamnesis_room_id,
+  });
+
+  // Fallback: fetch logged-in user profile name
+  const { data: profileName } = useQuery({
+    queryKey: ["my-profile-name"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+      const { data } = await supabase.from("profiles").select("full_name").eq("user_id", session.user.id).maybeSingle();
+      return data?.full_name || null;
+    },
+  });
+
+  const displayProfessor = professorName || profileName || "Professor";
 
   // Anamnesis rooms for import
   const { data: anamnesisRooms } = useQuery({
