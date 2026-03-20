@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import {
   areCycleMaterialsReleased,
   canAccessCycleMaterials,
   getCycleCaseIndex,
+  hasCycleStarted,
   getMaterialCycle,
   getPendingRoundsSorted,
   getStudyRole,
@@ -36,6 +38,7 @@ const normalizeAccessCode = (value: string) => value.trim().toLowerCase();
 
 export default function SimulationJoin() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [pin, setPin] = useState(() => sessionStorage.getItem("sim_pin") || "");
   const [email, setEmail] = useState(() => sessionStorage.getItem("sim_email") || "");
   const [joined, setJoined] = useState(false);
@@ -54,6 +57,7 @@ export default function SimulationJoin() {
   const [allAssignments, setAllAssignments] = useState<any[]>([]);
   const [materialsReady, setMaterialsReady] = useState(false);
   const [studentsReady, setStudentsReady] = useState<string[]>([]);
+  const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
 
   // Auto-join if redirected from StudentAuth
   useEffect(() => {
@@ -298,6 +302,7 @@ export default function SimulationJoin() {
   const materialCycleRounds = allRounds.filter((round: any) => round.cycle === materialCycle);
   const materialCycleRoundIds = materialCycleRounds.map((round: any) => round.id);
   const cycleMaterialsReleased = areCycleMaterialsReleased(allRounds, materialCycle);
+  const cycleAlreadyStarted = hasCycleStarted(allRounds, materialCycle);
   const canSeeCycleMaterials = canAccessCycleMaterials(
     allRounds,
     allAssignments,
@@ -307,26 +312,49 @@ export default function SimulationJoin() {
     participant?.pair_index,
     activeRound,
   );
-  const needsMaterialRelease = !activeRound && materialCycleRounds.length > 0 && !cycleMaterialsReleased;
+  const needsMaterialRelease =
+    !activeRound &&
+    !!nextPendingRound &&
+    materialCycleRounds.length > 0 &&
+    !cycleMaterialsReleased &&
+    !cycleAlreadyStarted;
 
   // Professor: release materials for ALL rounds in the cycle
   const releaseMaterials = async () => {
     if (materialCycleRoundIds.length > 0) {
-      await supabase.from("simulation_rounds").update({
-        materials_released: true,
-      }).in("id", materialCycleRoundIds);
+      await Promise.all([
+        supabase.from("simulation_rounds").update({
+          materials_released: true,
+        }).in("id", materialCycleRoundIds),
+        supabase
+          .from("simulation_participants")
+          .update({ status: "waiting" })
+          .eq("room_id", room.id)
+          .eq("participant_role", "student"),
+        supabase
+          .from("simulation_rooms")
+          .update({ current_cycle: materialCycle, current_round: 0, status: "active" })
+          .eq("id", room.id),
+      ]);
     }
+    setMaterialsReady(false);
     toast({ title: t("sim_materials_released") });
   };
 
   // Professor: start simulation (release round after materials)
   const releaseRound = async () => {
     if (!nextPendingRound) return;
-    await supabase.from("simulation_rounds").update({
-      status: "active",
-      started_at: new Date().toISOString(),
-      released_by: participant?.student_name || "professor",
-    }).eq("id", nextPendingRound.id);
+    await Promise.all([
+      supabase.from("simulation_rounds").update({
+        status: "active",
+        started_at: new Date().toISOString(),
+        released_by: participant?.student_name || "professor",
+      }).eq("id", nextPendingRound.id),
+      supabase
+        .from("simulation_rooms")
+        .update({ current_cycle: nextPendingRound.cycle, current_round: nextPendingRound.round_number, status: "active" })
+        .eq("id", room.id),
+    ]);
     setAnswers({});
     setFeedback("");
     toast({ title: t("sim_round_released") });
@@ -339,10 +367,21 @@ export default function SimulationJoin() {
       toast({ title: t("sim_must_submit_first"), variant: "destructive" });
       return;
     }
-    await supabase.from("simulation_rounds").update({
-      status: "completed",
-      finished_at: new Date().toISOString(),
-    }).eq("id", activeRound.id);
+    const remainingPendingRounds = allRounds.filter((round: any) => round.id !== activeRound.id && round.status === "pending");
+    await Promise.all([
+      supabase.from("simulation_rounds").update({
+        status: "completed",
+        finished_at: new Date().toISOString(),
+      }).eq("id", activeRound.id),
+      supabase
+        .from("simulation_rooms")
+        .update({
+          current_cycle: activeRound.cycle,
+          current_round: activeRound.round_number,
+          status: remainingPendingRounds.length === 0 ? "completed" : "active",
+        })
+        .eq("id", room.id),
+    ]);
     toast({ title: t("sim_round_ended") });
   };
 
@@ -350,6 +389,7 @@ export default function SimulationJoin() {
   const markMaterialsReady = async () => {
     if (!participant) return;
     setMaterialsReady(true);
+    setParticipant((previousParticipant: any) => previousParticipant ? { ...previousParticipant, status: "ready" } : previousParticipant);
     await supabase
       .from("simulation_participants")
       .update({ status: "ready" })
@@ -625,12 +665,36 @@ export default function SimulationJoin() {
   const isActive = !!activeRound;
   const canFill = isActive && !submitted && assignment?.assigned_role !== "patient";
   const completedRoundsList = allRounds.filter((r: any) => r.status === "completed");
+  const allRoundsCompleted = allRounds.length > 0 && allRounds.every((round: any) => round.status === "completed");
 
   // Check if student participates in active round
   const participatesInActiveRound = isActive && !!assignment;
 
   // Professor should see pairing UI when no rounds exist or explicitly in pairing mode (after reset)
   const shouldShowPairingUI = isProfessor && !isActive && (allRounds.length === 0 || showPairingMode);
+
+  useEffect(() => {
+    if (!joined || isProfessor || isActive || !allRoundsCompleted) {
+      setRedirectSeconds(null);
+      return;
+    }
+
+    setRedirectSeconds(15);
+    const redirectTimeout = window.setTimeout(() => {
+      navigate("/");
+    }, 15000);
+    const countdownInterval = window.setInterval(() => {
+      setRedirectSeconds((previousSeconds) => {
+        if (previousSeconds == null) return 14;
+        return previousSeconds > 0 ? previousSeconds - 1 : 0;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(redirectTimeout);
+      window.clearInterval(countdownInterval);
+    };
+  }, [allRoundsCompleted, isActive, isProfessor, joined, navigate]);
 
   // Material release stage check
   const isMaterialStage = isActive && activeRound && !activeRound.started_at && activeRound.materials_released;
@@ -640,6 +704,17 @@ export default function SimulationJoin() {
   // → professor starts simulation → status becomes "active", started_at set
   // But we already use "active" status... Let me handle it differently:
   // The material release phase is when the next pending round needs materials AND materials are released but round not started yet
+
+  if (isActive && !isProfessor && !participatesInActiveRound) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="flex flex-col items-center justify-center text-center gap-4">
+          <Clock className="h-12 w-12 text-muted-foreground/50 animate-pulse" />
+          <p className="text-lg text-muted-foreground">{t("sim_waiting_professor")}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto space-y-4">
@@ -732,7 +807,7 @@ export default function SimulationJoin() {
       )}
 
       {/* Waiting state for students: no active round and no materials released for cycle */}
-      {!isProfessor && !canSeeCycleMaterials && !participatesInActiveRound && (
+      {!isProfessor && !canSeeCycleMaterials && !participatesInActiveRound && !allRoundsCompleted && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Clock className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
@@ -833,16 +908,6 @@ export default function SimulationJoin() {
 
           return null;
         })()
-      )}
-
-      {/* Student not participating in active round */}
-      {isActive && !isProfessor && !participatesInActiveRound && !canSeeCycleMaterials && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Clock className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
-            <h3 className="text-lg font-medium">{t("sim_waiting_your_round")}</h3>
-          </CardContent>
-        </Card>
       )}
 
       {/* Waiting state (professor, need to form pairs and generate) */}
@@ -974,8 +1039,20 @@ export default function SimulationJoin() {
         </Card>
       )}
 
+      {!isActive && !isProfessor && allRoundsCompleted && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center gap-3">
+            <CheckCircle className="h-10 w-10 text-primary" />
+            <p className="text-lg font-medium">{t("sim_all_rounds_completed")}</p>
+            <p className="text-sm text-muted-foreground">
+              Você será encaminhado para a página inicial em {redirectSeconds ?? 15}s.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Submitted state */}
-      {submitted && (
+      {submitted && !allRoundsCompleted && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8">
             <Send className="h-10 w-10 text-primary mb-3" />

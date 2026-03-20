@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -170,6 +170,8 @@ export default function SimulationEditor() {
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [formTitle, setFormTitle] = useState("");
   const [clinicalCases, setClinicalCases] = useState<{ id: string; title: string; script: string }[]>([]);
+  const lastSavedFormSnapshotRef = useRef("");
+  const skipNextAutoSaveRef = useRef(true);
 
   useEffect(() => {
     if (activeForm) {
@@ -178,20 +180,38 @@ export default function SimulationEditor() {
         const content = activeForm.content_json as any;
         if (Array.isArray(content) && content.length > 0 && content[0]?.cases) {
           setClinicalCases(content[0].cases);
+          lastSavedFormSnapshotRef.current = JSON.stringify({
+            formType: activeFormType,
+            title: activeForm.title || "",
+            content: [{ id: "cases_container", cases: content[0].cases, type: "cases" }],
+          });
         } else if (Array.isArray(content) && content.length > 0 && content[0]?.label) {
           // Migrate old single-case format
           setClinicalCases([{ id: crypto.randomUUID(), title: `${t("sim_case_number")} 1`, script: content[0].label }]);
+          lastSavedFormSnapshotRef.current = JSON.stringify({
+            formType: activeFormType,
+            title: activeForm.title || "",
+            content: [{ id: "cases_container", cases: [{ id: "legacy", title: `${t("sim_case_number")} 1`, script: content[0].label }], type: "cases" }],
+          });
         } else {
           setClinicalCases([]);
+          lastSavedFormSnapshotRef.current = JSON.stringify({ formType: activeFormType, title: activeForm.title || "", content: [] });
         }
       } else {
         setFormFields(Array.isArray(activeForm.content_json) ? activeForm.content_json as FormField[] : []);
+        lastSavedFormSnapshotRef.current = JSON.stringify({
+          formType: activeFormType,
+          title: activeForm.title || "",
+          content: Array.isArray(activeForm.content_json) ? activeForm.content_json : [],
+        });
       }
     } else {
       setFormTitle("");
       setFormFields([]);
       setClinicalCases([]);
+      lastSavedFormSnapshotRef.current = JSON.stringify({ formType: activeFormType, title: "", content: [] });
     }
+    skipNextAutoSaveRef.current = true;
   }, [activeForm, activeFormType]);
 
   // Calculate total scores for professor and observer forms
@@ -220,7 +240,7 @@ export default function SimulationEditor() {
     return { profTotal, obsTotal, total };
   }, [forms, formFields, activeFormType]);
 
-  const saveForm = async () => {
+  const saveForm = async (silent = false) => {
     const contentJson = activeFormType === "patient_script"
       ? [{ id: "cases_container", cases: clinicalCases, type: "cases" as const }]
       : formFields;
@@ -250,9 +270,46 @@ export default function SimulationEditor() {
         content_json: contentJson as any,
       });
     }
-    refetchForms();
-    toast({ title: t("save"), description: t("sim_form_saved") });
+    lastSavedFormSnapshotRef.current = JSON.stringify({ formType: activeFormType, title: formTitle, content: contentJson });
+    if (!activeForm) {
+      await refetchForms();
+    } else if (!silent) {
+      refetchForms();
+    }
+    if (!silent) {
+      toast({ title: t("save"), description: t("sim_form_saved") });
+    }
   };
+
+  useEffect(() => {
+    if (!roomId) return;
+
+    const hasContent = activeFormType === "patient_script"
+      ? clinicalCases.length > 0 || formTitle.trim().length > 0
+      : formFields.length > 0 || formTitle.trim().length > 0;
+
+    if (!hasContent && !activeForm) return;
+
+    const contentJson = activeFormType === "patient_script"
+      ? [{ id: "cases_container", cases: clinicalCases, type: "cases" as const }]
+      : formFields;
+
+    const currentSnapshot = JSON.stringify({ formType: activeFormType, title: formTitle, content: contentJson });
+
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      lastSavedFormSnapshotRef.current = currentSnapshot;
+      return;
+    }
+
+    if (currentSnapshot === lastSavedFormSnapshotRef.current) return;
+
+    const timeout = window.setTimeout(() => {
+      void saveForm(true);
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+  }, [roomId, activeForm, activeFormType, clinicalCases, formFields, formTitle]);
 
   const addField = () => {
     setFormFields([...formFields, {
@@ -294,6 +351,55 @@ export default function SimulationEditor() {
     }).eq("id", roomId!);
     queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
     toast({ title: t("save") });
+  };
+
+  const resumeSimulation = () => {
+    if (!professor?.student_email) {
+      toast({ title: "Erro", description: "Cadastre um e-mail para o professor para retomar a atividade.", variant: "destructive" });
+      return;
+    }
+
+    sessionStorage.setItem("sim_pin", room.access_code);
+    sessionStorage.setItem("sim_email", String(professor.student_email).trim().toLowerCase());
+    navigate("/simulation/join");
+  };
+
+  const restartSimulation = async () => {
+    if (!roomId || !window.confirm("Deseja reiniciar a atividade do começo? As rodadas e respostas atuais serão apagadas.")) {
+      return;
+    }
+
+    const { data: roomRounds } = await supabase
+      .from("simulation_rounds")
+      .select("id")
+      .eq("room_id", roomId);
+
+    const roundIds = (roomRounds || []).map((round: any) => round.id);
+
+    if (roundIds.length > 0) {
+      await supabase.from("simulation_responses").delete().in("round_id", roundIds);
+      await supabase.from("simulation_round_assignments").delete().in("round_id", roundIds);
+      await supabase.from("simulation_rounds").delete().in("id", roundIds);
+    }
+
+    await Promise.all([
+      supabase
+        .from("simulation_participants")
+        .update({ status: "waiting", assigned_role: "waiting" })
+        .eq("room_id", roomId),
+      supabase
+        .from("simulation_rooms")
+        .update({ status: "active", current_cycle: 1, current_round: 0 })
+        .eq("id", roomId),
+    ]);
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] }),
+      queryClient.invalidateQueries({ queryKey: ["simulation-participants", roomId] }),
+      queryClient.invalidateQueries({ queryKey: ["simulation-forms", roomId] }),
+    ]);
+
+    toast({ title: "Atividade reiniciada" });
   };
 
   // Import functionality
@@ -737,7 +843,10 @@ export default function SimulationEditor() {
                 </div>
               )}
 
-              <Button onClick={saveForm} className="w-full">{t("save")}</Button>
+              <div className="space-y-2">
+                <Button onClick={() => saveForm()} className="w-full">{t("save")}</Button>
+                <p className="text-xs text-muted-foreground text-center">Salvamento automático ativado.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -764,7 +873,15 @@ export default function SimulationEditor() {
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm font-medium">PIN: <span className="font-mono text-lg">{room.access_code}</span></p>
               </div>
-              <Button onClick={saveSettings}>{t("save")}</Button>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={saveSettings}>{t("save")}</Button>
+                {room.status === "active" && (
+                  <Button variant="outline" onClick={resumeSimulation}>Retomar atividade</Button>
+                )}
+                {(room.status === "active" || room.status === "completed") && (
+                  <Button variant="destructive" onClick={restartSimulation}>Reiniciar do começo</Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 
