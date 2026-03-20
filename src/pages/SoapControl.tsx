@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Clock, Send } from "lucide-react";
+import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Clock, Send, Shuffle } from "lucide-react";
 
 export default function SoapControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -27,7 +27,7 @@ export default function SoapControl() {
     enabled: !!roomId,
   });
 
-  const { data: participants = [] } = useQuery({
+  const { data: participants = [], refetch: refetchParticipants } = useQuery({
     queryKey: ["soap-participants", roomId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -70,6 +70,34 @@ export default function SoapControl() {
   const [adminScore, setAdminScore] = useState<string>("");
   const [adminFeedback, setAdminFeedback] = useState("");
 
+  // Pair formation logic
+  const unpaired = participants.filter((p) => p.pair_index < 0);
+  const paired = participants.filter((p) => p.pair_index >= 0);
+
+  const formPairsAuto = async () => {
+    if (unpaired.length < 2) {
+      toast({ title: "Insuficiente", description: "Precisa de pelo menos 2 alunos sem dupla.", variant: "destructive" });
+      return;
+    }
+    const maxPairIdx = Math.max(0, ...paired.map((p) => p.pair_index));
+    let pairIdx = paired.length > 0 ? maxPairIdx + 1 : 0;
+    for (let i = 0; i < unpaired.length - 1; i += 2) {
+      await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "A" }).eq("id", unpaired[i].id);
+      await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "B" }).eq("id", unpaired[i + 1].id);
+      pairIdx++;
+    }
+    refetchParticipants();
+    toast({ title: "Duplas formadas!" });
+  };
+
+  const resetPairs = async () => {
+    for (const p of participants) {
+      await supabase.from("soap_participants").update({ pair_index: -1, pair_position: "X" }).eq("id", p.id);
+    }
+    refetchParticipants();
+    toast({ title: "Duplas desfeitas" });
+  };
+
   const saveAdminScore = async () => {
     if (!selectedResponse) return;
     const { error } = await supabase.from("soap_responses").update({
@@ -96,8 +124,11 @@ export default function SoapControl() {
   const submittedCount = soapResponses.length;
   const evaluatedCount = peerResponses.length;
 
-  // Analytics
   const avgAdminScore = responses.filter((r: any) => r.admin_score != null).reduce((sum: number, r: any) => sum + Number(r.admin_score), 0) / (responses.filter((r: any) => r.admin_score != null).length || 1);
+
+  // Group pairs
+  const pairGroups: Record<number, typeof paired> = {};
+  paired.forEach((p) => { (pairGroups[p.pair_index] ||= []).push(p); });
 
   if (!room) return <p className="p-6 text-muted-foreground">Carregando...</p>;
 
@@ -150,12 +181,58 @@ export default function SoapControl() {
         </Card>
       </div>
 
-      <Tabs defaultValue="responses">
+      <Tabs defaultValue="pairs">
         <TabsList>
+          <TabsTrigger value="pairs"><Shuffle className="h-4 w-4 mr-1" />Duplas</TabsTrigger>
           <TabsTrigger value="responses">Respostas SOAP</TabsTrigger>
           <TabsTrigger value="evaluations">Avaliações entre Pares</TabsTrigger>
           <TabsTrigger value="admin">Notas do Admin</TabsTrigger>
         </TabsList>
+
+        {/* Pairs Tab */}
+        <TabsContent value="pairs" className="space-y-4">
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={formPairsAuto} disabled={unpaired.length < 2}>
+              <Users className="h-4 w-4 mr-2" />Formar Duplas Automaticamente
+            </Button>
+            {paired.length > 0 && (
+              <Button variant="outline" onClick={resetPairs}>
+                Desfazer Duplas
+              </Button>
+            )}
+          </div>
+
+          {unpaired.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-base">Sem Dupla ({unpaired.length})</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {unpaired.map((p) => (
+                    <Badge key={p.id} variant="secondary">{p.student_name}</Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {Object.entries(pairGroups).map(([idx, members]) => (
+            <Card key={idx}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Dupla {idx}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4">
+                  {members.sort((a, b) => a.pair_position.localeCompare(b.pair_position)).map((m) => (
+                    <div key={m.id} className="flex items-center gap-2">
+                      <Badge variant={m.pair_position === "A" ? "default" : "secondary"}>{m.pair_position}</Badge>
+                      <span>{m.student_name}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
 
         <TabsContent value="responses" className="space-y-3">
           {soapResponses.length === 0 ? (
@@ -240,7 +317,6 @@ export default function SoapControl() {
             </Card>
           )}
 
-          {/* Scored responses summary */}
           {responses.filter((r: any) => r.admin_score != null).length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base">Notas Atribuídas</CardTitle></CardHeader>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, Download, Pencil, Check, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy } from "lucide-react";
+import SplitSoapRoomDialog from "@/components/SplitSoapRoomDialog";
 
 type FormField = {
   id: string;
@@ -28,7 +29,6 @@ export default function SoapEditor() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Room data
   const { data: room, isLoading: roomLoading } = useQuery({
     queryKey: ["soap-room", roomId],
     queryFn: async () => {
@@ -39,7 +39,6 @@ export default function SoapEditor() {
     enabled: !!roomId,
   });
 
-  // Participants
   const { data: participants = [], refetch: refetchParticipants } = useQuery({
     queryKey: ["soap-participants", roomId],
     queryFn: async () => {
@@ -54,7 +53,6 @@ export default function SoapEditor() {
     enabled: !!roomId,
   });
 
-  // Forms
   const { data: forms = [], refetch: refetchForms } = useQuery({
     queryKey: ["soap-forms", roomId],
     queryFn: async () => {
@@ -85,10 +83,31 @@ export default function SoapEditor() {
     },
   });
 
+  // Other SOAP rooms for form import
+  const { data: otherSoapRooms } = useQuery({
+    queryKey: ["soap-rooms-for-form-import", roomId],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data, error } = await supabase
+        .from("soap_rooms")
+        .select("id, title, access_code")
+        .eq("user_id", session.user.id)
+        .neq("id", roomId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!roomId,
+  });
+
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedImportRoom, setSelectedImportRoom] = useState("");
+  const [importFormDialogOpen, setImportFormDialogOpen] = useState(false);
+  const [selectedFormImportRoom, setSelectedFormImportRoom] = useState("");
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
 
   // Add participant
   const addParticipant = async () => {
@@ -129,7 +148,30 @@ export default function SoapEditor() {
     refetchParticipants();
   };
 
-  // Remove participant
+  // Import forms from another SOAP room
+  const importFormsFromRoom = async () => {
+    if (!selectedFormImportRoom) return;
+    const { data: sourceForms, error } = await supabase
+      .from("soap_forms")
+      .select("*")
+      .eq("room_id", selectedFormImportRoom);
+    if (error || !sourceForms?.length) {
+      toast({ title: "Erro", description: "Nenhum formulário encontrado na sala selecionada.", variant: "destructive" });
+      return;
+    }
+    const inserts = sourceForms.map((f: any) => ({
+      room_id: roomId!,
+      form_type: f.form_type,
+      title: f.title,
+      content_json: f.content_json,
+    }));
+    const { error: insertErr } = await supabase.from("soap_forms").insert(inserts);
+    if (insertErr) { toast({ title: "Erro", description: insertErr.message, variant: "destructive" }); return; }
+    toast({ title: "Importado", description: `${inserts.length} formulário(s) importado(s).` });
+    setImportFormDialogOpen(false);
+    refetchForms();
+  };
+
   const removeParticipant = async (id: string) => {
     await supabase.from("soap_participants").delete().eq("id", id);
     refetchParticipants();
@@ -189,24 +231,6 @@ export default function SoapEditor() {
     refetchForms();
   };
 
-  // Pair management
-  const formPairs = async () => {
-    const unpaired = participants.filter((p) => p.pair_index < 0);
-    if (unpaired.length < 2) {
-      toast({ title: "Insuficiente", description: "Precisa de pelo menos 2 alunos sem dupla.", variant: "destructive" });
-      return;
-    }
-    const maxPairIdx = Math.max(0, ...participants.filter(p => p.pair_index >= 0).map(p => p.pair_index));
-    let pairIdx = maxPairIdx + 1;
-    for (let i = 0; i < unpaired.length - 1; i += 2) {
-      await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "A" }).eq("id", unpaired[i].id);
-      await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "B" }).eq("id", unpaired[i + 1].id);
-      pairIdx++;
-    }
-    refetchParticipants();
-    toast({ title: "Duplas formadas" });
-  };
-
   // Activate room
   const activateRoom = async () => {
     const hasSoapForm = forms.some((f: any) => f.form_type === "soap");
@@ -227,10 +251,6 @@ export default function SoapEditor() {
   if (roomLoading) return <p className="p-6 text-muted-foreground">Carregando...</p>;
   if (!room) return <p className="p-6 text-destructive">Sala não encontrada</p>;
 
-  const students = participants;
-  const paired = students.filter((p) => p.pair_index >= 0);
-  const unpaired = students.filter((p) => p.pair_index < 0);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -241,24 +261,28 @@ export default function SoapEditor() {
           <h1 className="text-2xl font-bold">{room.title}</h1>
           <p className="text-muted-foreground text-sm">PIN: {room.access_code} • Status: {room.status}</p>
         </div>
-        {room.status === "draft" && (
-          <Button onClick={activateRoom}><Play className="h-4 w-4 mr-2" />Ativar Sala</Button>
-        )}
+        <div className="flex gap-2">
+          {room.status === "draft" && (
+            <>
+              <Button variant="outline" onClick={() => setSplitDialogOpen(true)}>
+                <Scissors className="h-4 w-4 mr-2" />Dividir Sala
+              </Button>
+              <Button onClick={activateRoom}><Play className="h-4 w-4 mr-2" />Ativar Sala</Button>
+            </>
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="participants">
         <TabsList>
-          <TabsTrigger value="participants"><Users className="h-4 w-4 mr-1" />Participantes ({students.length})</TabsTrigger>
+          <TabsTrigger value="participants"><Users className="h-4 w-4 mr-1" />Participantes ({participants.length})</TabsTrigger>
           <TabsTrigger value="forms"><FileText className="h-4 w-4 mr-1" />Formulários ({forms.length})</TabsTrigger>
-          <TabsTrigger value="pairs"><Settings className="h-4 w-4 mr-1" />Duplas</TabsTrigger>
         </TabsList>
 
         {/* Participants Tab */}
         <TabsContent value="participants" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Adicionar Aluno</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">Adicionar Aluno</CardTitle></CardHeader>
             <CardContent>
               <div className="flex gap-2">
                 <Input placeholder="Nome" value={newName} onChange={(e) => setNewName(e.target.value)} />
@@ -273,9 +297,7 @@ export default function SoapEditor() {
               <Button variant="outline"><Download className="h-4 w-4 mr-2" />Importar da Anamnese</Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Importar Alunos da Anamnese</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>Importar Alunos da Anamnese</DialogTitle></DialogHeader>
               <div className="space-y-4">
                 <Select value={selectedImportRoom} onValueChange={setSelectedImportRoom}>
                   <SelectTrigger><SelectValue placeholder="Selecione a sala de anamnese" /></SelectTrigger>
@@ -290,11 +312,11 @@ export default function SoapEditor() {
             </DialogContent>
           </Dialog>
 
-          {students.length > 0 && (
+          {participants.length > 0 && (
             <Card>
               <CardContent className="p-4">
                 <div className="space-y-2">
-                  {students.map((p) => (
+                  {participants.map((p) => (
                     <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
                       <div>
                         <span className="font-medium">{p.student_name}</span>
@@ -316,6 +338,28 @@ export default function SoapEditor() {
 
         {/* Forms Tab */}
         <TabsContent value="forms" className="space-y-4">
+          <div className="flex gap-2">
+            <Dialog open={importFormDialogOpen} onOpenChange={setImportFormDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline"><Copy className="h-4 w-4 mr-2" />Importar Formulários de Outra Sala</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Importar Formulários de Outra Sala SOAP</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <Select value={selectedFormImportRoom} onValueChange={setSelectedFormImportRoom}>
+                    <SelectTrigger><SelectValue placeholder="Selecione a sala SOAP de origem" /></SelectTrigger>
+                    <SelectContent>
+                      {otherSoapRooms?.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>{r.title} (PIN: {r.access_code})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={importFormsFromRoom} disabled={!selectedFormImportRoom} className="w-full">Importar</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{editingFormId ? "Editar Formulário" : "Novo Formulário"}</CardTitle>
@@ -402,49 +446,17 @@ export default function SoapEditor() {
             </Card>
           ))}
         </TabsContent>
-
-        {/* Pairs Tab */}
-        <TabsContent value="pairs" className="space-y-4">
-          <div className="flex gap-2">
-            <Button onClick={formPairs} disabled={unpaired.length < 2}>
-              <Users className="h-4 w-4 mr-2" />Formar Duplas Automaticamente
-            </Button>
-          </div>
-          {unpaired.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle className="text-base">Sem Dupla ({unpaired.length})</CardTitle></CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {unpaired.map((p) => (
-                    <Badge key={p.id} variant="secondary">{p.student_name}</Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          {paired.length > 0 && (() => {
-            const groups: Record<number, typeof paired> = {};
-            paired.forEach((p) => { (groups[p.pair_index] ||= []).push(p); });
-            return Object.entries(groups).map(([idx, members]) => (
-              <Card key={idx}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Dupla {idx}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-4">
-                    {members.sort((a, b) => a.pair_position.localeCompare(b.pair_position)).map((m) => (
-                      <div key={m.id} className="flex items-center gap-2">
-                        <Badge variant={m.pair_position === "A" ? "default" : "secondary"}>{m.pair_position}</Badge>
-                        <span>{m.student_name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ));
-          })()}
-        </TabsContent>
       </Tabs>
+
+      <SplitSoapRoomDialog
+        roomId={roomId!}
+        open={splitDialogOpen}
+        onOpenChange={setSplitDialogOpen}
+        onComplete={() => {
+          setSplitDialogOpen(false);
+          navigate("/simulations/soap");
+        }}
+      />
     </div>
   );
 }

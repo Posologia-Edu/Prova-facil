@@ -24,8 +24,8 @@ type FormField = {
 type Phase = "login" | "soap" | "waiting_peer" | "evaluate" | "done";
 
 export default function SoapJoin() {
-  const [pin, setPin] = useState("");
-  const [email, setEmail] = useState("");
+  const [pin, setPin] = useState(() => sessionStorage.getItem("soap_pin") || "");
+  const [email, setEmail] = useState(() => sessionStorage.getItem("soap_email") || "");
   const [phase, setPhase] = useState<Phase>("login");
   const [room, setRoom] = useState<any>(null);
   const [participant, setParticipant] = useState<any>(null);

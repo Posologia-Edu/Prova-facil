@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Users, Settings, Play, Trash2, FileText } from "lucide-react";
+import { Plus, Users, Settings, Play, Trash2, FileText, GraduationCap } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export default function SoapRooms() {
@@ -20,6 +20,8 @@ export default function SoapRooms() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [anamnesisRoomId, setAnamnesisRoomId] = useState<string>("");
+  const [professorName, setProfessorName] = useState("");
+  const [professorEmail, setProfessorEmail] = useState("");
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["soap-rooms"],
@@ -62,6 +64,17 @@ export default function SoapRooms() {
     },
   });
 
+  // Fetch profiles to show teacher name
+  const { data: profile } = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+      const { data } = await supabase.from("profiles").select("full_name").eq("user_id", session.user.id).maybeSingle();
+      return data;
+    },
+  });
+
   const createRoom = useMutation({
     mutationFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -72,7 +85,7 @@ export default function SoapRooms() {
           user_id: session.user.id,
           title,
           description,
-          anamnesis_room_id: anamnesisRoomId || null,
+          anamnesis_room_id: anamnesisRoomId && anamnesisRoomId !== "none" ? anamnesisRoomId : null,
         })
         .select()
         .single();
@@ -85,6 +98,8 @@ export default function SoapRooms() {
       setTitle("");
       setDescription("");
       setAnamnesisRoomId("");
+      setProfessorName("");
+      setProfessorEmail("");
       navigate(`/simulations/soap/editor/${data.id}`);
     },
     onError: () => {
@@ -105,6 +120,8 @@ export default function SoapRooms() {
     active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     completed: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
   };
+
+  const teacherName = profile?.full_name || "Professor";
 
   return (
     <div className="space-y-6">
@@ -180,9 +197,13 @@ export default function SoapRooms() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
                     <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{studentCount} alunos</span>
                     <span className="font-mono text-xs">PIN: {room.access_code}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
+                    <GraduationCap className="h-3.5 w-3.5" />
+                    <span>{teacherName}</span>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/editor/${room.id}`)}>
