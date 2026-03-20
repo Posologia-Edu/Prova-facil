@@ -711,7 +711,6 @@ export default function SimulationJoin() {
           );
         })()
       )}
-      )}
 
       {/* Student not participating in active round */}
       {isActive && !isProfessor && !participatesInActiveRound && (
