@@ -27,12 +27,14 @@ export default function StudentAuth() {
 
     try {
       // Check if PIN belongs to a simulation room first
-      const { data: simRoom } = await supabase
+      const { data: simRoom, error: simErr } = await supabase
         .from("simulation_rooms")
         .select("id, access_code")
         .eq("access_code", pin.trim().toLowerCase())
         .limit(1)
         .maybeSingle();
+
+      console.log("[StudentAuth] Simulation room check:", { pin: pin.trim().toLowerCase(), simRoom, simErr });
 
       if (simRoom) {
         // Redirect to simulation join with pre-filled data
