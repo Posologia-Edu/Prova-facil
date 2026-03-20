@@ -66,6 +66,41 @@ export default function SoapControl() {
     enabled: !!roomId,
   });
 
+  // Load anamnesis patient names for each participant
+  const { data: patientNames = {} } = useQuery({
+    queryKey: ["soap-patient-names", roomId, participants.map((p) => p.id).join(",")],
+    queryFn: async () => {
+      const withAnamnesis = participants.filter((p) => p.anamnesis_participant_id);
+      if (!withAnamnesis.length) return {};
+
+      const anamnesisIds = withAnamnesis.map((p) => p.anamnesis_participant_id!);
+      const { data: anamnesisParticipants } = await supabase
+        .from("simulation_participants")
+        .select("id, pair_index, room_id")
+        .in("id", anamnesisIds);
+      if (!anamnesisParticipants?.length) return {};
+
+      const result: Record<string, string> = {};
+      for (const ap of anamnesisParticipants) {
+        if (ap.pair_index < 0) continue;
+        const { data: partner } = await supabase
+          .from("simulation_participants")
+          .select("student_name")
+          .eq("room_id", ap.room_id)
+          .eq("pair_index", ap.pair_index)
+          .neq("id", ap.id)
+          .limit(1)
+          .maybeSingle();
+        if (partner) {
+          const soapP = withAnamnesis.find((p) => p.anamnesis_participant_id === ap.id);
+          if (soapP) result[soapP.id] = partner.student_name;
+        }
+      }
+      return result;
+    },
+    enabled: !!roomId && participants.length > 0,
+  });
+
   const studentsOnly = participants.filter((p: any) => (p as any).participant_role !== "teacher");
   const unpaired = studentsOnly.filter((p) => p.pair_index < 0);
   const paired = studentsOnly.filter((p) => p.pair_index >= 0);
@@ -327,7 +362,12 @@ export default function SoapControl() {
             <Card key={response.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{getParticipantName(response.participant_id)}</CardTitle>
+                  <div>
+                    <CardTitle className="text-base">{getParticipantName(response.participant_id)}</CardTitle>
+                    {(patientNames as Record<string, string>)[response.participant_id] && (
+                      <p className="text-xs text-muted-foreground mt-0.5">Paciente simulado: <strong>{(patientNames as Record<string, string>)[response.participant_id]}</strong></p>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     {response.admin_score != null && <Badge variant="default">Nota: {response.admin_score}</Badge>}
                     <Button variant="outline" size="sm" onClick={() => openAdminEvaluation(response)}>
@@ -382,7 +422,12 @@ export default function SoapControl() {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-foreground">{getParticipantName(response.participant_id)}</span>
+                          <div>
+                            <span className="font-medium text-foreground">{getParticipantName(response.participant_id)}</span>
+                            {(patientNames as Record<string, string>)[response.participant_id] && (
+                              <p className="text-xs text-muted-foreground">Pac: {(patientNames as Record<string, string>)[response.participant_id]}</p>
+                            )}
+                          </div>
                           {response.admin_score != null && <Badge variant="secondary">{response.admin_score}</Badge>}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
@@ -399,6 +444,9 @@ export default function SoapControl() {
                   <CardTitle className="text-base">
                     Avaliar: {selectedResponse ? getParticipantName(selectedResponse.participant_id) : "Selecione uma resposta"}
                   </CardTitle>
+                  {selectedResponse && (patientNames as Record<string, string>)[selectedResponse.participant_id] && (
+                    <p className="text-sm text-muted-foreground">Paciente simulado: <strong>{(patientNames as Record<string, string>)[selectedResponse.participant_id]}</strong></p>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {selectedResponse ? (

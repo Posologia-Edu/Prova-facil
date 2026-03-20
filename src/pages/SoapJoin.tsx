@@ -30,6 +30,7 @@ export default function SoapJoin() {
   const [room, setRoom] = useState<any>(null);
   const [participant, setParticipant] = useState<any>(null);
   const [partner, setPartner] = useState<any>(null);
+  const [patientName, setPatientName] = useState<string | null>(null);
   const [anamnesisAnswers, setAnamnesisAnswers] = useState<Record<string, any>>({});
   const [anamnesisFieldLabels, setAnamnesisFieldLabels] = useState<Record<string, string>>({});
   const [soapForm, setSoapForm] = useState<any>(null);
@@ -79,8 +80,26 @@ export default function SoapJoin() {
       if (partners?.length) setPartner(partners[0]);
     }
 
-    // Load anamnesis data
+    // Load anamnesis data and find patient name
     if (me.anamnesis_participant_id) {
+      // Find the patient (partner in anamnesis pair)
+      const { data: anamnesisMe } = await supabase
+        .from("simulation_participants")
+        .select("pair_index, room_id")
+        .eq("id", me.anamnesis_participant_id)
+        .single();
+      if (anamnesisMe && anamnesisMe.pair_index >= 0) {
+        const { data: anamnesisPartner } = await supabase
+          .from("simulation_participants")
+          .select("student_name")
+          .eq("room_id", anamnesisMe.room_id)
+          .eq("pair_index", anamnesisMe.pair_index)
+          .neq("id", me.anamnesis_participant_id)
+          .limit(1)
+          .maybeSingle();
+        if (anamnesisPartner) setPatientName(anamnesisPartner.student_name);
+      }
+
       const { data: responses } = await supabase
         .from("simulation_responses")
         .select("answers_json, form_id")
@@ -338,6 +357,9 @@ export default function SoapJoin() {
           <div className="text-center">
             <h1 className="text-2xl font-bold">Formulário SOAP</h1>
             <p className="text-muted-foreground">Preencha com base nas informações da sua anamnese</p>
+            {patientName && (
+              <p className="text-sm mt-1">Paciente simulado atendido: <strong>{patientName}</strong></p>
+            )}
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
