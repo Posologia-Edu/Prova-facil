@@ -362,7 +362,12 @@ export default function SoapControl() {
             <Card key={response.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{getParticipantName(response.participant_id)}</CardTitle>
+                  <div>
+                    <CardTitle className="text-base">{getParticipantName(response.participant_id)}</CardTitle>
+                    {(patientNames as Record<string, string>)[response.participant_id] && (
+                      <p className="text-xs text-muted-foreground mt-0.5">Paciente simulado: <strong>{(patientNames as Record<string, string>)[response.participant_id]}</strong></p>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     {response.admin_score != null && <Badge variant="default">Nota: {response.admin_score}</Badge>}
                     <Button variant="outline" size="sm" onClick={() => openAdminEvaluation(response)}>
