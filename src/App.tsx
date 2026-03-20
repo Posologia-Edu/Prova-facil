@@ -255,6 +255,31 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* SOAP routes */}
+            <Route
+              path="/simulations/soap"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><SoapRooms /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simulations/soap/editor/:roomId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><SoapEditor /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simulations/soap/control/:roomId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><SoapControl /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
             {/* Public OSCE routes (no auth required) */}
             <Route path="/osce/evaluate/:accessCode" element={<OsceEvaluator />} />
             <Route path="/osce/patient/:stationId" element={<OsceVirtualPatient />} />
