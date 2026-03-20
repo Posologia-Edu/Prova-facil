@@ -66,6 +66,41 @@ export default function SoapControl() {
     enabled: !!roomId,
   });
 
+  // Load anamnesis patient names for each participant
+  const { data: patientNames = {} } = useQuery({
+    queryKey: ["soap-patient-names", roomId, participants.map((p) => p.id).join(",")],
+    queryFn: async () => {
+      const withAnamnesis = participants.filter((p) => p.anamnesis_participant_id);
+      if (!withAnamnesis.length) return {};
+
+      const anamnesisIds = withAnamnesis.map((p) => p.anamnesis_participant_id!);
+      const { data: anamnesisParticipants } = await supabase
+        .from("simulation_participants")
+        .select("id, pair_index, room_id")
+        .in("id", anamnesisIds);
+      if (!anamnesisParticipants?.length) return {};
+
+      const result: Record<string, string> = {};
+      for (const ap of anamnesisParticipants) {
+        if (ap.pair_index < 0) continue;
+        const { data: partner } = await supabase
+          .from("simulation_participants")
+          .select("student_name")
+          .eq("room_id", ap.room_id)
+          .eq("pair_index", ap.pair_index)
+          .neq("id", ap.id)
+          .limit(1)
+          .maybeSingle();
+        if (partner) {
+          const soapP = withAnamnesis.find((p) => p.anamnesis_participant_id === ap.id);
+          if (soapP) result[soapP.id] = partner.student_name;
+        }
+      }
+      return result;
+    },
+    enabled: !!roomId && participants.length > 0,
+  });
+
   const studentsOnly = participants.filter((p: any) => (p as any).participant_role !== "teacher");
   const unpaired = studentsOnly.filter((p) => p.pair_index < 0);
   const paired = studentsOnly.filter((p) => p.pair_index >= 0);
