@@ -350,70 +350,121 @@ export default function SoapEditor() {
             </DialogContent>
           </Dialog>
 
-          {/* Pair formation buttons */}
-          {participants.length >= 2 && (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={async () => {
-                const unpaired = participants.filter(p => p.pair_index < 0);
-                if (unpaired.length < 2) {
-                  toast({ title: "Insuficiente", description: "Precisa de pelo menos 2 alunos sem dupla.", variant: "destructive" });
-                  return;
-                }
-                const paired = participants.filter(p => p.pair_index >= 0);
-                const maxPairIdx = paired.length > 0 ? Math.max(0, ...paired.map(p => p.pair_index)) + 1 : 0;
-                let pairIdx = maxPairIdx;
-                for (let i = 0; i < unpaired.length - 1; i += 2) {
-                  await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "A" } as any).eq("id", unpaired[i].id);
-                  await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "B" } as any).eq("id", unpaired[i + 1].id);
-                  pairIdx++;
-                }
-                refetchParticipants();
-                toast({ title: "Duplas formadas!" });
-              }}>
-                <Shuffle className="h-4 w-4 mr-2" />Formar Duplas
-              </Button>
-              {participants.some(p => p.pair_index >= 0) && (
-                <Button variant="outline" onClick={async () => {
-                  for (const p of participants) {
-                    await supabase.from("soap_participants").update({ pair_index: -1, pair_position: "X" } as any).eq("id", p.id);
-                  }
-                  refetchParticipants();
-                  toast({ title: "Duplas desfeitas" });
-                }}>
-                  <RotateCcw className="h-4 w-4 mr-2" />Desfazer Duplas
-                </Button>
-              )}
-            </div>
-          )}
+          {/* Pair formation section */}
+          {(() => {
+            const unpaired = participants.filter(p => p.pair_index < 0);
+            const paired = participants.filter(p => p.pair_index >= 0);
+            const pairGroups: Record<number, typeof paired> = {};
+            paired.forEach(p => { (pairGroups[p.pair_index] ||= []).push(p); });
+            const nextPairIdx = paired.length > 0 ? Math.max(0, ...paired.map(p => p.pair_index)) + 1 : 0;
 
-          {participants.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  Alunos
-                  <Badge variant="secondary">{participants.length}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="space-y-2">
-                  {participants.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                      <div>
-                        <span className="font-medium">{p.student_name}</span>
-                        {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
-                        {p.pair_index >= 0 && (
-                          <Badge variant="outline" className="ml-2">Dupla {p.pair_index} ({p.pair_position})</Badge>
-                        )}
+            const toggleSelect = (id: string) => {
+              setSelectedForPairing(prev => {
+                if (prev.includes(id)) return prev.filter(x => x !== id);
+                if (prev.length >= 2) return prev;
+                return [...prev, id];
+              });
+            };
+
+            const formPair = async () => {
+              if (selectedForPairing.length !== 2) return;
+              const [a, b] = selectedForPairing;
+              await supabase.from("soap_participants").update({ pair_index: nextPairIdx, pair_position: "A" } as any).eq("id", a);
+              await supabase.from("soap_participants").update({ pair_index: nextPairIdx, pair_position: "B" } as any).eq("id", b);
+              setSelectedForPairing([]);
+              refetchParticipants();
+              toast({ title: "Dupla formada!" });
+            };
+
+            const undoPair = async (pairIdx: number) => {
+              const members = pairGroups[pairIdx] || [];
+              for (const m of members) {
+                await supabase.from("soap_participants").update({ pair_index: -1, pair_position: "X" } as any).eq("id", m.id);
+              }
+              refetchParticipants();
+              toast({ title: "Dupla desfeita" });
+            };
+
+            return (
+              <>
+                {/* Formed pairs */}
+                {Object.keys(pairGroups).length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        Duplas Formadas
+                        <Badge variant="secondary">{Object.keys(pairGroups).length}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="space-y-2">
+                        {Object.entries(pairGroups).map(([idx, members]) => (
+                          <div key={idx} className="flex items-center justify-between py-2 px-3 rounded-lg bg-primary/5 border border-primary/10">
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline">Dupla {idx}</Badge>
+                              {members.map(m => (
+                                <span key={m.id} className="text-sm">
+                                  <span className="font-medium">{m.student_name}</span>
+                                  <span className="text-muted-foreground ml-1">({m.pair_position})</span>
+                                </span>
+                              ))}
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => undoPair(Number(idx))}>
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => removeParticipant(p.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Unpaired students */}
+                {unpaired.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        Alunos sem dupla
+                        <Badge variant="secondary">{unpaired.length}</Badge>
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">Selecione 2 alunos para formar uma dupla</p>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="grid grid-cols-2 gap-2">
+                        {unpaired.map(p => {
+                          const isSelected = selectedForPairing.includes(p.id);
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => toggleSelect(p.id)}
+                              className={`p-3 rounded-lg border text-left text-sm transition-colors ${
+                                isSelected
+                                  ? "border-primary bg-primary/10 ring-2 ring-primary"
+                                  : "border-border hover:border-primary/50"
+                              }`}
+                            >
+                              <span className="font-medium">{p.student_name}</span>
+                              {p.student_email && <p className="text-xs text-muted-foreground">{p.student_email}</p>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedForPairing.length === 2 && (
+                        <Button onClick={formPair} className="w-full mt-3" size="sm">
+                          <Users className="h-4 w-4 mr-1" />Formar Dupla
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* All paired, no unpaired */}
+                {unpaired.length === 0 && paired.length > 0 && (
+                  <p className="text-sm text-muted-foreground">Todos os alunos estão em duplas.</p>
+                )}
+              </>
+            );
+          })()}
         </TabsContent>
 
         {/* Forms Tab */}
