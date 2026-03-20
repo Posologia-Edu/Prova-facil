@@ -84,6 +84,56 @@ export default function DocumentationEditor() {
   const [medRowsScore, setMedRowsScore] = useState(1);
   const [medAnswerRows, setMedAnswerRows] = useState<Record<string, string>[]>([]);
   const [editingMedFormId, setEditingMedFormId] = useState<string | null>(null);
+  const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
+
+  // Reconciliation rooms for import
+  const { data: reconRooms } = useQuery({
+    queryKey: ["recon-rooms-for-doc-import"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data } = await supabase.from("reconciliation_rooms").select("id, title, access_code").eq("user_id", session.user.id).order("created_at", { ascending: false });
+      return data || [];
+    },
+  });
+
+  // Import students from reconciliation room (unpaired, admin forms pairs manually)
+  const importFromReconciliation = async (reconRoomId: string) => {
+    const { data: reconParticipants } = await supabase
+      .from("reconciliation_participants")
+      .select("*")
+      .eq("room_id", reconRoomId)
+      .eq("participant_role", "student");
+
+    if (!reconParticipants?.length) {
+      toast({ title: "Sem alunos", description: "Nenhum aluno encontrado nesta sala de Reconciliação.", variant: "destructive" });
+      return;
+    }
+
+    const inserts = reconParticipants.map(rp => ({
+      room_id: roomId!,
+      student_name: rp.student_name,
+      student_email: rp.student_email,
+      pair_index: -1,
+      pair_position: "X",
+      reconciliation_participant_id: rp.id,
+      participant_role: "student" as const,
+    }));
+
+    const { error } = await supabase.from("documentation_participants").insert(inserts);
+    if (error) {
+      toast({ title: "Erro", description: "Erro ao importar alunos.", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Importado", description: `${inserts.length} alunos importados. Forme as duplas manualmente.` });
+    refetchParticipants();
+  };
+
+  const deleteParticipant = async (id: string) => {
+    await supabase.from("documentation_participants").delete().eq("id", id);
+    refetchParticipants();
+  };
 
   const students = participants.filter(p => p.participant_role === "student");
   const pairs = students.reduce((acc: Record<number, any[]>, p) => {
