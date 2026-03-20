@@ -26,6 +26,35 @@ export default function StudentAuth() {
     setLoading(true);
 
     try {
+      // Check if PIN belongs to a simulation room first
+      const { data: simRoom } = await supabase
+        .from("simulation_rooms")
+        .select("id, access_code")
+        .eq("access_code", pin.trim().toLowerCase())
+        .limit(1)
+        .maybeSingle();
+
+      if (simRoom) {
+        // Redirect to simulation join with pre-filled data
+        sessionStorage.setItem("sim_pin", pin.trim().toLowerCase());
+        sessionStorage.setItem("sim_email", email.trim().toLowerCase());
+        navigate("/simulation/join");
+        return;
+      }
+
+      // Check if PIN belongs to an OSCE circuit
+      const { data: osceCircuit } = await supabase
+        .from("osce_circuits")
+        .select("id, access_code")
+        .eq("access_code", pin.trim().toLowerCase())
+        .limit(1)
+        .maybeSingle();
+
+      if (osceCircuit) {
+        navigate(`/osce/student/${pin.trim().toLowerCase()}`);
+        return;
+      }
+
       const res = await fetch(FUNCTION_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
