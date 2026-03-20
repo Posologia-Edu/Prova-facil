@@ -616,40 +616,101 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Material study phase for students */}
+      {/* Material study phase for students - role-specific */}
       {!isActive && !isProfessor && nextPendingRound?.materials_released && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              {t("sim_release_materials")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Show all forms for study */}
-            {forms.map((form: any) => {
-              const fields = form.content_json as FormField[];
-              return (
-                <div key={form.id} className="border rounded-lg p-3 space-y-2">
-                  <p className="text-sm font-medium">{form.title || form.form_type}</p>
-                  {fields.map((field) => (
-                    <p key={field.id} className="text-sm text-muted-foreground">• {field.label}</p>
-                  ))}
-                </div>
-              );
-            })}
-            {!materialsReady ? (
-              <Button onClick={markMaterialsReady} className="w-full">
-                <CheckCircle className="h-4 w-4 mr-1" />{t("sim_materials_ready")}
-              </Button>
-            ) : (
-              <div className="flex flex-col items-center py-4">
-                <CheckCircle className="h-8 w-8 text-primary mb-2" />
-                <p className="text-sm text-muted-foreground">{t("sim_waiting_professor")}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        (() => {
+          // Determine student's role in the next pending round
+          const nextRoundAssigns = allAssignments.filter((a: any) => a.round_id === nextPendingRound.id);
+          const myAssign = nextRoundAssigns.find((a: any) => a.participant_id === participant?.id);
+          const myRole = myAssign?.assigned_role;
+
+          // Professionals see anamnesis form
+          if (myRole === "professional") {
+            const anamnesisForm = forms.find((f: any) => f.form_type === "anamnesis");
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    {t("sim_release_materials")} — {roleLabels.professional}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {anamnesisForm ? (
+                    <div className="border rounded-lg p-3 space-y-2">
+                      <p className="text-sm font-medium">{anamnesisForm.title || t("sim_form_anamnesis")}</p>
+                      {Array.isArray(anamnesisForm.content_json) && (anamnesisForm.content_json as FormField[]).map((field) => (
+                        <p key={field.id} className="text-sm text-muted-foreground">• {field.label}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t("sim_no_script")}</p>
+                  )}
+                  {!materialsReady ? (
+                    <Button onClick={markMaterialsReady} className="w-full">
+                      <CheckCircle className="h-4 w-4 mr-1" />{t("sim_materials_ready")}
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col items-center py-4">
+                      <CheckCircle className="h-8 w-8 text-primary mb-2" />
+                      <p className="text-sm text-muted-foreground">{t("sim_waiting_professor")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          }
+
+          // Patients see their assigned clinical case
+          if (myRole === "patient") {
+            const caseIdx = myAssign?.case_index ?? 0;
+            const assignedCase = clinicalCases[caseIdx];
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    {t("sim_release_materials")} — {roleLabels.patient}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {assignedCase ? (
+                    <div className="border rounded-lg p-4 space-y-2">
+                      <p className="text-sm font-semibold">{assignedCase.title}</p>
+                      <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap text-sm">
+                        {assignedCase.script}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t("sim_no_cases")}</p>
+                  )}
+                  {!materialsReady ? (
+                    <Button onClick={markMaterialsReady} className="w-full">
+                      <CheckCircle className="h-4 w-4 mr-1" />{t("sim_materials_ready")}
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col items-center py-4">
+                      <CheckCircle className="h-8 w-8 text-primary mb-2" />
+                      <p className="text-sm text-muted-foreground">{t("sim_waiting_professor")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          }
+
+          // Observers wait - they only get their form when simulation starts
+          return (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Clock className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
+                <h3 className="text-lg font-medium">{t("sim_waiting_professor")}</h3>
+                <p className="text-sm text-muted-foreground">{t("sim_waiting_desc")}</p>
+              </CardContent>
+            </Card>
+          );
+        })()
+      )}
       )}
 
       {/* Student not participating in active round */}
