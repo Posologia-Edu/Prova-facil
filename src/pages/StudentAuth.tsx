@@ -8,6 +8,7 @@ import { GraduationCap, Loader2, ArrowLeft, KeyRound, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
 
