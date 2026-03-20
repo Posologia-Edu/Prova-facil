@@ -14,6 +14,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { generateRounds } from "@/lib/simulation-distribution";
+import {
+  areCycleMaterialsReleased,
+  getCycleCaseIndex,
+  getMaterialCycle,
+  getPendingRoundsSorted,
+  getStudyRole,
+} from "@/lib/simulation-materials";
 
 type FormField = {
   id: string;
@@ -125,6 +132,29 @@ export default function SimulationJoin() {
         .select("*")
         .eq("room_id", room.id);
       setAllParticipants(participantsData || []);
+
+      const refreshedParticipant = (participantsData || []).find((currentParticipant: any) => {
+        if (participant?.id) return currentParticipant.id === participant.id;
+        return normalizeParticipantEmail(currentParticipant.student_email || "") === normalizeParticipantEmail(email);
+      });
+
+      if (refreshedParticipant) {
+        setParticipant((previousParticipant: any) => {
+          if (!previousParticipant) return refreshedParticipant;
+
+          const isSameParticipant =
+            previousParticipant.id === refreshedParticipant.id &&
+            previousParticipant.room_id === refreshedParticipant.room_id &&
+            previousParticipant.status === refreshedParticipant.status &&
+            previousParticipant.pair_index === refreshedParticipant.pair_index &&
+            previousParticipant.pair_position === refreshedParticipant.pair_position &&
+            previousParticipant.participant_role === refreshedParticipant.participant_role &&
+            previousParticipant.assigned_role === refreshedParticipant.assigned_role;
+
+          return isSameParticipant ? previousParticipant : refreshedParticipant;
+        });
+        setMaterialsReady(refreshedParticipant.status === "ready");
+      }
 
       // Refresh forms (in case admin updates them)
       const { data: formsData } = await supabase
@@ -261,25 +291,20 @@ export default function SimulationJoin() {
     return sameRoundsInCycle.length > 0 && sameRoundsInCycle[0].id === round.id;
   };
 
-  // Check if the next pending round needs material release
-  const nextPendingRound = allRounds.find((r: any) => r.status === "pending");
-  const needsMaterialRelease = nextPendingRound && isFirstRoundOfCycle(nextPendingRound) && !nextPendingRound.materials_released;
-
-  // Check if materials are released for the current cycle (any round in cycle)
-  // Fallback: if no pending/active round, use the first round's cycle (default to 1)
-  const currentCycle = nextPendingRound?.cycle || activeRound?.cycle || (allRounds.length > 0 ? allRounds[0].cycle : 1);
-  const currentCycleRounds = allRounds.filter((r: any) => r.cycle === currentCycle);
-  // Also check globally: if ANY round has materials_released, consider it released for robustness
-  const cycleMaterialsReleased = currentCycleRounds.some((r: any) => r.materials_released) || allRounds.some((r: any) => r.cycle === currentCycle && r.materials_released);
+  const pendingRounds = getPendingRoundsSorted(allRounds);
+  const nextPendingRound = pendingRounds[0] || null;
+  const materialCycle = getMaterialCycle(allRounds, activeRound);
+  const materialCycleRounds = allRounds.filter((round: any) => round.cycle === materialCycle);
+  const materialCycleRoundIds = materialCycleRounds.map((round: any) => round.id);
+  const cycleMaterialsReleased = areCycleMaterialsReleased(allRounds, materialCycle);
+  const needsMaterialRelease = !activeRound && materialCycleRounds.length > 0 && !cycleMaterialsReleased;
 
   // Professor: release materials for ALL rounds in the cycle
   const releaseMaterials = async () => {
-    if (!nextPendingRound) return;
-    const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
-    if (cycleRoundIds.length > 0) {
+    if (materialCycleRoundIds.length > 0) {
       await supabase.from("simulation_rounds").update({
         materials_released: true,
-      }).in("id", cycleRoundIds);
+      }).in("id", materialCycleRoundIds);
     }
     toast({ title: t("sim_materials_released") });
   };
@@ -710,19 +735,17 @@ export default function SimulationJoin() {
       {/* Material study phase for students - role based on pair_position + cycle, NOT round assignments */}
       {!isActive && !isProfessor && cycleMaterialsReleased && (
         (() => {
-          // Determine role from pair_position and current cycle
-          // Cycle 1: A=professional, B=patient
-          // Cycle 2: B=professional, A=patient
-          // This ensures ALL students get materials regardless of observer assignments
-          const pairPos = participant?.pair_position;
-          const myRole = currentCycle === 1
-            ? (pairPos === "A" ? "professional" : "patient")
-            : (pairPos === "B" ? "professional" : "patient");
-
-          // For patients, find the case_index from any assignment in the cycle
-          const cycleRoundIds = currentCycleRounds.map((r: any) => r.id);
-          const cycleAssigns = allAssignments.filter((a: any) => cycleRoundIds.includes(a.round_id));
-          const myPatientAssign = cycleAssigns.find((a: any) => a.participant_id === participant?.id && a.assigned_role === "patient");
+          const cycleAssigns = allAssignments.filter((assignment: any) => materialCycleRoundIds.includes(assignment.round_id));
+          const caseIdx = getCycleCaseIndex(
+            cycleAssigns,
+            materialCycleRoundIds,
+            participant?.id,
+            participant?.pair_index,
+          );
+          const fallbackRole = cycleAssigns.some((assignment: any) => assignment.participant_id === participant?.id && assignment.assigned_role === "patient")
+            ? "patient"
+            : "professional";
+          const myRole = getStudyRole(participant?.pair_position, materialCycle) || fallbackRole;
 
           // Professionals see anamnesis form
           if (myRole === "professional") {
@@ -763,8 +786,7 @@ export default function SimulationJoin() {
 
           // Patients see their assigned clinical case
           if (myRole === "patient") {
-            const caseIdx = myPatientAssign?.case_index ?? 0;
-            const assignedCase = clinicalCases[caseIdx];
+            const assignedCase = clinicalCases[caseIdx] || clinicalCases[0];
             return (
               <Card>
                 <CardHeader>
