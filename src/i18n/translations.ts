@@ -1288,8 +1288,8 @@ const en: TranslationKeys = {
   protected_admin_desc: "This area is for administrators only.",
   protected_back_dashboard: "Back to Dashboard",
 
-  student_portal_title: "Student Portal",
-  student_portal_desc: "Enter your email registered by the teacher and the exam PIN",
+  student_portal_title: "Assessment Portal",
+  student_portal_desc: "Enter your email registered by the teacher and the assessment PIN",
   student_email_label: "Registered email",
   student_email_placeholder: "your.email@university.edu",
   student_pin_label: "Exam PIN",
