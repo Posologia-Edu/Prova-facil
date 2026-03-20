@@ -604,8 +604,8 @@ export default function SimulationJoin() {
         </div>
       </div>
 
-      {/* Professor Controls */}
-      {isProfessor && (
+      {/* Professor Controls - only when rounds are confirmed and not in pairing mode */}
+      {isProfessor && !shouldShowPairingUI && allRounds.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("sim_round")} — {t("sim_professor")}</CardTitle>
@@ -639,6 +639,13 @@ export default function SimulationJoin() {
                 </Button>
               )}
             </div>
+
+            {/* Reset button when all rounds are still pending */}
+            {allRoundsPending && !isActive && (
+              <Button variant="outline" size="sm" onClick={resetRounds} className="w-full">
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />Redistribuir
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
