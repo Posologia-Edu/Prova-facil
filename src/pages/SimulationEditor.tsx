@@ -483,34 +483,32 @@ export default function SimulationEditor() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("sim_pairs")}</CardTitle>
+              <CardTitle className="text-base">{t("sim_students_list")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(pairs)
-                .filter(([_, ps]) => (ps as any[])[0]?.participant_role === "student")
-                .map(([idx, ps]) => (
-                  <div key={idx} className="p-3 bg-muted rounded-lg space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">{t("sim_pair")} {Number(idx) + 1}</p>
-                    {(ps as any[]).map((p) => (
-                      <div key={p.id} className="flex items-center justify-between">
-                        <div>
-                          <span className="font-medium">{p.student_name}</span>
-                          <span className="text-sm text-muted-foreground ml-2">({p.pair_position})</span>
-                          {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => removeParticipant(p.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+              {students.length > 0 ? (
+                <div className="space-y-2">
+                  {students.map((p: any) => (
+                    <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                      <div>
+                        <span className="font-medium">{p.student_name}</span>
+                        {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
                       </div>
-                    ))}
-                  </div>
-                ))}
+                      <Button variant="ghost" size="sm" onClick={() => removeParticipant(p.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">{t("sim_add_student")}</p>
+              )}
 
               <div className="border-t pt-4">
                 <p className="text-sm text-muted-foreground mb-2">{t("sim_add_student")}</p>
                 <div className="flex gap-2">
                   <Input placeholder={t("sim_name_placeholder")} value={newName} onChange={(e) => setNewName(e.target.value)} />
-                  <Input placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                  <Input placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} type="email" />
                   <Button onClick={() => addParticipant("student")} disabled={!newName.trim()}>
                     <Plus className="h-4 w-4" />
                   </Button>
