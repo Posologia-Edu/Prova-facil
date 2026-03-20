@@ -62,7 +62,7 @@ export default function StudentAuth() {
         }
         sessionStorage.setItem("soap_pin", pin.trim().toLowerCase());
         sessionStorage.setItem("soap_email", email.trim().toLowerCase());
-        navigate("/simulations/soap/join");
+        navigate("/simulation/soap/join");
         return;
       }
 
