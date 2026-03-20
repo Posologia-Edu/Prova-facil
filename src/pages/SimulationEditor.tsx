@@ -104,14 +104,16 @@ export default function SimulationEditor() {
   const nextPairIndex = students.length > 0 ? Math.floor(students.length / 2) : 0;
 
   const addParticipant = async (role: string) => {
-    if (!newName.trim()) return;
+    const name = role === "professor" ? profName : newName;
+    const email = role === "professor" ? profEmail : newEmail;
+    if (!name.trim()) return;
     const pairIndex = role === "professor" ? -1 : nextPairIndex;
     const pairPosition = role === "professor" ? "P" : (students.filter((s: any) => s.pair_index === nextPairIndex).length === 0 ? "A" : "B");
 
     const { error } = await supabase.from("simulation_participants").insert({
       room_id: roomId!,
-      student_name: newName,
-      student_email: newEmail,
+      student_name: name,
+      student_email: email,
       pair_index: pairIndex,
       pair_position: pairPosition,
       participant_role: role,
@@ -119,8 +121,13 @@ export default function SimulationEditor() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      setNewName("");
-      setNewEmail("");
+      if (role === "professor") {
+        setProfName("");
+        setProfEmail("");
+      } else {
+        setNewName("");
+        setNewEmail("");
+      }
       refetchParticipants();
     }
   };
