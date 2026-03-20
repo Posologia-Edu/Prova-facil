@@ -1387,6 +1387,204 @@ export type Database = {
           },
         ]
       }
+      soap_forms: {
+        Row: {
+          content_json: Json
+          created_at: string
+          form_type: string
+          id: string
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soap_forms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "soap_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      soap_participants: {
+        Row: {
+          anamnesis_participant_id: string | null
+          created_at: string
+          id: string
+          pair_index: number
+          pair_position: string
+          room_id: string
+          status: string
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          anamnesis_participant_id?: string | null
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          room_id: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Update: {
+          anamnesis_participant_id?: string | null
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          room_id?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soap_participants_anamnesis_participant_id_fkey"
+            columns: ["anamnesis_participant_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soap_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "soap_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      soap_responses: {
+        Row: {
+          admin_feedback: string | null
+          admin_score: number | null
+          answers_json: Json
+          created_at: string
+          form_id: string
+          id: string
+          participant_id: string
+          room_id: string
+          submitted_at: string | null
+          target_participant_id: string | null
+        }
+        Insert: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          answers_json?: Json
+          created_at?: string
+          form_id: string
+          id?: string
+          participant_id: string
+          room_id: string
+          submitted_at?: string | null
+          target_participant_id?: string | null
+        }
+        Update: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          answers_json?: Json
+          created_at?: string
+          form_id?: string
+          id?: string
+          participant_id?: string
+          room_id?: string
+          submitted_at?: string | null
+          target_participant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soap_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "soap_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soap_responses_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "soap_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soap_responses_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "soap_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soap_responses_target_participant_id_fkey"
+            columns: ["target_participant_id"]
+            isOneToOne: false
+            referencedRelation: "soap_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      soap_rooms: {
+        Row: {
+          access_code: string
+          anamnesis_room_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          anamnesis_room_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          anamnesis_room_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soap_rooms_anamnesis_room_id_fkey"
+            columns: ["anamnesis_room_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_answers: {
         Row: {
           ai_feedback: string | null
