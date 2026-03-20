@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Clock, Send, Shuffle } from "lucide-react";
+import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle } from "lucide-react";
 
 export default function SoapControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -66,32 +66,113 @@ export default function SoapControl() {
     enabled: !!roomId,
   });
 
-  // Build a label map from all soap_forms fields
+  const studentsOnly = participants.filter((p: any) => (p as any).participant_role !== "teacher");
+  const unpaired = studentsOnly.filter((p) => p.pair_index < 0);
+  const paired = studentsOnly.filter((p) => p.pair_index >= 0);
+  const soapResponses = responses.filter((r: any) => !r.target_participant_id);
+  const peerResponses = responses.filter((r: any) => r.target_participant_id);
+
   const fieldLabels = useMemo(() => {
     const labels: Record<string, string> = {};
-    forms.forEach((f: any) => {
-      const fields = f.content_json as any[];
-      if (Array.isArray(fields)) {
-        fields.forEach((field: any) => {
-          if (field.id && field.label) {
-            labels[field.id] = field.label;
-          }
-        });
-      }
+    forms.forEach((form: any) => {
+      const fields = form.content_json as any[];
+      if (!Array.isArray(fields)) return;
+
+      fields.forEach((field: any) => {
+        if (field.id && field.label) {
+          labels[field.id] = field.label;
+        }
+      });
     });
     return labels;
   }, [forms]);
 
-  const resolveLabel = (key: string) => fieldLabels[key] || key;
+  const responseFieldMeta = useMemo(() => {
+    const meta: Record<string, { label: string; maxScore?: number | null }> = {};
+    forms.forEach((form: any) => {
+      const fields = form.content_json as any[];
+      if (!Array.isArray(fields)) return;
 
-  const [selectedResponse, setSelectedResponse] = useState<any>(null);
+      fields.forEach((field: any) => {
+        if (field.id) {
+          meta[field.id] = {
+            label: field.label || field.id,
+            maxScore: typeof field.max_score === "number" ? field.max_score : null,
+          };
+        }
+      });
+    });
+    return meta;
+  }, [forms]);
+
+  const resolveLabel = (key: string) => fieldLabels[key] || key;
+  const getParticipantName = (id: string) => participants.find((p) => p.id === id)?.student_name || "—";
+  const submittedCount = soapResponses.length;
+  const evaluatedCount = peerResponses.length;
+  const avgAdminScore = responses.filter((r: any) => r.admin_score != null).reduce((sum: number, r: any) => sum + Number(r.admin_score), 0) / (responses.filter((r: any) => r.admin_score != null).length || 1);
+
+  const pairGroups: Record<number, typeof paired> = {};
+  paired.forEach((p) => {
+    (pairGroups[p.pair_index] ||= []).push(p);
+  });
+
+  const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null);
   const [adminScore, setAdminScore] = useState<string>("");
   const [adminFeedback, setAdminFeedback] = useState("");
 
-  // Pair formation logic — only students (exclude teachers)
-  const studentsOnly = participants.filter((p: any) => (p as any).participant_role !== "teacher");
-  const unpaired = studentsOnly.filter((p) => p.pair_index < 0);
-  const paired = studentsOnly.filter((p) => p.pair_index >= 0);
+  const selectedResponse = useMemo(
+    () => soapResponses.find((response: any) => response.id === selectedResponseId) ?? null,
+    [soapResponses, selectedResponseId],
+  );
+
+  useEffect(() => {
+    if (!soapResponses.length) {
+      setSelectedResponseId(null);
+      return;
+    }
+
+    if (!selectedResponseId || !soapResponses.some((response: any) => response.id === selectedResponseId)) {
+      setSelectedResponseId(soapResponses[0].id);
+    }
+  }, [soapResponses, selectedResponseId]);
+
+  useEffect(() => {
+    setAdminScore(selectedResponse?.admin_score != null ? String(selectedResponse.admin_score) : "");
+    setAdminFeedback(selectedResponse?.admin_feedback || "");
+  }, [selectedResponse?.id, selectedResponse?.admin_score, selectedResponse?.admin_feedback]);
+
+  const openAdminEvaluation = (response: any) => {
+    setSelectedResponseId(response.id);
+  };
+
+  const renderAnswerEntries = (answers: Record<string, any>, showItemScores = false) => {
+    const entries = Object.entries(answers || {}).filter(([key]) => key !== "_feedback");
+
+    if (!entries.length) {
+      return <p className="text-sm text-muted-foreground">Nenhuma resposta encontrada.</p>;
+    }
+
+    return (
+      <div className="space-y-2">
+        {entries.map(([key, value]) => {
+          const fieldMeta = responseFieldMeta[key];
+          return (
+            <div key={key} className="rounded border bg-muted/50 p-3 text-sm">
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <span className="font-medium text-foreground">{resolveLabel(key)}</span>
+                {showItemScores && fieldMeta?.maxScore != null && (
+                  <Badge variant="outline">{fieldMeta.maxScore} pts</Badge>
+                )}
+              </div>
+              <div className="text-muted-foreground">
+                {typeof value === "object" ? JSON.stringify(value) : String(value)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const formPairsAuto = async () => {
     if (unpaired.length < 2) {
@@ -123,12 +204,12 @@ export default function SoapControl() {
       admin_score: adminScore ? Number(adminScore) : null,
       admin_feedback: adminFeedback || null,
     }).eq("id", selectedResponse.id);
-    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
     toast({ title: "Nota salva!" });
     queryClient.invalidateQueries({ queryKey: ["soap-responses", roomId] });
-    setSelectedResponse(null);
-    setAdminScore("");
-    setAdminFeedback("");
   };
 
   const completeRoom = async () => {
@@ -136,18 +217,6 @@ export default function SoapControl() {
     queryClient.invalidateQueries({ queryKey: ["soap-room", roomId] });
     toast({ title: "Sala concluída!" });
   };
-
-  const soapResponses = responses.filter((r: any) => !r.target_participant_id);
-  const peerResponses = responses.filter((r: any) => r.target_participant_id);
-  const getParticipantName = (id: string) => participants.find((p) => p.id === id)?.student_name || "—";
-  const submittedCount = soapResponses.length;
-  const evaluatedCount = peerResponses.length;
-
-  const avgAdminScore = responses.filter((r: any) => r.admin_score != null).reduce((sum: number, r: any) => sum + Number(r.admin_score), 0) / (responses.filter((r: any) => r.admin_score != null).length || 1);
-
-  // Group pairs
-  const pairGroups: Record<number, typeof paired> = {};
-  paired.forEach((p) => { (pairGroups[p.pair_index] ||= []).push(p); });
 
   if (!room) return <p className="p-6 text-muted-foreground">Carregando...</p>;
 
@@ -168,7 +237,6 @@ export default function SoapControl() {
         )}
       </div>
 
-      {/* Status cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-4 text-center">
@@ -208,7 +276,6 @@ export default function SoapControl() {
           <TabsTrigger value="admin">Notas do Admin</TabsTrigger>
         </TabsList>
 
-        {/* Pairs Tab */}
         <TabsContent value="pairs" className="space-y-4">
           <div className="flex gap-2 flex-wrap">
             <Button onClick={formPairsAuto} disabled={unpaired.length < 2}>
@@ -256,29 +323,20 @@ export default function SoapControl() {
         <TabsContent value="responses" className="space-y-3">
           {soapResponses.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum SOAP enviado ainda.</CardContent></Card>
-          ) : soapResponses.map((r: any) => (
-            <Card key={r.id}>
+          ) : soapResponses.map((response: any) => (
+            <Card key={response.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{getParticipantName(r.participant_id)}</CardTitle>
+                  <CardTitle className="text-base">{getParticipantName(response.participant_id)}</CardTitle>
                   <div className="flex items-center gap-2">
-                    {r.admin_score != null && <Badge variant="default">Nota: {r.admin_score}</Badge>}
-                    <Button variant="outline" size="sm" onClick={() => { setSelectedResponse(r); setAdminScore(r.admin_score?.toString() || ""); setAdminFeedback(r.admin_feedback || ""); }}>
+                    {response.admin_score != null && <Badge variant="default">Nota: {response.admin_score}</Badge>}
+                    <Button variant="outline" size="sm" onClick={() => openAdminEvaluation(response)}>
                       Avaliar
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {Object.entries(r.answers_json as Record<string, any>).map(([key, val]) => (
-                    <div key={key} className="p-2 bg-muted/50 rounded text-sm">
-                      <span className="text-muted-foreground">{resolveLabel(key)}: </span>
-                      <span>{typeof val === "object" ? JSON.stringify(val) : String(val)}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
+              <CardContent>{renderAnswerEntries(response.answers_json)}</CardContent>
             </Card>
           ))}
         </TabsContent>
@@ -286,54 +344,87 @@ export default function SoapControl() {
         <TabsContent value="evaluations" className="space-y-3">
           {peerResponses.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhuma avaliação enviada ainda.</CardContent></Card>
-          ) : peerResponses.map((r: any) => (
-            <Card key={r.id}>
+          ) : peerResponses.map((response: any) => (
+            <Card key={response.id}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">
-                  {getParticipantName(r.participant_id)} avaliou {getParticipantName(r.target_participant_id)}
+                  {getParticipantName(response.participant_id)} avaliou {getParticipantName(response.target_participant_id)}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {Object.entries(r.answers_json as Record<string, any>).map(([key, val]) => (
-                    <div key={key} className="p-2 bg-muted/50 rounded text-sm">
-                      <span className="text-muted-foreground">{resolveLabel(key)}: </span>
-                      <span>{typeof val === "object" ? JSON.stringify(val) : String(val)}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
+              <CardContent>{renderAnswerEntries(response.answers_json, true)}</CardContent>
             </Card>
           ))}
         </TabsContent>
 
-        <TabsContent value="admin" className="space-y-3">
-          {selectedResponse ? (
+        <TabsContent value="admin" className="space-y-4">
+          {soapResponses.length === 0 ? (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Avaliar: {getParticipantName(selectedResponse.participant_id)}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Nota</Label>
-                  <Input type="number" value={adminScore} onChange={(e) => setAdminScore(e.target.value)} placeholder="0-10" />
-                </div>
-                <div>
-                  <Label>Feedback</Label>
-                  <Textarea value={adminFeedback} onChange={(e) => setAdminFeedback(e.target.value)} rows={4} />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={saveAdminScore}>Salvar Nota</Button>
-                  <Button variant="outline" onClick={() => setSelectedResponse(null)}>Cancelar</Button>
-                </div>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Nenhum SOAP foi enviado ainda para avaliação.
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Selecione uma resposta SOAP para atribuir nota clicando em "Avaliar" na aba de Respostas SOAP.
-              </CardContent>
-            </Card>
+            <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Respostas disponíveis</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {soapResponses.map((response: any) => {
+                    const isSelected = response.id === selectedResponse?.id;
+                    return (
+                      <button
+                        key={response.id}
+                        type="button"
+                        onClick={() => openAdminEvaluation(response)}
+                        className={`w-full rounded border p-3 text-left transition-colors ${
+                          isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-foreground">{getParticipantName(response.participant_id)}</span>
+                          {response.admin_score != null && <Badge variant="secondary">{response.admin_score}</Badge>}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {response.admin_feedback ? "Com feedback salvo" : "Sem feedback ainda"}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Avaliar: {selectedResponse ? getParticipantName(selectedResponse.participant_id) : "Selecione uma resposta"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {selectedResponse ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Resposta SOAP</Label>
+                        {renderAnswerEntries(selectedResponse.answers_json)}
+                      </div>
+                      <div>
+                        <Label>Nota</Label>
+                        <Input type="number" value={adminScore} onChange={(e) => setAdminScore(e.target.value)} placeholder="0-10" />
+                      </div>
+                      <div>
+                        <Label>Feedback</Label>
+                        <Textarea value={adminFeedback} onChange={(e) => setAdminFeedback(e.target.value)} rows={4} />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={saveAdminScore}>Salvar Nota</Button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Selecione uma resposta para começar a avaliação.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {responses.filter((r: any) => r.admin_score != null).length > 0 && (
@@ -341,12 +432,12 @@ export default function SoapControl() {
               <CardHeader><CardTitle className="text-base">Notas Atribuídas</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {responses.filter((r: any) => r.admin_score != null).map((r: any) => (
-                    <div key={r.id} className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded">
-                      <span>{getParticipantName(r.participant_id)}</span>
+                  {responses.filter((r: any) => r.admin_score != null).map((response: any) => (
+                    <div key={response.id} className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded">
+                      <span>{getParticipantName(response.participant_id)}</span>
                       <div className="flex items-center gap-2">
-                        <Badge>{r.admin_score}</Badge>
-                        {r.admin_feedback && <span className="text-xs text-muted-foreground truncate max-w-[200px]">{r.admin_feedback}</span>}
+                        <Badge>{response.admin_score}</Badge>
+                        {response.admin_feedback && <span className="text-xs text-muted-foreground truncate max-w-[200px]">{response.admin_feedback}</span>}
                       </div>
                     </div>
                   ))}
