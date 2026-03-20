@@ -71,3 +71,44 @@ export function getCycleCaseIndex<T extends AssignmentLike>(
   );
   return fallbackMatch?.case_index ?? 0;
 }
+
+export function getParticipantCycleRoundId<T extends AssignmentLike>(
+  assignments: T[],
+  roundIds: string[],
+  participantId?: string,
+  pairIndex?: number,
+) {
+  const cycleAssignments = assignments.filter((assignment) => roundIds.includes(assignment.round_id));
+
+  const directMatch = cycleAssignments.find(
+    (assignment) => assignment.participant_id === participantId && assignment.assigned_role !== "observer",
+  );
+  if (directMatch) return directMatch.round_id;
+
+  const pairMatch = cycleAssignments.find(
+    (assignment) => assignment.pair_index === pairIndex && assignment.assigned_role !== "observer",
+  );
+  return pairMatch?.round_id ?? null;
+}
+
+export function canAccessCycleMaterials<T extends RoundLike, A extends AssignmentLike>(
+  rounds: T[],
+  assignments: A[],
+  cycle: number,
+  roundIds: string[],
+  participantId?: string,
+  pairIndex?: number,
+  activeRound?: T | null,
+) {
+  if (!areCycleMaterialsReleased(rounds, cycle)) return false;
+  if (!activeRound) return true;
+  if (activeRound.cycle !== cycle) return false;
+
+  const participantRoundId = getParticipantCycleRoundId(assignments, roundIds, participantId, pairIndex);
+  if (!participantRoundId) return true;
+
+  const participantRound = rounds.find((round) => round.id === participantRoundId);
+  if (!participantRound) return true;
+
+  return participantRound.status === "pending";
+}

@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { generateRounds } from "@/lib/simulation-distribution";
 import {
   areCycleMaterialsReleased,
+  canAccessCycleMaterials,
   getCycleCaseIndex,
   getMaterialCycle,
+  getParticipantCycleRoundId,
   getStudyRole,
 } from "@/lib/simulation-materials";
 
@@ -34,6 +36,37 @@ describe("simulation material helpers", () => {
     ];
 
     expect(getCycleCaseIndex(assignments, ["r1"], "student-a", 7)).toBe(3);
+  });
+
+  it("keeps cycle materials available for pairs still pending in the active cycle", () => {
+    const rounds = [
+      { id: "r1", cycle: 1, round_number: 1, status: "active", materials_released: true },
+      { id: "r2", cycle: 1, round_number: 2, status: "pending", materials_released: true },
+    ];
+    const assignments = [
+      { round_id: "r1", participant_id: "student-a", pair_index: 0, assigned_role: "professional", case_index: null },
+      { round_id: "r1", participant_id: "student-b", pair_index: 0, assigned_role: "patient", case_index: 0 },
+      { round_id: "r2", participant_id: "student-c", pair_index: 1, assigned_role: "professional", case_index: null },
+      { round_id: "r2", participant_id: "student-d", pair_index: 1, assigned_role: "patient", case_index: 1 },
+    ];
+
+    expect(getParticipantCycleRoundId(assignments, ["r1", "r2"], "student-c", 1)).toBe("r2");
+    expect(canAccessCycleMaterials(rounds, assignments, 1, ["r1", "r2"], "student-c", 1, rounds[0])).toBe(true);
+  });
+
+  it("blocks cycle materials after the participant pair already completed its round", () => {
+    const rounds = [
+      { id: "r1", cycle: 1, round_number: 1, status: "completed", materials_released: true },
+      { id: "r2", cycle: 1, round_number: 2, status: "active", materials_released: true },
+    ];
+    const assignments = [
+      { round_id: "r1", participant_id: "student-a", pair_index: 0, assigned_role: "professional", case_index: null },
+      { round_id: "r1", participant_id: "student-b", pair_index: 0, assigned_role: "patient", case_index: 0 },
+      { round_id: "r2", participant_id: "student-c", pair_index: 1, assigned_role: "professional", case_index: null },
+      { round_id: "r2", participant_id: "student-d", pair_index: 1, assigned_role: "patient", case_index: 1 },
+    ];
+
+    expect(canAccessCycleMaterials(rounds, assignments, 1, ["r1", "r2"], "student-a", 0, rounds[1])).toBe(false);
   });
 
   it("preserves the original pair index when generating rounds", () => {
