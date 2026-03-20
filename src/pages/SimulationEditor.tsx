@@ -228,6 +228,89 @@ export default function SimulationEditor() {
     toast({ title: t("save") });
   };
 
+  // Import functionality
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRoomId, setImportRoomId] = useState("");
+  const [importParticipants, setImportParticipants] = useState(false);
+  const [importForms, setImportForms] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  const { data: otherRooms = [] } = useQuery({
+    queryKey: ["simulation-rooms-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("simulation_rooms")
+        .select("id, title, access_code")
+        .neq("id", roomId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: importOpen,
+  });
+
+  const handleImport = async () => {
+    if (!importRoomId) return;
+    if (!importParticipants && !importForms) {
+      toast({ title: t("sim_import_nothing"), variant: "destructive" });
+      return;
+    }
+    setImporting(true);
+
+    try {
+      if (importParticipants) {
+        const { data: srcParticipants } = await supabase
+          .from("simulation_participants")
+          .select("*")
+          .eq("room_id", importRoomId);
+        if (srcParticipants?.length) {
+          const newParticipants = srcParticipants.map(({ id, room_id, created_at, ...rest }) => ({
+            ...rest,
+            room_id: roomId!,
+          }));
+          await supabase.from("simulation_participants").insert(newParticipants);
+          refetchParticipants();
+        }
+      }
+
+      if (importForms) {
+        const { data: srcForms } = await supabase
+          .from("simulation_forms")
+          .select("*")
+          .eq("room_id", importRoomId);
+        if (srcForms?.length) {
+          for (const form of srcForms) {
+            const existing = forms.find((f: any) => f.form_type === form.form_type);
+            if (existing) {
+              await supabase.from("simulation_forms").update({
+                title: form.title,
+                content_json: form.content_json,
+              }).eq("id", existing.id);
+            } else {
+              await supabase.from("simulation_forms").insert({
+                room_id: roomId!,
+                form_type: form.form_type,
+                title: form.title,
+                content_json: form.content_json,
+              });
+            }
+          }
+          refetchForms();
+        }
+      }
+
+      toast({ title: t("sim_import_success") });
+      setImportOpen(false);
+      setImportRoomId("");
+      setImportParticipants(false);
+      setImportForms(false);
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const startSimulation = async () => {
     if (!professor) {
       toast({ title: "Erro", description: t("sim_need_professor"), variant: "destructive" });
