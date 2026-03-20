@@ -44,6 +44,7 @@ export function generateRounds(pairs: Participant[][], numCases?: number): Round
     for (let i = 0; i < numPairs; i++) {
       const assignments: Assignment[] = [];
       const activePair = pairs[i];
+      const activePairIndex = activePair[0]?.pair_index ?? i;
 
       const professional = activePair.find(
         (p) => p.pair_position === (cycle === 1 ? "A" : "B")
@@ -59,7 +60,7 @@ export function generateRounds(pairs: Participant[][], numCases?: number): Round
         assignments.push({
           participantId: professional.id,
           role: "professional",
-          pairIndex: i,
+          pairIndex: activePairIndex,
         });
       }
 
@@ -67,14 +68,15 @@ export function generateRounds(pairs: Participant[][], numCases?: number): Round
         assignments.push({
           participantId: patient.id,
           role: "patient",
-          pairIndex: i,
+          pairIndex: activePairIndex,
           caseIndex,
         });
       }
 
-      const observerPairIndex = (i + 1) % numPairs;
-      if (observerPairIndex !== i) {
-        const observerPair = pairs[observerPairIndex];
+      const observerPairListIndex = (i + 1) % numPairs;
+      if (observerPairListIndex !== i) {
+        const observerPair = pairs[observerPairListIndex];
+        const observerPairIndex = observerPair[0]?.pair_index ?? observerPairListIndex;
         const observer = observerPair.find(
           (p) => p.pair_position === (cycle === 1 ? "A" : "B")
         ) || observerPair[0];
