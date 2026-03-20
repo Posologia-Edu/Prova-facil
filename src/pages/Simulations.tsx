@@ -43,6 +43,24 @@ const modules = [
     color: "text-chart-3",
     bgColor: "bg-chart-3/10",
   },
+  {
+    id: "documentation",
+    title: "Documentação",
+    description: "Encaminhamento e quadro resumo de medicamentos com correção por IA e manual.",
+    icon: FileText,
+    route: "/simulations/documentation",
+    color: "text-chart-4",
+    bgColor: "bg-chart-4/10",
+  },
+  {
+    id: "aggregator",
+    title: "Agregador de Notas",
+    description: "Visão geral das notas de todos os módulos com média geral por aluno.",
+    icon: BarChart3,
+    route: "/simulations/aggregator",
+    color: "text-chart-5",
+    bgColor: "bg-chart-5/10",
+  },
 ];
 
 export default function Simulations() {
