@@ -11,8 +11,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight } from "lucide-react";
+import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { generateRounds } from "@/lib/simulation-distribution";
 
 type FormField = {
   id: string;
@@ -249,6 +250,63 @@ export default function SimulationJoin() {
     toast({ title: t("sim_round_ended") });
   };
 
+  const [generatingRounds, setGeneratingRounds] = useState(false);
+
+  const generateRoundsForRoom = async () => {
+    if (!room || !allParticipants.length) return;
+    setGeneratingRounds(true);
+    try {
+      const students = allParticipants.filter((p: any) => p.participant_role === "student");
+      // Group into pairs
+      const pairsMap: Record<number, any[]> = {};
+      students.forEach((s: any) => {
+        if (!pairsMap[s.pair_index]) pairsMap[s.pair_index] = [];
+        pairsMap[s.pair_index].push(s);
+      });
+      const pairsList = Object.values(pairsMap).filter(p => p.length >= 2);
+
+      if (pairsList.length === 0) {
+        toast({ title: "Erro", description: "É necessário pelo menos uma dupla de alunos.", variant: "destructive" });
+        return;
+      }
+
+      const rounds = generateRounds(pairsList);
+
+      for (const round of rounds) {
+        const { data: roundData, error: roundError } = await supabase
+          .from("simulation_rounds")
+          .insert({
+            room_id: room.id,
+            round_number: round.roundNumber,
+            cycle: round.cycle,
+            status: "pending",
+          })
+          .select()
+          .single();
+        if (roundError) continue;
+
+        const assignments = round.assignments.map((a: any) => ({
+          round_id: roundData.id,
+          participant_id: a.participantId,
+          assigned_role: a.role,
+          pair_index: a.pairIndex,
+        }));
+        await supabase.from("simulation_round_assignments").insert(assignments);
+      }
+
+      // Update room status to active if still draft
+      if (room.status === "draft") {
+        await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
+      }
+
+      toast({ title: t("sim_started") || "Rodadas geradas com sucesso!" });
+    } catch (err) {
+      toast({ title: "Erro", description: "Falha ao gerar rodadas.", variant: "destructive" });
+    } finally {
+      setGeneratingRounds(false);
+    }
+  };
+
   const roleIcons: Record<string, any> = {
     professional: Stethoscope,
     patient: Users,
@@ -393,8 +451,22 @@ export default function SimulationJoin() {
         </Card>
       )}
 
-      {/* Waiting state (professor, no active round) */}
-      {!isActive && isProfessor && !nextPendingRound && (
+      {/* Waiting state (professor, no rounds at all - need to generate) */}
+      {!isActive && isProfessor && !nextPendingRound && allRounds.length === 0 && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
+            <RefreshCw className="h-10 w-10 text-muted-foreground/50" />
+            <p className="text-muted-foreground">{"Nenhuma rodada encontrada. Gere as rodadas para iniciar a simulação."}</p>
+            <Button onClick={generateRoundsForRoom} disabled={generatingRounds}>
+              {generatingRounds ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
+              {"Gerar Rodadas"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* All rounds truly completed */}
+      {!isActive && isProfessor && !nextPendingRound && allRounds.length > 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8">
             <p className="text-muted-foreground">{t("sim_all_rounds_completed") || "Todas as rodadas foram concluídas."}</p>

@@ -147,7 +147,11 @@ export default function SimulationControl() {
         )}
       </div>
 
-      {/* Rounds */}
+      <p className="text-sm text-muted-foreground">
+        {t("sim_control_admin_hint") || "A liberação das rodadas é realizada pelo professor na sala virtual."}
+      </p>
+
+      {/* Rounds (read-only monitoring) */}
       <div className="grid gap-4">
         {rounds.map((round: any) => {
           const roundAssignments = assignments.filter((a: any) => a.round_id === round.id);
@@ -167,17 +171,6 @@ export default function SimulationControl() {
                     {isCompleted && <Badge variant="secondary"><CheckCircle className="h-3 w-3 mr-1" />{t("sim_status_completed")}</Badge>}
                     {isActive && <Badge className="bg-green-600">{t("sim_status_active")}</Badge>}
                     {isPending && <Badge variant="outline">{t("sim_status_pending")}</Badge>}
-
-                    {isPending && !activeRound && (
-                      <Button size="sm" onClick={() => releaseRound(round.id)}>
-                        <Play className="h-3.5 w-3.5 mr-1" />{t("sim_release")}
-                      </Button>
-                    )}
-                    {isActive && (
-                      <Button size="sm" variant="destructive" onClick={() => endRound(round.id)}>
-                        <Square className="h-3.5 w-3.5 mr-1" />{t("sim_end_round")}
-                      </Button>
-                    )}
                   </div>
                 </div>
               </CardHeader>
