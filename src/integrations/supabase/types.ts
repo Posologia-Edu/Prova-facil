@@ -220,6 +220,251 @@ export type Database = {
         }
         Relationships: []
       }
+      documentation_clinical_cases: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          position: number
+          reconciliation_case_id: string | null
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          reconciliation_case_id?: string | null
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          reconciliation_case_id?: string | null
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_clinical_cases_reconciliation_case_id_fkey"
+            columns: ["reconciliation_case_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_clinical_cases_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_forms: {
+        Row: {
+          content_json: Json
+          created_at: string
+          form_type: string
+          id: string
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_forms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_participants: {
+        Row: {
+          created_at: string
+          id: string
+          pair_index: number
+          pair_position: string
+          participant_role: string
+          reconciliation_participant_id: string | null
+          room_id: string
+          status: string
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          reconciliation_participant_id?: string | null
+          room_id: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          reconciliation_participant_id?: string | null
+          room_id?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_participants_reconciliation_participant_id_fkey"
+            columns: ["reconciliation_participant_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_responses: {
+        Row: {
+          admin_feedback: string | null
+          admin_score: number | null
+          ai_feedback_json: Json | null
+          ai_score: number | null
+          answers_json: Json
+          clinical_case_id: string | null
+          created_at: string
+          form_id: string
+          id: string
+          pair_index: number
+          room_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id: string
+          id?: string
+          pair_index?: number
+          room_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id?: string
+          id?: string
+          pair_index?: number
+          room_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_responses_clinical_case_id_fkey"
+            columns: ["clinical_case_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_responses_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_rooms: {
+        Row: {
+          access_code: string
+          created_at: string
+          description: string | null
+          id: string
+          reconciliation_room_id: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reconciliation_room_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reconciliation_room_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_rooms_reconciliation_room_id_fkey"
+            columns: ["reconciliation_room_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_publications: {
         Row: {
           access_code: string
