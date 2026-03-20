@@ -461,6 +461,14 @@ type TranslationKeys = {
   sim_waiting_next_round: string;
   sim_submit: string;
   sim_no_script: string;
+  sim_import: string;
+  sim_import_from: string;
+  sim_import_select_room: string;
+  sim_import_participants: string;
+  sim_import_forms: string;
+  sim_import_success: string;
+  sim_import_nothing: string;
+  sim_no_other_rooms: string;
 
   // Empty states
   empty_questions_hint: string;
