@@ -55,6 +55,8 @@ import DocumentationEditor from "./pages/DocumentationEditor";
 import DocumentationJoin from "./pages/DocumentationJoin";
 import DocumentationControl from "./pages/DocumentationControl";
 import SimulationAggregator from "./pages/SimulationAggregator";
+import VirtualPatients from "./pages/VirtualPatients";
+import VirtualPatientChat from "./pages/VirtualPatientChat";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
 import PublicContact from "./pages/PublicContact";
