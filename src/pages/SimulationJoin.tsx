@@ -330,7 +330,7 @@ export default function SimulationJoin() {
     setAllAssignments([]);
     setDistributionGenerated(false);
     setLocalRounds([]);
-    setShowPairingMode(false);
+    setShowPairingMode(true);
     toast({ title: "Rodadas resetadas" });
   };
 
