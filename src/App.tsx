@@ -361,6 +361,23 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Virtual Patients */}
+            <Route
+              path="/virtual-patients"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><VirtualPatients /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/virtual-patients/chat/:patientId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><VirtualPatientChat /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
