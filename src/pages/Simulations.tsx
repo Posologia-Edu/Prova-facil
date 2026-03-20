@@ -89,6 +89,51 @@ export default function Simulations() {
     },
   });
 
+  const { data: soapRooms, isLoading: soapLoading } = useQuery({
+    queryKey: ["soap-rooms-list"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data, error } = await supabase
+        .from("soap_rooms")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: reconciliationRooms, isLoading: reconciliationLoading } = useQuery({
+    queryKey: ["reconciliation-rooms-list"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data, error } = await supabase
+        .from("reconciliation_rooms")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: documentationRooms, isLoading: documentationLoading } = useQuery({
+    queryKey: ["documentation-rooms-list"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data, error } = await supabase
+        .from("documentation_rooms")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: participantCounts } = useQuery({
     queryKey: ["simulation-participant-counts"],
     queryFn: async () => {
