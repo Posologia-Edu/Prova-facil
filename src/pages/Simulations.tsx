@@ -257,7 +257,11 @@ export default function Simulations() {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <Badge variant="outline" className="text-xs">
-                    {mod.id === "anamnesis" ? `${rooms?.length || 0} salas` : "Acessar módulo"}
+                    {mod.id === "anamnesis" ? `${rooms?.length || 0} salas`
+                      : mod.id === "soap" ? `${soapRooms?.length || 0} salas`
+                      : mod.id === "reconciliation" ? `${reconciliationRooms?.length || 0} salas`
+                      : mod.id === "documentation" ? `${documentationRooms?.length || 0} salas`
+                      : "Acessar módulo"}
                   </Badge>
                 </CardContent>
               </Card>
