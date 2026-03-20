@@ -422,7 +422,12 @@ export default function SoapControl() {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-foreground">{getParticipantName(response.participant_id)}</span>
+                          <div>
+                            <span className="font-medium text-foreground">{getParticipantName(response.participant_id)}</span>
+                            {(patientNames as Record<string, string>)[response.participant_id] && (
+                              <p className="text-xs text-muted-foreground">Pac: {(patientNames as Record<string, string>)[response.participant_id]}</p>
+                            )}
+                          </div>
                           {response.admin_score != null && <Badge variant="secondary">{response.admin_score}</Badge>}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
