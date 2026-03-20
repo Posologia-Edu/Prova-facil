@@ -349,9 +349,11 @@ export default function SoapJoin() {
               <CardContent>
                 {Object.keys(anamnesisAnswers).length > 0 ? (
                   <div className="space-y-3">
-                    {Object.entries(anamnesisAnswers).map(([key, value]) => (
+                    {Object.entries(anamnesisAnswers)
+                      .filter(([key]) => key !== "_feedback")
+                      .map(([key, value]) => (
                       <div key={key} className="p-3 bg-muted/50 rounded-lg">
-                        <p className="text-xs text-muted-foreground mb-1">{key}</p>
+                        <p className="text-xs text-muted-foreground mb-1 font-medium">{anamnesisFieldLabels[key] || key}</p>
                         <p className="text-sm">{typeof value === "object" ? JSON.stringify(value) : String(value)}</p>
                       </div>
                     ))}
