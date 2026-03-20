@@ -1594,7 +1594,7 @@ const es: TranslationKeys = {
   auth_error_signup: "Error al registrarse",
   auth_signup_success_title: "¡Registro completado!",
   auth_signup_success_desc: "Revise su correo para confirmar la cuenta. Después de la confirmación, su acceso será analizado por el administrador.",
-  auth_student: "Soy Alumno",
+  auth_student: "Acceder a Evaluación",
 
   landing_enter: "Iniciar sesión",
   landing_create_free: "Crear cuenta gratis",
