@@ -774,6 +774,7 @@ export default function ClassesPage() {
         </Dialog>
 
 
+        <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditingClass(null); }}>
           <DialogContent>
             <DialogHeader><DialogTitle>Editar Turma</DialogTitle></DialogHeader>
             <div className="space-y-4 py-2">
