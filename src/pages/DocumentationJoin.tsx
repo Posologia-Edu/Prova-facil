@@ -9,7 +9,7 @@ import { FileText, Send, CheckCircle, BookOpen, Users, Table2, Plus, Trash2 } fr
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
 
-type FormField = { id: string; label: string; type: "text" | "textarea" | "radio" | "checkbox" | "scale"; options?: string[]; max_score?: number; required?: boolean };
+// FormField type imported from @/components/forms/types
 type MedColumn = { id: string; label: string };
 type MedFormContent = { columns: MedColumn[]; rows_score: number };
 type Phase = "login" | "active" | "done";
