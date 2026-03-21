@@ -15,6 +15,10 @@ import {
   X,
   FileText,
   Upload,
+  HeartPulse,
+  KeyRound,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -83,6 +87,26 @@ interface ExamItem {
   created_at: string;
 }
 
+interface ClassVirtualPatient {
+  id: string;
+  patient_id: string;
+  access_code: string;
+  status: string;
+}
+
+const VP_CATALOG = [
+  { id: "pain_helena", name: "Dona Helena, 67 anos", module: "Dor", desc: "Dor neuropática pós-herpética" },
+  { id: "pain_luciana", name: "Luciana, 42 anos", module: "Dor", desc: "Fibromialgia" },
+  { id: "pain_rogerio", name: "Rogério, 58 anos", module: "Dor", desc: "Lombalgia crônica" },
+  { id: "pain_pedro", name: "Pedro, 65 anos", module: "Dor", desc: "Dor oncológica" },
+  { id: "pain_ana", name: "Ana, 36 anos", module: "Dor", desc: "Cefaleia por uso excessivo" },
+  { id: "inflammation_maria", name: "Dona Maria, 72 anos", module: "Inflamação", desc: "Osteoartrite de joelho" },
+  { id: "inflammation_antonio", name: "Seu Antônio, 66 anos", module: "Inflamação", desc: "Osteoartrite de quadril" },
+  { id: "inflammation_renata", name: "Renata, 39 anos", module: "Inflamação", desc: "Artrite reumatoide inicial" },
+  { id: "inflammation_wilson", name: "Seu Wilson, 57 anos", module: "Inflamação", desc: "AR refratária" },
+  { id: "inflammation_jose", name: "José, 57 anos", module: "Inflamação", desc: "Complicações do corticoide" },
+];
+
 export default function ClassesPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -97,6 +121,8 @@ export default function ClassesPage() {
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [classExams, setClassExams] = useState<ExamItem[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
+  const [classVPs, setClassVPs] = useState<ClassVirtualPatient[]>([]);
+  const [linkVPOpen, setLinkVPOpen] = useState(false);
 
   // Manage students dialog
   const [manageStudentsOpen, setManageStudentsOpen] = useState(false);
@@ -242,13 +268,15 @@ export default function ClassesPage() {
     setSelectedClass(cls);
     setStudentsLoading(true);
 
-    const [studentsRes, examsRes] = await Promise.all([
+    const [studentsRes, examsRes, vpsRes] = await Promise.all([
       supabase.from("class_students").select("*").eq("class_id", cls.id).order("student_name"),
       supabase.from("exams").select("id, title, status, created_at").eq("class_id", cls.id).is("deleted_at", null).order("created_at", { ascending: false }),
+      supabase.from("class_virtual_patients").select("id, patient_id, access_code, status").eq("class_id", cls.id).order("created_at"),
     ]);
 
     setStudents(studentsRes.data || []);
     setClassExams(examsRes.data || []);
+    setClassVPs((vpsRes.data as ClassVirtualPatient[]) || []);
     setStudentsLoading(false);
   };
 
@@ -314,6 +342,39 @@ export default function ClassesPage() {
     loadManageStudents(managingClassId);
     fetchClasses();
   };
+
+  // Virtual patient linking
+  const linkVirtualPatient = async (patientId: string) => {
+    if (!selectedClass) return;
+    const { error } = await supabase.from("class_virtual_patients").insert({
+      class_id: selectedClass.id,
+      patient_id: patientId,
+    });
+    if (error) {
+      if (error.code === "23505") toast.error("Este paciente já está vinculado a esta turma.");
+      else toast.error("Erro ao vincular paciente.");
+      return;
+    }
+    toast.success("Paciente virtual vinculado!");
+    setLinkVPOpen(false);
+    const { data } = await supabase.from("class_virtual_patients").select("id, patient_id, access_code, status").eq("class_id", selectedClass.id).order("created_at");
+    setClassVPs((data as ClassVirtualPatient[]) || []);
+  };
+
+  const toggleVPStatus = async (vp: ClassVirtualPatient) => {
+    const newStatus = vp.status === "active" ? "draft" : "active";
+    await supabase.from("class_virtual_patients").update({ status: newStatus }).eq("id", vp.id);
+    setClassVPs(prev => prev.map(v => v.id === vp.id ? { ...v, status: newStatus } : v));
+    toast.success(newStatus === "active" ? "Paciente virtual ativado!" : "Paciente virtual desativado.");
+  };
+
+  const removeVP = async (vpId: string) => {
+    await supabase.from("class_virtual_patients").delete().eq("id", vpId);
+    setClassVPs(prev => prev.filter(v => v.id !== vpId));
+    toast.success("Paciente virtual removido da turma.");
+  };
+
+  const getVPInfo = (patientId: string) => VP_CATALOG.find(p => p.id === patientId);
 
   // Shared manage students dialog content
   const manageStudentsContent = (
@@ -488,7 +549,92 @@ export default function ClassesPage() {
           )}
         </div>
 
-        {/* Edit dialog */}
+        <Separator />
+
+        {/* Pacientes Virtuais vinculados */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-primary flex items-center gap-1.5">
+              <HeartPulse className="h-4 w-4" /> Pacientes Virtuais ({classVPs.length})
+            </h3>
+            <Button variant="outline" size="sm" onClick={() => setLinkVPOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Vincular Paciente
+            </Button>
+          </div>
+          {classVPs.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic py-4">Nenhum paciente virtual vinculado a esta turma.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {classVPs.map((vp) => {
+                const info = getVPInfo(vp.patient_id);
+                return (
+                  <Card key={vp.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-2">
+                        <HeartPulse className="h-4 w-4 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold">{info?.name || vp.patient_id}</p>
+                          <p className="text-xs text-muted-foreground">{info?.desc}</p>
+                          <Badge variant="outline" className="text-[10px] mt-1">{info?.module}</Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant={vp.status === "active" ? "default" : "secondary"} className="text-[10px]">
+                          {vp.status === "active" ? "Ativo" : "Rascunho"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <KeyRound className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-mono text-xs font-bold tracking-widest uppercase">{vp.access_code}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                          navigator.clipboard.writeText(vp.access_code);
+                          toast.success("PIN copiado!");
+                        }}>
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleVPStatus(vp)} title={vp.status === "active" ? "Desativar" : "Ativar"}>
+                          {vp.status === "active" ? <ToggleRight className="h-4 w-4 text-green-600" /> : <ToggleLeft className="h-4 w-4 text-muted-foreground" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeVP(vp.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Link VP Dialog */}
+        <Dialog open={linkVPOpen} onOpenChange={setLinkVPOpen}>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Vincular Paciente Virtual</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground mb-4">Selecione um paciente para vincular a esta turma. Um PIN será gerado automaticamente.</p>
+            <div className="space-y-2">
+              {VP_CATALOG.filter(p => !classVPs.some(v => v.patient_id === p.id)).map((p) => (
+                <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                  <div>
+                    <p className="text-sm font-medium">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">{p.desc}</p>
+                    <Badge variant="outline" className="text-[10px] mt-1">{p.module}</Badge>
+                  </div>
+                  <Button size="sm" onClick={() => linkVirtualPatient(p.id)}>Vincular</Button>
+                </div>
+              ))}
+              {VP_CATALOG.filter(p => !classVPs.some(v => v.patient_id === p.id)).length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Todos os pacientes já estão vinculados.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+
         <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditingClass(null); }}>
           <DialogContent>
             <DialogHeader><DialogTitle>Editar Turma</DialogTitle></DialogHeader>

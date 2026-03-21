@@ -57,6 +57,7 @@ import DocumentationControl from "./pages/DocumentationControl";
 import SimulationAggregator from "./pages/SimulationAggregator";
 import VirtualPatients from "./pages/VirtualPatients";
 import VirtualPatientChat from "./pages/VirtualPatientChat";
+import VirtualPatientRoom from "./pages/VirtualPatientRoom";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
 import PublicContact from "./pages/PublicContact";
@@ -378,6 +379,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Public Virtual Patient Room (student access via PIN) */}
+            <Route path="/virtual-patients/room/:cvpId" element={<VirtualPatientRoom />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />

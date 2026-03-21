@@ -106,6 +106,41 @@ export default function StudentAuth() {
         return;
       }
 
+      // Check if PIN belongs to a Virtual Patient room
+      const { data: vpRoom } = await supabase
+        .from("class_virtual_patients")
+        .select("id, class_id, patient_id, status")
+        .eq("access_code", pin.trim().toLowerCase())
+        .limit(1)
+        .maybeSingle();
+
+      if (vpRoom) {
+        if (vpRoom.status !== "active") {
+          toast({ title: "Sala não disponível", description: "Este paciente virtual ainda não foi ativado pelo professor.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+        // Check if student email belongs to the class
+        const { data: studentInClass } = await supabase
+          .from("class_students")
+          .select("id, student_name")
+          .eq("class_id", vpRoom.class_id)
+          .ilike("student_email", email.trim().toLowerCase())
+          .limit(1)
+          .maybeSingle();
+
+        if (!studentInClass) {
+          toast({ title: "Acesso negado", description: "Seu e-mail não está cadastrado na turma vinculada a este paciente virtual.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+
+        sessionStorage.setItem("vp_email", email.trim().toLowerCase());
+        sessionStorage.setItem("vp_student_name", studentInClass.student_name || "");
+        navigate(`/virtual-patients/room/${vpRoom.id}`);
+        return;
+      }
+
       const { data: osceCircuit } = await supabase
         .from("osce_circuits")
         .select("id, access_code")

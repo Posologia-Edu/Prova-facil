@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.virtual-patient-chat]
 verify_jwt = false
+
+[functions.grade-virtual-patient]
+verify_jwt = false

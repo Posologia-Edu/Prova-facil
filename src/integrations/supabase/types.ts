@@ -184,6 +184,41 @@ export type Database = {
           },
         ]
       }
+      class_virtual_patients: {
+        Row: {
+          access_code: string
+          class_id: string
+          created_at: string
+          id: string
+          patient_id: string
+          status: string
+        }
+        Insert: {
+          access_code?: string
+          class_id: string
+          created_at?: string
+          id?: string
+          patient_id: string
+          status?: string
+        }
+        Update: {
+          access_code?: string
+          class_id?: string
+          created_at?: string
+          id?: string
+          patient_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_virtual_patients_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           created_at: string
@@ -2158,6 +2193,63 @@ export type Database = {
         }
         Relationships: []
       }
+      virtual_patient_grades: {
+        Row: {
+          bonus_penalidades: Json | null
+          class_virtual_patient_id: string
+          created_at: string
+          feedback_resumido: string | null
+          flags_seguranca: Json | null
+          id: string
+          nota_final: number | null
+          nota_microlearning: number | null
+          orientacoes_melhoria: string | null
+          session_id: string
+          subscores: Json
+        }
+        Insert: {
+          bonus_penalidades?: Json | null
+          class_virtual_patient_id: string
+          created_at?: string
+          feedback_resumido?: string | null
+          flags_seguranca?: Json | null
+          id?: string
+          nota_final?: number | null
+          nota_microlearning?: number | null
+          orientacoes_melhoria?: string | null
+          session_id: string
+          subscores?: Json
+        }
+        Update: {
+          bonus_penalidades?: Json | null
+          class_virtual_patient_id?: string
+          created_at?: string
+          feedback_resumido?: string | null
+          flags_seguranca?: Json | null
+          id?: string
+          nota_final?: number | null
+          nota_microlearning?: number | null
+          orientacoes_melhoria?: string | null
+          session_id?: string
+          subscores?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "virtual_patient_grades_class_virtual_patient_id_fkey"
+            columns: ["class_virtual_patient_id"]
+            isOneToOne: false
+            referencedRelation: "class_virtual_patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "virtual_patient_grades_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_patient_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       virtual_patient_mai_scores: {
         Row: {
           created_at: string
@@ -2227,6 +2319,7 @@ export type Database = {
       }
       virtual_patient_sessions: {
         Row: {
+          class_virtual_patient_id: string | null
           created_at: string
           current_encounter: number
           id: string
@@ -2234,10 +2327,13 @@ export type Database = {
           module: string
           patient_id: string
           status: string
+          student_email: string | null
+          student_name: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          class_virtual_patient_id?: string | null
           created_at?: string
           current_encounter?: number
           id?: string
@@ -2245,10 +2341,13 @@ export type Database = {
           module?: string
           patient_id: string
           status?: string
+          student_email?: string | null
+          student_name?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          class_virtual_patient_id?: string | null
           created_at?: string
           current_encounter?: number
           id?: string
@@ -2256,10 +2355,20 @@ export type Database = {
           module?: string
           patient_id?: string
           status?: string
+          student_email?: string | null
+          student_name?: string | null
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "virtual_patient_sessions_class_virtual_patient_id_fkey"
+            columns: ["class_virtual_patient_id"]
+            isOneToOne: false
+            referencedRelation: "class_virtual_patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
