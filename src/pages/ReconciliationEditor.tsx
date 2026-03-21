@@ -184,7 +184,7 @@ export default function ReconciliationEditor() {
   };
 
   // Save form
-  const saveForm = async () => {
+  const saveForm = async (silent = false) => {
     if (!formTitle.trim()) return;
 
     if (editingFormId) {
@@ -193,7 +193,7 @@ export default function ReconciliationEditor() {
         content_json: formFields as any,
         form_type: formType,
       }).eq("id", editingFormId);
-      if (error) { toast({ title: "Erro", variant: "destructive" }); return; }
+      if (error) { if (!silent) toast({ title: "Erro", variant: "destructive" }); return; }
     } else {
       const { error } = await supabase.from("reconciliation_forms").insert({
         room_id: roomId!,
@@ -201,16 +201,46 @@ export default function ReconciliationEditor() {
         content_json: formFields as any,
         form_type: formType,
       });
-      if (error) { toast({ title: "Erro", variant: "destructive" }); return; }
+      if (error) { if (!silent) toast({ title: "Erro", variant: "destructive" }); return; }
     }
 
-    setEditingFormId(null);
-    setFormTitle("");
-    setFormFields([]);
-    setFormType("reconciliation");
-    refetchForms();
-    toast({ title: "Salvo", description: "Formulário salvo com sucesso." });
+    lastSavedSnapshotRef.current = JSON.stringify({ formType, title: formTitle, content: formFields });
+    if (!editingFormId) {
+      await refetchForms();
+    } else if (!silent) {
+      refetchForms();
+    }
+    if (!silent) {
+      setEditingFormId(null);
+      setFormTitle("");
+      setFormFields([]);
+      setFormType("reconciliation");
+      refetchForms();
+      toast({ title: "Salvo", description: "Formulário salvo com sucesso." });
+    }
   };
+
+  // Auto-save effect
+  useEffect(() => {
+    if (!roomId || !editingFormId) return;
+    if (!formTitle.trim() && formFields.length === 0) return;
+
+    const currentSnapshot = JSON.stringify({ formType, title: formTitle, content: formFields });
+
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      lastSavedSnapshotRef.current = currentSnapshot;
+      return;
+    }
+
+    if (currentSnapshot === lastSavedSnapshotRef.current) return;
+
+    const timeout = window.setTimeout(() => {
+      void saveForm(true);
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+  }, [roomId, editingFormId, formType, formTitle, formFields]);
 
   const deleteForm = async (id: string) => {
     await supabase.from("reconciliation_forms").delete().eq("id", id);
@@ -218,10 +248,13 @@ export default function ReconciliationEditor() {
   };
 
   const editForm = (form: any) => {
+    skipNextAutoSaveRef.current = true;
     setEditingFormId(form.id);
     setFormTitle(form.title);
     setFormType(form.form_type);
-    setFormFields(Array.isArray(form.content_json) ? form.content_json : []);
+    const fields = Array.isArray(form.content_json) ? form.content_json : [];
+    setFormFields(fields);
+    lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: fields });
   };
 
   // Add field to form

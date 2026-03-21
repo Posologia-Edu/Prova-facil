@@ -273,10 +273,13 @@ export default function SoapEditor() {
   }, [roomId, editingFormId, formType, formTitle, formFields]);
 
   const editForm = (form: any) => {
+    skipNextAutoSaveRef.current = true;
     setEditingFormId(form.id);
     setFormTitle(form.title);
     setFormType(form.form_type);
-    setFormFields(Array.isArray(form.content_json) ? form.content_json : []);
+    const fields = Array.isArray(form.content_json) ? form.content_json : [];
+    setFormFields(fields);
+    lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: fields });
   };
 
   const deleteForm = async (id: string) => {
