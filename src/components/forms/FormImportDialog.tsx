@@ -188,7 +188,7 @@ export default function FormImportDialog({ open, onOpenChange, onImport, formTab
               <p className="text-xs text-muted-foreground">{selectedForm.source} · {selectedForm.form_type}</p>
             </div>
 
-            <ScrollArea className="h-[300px]">
+            <ScrollArea className="h-[350px]">
               <div className="space-y-1.5">
                 {selectedForm.fields.map((field) => {
                   if (field.type === "section_header" || field.type === "image_block" || field.type === "video_block") {
@@ -216,18 +216,18 @@ export default function FormImportDialog({ open, onOpenChange, onImport, formTab
                     </label>
                   );
                 })}
+
+                <div className="pt-3 flex justify-end">
+                  <Button
+                    onClick={handleImport}
+                    disabled={selectedFieldIds.size === 0}
+                  >
+                    <Import className="h-4 w-4 mr-2" />
+                    Importar {selectedFieldIds.size > 0 ? `(${selectedFieldIds.size})` : ""} perguntas selecionadas
+                  </Button>
+                </div>
               </div>
             </ScrollArea>
-
-            <div className="border-t pt-3 flex justify-end">
-              <Button
-                onClick={handleImport}
-                disabled={selectedFieldIds.size === 0}
-              >
-                <Import className="h-4 w-4 mr-2" />
-                Importar {selectedFieldIds.size > 0 ? `(${selectedFieldIds.size})` : ""} perguntas selecionadas
-              </Button>
-            </div>
           </div>
         )}
       </DialogContent>
