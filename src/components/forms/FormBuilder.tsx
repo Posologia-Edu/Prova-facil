@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,27 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [toolbarTop, setToolbarTop] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fieldRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const setFieldRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    if (el) fieldRefs.current.set(id, el);
+    else fieldRefs.current.delete(id);
+  }, []);
+
+  // Update toolbar position when selected field changes
+  useEffect(() => {
+    if (!selectedFieldId || !containerRef.current) {
+      setToolbarTop(0);
+      return;
+    }
+    const fieldEl = fieldRefs.current.get(selectedFieldId);
+    if (!fieldEl) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const fieldRect = fieldEl.getBoundingClientRect();
+    setToolbarTop(fieldRect.top - containerRect.top);
+  }, [selectedFieldId, fields]);
 
   // Find the insertion index (after the currently selected field, or at the end)
   const getInsertIndex = (): number => {
@@ -202,6 +223,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
       return (
         <div
           key={field.id}
+          ref={(el) => setFieldRef(field.id, el)}
           className={`group border rounded-lg p-4 bg-card transition-all cursor-pointer ${isSelected ? "ring-2 ring-primary shadow-md" : "hover:shadow-sm"}`}
           onClick={() => setSelectedFieldId(field.id)}
         >
@@ -238,6 +260,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
       return (
         <div
           key={field.id}
+          ref={(el) => setFieldRef(field.id, el)}
           className={`group border rounded-lg p-4 bg-card transition-all cursor-pointer ${isSelected ? "ring-2 ring-primary shadow-md" : "hover:shadow-sm"}`}
           onClick={() => setSelectedFieldId(field.id)}
         >
@@ -273,6 +296,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
     return (
       <div
         key={field.id}
+        ref={(el) => setFieldRef(field.id, el)}
         className={`group border rounded-lg p-3 bg-card transition-all cursor-pointer ${isSelected ? "ring-2 ring-primary shadow-md" : "hover:shadow-sm"}`}
         onClick={() => setSelectedFieldId(field.id)}
       >
@@ -430,9 +454,9 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
   };
 
   return (
-    <div className="relative flex gap-3">
+    <div className="relative pr-14" ref={containerRef}>
       {/* Main form content */}
-      <div className="flex-1 space-y-4">
+      <div className="space-y-4">
         {sections.map((section, sectionIdx) => {
           const isCollapsed = section.header ? collapsedSections.has(section.header.id) : false;
           const sectionGlobalStart = section.header ? getFieldGlobalIndex(section.header) : (section.fields.length > 0 ? getFieldGlobalIndex(section.fields[0]) : 0);
@@ -442,6 +466,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
               {/* Section Header */}
               {section.header && (
                 <div
+                  ref={(el) => setFieldRef(section.header!.id, el)}
                   className={`bg-primary/5 border-l-4 border-l-primary rounded-lg p-4 space-y-2 cursor-pointer transition-all ${selectedFieldId === section.header.id ? "ring-2 ring-primary shadow-md" : ""}`}
                   onClick={() => setSelectedFieldId(section.header!.id)}
                 >
@@ -521,8 +546,11 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
         )}
       </div>
 
-      {/* Floating sidebar toolbar (Google Forms style) */}
-      <div className="sticky top-4 h-fit">
+      {/* Floating toolbar that follows selected field */}
+      <div
+        className="absolute right-0 transition-all duration-200 ease-out"
+        style={{ top: `${toolbarTop}px`, width: '48px' }}
+      >
         <div className="flex flex-col gap-0.5 bg-card border rounded-lg shadow-lg p-1.5">
           <Button
             variant="ghost"
