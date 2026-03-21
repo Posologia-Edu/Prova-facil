@@ -4,14 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
 import { FileText, Send, CheckCircle, BookOpen, Users, Table2, Plus, Trash2 } from "lucide-react";
+import FormRenderer from "@/components/forms/FormRenderer";
+import type { FormField } from "@/components/forms/types";
 
-type FormField = { id: string; label: string; type: "text" | "textarea" | "radio" | "checkbox" | "scale"; options?: string[]; max_score?: number; required?: boolean };
+// FormField type imported from @/components/forms/types
 type MedColumn = { id: string; label: string };
 type MedFormContent = { columns: MedColumn[]; rows_score: number };
 type Phase = "login" | "active" | "done";
@@ -117,37 +115,7 @@ export default function DocumentationJoin() {
   const referralFields: FormField[] = referralForm ? (Array.isArray(referralForm.content_json) ? referralForm.content_json : []) : [];
   const medContent: MedFormContent | null = medForm ? (medForm.content_json as MedFormContent) : null;
 
-  const renderField = (field: FormField) => {
-    switch (field.type) {
-      case "text": return <Input value={referralAnswers[field.id] || ""} onChange={e => setReferralAnswers({ ...referralAnswers, [field.id]: e.target.value })} />;
-      case "textarea": return <Textarea value={referralAnswers[field.id] || ""} onChange={e => setReferralAnswers({ ...referralAnswers, [field.id]: e.target.value })} rows={4} />;
-      case "radio": return (
-        <RadioGroup value={referralAnswers[field.id] || ""} onValueChange={v => setReferralAnswers({ ...referralAnswers, [field.id]: v })}>
-          {field.options?.map(opt => (<div key={opt} className="flex items-center gap-2"><RadioGroupItem value={opt} id={`${field.id}-${opt}`} /><Label htmlFor={`${field.id}-${opt}`}>{opt}</Label></div>))}
-        </RadioGroup>
-      );
-      case "checkbox": return (
-        <div className="space-y-2">
-          {field.options?.map(opt => (
-            <div key={opt} className="flex items-center gap-2">
-              <Checkbox checked={(referralAnswers[field.id] || []).includes(opt)} onCheckedChange={(checked) => {
-                const current = referralAnswers[field.id] || [];
-                setReferralAnswers({ ...referralAnswers, [field.id]: checked ? [...current, opt] : current.filter((o: string) => o !== opt) });
-              }} />
-              <Label>{opt}</Label>
-            </div>
-          ))}
-        </div>
-      );
-      case "scale": return (
-        <div className="flex items-center gap-4">
-          <Slider value={[referralAnswers[field.id] || 0]} onValueChange={([v]) => setReferralAnswers({ ...referralAnswers, [field.id]: v })} min={0} max={field.max_score || 10} step={1} />
-          <span className="text-sm font-medium w-8">{referralAnswers[field.id] || 0}</span>
-        </div>
-      );
-      default: return null;
-    }
-  };
+  // Form rendering delegated to FormRenderer
 
   const addMedRow = () => {
     const row: Record<string, string> = {};
@@ -212,12 +180,12 @@ export default function DocumentationJoin() {
           <Card>
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{referralForm.title}</CardTitle></CardHeader>
             <CardContent className="space-y-6">
-              {referralFields.map((field, idx) => (
-                <div key={field.id} className="space-y-2">
-                  <Label className="text-sm font-medium">{idx + 1}. {field.label}{field.max_score ? <span className="text-muted-foreground ml-1">({field.max_score} pts)</span> : null}</Label>
-                  {renderField(field)}
-                </div>
-              ))}
+              <FormRenderer
+                fields={referralFields}
+                answers={referralAnswers}
+                onChange={setReferralAnswers}
+                showScores={true}
+              />
             </CardContent>
           </Card>
         )}

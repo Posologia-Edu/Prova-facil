@@ -13,15 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw } from "lucide-react";
+import FormBuilder from "@/components/forms/FormBuilder";
+import type { FormField } from "@/components/forms/types";
 
-type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "radio" | "checkbox" | "scale";
-  options?: string[];
-  max_score?: number;
-  required?: boolean;
-};
+// FormField type imported from @/components/forms/types
 
 export default function ReconciliationEditor() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -228,23 +223,7 @@ export default function ReconciliationEditor() {
   };
 
   // Add field to form
-  const addField = () => {
-    setFormFields([...formFields, {
-      id: crypto.randomUUID(),
-      label: "",
-      type: "textarea",
-      max_score: 1,
-      required: true,
-    }]);
-  };
-
-  const updateField = (idx: number, updates: Partial<FormField>) => {
-    setFormFields(formFields.map((f, i) => i === idx ? { ...f, ...updates } : f));
-  };
-
-  const removeField = (idx: number) => {
-    setFormFields(formFields.filter((_, i) => i !== idx));
-  };
+  // Field management delegated to FormBuilder
 
   // Clinical cases
   const saveCase = async () => {
@@ -302,7 +281,7 @@ export default function ReconciliationEditor() {
   if (roomLoading) return <p className="p-6 text-muted-foreground">Carregando...</p>;
   if (!room) return <p className="p-6">Sala não encontrada.</p>;
 
-  const totalMaxScore = formFields.reduce((sum, f) => sum + (f.max_score || 0), 0);
+  const totalMaxScore = formFields.filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -541,54 +520,16 @@ export default function ReconciliationEditor() {
                 </div>
               </div>
 
-              {formFields.map((field, idx) => (
-                <Card key={field.id} className="p-3">
-                  <div className="grid gap-2">
-                    <div className="flex gap-2">
-                      <Input
-                        value={field.label}
-                        onChange={e => updateField(idx, { label: e.target.value })}
-                        placeholder="Pergunta / Item"
-                        className="flex-1"
-                      />
-                      <Select value={field.type} onValueChange={(v: any) => updateField(idx, { type: v })}>
-                        <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="text">Texto curto</SelectItem>
-                          <SelectItem value="textarea">Texto longo</SelectItem>
-                          <SelectItem value="radio">Múltipla escolha</SelectItem>
-                          <SelectItem value="checkbox">Checkbox</SelectItem>
-                          <SelectItem value="scale">Escala</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="number"
-                        value={field.max_score || 0}
-                        onChange={e => updateField(idx, { max_score: Number(e.target.value) })}
-                        className="w-20"
-                        placeholder="Pts"
-                      />
-                      <Button variant="ghost" size="sm" onClick={() => removeField(idx)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    {(field.type === "radio" || field.type === "checkbox") && (
-                      <Input
-                        value={field.options?.join(", ") || ""}
-                        onChange={e => updateField(idx, { options: e.target.value.split(",").map(o => o.trim()) })}
-                        placeholder="Opções separadas por vírgula"
-                      />
-                    )}
-                  </div>
-                </Card>
-              ))}
+              <FormBuilder
+                fields={formFields}
+                onChange={setFormFields}
+                showScores={true}
+                scoreLabel="Pts"
+              />
 
               <div className="flex items-center justify-between">
-                <Button variant="outline" onClick={addField}><Plus className="h-4 w-4 mr-1" />Adicionar Campo</Button>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">Total: {totalMaxScore} pts</span>
-                  <Button onClick={saveForm} disabled={!formTitle.trim()}>Salvar Formulário</Button>
-                </div>
+                <span className="text-sm text-muted-foreground">Total: {totalMaxScore} pts</span>
+                <Button onClick={saveForm} disabled={!formTitle.trim()}>Salvar Formulário</Button>
               </div>
               {editingFormId && (
                 <Button variant="ghost" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); }}>

@@ -4,22 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
 import { FileText, Send, CheckCircle, BookOpen, Users } from "lucide-react";
-
-type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "radio" | "checkbox" | "scale";
-  options?: string[];
-  max_score?: number;
-  required?: boolean;
-};
+import FormRenderer from "@/components/forms/FormRenderer";
+import type { FormField } from "@/components/forms/types";
 
 type Phase = "login" | "waiting" | "active" | "done";
 
@@ -150,51 +139,7 @@ export default function ReconciliationJoin() {
 
   const fields: FormField[] = form ? (Array.isArray(form.content_json) ? form.content_json : []) : [];
 
-  const renderField = (field: FormField) => {
-    switch (field.type) {
-      case "text":
-        return <Input value={answers[field.id] || ""} onChange={e => setAnswers({ ...answers, [field.id]: e.target.value })} />;
-      case "textarea":
-        return <Textarea value={answers[field.id] || ""} onChange={e => setAnswers({ ...answers, [field.id]: e.target.value })} rows={4} />;
-      case "radio":
-        return (
-          <RadioGroup value={answers[field.id] || ""} onValueChange={v => setAnswers({ ...answers, [field.id]: v })}>
-            {field.options?.map(opt => (
-              <div key={opt} className="flex items-center gap-2">
-                <RadioGroupItem value={opt} id={`${field.id}-${opt}`} />
-                <Label htmlFor={`${field.id}-${opt}`}>{opt}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-        );
-      case "checkbox":
-        return (
-          <div className="space-y-2">
-            {field.options?.map(opt => (
-              <div key={opt} className="flex items-center gap-2">
-                <Checkbox
-                  checked={(answers[field.id] || []).includes(opt)}
-                  onCheckedChange={(checked) => {
-                    const current = answers[field.id] || [];
-                    setAnswers({ ...answers, [field.id]: checked ? [...current, opt] : current.filter((o: string) => o !== opt) });
-                  }}
-                />
-                <Label>{opt}</Label>
-              </div>
-            ))}
-          </div>
-        );
-      case "scale":
-        return (
-          <div className="flex items-center gap-4">
-            <Slider value={[answers[field.id] || 0]} onValueChange={([v]) => setAnswers({ ...answers, [field.id]: v })} min={0} max={field.max_score || 10} step={1} />
-            <span className="text-sm font-medium w-8">{answers[field.id] || 0}</span>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+  // Form rendering delegated to FormRenderer
 
   if (phase === "login") {
     return (
@@ -273,15 +218,12 @@ export default function ReconciliationJoin() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {fields.map((field, idx) => (
-                <div key={field.id} className="space-y-2">
-                  <Label className="text-sm font-medium">
-                    {idx + 1}. {field.label}
-                    {field.max_score ? <span className="text-muted-foreground ml-1">({field.max_score} pts)</span> : null}
-                  </Label>
-                  {renderField(field)}
-                </div>
-              ))}
+              <FormRenderer
+                fields={fields}
+                answers={answers}
+                onChange={setAnswers}
+                showScores={true}
+              />
 
               <Button className="w-full" onClick={handleSubmit} disabled={submitted}>
                 <Send className="h-4 w-4 mr-2" />Enviar Ficha de Reconciliação

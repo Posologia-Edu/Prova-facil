@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download, AlertTriangle, CheckCircle, Pencil, Check, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import FormBuilder from "@/components/forms/FormBuilder";
+import type { FormField } from "@/components/forms/types";
 import { Checkbox } from "@/components/ui/checkbox";
 
 
@@ -27,14 +29,7 @@ type Participant = {
   participant_role: string;
 };
 
-type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "radio" | "checkbox" | "scale";
-  options?: string[];
-  max_score?: number;
-  required?: boolean;
-};
+// FormField type imported from @/components/forms/types
 
 type SimForm = {
   id?: string;
@@ -223,17 +218,17 @@ export default function SimulationEditor() {
     let obsTotal = 0;
 
     if (profForm && Array.isArray(profForm.content_json)) {
-      (profForm.content_json as FormField[]).forEach(f => { profTotal += (f.max_score || 0); });
+      (profForm.content_json as FormField[]).forEach(f => { if (f.type !== "section_header") profTotal += (f.max_score || 0); });
     }
     if (obsForm && Array.isArray(obsForm.content_json)) {
-      (obsForm.content_json as FormField[]).forEach(f => { obsTotal += (f.max_score || 0); });
+      (obsForm.content_json as FormField[]).forEach(f => { if (f.type !== "section_header") obsTotal += (f.max_score || 0); });
     }
 
     // If currently editing one of these forms, use the local formFields
     if (activeFormType === "professor_eval") {
-      profTotal = formFields.reduce((sum, f) => sum + (f.max_score || 0), 0);
+      profTotal = formFields.filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0);
     } else if (activeFormType === "observer_eval") {
-      obsTotal = formFields.reduce((sum, f) => sum + (f.max_score || 0), 0);
+      obsTotal = formFields.filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0);
     }
 
     const total = profTotal + obsTotal;
@@ -311,25 +306,7 @@ export default function SimulationEditor() {
     return () => window.clearTimeout(timeout);
   }, [roomId, activeForm, activeFormType, clinicalCases, formFields, formTitle]);
 
-  const addField = () => {
-    setFormFields([...formFields, {
-      id: crypto.randomUUID(),
-      label: "",
-      type: "text",
-      max_score: 0,
-      required: false,
-    }]);
-  };
-
-  const updateField = (index: number, updates: Partial<FormField>) => {
-    const updated = [...formFields];
-    updated[index] = { ...updated[index], ...updates };
-    setFormFields(updated);
-  };
-
-  const removeField = (index: number) => {
-    setFormFields(formFields.filter((_, i) => i !== index));
-  };
+  // Field management delegated to FormBuilder component
 
   const [roomTitle, setRoomTitle] = useState("");
   const [roomDesc, setRoomDesc] = useState("");
@@ -785,62 +762,12 @@ export default function SimulationEditor() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {formFields.map((field, i) => (
-                    <div key={field.id} className="p-3 border rounded-lg space-y-2">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder={t("sim_field_label")}
-                          value={field.label}
-                          onChange={(e) => updateField(i, { label: e.target.value })}
-                          className="flex-1"
-                        />
-                        <Select value={field.type} onValueChange={(v) => updateField(i, { type: v as any })}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text">Texto</SelectItem>
-                            <SelectItem value="textarea">Texto longo</SelectItem>
-                            <SelectItem value="radio">Múltipla escolha</SelectItem>
-                            <SelectItem value="checkbox">Checkbox</SelectItem>
-                            <SelectItem value="scale">Escala</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {isEvalForm && (
-                          <div className="flex items-center gap-1">
-                            <Label className="text-xs whitespace-nowrap">{t("sim_max_score")}</Label>
-                            <Input
-                              type="number"
-                              value={field.max_score || 0}
-                              onChange={(e) => updateField(i, { max_score: Number(e.target.value) })}
-                              className="w-16"
-                              min={0}
-                              step={0.5}
-                            />
-                          </div>
-                        )}
-                        <Button variant="ghost" size="sm" onClick={() => removeField(i)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      {(field.type === "radio" || field.type === "checkbox") && (
-                        <div>
-                          <Label className="text-xs">{t("sim_field_options")}</Label>
-                          <Input
-                            placeholder="Opção 1, Opção 2, Opção 3"
-                            value={field.options?.join(", ") || ""}
-                            onChange={(e) => updateField(i, { options: e.target.value.split(",").map(o => o.trim()) })}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={addField}>
-                    <Plus className="h-4 w-4 mr-1" />{t("sim_add_field")}
-                  </Button>
-                </div>
+                <FormBuilder
+                  fields={formFields}
+                  onChange={setFormFields}
+                  showScores={isEvalForm}
+                  scoreLabel={t("sim_max_score")}
+                />
               )}
 
               <div className="space-y-2">

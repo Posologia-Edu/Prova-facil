@@ -14,15 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy, GraduationCap, Shuffle, RotateCcw } from "lucide-react";
 import SplitSoapRoomDialog from "@/components/SplitSoapRoomDialog";
+import FormBuilder from "@/components/forms/FormBuilder";
+import type { FormField } from "@/components/forms/types";
 
-type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "radio" | "checkbox" | "scale";
-  options?: string[];
-  max_score?: number;
-  required?: boolean;
-};
+// FormField type imported from @/components/forms/types
 
 export default function SoapEditor() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -219,17 +214,7 @@ export default function SoapEditor() {
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
 
-  const addField = () => {
-    setFormFields([...formFields, { id: crypto.randomUUID(), label: "", type: "text", required: false }]);
-  };
-
-  const updateField = (idx: number, updates: Partial<FormField>) => {
-    setFormFields(formFields.map((f, i) => i === idx ? { ...f, ...updates } : f));
-  };
-
-  const removeField = (idx: number) => {
-    setFormFields(formFields.filter((_, i) => i !== idx));
-  };
+  // Field management delegated to FormBuilder
 
   const saveForm = async () => {
     if (!formTitle.trim()) return;
@@ -514,43 +499,12 @@ export default function SoapEditor() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Campos</Label>
-                  <Button variant="outline" size="sm" onClick={addField}><Plus className="h-3 w-3 mr-1" />Campo</Button>
-                </div>
-                {formFields.map((field, idx) => (
-                  <div key={field.id} className="flex gap-2 items-start p-3 border rounded-lg">
-                    <div className="flex-1 space-y-2">
-                      <Input placeholder="Rótulo do campo" value={field.label} onChange={(e) => updateField(idx, { label: e.target.value })} />
-                      <div className="flex gap-2">
-                        <Select value={field.type} onValueChange={(v) => updateField(idx, { type: v as any })}>
-                          <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text">Texto curto</SelectItem>
-                            <SelectItem value="textarea">Texto longo</SelectItem>
-                            <SelectItem value="radio">Múltipla escolha</SelectItem>
-                            <SelectItem value="checkbox">Checkbox</SelectItem>
-                            <SelectItem value="scale">Escala</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {field.type === "scale" && (
-                          <Input type="number" placeholder="Nota máx" value={field.max_score || ""} onChange={(e) => updateField(idx, { max_score: Number(e.target.value) })} className="w-24" />
-                        )}
-                        {field.type !== "scale" && formType === "peer_evaluation" && (
-                          <Input type="number" placeholder="Pontuação" value={field.max_score || ""} onChange={(e) => updateField(idx, { max_score: Number(e.target.value) || undefined })} className="w-24" title="Pontuação máxima deste item" />
-                        )}
-                      </div>
-                      {(field.type === "radio" || field.type === "checkbox") && (
-                        <Input placeholder="Opções (separadas por vírgula)" value={field.options?.join(", ") || ""} onChange={(e) => updateField(idx, { options: e.target.value.split(",").map(s => s.trim()) })} />
-                      )}
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => removeField(idx)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+              <FormBuilder
+                fields={formFields}
+                onChange={setFormFields}
+                showScores={formType === "peer_evaluation"}
+                scoreLabel="Pts"
+              />
 
               <Button onClick={saveForm} disabled={!formTitle.trim()} className="w-full">
                 {editingFormId ? "Atualizar Formulário" : "Salvar Formulário"}
