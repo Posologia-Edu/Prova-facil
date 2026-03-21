@@ -116,8 +116,25 @@ export default function ReconciliationControl() {
     ? (Array.isArray(reconciliationForm.content_json) ? reconciliationForm.content_json : [])
     : [];
 
+  // Get answer key for a specific clinical case
+  const getAnswerKeyFieldsForCase = (caseId: string | null): FormField[] => {
+    if (!answerKeyForm) return [];
+    const content = answerKeyForm.content_json;
+    // New per-case structure
+    if (content && typeof content === "object" && !Array.isArray(content) && (content as any).case_answers) {
+      const caseAnswers = (content as any).case_answers;
+      if (caseId && caseAnswers[caseId]) return caseAnswers[caseId];
+      // Fallback: first case
+      const firstKey = Object.keys(caseAnswers)[0];
+      return firstKey ? caseAnswers[firstKey] : [];
+    }
+    // Legacy: flat array
+    if (Array.isArray(content)) return content as FormField[];
+    return [];
+  };
+
   const answerKeyFields: FormField[] = answerKeyForm
-    ? (Array.isArray(answerKeyForm.content_json) ? answerKeyForm.content_json : [])
+    ? getAnswerKeyFieldsForCase(selectedResponse?.clinical_case_id)
     : [];
 
   // Sync admin fields when selection changes
