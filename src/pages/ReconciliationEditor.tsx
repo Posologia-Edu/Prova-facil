@@ -281,7 +281,7 @@ export default function ReconciliationEditor() {
   if (roomLoading) return <p className="p-6 text-muted-foreground">Carregando...</p>;
   if (!room) return <p className="p-6">Sala não encontrada.</p>;
 
-  const totalMaxScore = formFields.reduce((sum, f) => sum + (f.max_score || 0), 0);
+  const totalMaxScore = formFields.filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0);
 
   return (
     <div className="space-y-6">
