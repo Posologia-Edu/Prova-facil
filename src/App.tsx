@@ -379,6 +379,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Public Virtual Patient Room (student access via PIN) */}
+            <Route path="/virtual-patients/room/:cvpId" element={<VirtualPatientRoom />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
