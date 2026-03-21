@@ -104,6 +104,26 @@ export default function Simulations() {
     },
   });
 
+  // Fetch SOAP forms for scoring display on cards
+  const { data: soapFormsByRoom } = useQuery({
+    queryKey: ["soap-forms-by-room", soapRooms?.map(r => r.id)],
+    queryFn: async () => {
+      if (!soapRooms?.length) return {};
+      const roomIds = soapRooms.map(r => r.id);
+      const { data, error } = await supabase
+        .from("soap_forms")
+        .select("id, room_id, form_type, content_json")
+        .in("room_id", roomIds);
+      if (error) return {};
+      const map: Record<string, any[]> = {};
+      (data || []).forEach(f => {
+        (map[f.room_id] ||= []).push(f);
+      });
+      return map;
+    },
+    enabled: !!soapRooms?.length,
+  });
+
   const { data: reconciliationRooms, isLoading: reconciliationLoading } = useQuery({
     queryKey: ["reconciliation-rooms-list"],
     queryFn: async () => {
