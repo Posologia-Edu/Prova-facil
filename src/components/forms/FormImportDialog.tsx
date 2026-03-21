@@ -49,9 +49,16 @@ export default function FormImportDialog({ open, onOpenChange, onImport, formTab
     setLoading(true);
     const allForms: FormSource[] = [];
 
-    for (const { table, label } of FORM_TABLES) {
+    const tables: Array<{ table: "simulation_forms" | "soap_forms" | "reconciliation_forms" | "documentation_forms"; label: string }> = [
+      { table: "simulation_forms", label: "Anamnese" },
+      { table: "soap_forms", label: "SOAP" },
+      { table: "reconciliation_forms", label: "Reconciliação" },
+      { table: "documentation_forms", label: "Documentação" },
+    ];
+
+    for (const { table, label } of tables) {
       const { data } = await supabase
-        .from(table as any)
+        .from(table)
         .select("id, title, form_type, content_json")
         .order("created_at", { ascending: false })
         .limit(50);
