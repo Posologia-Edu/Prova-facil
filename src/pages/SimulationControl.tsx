@@ -237,7 +237,7 @@ export default function SimulationControl() {
             <ArrowLeft className="h-4 w-4 mr-1" />{t("pricing_back")}
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{room?.title} — {t("sim_control")}</h1>
+            <h1 className="text-2xl font-bold text-foreground"><span className="text-xs font-normal bg-primary/10 text-primary border border-primary/30 rounded px-1.5 py-0.5 mr-2">Anamnese</span>{room?.title} — {t("sim_control")}</h1>
             <p className="text-sm text-muted-foreground">PIN: <span className="font-mono">{room?.access_code}</span></p>
           </div>
         </div>

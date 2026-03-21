@@ -262,7 +262,7 @@ export default function SoapControl() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{room.title} — Controle</h1>
+          <h1 className="text-2xl font-bold"><span className="text-xs font-normal bg-chart-2/10 text-chart-2 border border-chart-2/30 rounded px-1.5 py-0.5 mr-2">SOAP</span>{room.title} — Controle</h1>
           <p className="text-muted-foreground text-sm">PIN: {room.access_code} • {studentsOnly.length} alunos</p>
         </div>
         {room.status === "active" && (
