@@ -392,6 +392,52 @@ export default function ClassesPage() {
     setAssessmentMode(mode);
   };
 
+  // Exam linking
+  const openLinkExamDialog = async () => {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return;
+    const { data } = await supabase
+      .from("exams")
+      .select("id, title, status, created_at")
+      .eq("user_id", user.user.id)
+      .is("deleted_at", null)
+      .is("class_id", null)
+      .order("created_at", { ascending: false });
+    setAvailableExams(data || []);
+    setLinkExamOpen(true);
+  };
+
+  const linkExamToClass = async (examId: string) => {
+    if (!selectedClass) return;
+    const { error } = await supabase
+      .from("exams")
+      .update({ class_id: selectedClass.id })
+      .eq("id", examId);
+    if (error) { toast.error("Erro ao vincular prova."); return; }
+    toast.success("Prova vinculada à turma!");
+    setLinkExamOpen(false);
+    // Refresh exams
+    const { data } = await supabase
+      .from("exams")
+      .select("id, title, status, created_at")
+      .eq("class_id", selectedClass.id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+    setClassExams(data || []);
+    fetchClasses();
+  };
+
+  const unlinkExam = async (examId: string) => {
+    const { error } = await supabase
+      .from("exams")
+      .update({ class_id: null })
+      .eq("id", examId);
+    if (error) { toast.error("Erro ao desvincular prova."); return; }
+    toast.success("Prova desvinculada da turma.");
+    setClassExams(prev => prev.filter(e => e.id !== examId));
+    fetchClasses();
+  };
+
   // Shared manage students dialog content
   const manageStudentsContent = (
     <Dialog open={manageStudentsOpen} onOpenChange={setManageStudentsOpen}>
