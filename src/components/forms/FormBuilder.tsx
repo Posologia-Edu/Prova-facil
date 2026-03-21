@@ -9,8 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Trash2, GripVertical, MoreVertical, Copy, ArrowUp, ArrowDown,
   SeparatorHorizontal, ChevronUp, ChevronDown, FileText, Image, Video,
-  Type, Import,
+  Type, Import, CheckCircle2, Key,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FormField, FormFieldType, FIELD_TYPE_LABELS, getSections } from "./types";
 import FormImportDialog from "./FormImportDialog";
 

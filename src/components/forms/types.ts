@@ -27,6 +27,12 @@ export type FormField = {
   /** Scale labels */
   scale_min_label?: string;
   scale_max_label?: string;
+  /** Correct answer for scoring — index for radio/dropdown, indices for checkbox, text for text/textarea, number for scale/rating */
+  correct_answer?: string | number | number[];
+  /** Feedback shown when answer is correct */
+  feedback_correct?: string;
+  /** Feedback shown when answer is incorrect */
+  feedback_incorrect?: string;
 };
 
 export const FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
