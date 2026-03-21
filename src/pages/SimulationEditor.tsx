@@ -209,7 +209,7 @@ export default function SimulationEditor() {
     skipNextAutoSaveRef.current = true;
   }, [activeForm, activeFormType]);
 
-  // Calculate total scores for professor and observer forms
+  // Calculate total scores for professor and observer forms (each should be 10, student grade = average)
   const scoreValidation = useMemo(() => {
     const profForm = forms.find((f: any) => f.form_type === "professor_eval");
     const obsForm = forms.find((f: any) => f.form_type === "observer_eval");
@@ -231,8 +231,10 @@ export default function SimulationEditor() {
       obsTotal = formFields.filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0);
     }
 
-    const total = profTotal + obsTotal;
-    return { profTotal, obsTotal, total };
+    const profValid = profTotal === 10 || profTotal === 0;
+    const obsValid = obsTotal === 10 || obsTotal === 0;
+    const allValid = profValid && obsValid;
+    return { profTotal, obsTotal, profValid, obsValid, allValid };
   }, [forms, formFields, activeFormType]);
 
   const saveForm = async (silent = false) => {
