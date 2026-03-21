@@ -757,7 +757,7 @@ export default function ClassesPage() {
             <p className="text-sm text-muted-foreground mb-4">Selecione uma prova para vincular a esta turma.</p>
             <div className="space-y-2">
               {availableExams.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma prova disponível para vincular. Crie uma prova no Compositor primeiro.</p>
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma prova publicada disponível para vincular. Publique uma prova em "Minhas Provas" primeiro.</p>
               ) : (
                 availableExams.map((exam) => (
                   <div key={exam.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
