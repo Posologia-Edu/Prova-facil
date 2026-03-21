@@ -103,6 +103,9 @@ export default function ReconciliationEditor() {
   const [formTitle, setFormTitle] = useState("");
   const [formType, setFormType] = useState<"reconciliation" | "answer_key">("reconciliation");
   const [formFields, setFormFields] = useState<FormField[]>([]);
+  // Per-case answer keys: { [caseId]: FormField[] }
+  const [answerKeyByCaseId, setAnswerKeyByCaseId] = useState<Record<string, FormField[]>>({});
+  const [activeAnswerKeyCaseId, setActiveAnswerKeyCaseId] = useState<string>("");
   const lastSavedSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(false);
 
