@@ -157,6 +157,37 @@ export default function DocumentationRooms() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["documentation-rooms"] }),
   });
 
+  const duplicateRoom = useMutation({
+    mutationFn: async (roomId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const original = rooms?.find(r => r.id === roomId);
+      if (!original) throw new Error("Room not found");
+      const { data: newRoom, error } = await supabase.from("documentation_rooms").insert({
+        user_id: session.user.id,
+        title: `${original.title} (cópia)`,
+        description: original.description,
+        reconciliation_room_id: original.reconciliation_room_id,
+      }).select().single();
+      if (error) throw error;
+      const { data: forms } = await supabase.from("documentation_forms").select("*").eq("room_id", roomId);
+      if (forms?.length) {
+        await supabase.from("documentation_forms").insert(forms.map(f => ({ room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: f.content_json })));
+      }
+      const { data: cases } = await supabase.from("documentation_clinical_cases").select("*").eq("room_id", roomId);
+      if (cases?.length) {
+        await supabase.from("documentation_clinical_cases").insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })));
+      }
+      return newRoom;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["documentation-rooms"] });
+      toast({ title: "Sala duplicada", description: "A sala de documentação foi duplicada com sucesso." });
+      navigate(`/simulations/documentation/editor/${data.id}`);
+    },
+    onError: () => toast({ title: "Erro", description: "Erro ao duplicar sala.", variant: "destructive" }),
+  });
+
   const statusColor: Record<string, string> = {
     draft: "bg-muted text-muted-foreground",
     active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
