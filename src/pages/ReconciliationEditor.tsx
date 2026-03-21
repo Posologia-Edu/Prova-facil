@@ -554,14 +554,19 @@ export default function ReconciliationEditor() {
           )}
 
           {/* Existing forms */}
-          {forms.map((form: any) => (
+          {forms.map((form: any) => {
+            const isAnswerKey = form.form_type === "answer_key";
+            const caseAnswers = isAnswerKey && form.content_json?.case_answers;
+            const caseCount = caseAnswers ? Object.keys(caseAnswers).length : 0;
+            const fieldCount = Array.isArray(form.content_json) ? form.content_json.length : 0;
+            return (
             <Card key={form.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-base">{form.title}</CardTitle>
                     <Badge variant="outline" className="mt-1">
-                      {form.form_type === "answer_key" ? "Espelho de Respostas" : "Ficha de Reconciliação"}
+                      {isAnswerKey ? "Espelho de Respostas" : "Ficha de Reconciliação"}
                     </Badge>
                   </div>
                   <div className="flex gap-1">
@@ -572,11 +577,15 @@ export default function ReconciliationEditor() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  {Array.isArray(form.content_json) ? `${form.content_json.length} campos` : "0 campos"}
+                  {isAnswerKey
+                    ? (caseCount > 0 ? `${caseCount} caso(s) com espelho` : (fieldCount > 0 ? `${fieldCount} campos (legado)` : "Sem espelhos"))
+                    : `${fieldCount} campos`
+                  }
                 </p>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
 
           {/* Form editor */}
           <Card>
@@ -591,7 +600,12 @@ export default function ReconciliationEditor() {
                 </div>
                 <div>
                   <Label>Tipo</Label>
-                  <Select value={formType} onValueChange={(v: any) => setFormType(v)}>
+                  <Select value={formType} onValueChange={(v: any) => {
+                    setFormType(v);
+                    if (v === "answer_key" && clinicalCases.length > 0 && !activeAnswerKeyCaseId) {
+                      setActiveAnswerKeyCaseId(clinicalCases[0].id);
+                    }
+                  }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="reconciliation">Ficha de Reconciliação</SelectItem>
@@ -601,25 +615,69 @@ export default function ReconciliationEditor() {
                 </div>
               </div>
 
-              <FormBuilder
-                fields={formFields}
-                onChange={setFormFields}
-                showScores={true}
-                scoreLabel="Pts"
-              />
+              {formType === "answer_key" ? (
+                /* Per-case answer key editor */
+                clinicalCases.length === 0 ? (
+                  <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
+                    <p className="text-sm">Cadastre casos clínicos na aba "Casos Clínicos" primeiro para definir espelhos de resposta por caso.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Defina o espelho de respostas para cada caso clínico:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {clinicalCases.map((cc: any) => (
+                        <Button
+                          key={cc.id}
+                          variant={activeAnswerKeyCaseId === cc.id ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setActiveAnswerKeyCaseId(cc.id)}
+                        >
+                          {cc.title}
+                          {answerKeyByCaseId[cc.id]?.length ? ` (${answerKeyByCaseId[cc.id].length})` : ""}
+                        </Button>
+                      ))}
+                    </div>
+                    {activeAnswerKeyCaseId && (
+                      <FormBuilder
+                        fields={answerKeyByCaseId[activeAnswerKeyCaseId] || []}
+                        onChange={(fields) => setAnswerKeyByCaseId(prev => ({ ...prev, [activeAnswerKeyCaseId]: fields }))}
+                        showScores={true}
+                        scoreLabel="Pts"
+                      />
+                    )}
+                    {activeAnswerKeyCaseId && (
+                      <p className="text-sm text-muted-foreground">
+                        Total ({clinicalCases.find((c: any) => c.id === activeAnswerKeyCaseId)?.title}): {
+                          (answerKeyByCaseId[activeAnswerKeyCaseId] || []).filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0)
+                        } pts
+                      </p>
+                    )}
+                  </div>
+                )
+              ) : (
+                <>
+                  <FormBuilder
+                    fields={formFields}
+                    onChange={setFormFields}
+                    showScores={true}
+                    scoreLabel="Pts"
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Total: {totalMaxScore} pts</span>
+                  </div>
+                </>
+              )}
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total: {totalMaxScore} pts</span>
+              <div className="flex items-center justify-end gap-2">
                 <Button onClick={() => saveForm()} disabled={!formTitle.trim()}>Salvar Formulário</Button>
               </div>
               {editingFormId && (
-                <Button variant="ghost" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); }}>
+                <Button variant="ghost" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); setAnswerKeyByCaseId({}); setActiveAnswerKeyCaseId(""); }}>
                   Cancelar edição
                 </Button>
               )}
             </CardContent>
           </Card>
-        </TabsContent>
 
         {/* Clinical Cases Tab */}
         <TabsContent value="cases" className="space-y-4">
