@@ -288,6 +288,16 @@ type TranslationKeys = {
   docs_plans_content: string;
   docs_security: string;
   docs_security_content: string;
+  docs_virtual_patients: string;
+  docs_virtual_patients_content: string;
+  docs_simulation: string;
+  docs_simulation_content: string;
+  docs_soap: string;
+  docs_soap_content: string;
+  docs_reconciliation: string;
+  docs_reconciliation_content: string;
+  docs_documentation_rooms: string;
+  docs_documentation_rooms_content: string;
   // Technical docs
   docs_tech_header: string;
   docs_tech_header_subtitle: string;

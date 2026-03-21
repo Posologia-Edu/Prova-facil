@@ -45,10 +45,10 @@ const Index = () => {
   ];
 
   const stats = [
-    { value: "10.000+", label: t("landing_stats_questions") },
-    { value: "2.500+", label: t("landing_stats_teachers") },
-    { value: "80%", label: t("landing_stats_time") },
-    { value: "4.9/5", label: t("landing_stats_rating") },
+    { value: "9+", label: t("landing_stats_questions") },
+    { value: "4", label: t("landing_stats_teachers") },
+    { value: "3", label: t("landing_stats_time") },
+    { value: "100%", label: t("landing_stats_rating") },
   ];
 
   return (
