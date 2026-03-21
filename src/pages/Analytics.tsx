@@ -96,7 +96,7 @@ export default function AnalyticsPage() {
       .from("exam_sessions")
       .select("id, student_id, total_score, max_score, status, finished_at")
       .in("publication_id", filteredPubIds)
-      .eq("status", "finished");
+      .in("status", ["finished", "submitted", "graded"]);
 
     setSessions(sessData || []);
 
