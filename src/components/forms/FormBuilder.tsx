@@ -27,6 +27,27 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [toolbarTop, setToolbarTop] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fieldRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const setFieldRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    if (el) fieldRefs.current.set(id, el);
+    else fieldRefs.current.delete(id);
+  }, []);
+
+  // Update toolbar position when selected field changes
+  useEffect(() => {
+    if (!selectedFieldId || !containerRef.current) {
+      setToolbarTop(0);
+      return;
+    }
+    const fieldEl = fieldRefs.current.get(selectedFieldId);
+    if (!fieldEl) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const fieldRect = fieldEl.getBoundingClientRect();
+    setToolbarTop(fieldRect.top - containerRect.top);
+  }, [selectedFieldId, fields]);
 
   // Find the insertion index (after the currently selected field, or at the end)
   const getInsertIndex = (): number => {
