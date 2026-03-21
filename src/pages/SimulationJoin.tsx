@@ -1107,11 +1107,6 @@ export default function SimulationJoin() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {fields.map((field) => (
-                  <div key={field.id} className="space-y-2">
-                    {field.type === "section_header" ? null : null}
-                  </div>
-                ))}
                 <FormRenderer
                   fields={fields}
                   answers={answers}
