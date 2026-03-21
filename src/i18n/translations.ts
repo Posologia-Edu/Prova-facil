@@ -495,6 +495,7 @@ type TranslationKeys = {
   sim_score_warning_each: string;
   sim_score_valid: string;
   sim_score_average_info: string;
+  sim_score_average_label: string;
   sim_tab_analytics: string;
   sim_analytics_no_data: string;
   sim_analytics_student: string;
