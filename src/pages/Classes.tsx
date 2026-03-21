@@ -121,6 +121,8 @@ export default function ClassesPage() {
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [classExams, setClassExams] = useState<ExamItem[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
+  const [classVPs, setClassVPs] = useState<ClassVirtualPatient[]>([]);
+  const [linkVPOpen, setLinkVPOpen] = useState(false);
 
   // Manage students dialog
   const [manageStudentsOpen, setManageStudentsOpen] = useState(false);
