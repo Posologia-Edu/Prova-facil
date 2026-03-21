@@ -70,6 +70,13 @@ interface ExamItem {
   title: string;
   status: string;
   created_at: string;
+  class_id?: string | null;
+  publication?: {
+    access_code: string;
+    is_active: boolean;
+    created_at: string;
+  } | null;
+  previous_class_name?: string | null;
 }
 
 interface ClassVirtualPatient {
@@ -132,6 +139,55 @@ export default function ClassesPage() {
   // Profile info for detail view
   const [profileName, setProfileName] = useState("");
   const [profileEmail, setProfileEmail] = useState("");
+
+  const buildPublicationMap = (
+    publications: Array<{ exam_id: string; access_code: string; is_active: boolean; created_at: string }> | null,
+  ) => {
+    const publicationMap: Record<string, ExamItem["publication"]> = {};
+
+    for (const publication of publications || []) {
+      const current = publicationMap[publication.exam_id];
+      if (!current || (publication.is_active && !current.is_active)) {
+        publicationMap[publication.exam_id] = {
+          access_code: publication.access_code,
+          is_active: publication.is_active,
+          created_at: publication.created_at,
+        };
+      }
+    }
+
+    return publicationMap;
+  };
+
+  const loadClassExams = async (classId: string) => {
+    const { data: examsData, error } = await supabase
+      .from("exams")
+      .select("id, title, status, created_at, class_id")
+      .eq("class_id", classId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    if (error || !examsData) {
+      setClassExams([]);
+      return [] as ExamItem[];
+    }
+
+    const examIds = examsData.map((exam) => exam.id);
+    const { data: publicationRows } = await supabase
+      .from("exam_publications")
+      .select("exam_id, access_code, is_active, created_at")
+      .in("exam_id", examIds.length > 0 ? examIds : ["__none__"])
+      .order("created_at", { ascending: false });
+
+    const publicationMap = buildPublicationMap(publicationRows);
+    const linkedExams: ExamItem[] = examsData.map((exam) => ({
+      ...exam,
+      publication: publicationMap[exam.id] ?? null,
+    }));
+
+    setClassExams(linkedExams);
+    return linkedExams;
+  };
 
   const fetchClasses = async () => {
     setLoading(true);
@@ -258,21 +314,20 @@ export default function ClassesPage() {
     setSelectedClass(cls);
     setStudentsLoading(true);
 
-    const [studentsRes, examsRes, vpsRes] = await Promise.all([
+    const [studentsRes, examsData, vpsRes] = await Promise.all([
       supabase.from("class_students").select("*").eq("class_id", cls.id).order("student_name"),
-      supabase.from("exams").select("id, title, status, created_at").eq("class_id", cls.id).is("deleted_at", null).order("created_at", { ascending: false }),
+      loadClassExams(cls.id),
       supabase.from("class_virtual_patients").select("id, patient_id, access_code, status").eq("class_id", cls.id).order("created_at"),
     ]);
 
     setStudents(studentsRes.data || []);
-    setClassExams(examsRes.data || []);
     const vps = (vpsRes.data as ClassVirtualPatient[]) || [];
     setClassVPs(vps);
 
     // Determine mode based on existing data
     if (vps.length > 0) {
       setAssessmentMode("vp");
-    } else if ((examsRes.data || []).length > 0) {
+    } else if (examsData.length > 0) {
       setAssessmentMode("exam");
     } else {
       setAssessmentMode(null);
@@ -397,20 +452,54 @@ export default function ClassesPage() {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return;
 
-    const { data, error } = await supabase
+    const { data: examsData, error } = await supabase
       .from("exams")
-      .select("id, title, status, created_at")
+      .select("id, title, status, created_at, class_id")
       .eq("user_id", user.user.id)
       .is("deleted_at", null)
-      .is("class_id", null)
       .order("created_at", { ascending: false });
 
-    if (error) {
+    if (error || !examsData) {
       toast.error("Erro ao carregar provas.");
       return;
     }
 
-    setAvailableExams(data || []);
+    const examIds = examsData.map((exam) => exam.id);
+    const linkedClassIds = Array.from(new Set(examsData.map((exam) => exam.class_id).filter(Boolean))) as string[];
+
+    const [classesRes, publicationsRes] = await Promise.all([
+      supabase
+        .from("classes")
+        .select("id, name, deleted_at")
+        .in("id", linkedClassIds.length > 0 ? linkedClassIds : ["__none__"]),
+      supabase
+        .from("exam_publications")
+        .select("exam_id, access_code, is_active, created_at")
+        .in("exam_id", examIds.length > 0 ? examIds : ["__none__"])
+        .order("created_at", { ascending: false }),
+    ]);
+
+    const classMap = new Map((classesRes.data || []).map((cls) => [cls.id, cls]));
+    const publicationMap = buildPublicationMap(publicationsRes.data || null);
+
+    const eligibleExams: ExamItem[] = examsData
+      .filter((exam) => {
+        if (!exam.class_id) return true;
+        const linkedClass = classMap.get(exam.class_id);
+        return !linkedClass || linkedClass.deleted_at !== null;
+      })
+      .map((exam) => ({
+        ...exam,
+        publication: publicationMap[exam.id] ?? null,
+        previous_class_name: exam.class_id ? classMap.get(exam.class_id)?.name ?? null : null,
+      }))
+      .sort((a, b) => {
+        const publicationPriority = Number(Boolean(b.publication?.is_active)) - Number(Boolean(a.publication?.is_active));
+        if (publicationPriority !== 0) return publicationPriority;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+
+    setAvailableExams(eligibleExams);
     setLinkExamOpen(true);
   };
 
@@ -423,14 +512,7 @@ export default function ClassesPage() {
     if (error) { toast.error("Erro ao vincular prova."); return; }
     toast.success("Prova vinculada à turma!");
     setLinkExamOpen(false);
-    // Refresh exams
-    const { data } = await supabase
-      .from("exams")
-      .select("id, title, status, created_at")
-      .eq("class_id", selectedClass.id)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
-    setClassExams(data || []);
+    await loadClassExams(selectedClass.id);
     fetchClasses();
   };
 
@@ -441,7 +523,9 @@ export default function ClassesPage() {
       .eq("id", examId);
     if (error) { toast.error("Erro ao desvincular prova."); return; }
     toast.success("Prova desvinculada da turma.");
-    setClassExams(prev => prev.filter(e => e.id !== examId));
+    if (selectedClass) {
+      await loadClassExams(selectedClass.id);
+    }
     fetchClasses();
   };
 
@@ -652,7 +736,31 @@ export default function ClassesPage() {
                             </p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => unlinkExam(exam.id)} title="Desvincular prova">
+                        <Badge variant={exam.publication?.is_active ? "default" : "secondary"} className="text-[10px]">
+                          {exam.publication?.is_active ? "Publicado" : "Sem publicação"}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        {exam.publication?.access_code ? (
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <KeyRound className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <span className="font-mono text-xs font-bold tracking-widest uppercase truncate">{exam.publication.access_code}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0"
+                              onClick={() => {
+                                navigator.clipboard.writeText(exam.publication?.access_code || "");
+                                toast.success("PIN copiado!");
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Publique a prova para gerar o PIN de acesso.</p>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => unlinkExam(exam.id)} title="Desvincular prova">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -769,8 +877,18 @@ export default function ClassesPage() {
                     <div>
                       <p className="text-sm font-medium">{exam.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(exam.created_at).toLocaleDateString("pt-BR")} · {exam.status}
+                        {new Date(exam.created_at).toLocaleDateString("pt-BR")}
                       </p>
+                      <div className="flex flex-wrap items-center gap-1 mt-2">
+                        <Badge variant={exam.publication?.is_active ? "default" : "secondary"} className="text-[10px]">
+                          {exam.publication?.is_active ? `PIN ${exam.publication.access_code.toUpperCase()}` : "Sem publicação"}
+                        </Badge>
+                        {exam.previous_class_name && (
+                          <Badge variant="outline" className="text-[10px]">
+                            Liberada de turma excluída
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <Button size="sm" onClick={() => linkExamToClass(exam.id)}>Vincular</Button>
                   </div>
