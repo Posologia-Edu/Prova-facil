@@ -16,10 +16,9 @@ import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-// FormField type imported from @/components/forms/types
-
 type MedColumn = { id: string; label: string };
 type MedFormContent = { columns: MedColumn[]; rows_score: number; answer_rows?: Record<string, string>[] };
+type MedCaseContent = { columns: MedColumn[]; rows_score: number; answer_rows: Record<string, string>[] };
 
 export default function DocumentationEditor() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -71,6 +70,9 @@ export default function DocumentationEditor() {
   const [formTitle, setFormTitle] = useState("");
   const [formType, setFormType] = useState<string>("referral");
   const [formFields, setFormFields] = useState<FormField[]>([]);
+  // Per-case answer keys for referral: { [caseId]: FormField[] }
+  const [answerKeyByCaseId, setAnswerKeyByCaseId] = useState<Record<string, FormField[]>>({});
+  const [activeAnswerKeyCaseId, setActiveAnswerKeyCaseId] = useState<string>("");
   const lastSavedSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(false);
 
@@ -80,6 +82,9 @@ export default function DocumentationEditor() {
   const [medColumns, setMedColumns] = useState<MedColumn[]>([]);
   const [medRowsScore, setMedRowsScore] = useState(1);
   const [medAnswerRows, setMedAnswerRows] = useState<Record<string, string>[]>([]);
+  // Per-case answer keys for medication: { [caseId]: { columns, rows_score, answer_rows } }
+  const [medAnswerKeyByCaseId, setMedAnswerKeyByCaseId] = useState<Record<string, MedCaseContent>>({});
+  const [activeMedAnswerKeyCaseId, setActiveMedAnswerKeyCaseId] = useState<string>("");
   const [editingMedFormId, setEditingMedFormId] = useState<string | null>(null);
   const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
 
@@ -103,7 +108,7 @@ export default function DocumentationEditor() {
       .eq("participant_role", "student");
 
     if (!reconParticipants?.length) {
-      toast({ title: "Sem alunos", description: "Nenhum aluno encontrado nesta sala de Reconciliação.", variant: "destructive" });
+      toast({ title: "Sem alunos", description: "Nenhum aluno encontrado nesta sala.", variant: "destructive" });
       return;
     }
 
@@ -127,11 +132,6 @@ export default function DocumentationEditor() {
     refetchParticipants();
   };
 
-  const deleteParticipant = async (id: string) => {
-    await supabase.from("documentation_participants").delete().eq("id", id);
-    refetchParticipants();
-  };
-
   const students = participants.filter(p => p.participant_role === "student");
   const pairs = students.reduce((acc: Record<number, any[]>, p) => {
     if (p.pair_index >= 0) {
@@ -141,16 +141,27 @@ export default function DocumentationEditor() {
     return acc;
   }, {});
 
-  // Save referral form
+  // ─── Referral form save ───
   const saveForm = async (silent = false) => {
     if (!formTitle.trim()) return;
-    const payload = { title: formTitle, content_json: formFields as any, form_type: formType };
+
+    const contentToSave = formType === "referral_answer_key"
+      ? { case_answers: answerKeyByCaseId } as any
+      : formFields as any;
+
+    const payload = { title: formTitle, content_json: contentToSave, form_type: formType };
+
     if (editingFormId) {
       await supabase.from("documentation_forms").update(payload).eq("id", editingFormId);
     } else {
       await supabase.from("documentation_forms").insert({ ...payload, room_id: roomId! });
     }
-    lastSavedSnapshotRef.current = JSON.stringify({ formType, title: formTitle, content: formFields });
+
+    const snapshotData = formType === "referral_answer_key"
+      ? { formType, title: formTitle, content: answerKeyByCaseId }
+      : { formType, title: formTitle, content: formFields };
+    lastSavedSnapshotRef.current = JSON.stringify(snapshotData);
+
     if (!editingFormId) {
       await refetchForms();
     } else if (!silent) {
@@ -158,17 +169,21 @@ export default function DocumentationEditor() {
     }
     if (!silent) {
       setEditingFormId(null); setFormTitle(""); setFormFields([]); setFormType("referral");
+      setAnswerKeyByCaseId({}); setActiveAnswerKeyCaseId("");
       refetchForms();
       toast({ title: "Formulário salvo" });
     }
   };
 
-  // Auto-save effect
+  // Auto-save for referral forms
   useEffect(() => {
     if (!roomId || !editingFormId) return;
-    if (!formTitle.trim() && formFields.length === 0) return;
+    if (!formTitle.trim() && formFields.length === 0 && Object.keys(answerKeyByCaseId).length === 0) return;
 
-    const currentSnapshot = JSON.stringify({ formType, title: formTitle, content: formFields });
+    const snapshotData = formType === "referral_answer_key"
+      ? { formType, title: formTitle, content: answerKeyByCaseId }
+      : { formType, title: formTitle, content: formFields };
+    const currentSnapshot = JSON.stringify(snapshotData);
 
     if (skipNextAutoSaveRef.current) {
       skipNextAutoSaveRef.current = false;
@@ -183,7 +198,7 @@ export default function DocumentationEditor() {
     }, 800);
 
     return () => window.clearTimeout(timeout);
-  }, [roomId, editingFormId, formType, formTitle, formFields]);
+  }, [roomId, editingFormId, formType, formTitle, formFields, answerKeyByCaseId]);
 
   const editForm = (form: any) => {
     if (form.form_type === "medication_summary" || form.form_type === "medication_answer_key") {
@@ -194,9 +209,37 @@ export default function DocumentationEditor() {
     setEditingFormId(form.id);
     setFormTitle(form.title);
     setFormType(form.form_type);
-    const fields = Array.isArray(form.content_json) ? form.content_json : [];
-    setFormFields(fields);
-    lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: fields });
+
+    if (form.form_type === "referral_answer_key") {
+      const content = form.content_json;
+      if (content && typeof content === "object" && !Array.isArray(content) && content.case_answers) {
+        setAnswerKeyByCaseId(content.case_answers);
+        setFormFields([]);
+        const firstCaseId = clinicalCases.length > 0 ? clinicalCases[0].id : "";
+        setActiveAnswerKeyCaseId(firstCaseId);
+        lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: content.case_answers });
+      } else if (Array.isArray(content)) {
+        // Legacy migration: single array → assign to first case
+        const migrated: Record<string, FormField[]> = {};
+        if (clinicalCases.length > 0) {
+          migrated[clinicalCases[0].id] = content;
+          setActiveAnswerKeyCaseId(clinicalCases[0].id);
+        }
+        setAnswerKeyByCaseId(migrated);
+        setFormFields([]);
+        lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: migrated });
+      } else {
+        setAnswerKeyByCaseId({});
+        setFormFields([]);
+        setActiveAnswerKeyCaseId(clinicalCases.length > 0 ? clinicalCases[0].id : "");
+        lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: {} });
+      }
+    } else {
+      const fields = Array.isArray(form.content_json) ? form.content_json : [];
+      setFormFields(fields);
+      setAnswerKeyByCaseId({});
+      lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: fields });
+    }
   };
 
   const deleteForm = async (id: string) => {
@@ -204,15 +247,20 @@ export default function DocumentationEditor() {
     refetchForms();
   };
 
-  // Field management delegated to FormBuilder
-
-  // Medication summary form
+  // ─── Medication summary form ───
   const saveMedForm = async () => {
-    if (!medTitle.trim() || !medColumns.length) return;
-    const content: MedFormContent = { columns: medColumns, rows_score: medRowsScore };
-    if (medType === "medication_answer_key") content.answer_rows = medAnswerRows;
+    if (!medTitle.trim()) return;
 
-    const payload = { title: medTitle, content_json: content as any, form_type: medType };
+    let contentToSave: any;
+    if (medType === "medication_answer_key") {
+      contentToSave = { case_answers: medAnswerKeyByCaseId };
+    } else {
+      if (!medColumns.length) return;
+      const content: MedFormContent = { columns: medColumns, rows_score: medRowsScore };
+      contentToSave = content;
+    }
+
+    const payload = { title: medTitle, content_json: contentToSave, form_type: medType };
     if (editingMedFormId) {
       await supabase.from("documentation_forms").update(payload).eq("id", editingMedFormId);
     } else {
@@ -227,15 +275,46 @@ export default function DocumentationEditor() {
     setEditingMedFormId(form.id);
     setMedTitle(form.title);
     setMedType(form.form_type);
-    const content = form.content_json as MedFormContent;
-    setMedColumns(content?.columns || []);
-    setMedRowsScore(content?.rows_score || 1);
-    setMedAnswerRows(content?.answer_rows || []);
+
+    if (form.form_type === "medication_answer_key") {
+      const content = form.content_json;
+      if (content && typeof content === "object" && !Array.isArray(content) && content.case_answers) {
+        setMedAnswerKeyByCaseId(content.case_answers);
+        setMedColumns([]);
+        setMedRowsScore(1);
+        setMedAnswerRows([]);
+        const firstCaseId = clinicalCases.length > 0 ? clinicalCases[0].id : "";
+        setActiveMedAnswerKeyCaseId(firstCaseId);
+      } else {
+        // Legacy: single content → migrate to first case
+        const legacy = content as MedFormContent;
+        const migrated: Record<string, MedCaseContent> = {};
+        if (clinicalCases.length > 0) {
+          migrated[clinicalCases[0].id] = {
+            columns: legacy?.columns || [],
+            rows_score: legacy?.rows_score || 1,
+            answer_rows: legacy?.answer_rows || [],
+          };
+          setActiveMedAnswerKeyCaseId(clinicalCases[0].id);
+        }
+        setMedAnswerKeyByCaseId(migrated);
+        setMedColumns([]);
+        setMedRowsScore(1);
+        setMedAnswerRows([]);
+      }
+    } else {
+      const content = form.content_json as MedFormContent;
+      setMedColumns(content?.columns || []);
+      setMedRowsScore(content?.rows_score || 1);
+      setMedAnswerRows(content?.answer_rows || []);
+      setMedAnswerKeyByCaseId({});
+    }
   };
 
   const resetMedForm = () => {
     setEditingMedFormId(null); setMedTitle(""); setMedType("medication_summary");
     setMedColumns([]); setMedRowsScore(1); setMedAnswerRows([]);
+    setMedAnswerKeyByCaseId({}); setActiveMedAnswerKeyCaseId("");
   };
 
   const addMedColumn = () => {
@@ -246,6 +325,30 @@ export default function DocumentationEditor() {
     const row: Record<string, string> = {};
     medColumns.forEach(c => { row[c.id] = ""; });
     setMedAnswerRows([...medAnswerRows, row]);
+  };
+
+  // Per-case medication helpers
+  const getActiveMedCase = (): MedCaseContent => {
+    return medAnswerKeyByCaseId[activeMedAnswerKeyCaseId] || { columns: [], rows_score: 1, answer_rows: [] };
+  };
+
+  const updateActiveMedCase = (update: Partial<MedCaseContent>) => {
+    setMedAnswerKeyByCaseId(prev => ({
+      ...prev,
+      [activeMedAnswerKeyCaseId]: { ...getActiveMedCase(), ...update },
+    }));
+  };
+
+  const addMedCaseColumn = () => {
+    const current = getActiveMedCase();
+    updateActiveMedCase({ columns: [...current.columns, { id: crypto.randomUUID(), label: "" }] });
+  };
+
+  const addMedCaseAnswerRow = () => {
+    const current = getActiveMedCase();
+    const row: Record<string, string> = {};
+    current.columns.forEach(c => { row[c.id] = ""; });
+    updateActiveMedCase({ answer_rows: [...current.answer_rows, row] });
   };
 
   // Activate room
@@ -306,7 +409,7 @@ export default function DocumentationEditor() {
           <TabsTrigger value="cases"><BookOpen className="h-4 w-4 mr-1" />Casos Clínicos</TabsTrigger>
         </TabsList>
 
-        {/* Participants - manual pair formation like Reconciliation */}
+        {/* Participants - manual pair formation */}
         <TabsContent value="participants" className="space-y-4">
           <Card>
             <CardHeader>
@@ -444,25 +547,37 @@ export default function DocumentationEditor() {
         {/* Referral form tab */}
         <TabsContent value="referral" className="space-y-4">
           {/* Existing referral forms */}
-          {forms.filter((f: any) => f.form_type === "referral" || f.form_type === "referral_answer_key").map((form: any) => (
-            <Card key={form.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">{form.title}</CardTitle>
-                    <Badge variant="outline" className="mt-1">{formTypeLabel[form.form_type]}</Badge>
+          {forms.filter((f: any) => f.form_type === "referral" || f.form_type === "referral_answer_key").map((form: any) => {
+            const isAnswerKey = form.form_type === "referral_answer_key";
+            const caseAnswers = isAnswerKey && form.content_json?.case_answers;
+            const caseCount = caseAnswers ? Object.keys(caseAnswers).length : 0;
+            const fieldCount = Array.isArray(form.content_json) ? form.content_json.length : 0;
+
+            return (
+              <Card key={form.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">{form.title}</CardTitle>
+                      <Badge variant="outline" className="mt-1">{formTypeLabel[form.form_type]}</Badge>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{Array.isArray(form.content_json) ? `${form.content_json.length} campos` : "0 campos"}</p>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    {isAnswerKey
+                      ? (caseCount > 0 ? `${caseCount} caso(s) com espelho` : (fieldCount > 0 ? `${fieldCount} campos (legado)` : "Sem espelhos"))
+                      : `${fieldCount} campos`
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           {/* Form builder */}
           <Card>
@@ -475,7 +590,12 @@ export default function DocumentationEditor() {
                 </div>
                 <div>
                   <Label>Tipo</Label>
-                  <Select value={formType} onValueChange={setFormType}>
+                  <Select value={formType} onValueChange={(v: any) => {
+                    setFormType(v);
+                    if (v === "referral_answer_key" && clinicalCases.length > 0 && !activeAnswerKeyCaseId) {
+                      setActiveAnswerKeyCaseId(clinicalCases[0].id);
+                    }
+                  }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="referral">Ficha de Encaminhamento</SelectItem>
@@ -485,16 +605,59 @@ export default function DocumentationEditor() {
                 </div>
               </div>
 
-              <FormBuilder
-                fields={formFields}
-                onChange={setFormFields}
-                showScores={true}
-                scoreLabel="Pts"
-              />
+              {formType === "referral_answer_key" ? (
+                /* Per-case answer key editor */
+                clinicalCases.length === 0 ? (
+                  <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
+                    <p className="text-sm">Cadastre casos clínicos na aba "Casos Clínicos" primeiro para definir espelhos de resposta por caso.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Defina o espelho de respostas para cada caso clínico:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {clinicalCases.map((cc: any) => (
+                        <Button
+                          key={cc.id}
+                          variant={activeAnswerKeyCaseId === cc.id ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setActiveAnswerKeyCaseId(cc.id)}
+                        >
+                          {cc.title}
+                          {answerKeyByCaseId[cc.id]?.length ? ` (${answerKeyByCaseId[cc.id].length})` : ""}
+                        </Button>
+                      ))}
+                    </div>
+                    {activeAnswerKeyCaseId && (
+                      <FormBuilder
+                        fields={answerKeyByCaseId[activeAnswerKeyCaseId] || []}
+                        onChange={(fields) => setAnswerKeyByCaseId(prev => ({ ...prev, [activeAnswerKeyCaseId]: fields }))}
+                        showScores={true}
+                        scoreLabel="Pts"
+                      />
+                    )}
+                    {activeAnswerKeyCaseId && (
+                      <p className="text-sm text-muted-foreground">
+                        Total ({clinicalCases.find((c: any) => c.id === activeAnswerKeyCaseId)?.title}): {
+                          (answerKeyByCaseId[activeAnswerKeyCaseId] || []).filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0)
+                        } pts
+                      </p>
+                    )}
+                  </div>
+                )
+              ) : (
+                <>
+                  <FormBuilder
+                    fields={formFields}
+                    onChange={setFormFields}
+                    showScores={true}
+                    scoreLabel="Pts"
+                  />
+                </>
+              )}
 
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => saveForm()} disabled={!formTitle.trim()}>Salvar</Button>
-                {editingFormId && <Button variant="ghost" size="sm" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); setFormType("referral"); }}>Cancelar</Button>}
+                {editingFormId && <Button variant="ghost" size="sm" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); setFormType("referral"); setAnswerKeyByCaseId({}); setActiveAnswerKeyCaseId(""); }}>Cancelar</Button>}
               </div>
             </CardContent>
           </Card>
@@ -503,25 +666,36 @@ export default function DocumentationEditor() {
         {/* Medication summary tab */}
         <TabsContent value="medication" className="space-y-4">
           {/* Existing medication forms */}
-          {forms.filter((f: any) => f.form_type === "medication_summary" || f.form_type === "medication_answer_key").map((form: any) => (
-            <Card key={form.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">{form.title}</CardTitle>
-                    <Badge variant="outline" className="mt-1">{formTypeLabel[form.form_type]}</Badge>
+          {forms.filter((f: any) => f.form_type === "medication_summary" || f.form_type === "medication_answer_key").map((form: any) => {
+            const isAnswerKey = form.form_type === "medication_answer_key";
+            const caseAnswers = isAnswerKey && form.content_json?.case_answers;
+            const caseCount = caseAnswers ? Object.keys(caseAnswers).length : 0;
+
+            return (
+              <Card key={form.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">{form.title}</CardTitle>
+                      <Badge variant="outline" className="mt-1">{formTypeLabel[form.form_type]}</Badge>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => editMedForm(form)}>Editar</Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => editMedForm(form)}>Editar</Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{(form.content_json as MedFormContent)?.columns?.length || 0} colunas</p>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    {isAnswerKey
+                      ? (caseCount > 0 ? `${caseCount} caso(s) com espelho` : `${(form.content_json as MedFormContent)?.columns?.length || 0} colunas (legado)`)
+                      : `${(form.content_json as MedFormContent)?.columns?.length || 0} colunas`
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           {/* Medication form builder */}
           <Card>
@@ -534,7 +708,12 @@ export default function DocumentationEditor() {
                 </div>
                 <div>
                   <Label>Tipo</Label>
-                  <Select value={medType} onValueChange={setMedType}>
+                  <Select value={medType} onValueChange={(v) => {
+                    setMedType(v);
+                    if (v === "medication_answer_key" && clinicalCases.length > 0 && !activeMedAnswerKeyCaseId) {
+                      setActiveMedAnswerKeyCaseId(clinicalCases[0].id);
+                    }
+                  }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="medication_summary">Quadro Resumo</SelectItem>
@@ -544,64 +723,145 @@ export default function DocumentationEditor() {
                 </div>
               </div>
 
-              <div>
-                <Label>Pontuação por linha</Label>
-                <Input type="number" value={medRowsScore} onChange={e => setMedRowsScore(Number(e.target.value))} min={0} className="w-32" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Colunas da tabela</Label>
-                {medColumns.map((col, idx) => (
-                  <div key={col.id} className="flex gap-2 items-center">
-                    <Input value={col.label} onChange={e => {
-                      const updated = [...medColumns];
-                      updated[idx] = { ...updated[idx], label: e.target.value };
-                      setMedColumns(updated);
-                    }} placeholder={`Coluna ${idx + 1}`} />
-                    <Button variant="ghost" size="sm" onClick={() => setMedColumns(medColumns.filter((_, i) => i !== idx))}><Trash2 className="h-3.5 w-3.5" /></Button>
+              {medType === "medication_answer_key" ? (
+                /* Per-case medication answer key editor */
+                clinicalCases.length === 0 ? (
+                  <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
+                    <p className="text-sm">Cadastre casos clínicos na aba "Casos Clínicos" primeiro para definir espelhos por caso.</p>
                   </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={addMedColumn}><Plus className="h-3.5 w-3.5 mr-1" />Coluna</Button>
-              </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Defina o espelho do quadro resumo para cada caso clínico:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {clinicalCases.map((cc: any) => {
+                        const caseData = medAnswerKeyByCaseId[cc.id];
+                        const rowCount = caseData?.answer_rows?.length || 0;
+                        return (
+                          <Button
+                            key={cc.id}
+                            variant={activeMedAnswerKeyCaseId === cc.id ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setActiveMedAnswerKeyCaseId(cc.id)}
+                          >
+                            {cc.title}
+                            {rowCount > 0 ? ` (${rowCount} linhas)` : ""}
+                          </Button>
+                        );
+                      })}
+                    </div>
 
-              {/* Answer rows for answer key */}
-              {medType === "medication_answer_key" && medColumns.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Linhas esperadas (espelho)</Label>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm border">
-                      <thead>
-                        <tr>
-                          {medColumns.map(c => <th key={c.id} className="border p-2 text-left">{c.label || "—"}</th>)}
-                          <th className="border p-2 w-12"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {medAnswerRows.map((row, rIdx) => (
-                          <tr key={rIdx}>
-                            {medColumns.map(c => (
-                              <td key={c.id} className="border p-1">
-                                <Input value={row[c.id] || ""} onChange={e => {
-                                  const updated = [...medAnswerRows];
-                                  updated[rIdx] = { ...updated[rIdx], [c.id]: e.target.value };
-                                  setMedAnswerRows(updated);
-                                }} className="h-8" />
-                              </td>
+                    {activeMedAnswerKeyCaseId && (() => {
+                      const caseData = getActiveMedCase();
+                      return (
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Pontuação por linha</Label>
+                            <Input
+                              type="number"
+                              value={caseData.rows_score}
+                              onChange={e => updateActiveMedCase({ rows_score: Number(e.target.value) })}
+                              min={0}
+                              className="w-32"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Colunas da tabela</Label>
+                            {caseData.columns.map((col, idx) => (
+                              <div key={col.id} className="flex gap-2 items-center">
+                                <Input
+                                  value={col.label}
+                                  onChange={e => {
+                                    const updated = [...caseData.columns];
+                                    updated[idx] = { ...updated[idx], label: e.target.value };
+                                    updateActiveMedCase({ columns: updated });
+                                  }}
+                                  placeholder={`Coluna ${idx + 1}`}
+                                />
+                                <Button variant="ghost" size="sm" onClick={() => updateActiveMedCase({ columns: caseData.columns.filter((_, i) => i !== idx) })}>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
                             ))}
-                            <td className="border p-1">
-                              <Button variant="ghost" size="sm" onClick={() => setMedAnswerRows(medAnswerRows.filter((_, i) => i !== rIdx))}><Trash2 className="h-3 w-3" /></Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            <Button variant="outline" size="sm" onClick={addMedCaseColumn}>
+                              <Plus className="h-3.5 w-3.5 mr-1" />Coluna
+                            </Button>
+                          </div>
+
+                          {caseData.columns.length > 0 && (
+                            <div className="space-y-2">
+                              <Label>Linhas esperadas (espelho)</Label>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm border">
+                                  <thead>
+                                    <tr>
+                                      {caseData.columns.map(c => <th key={c.id} className="border p-2 text-left">{c.label || "—"}</th>)}
+                                      <th className="border p-2 w-12"></th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {caseData.answer_rows.map((row, rIdx) => (
+                                      <tr key={rIdx}>
+                                        {caseData.columns.map(c => (
+                                          <td key={c.id} className="border p-1">
+                                            <Input
+                                              value={row[c.id] || ""}
+                                              onChange={e => {
+                                                const updated = [...caseData.answer_rows];
+                                                updated[rIdx] = { ...updated[rIdx], [c.id]: e.target.value };
+                                                updateActiveMedCase({ answer_rows: updated });
+                                              }}
+                                              className="h-8"
+                                            />
+                                          </td>
+                                        ))}
+                                        <td className="border p-1">
+                                          <Button variant="ghost" size="sm" onClick={() => updateActiveMedCase({ answer_rows: caseData.answer_rows.filter((_, i) => i !== rIdx) })}>
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                              <Button variant="outline" size="sm" onClick={addMedCaseAnswerRow}>
+                                <Plus className="h-3.5 w-3.5 mr-1" />Linha
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
-                  <Button variant="outline" size="sm" onClick={addMedAnswerRow}><Plus className="h-3.5 w-3.5 mr-1" />Linha</Button>
-                </div>
+                )
+              ) : (
+                /* Regular medication summary builder */
+                <>
+                  <div>
+                    <Label>Pontuação por linha</Label>
+                    <Input type="number" value={medRowsScore} onChange={e => setMedRowsScore(Number(e.target.value))} min={0} className="w-32" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Colunas da tabela</Label>
+                    {medColumns.map((col, idx) => (
+                      <div key={col.id} className="flex gap-2 items-center">
+                        <Input value={col.label} onChange={e => {
+                          const updated = [...medColumns];
+                          updated[idx] = { ...updated[idx], label: e.target.value };
+                          setMedColumns(updated);
+                        }} placeholder={`Coluna ${idx + 1}`} />
+                        <Button variant="ghost" size="sm" onClick={() => setMedColumns(medColumns.filter((_, i) => i !== idx))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" onClick={addMedColumn}><Plus className="h-3.5 w-3.5 mr-1" />Coluna</Button>
+                  </div>
+                </>
               )}
 
               <div className="flex gap-2">
-                <Button size="sm" onClick={saveMedForm} disabled={!medTitle.trim() || !medColumns.length}>Salvar</Button>
+                <Button size="sm" onClick={saveMedForm} disabled={!medTitle.trim()}>Salvar</Button>
                 {editingMedFormId && <Button variant="ghost" size="sm" onClick={resetMedForm}>Cancelar</Button>}
               </div>
             </CardContent>
