@@ -33,14 +33,25 @@ export default function SimulationAggregator() {
       const roomIds = new Set(rooms.map(r => r.id));
       const relevantParticipants = participants.filter(p => roomIds.has(p.room_id));
 
-      const { data: responses } = await supabase.from("simulation_responses").select("participant_id, score");
+      const { data: responses } = await supabase.from("simulation_responses").select("participant_id, score, round_id, form_id");
       if (!responses) return [];
 
-      return relevantParticipants.map(p => ({
-        email: p.student_email?.toLowerCase() || "",
-        name: p.student_name,
-        score: responses.filter(r => r.participant_id === p.id).reduce((sum, r) => sum + (Number(r.score) || 0), 0) || null,
-      }));
+      // Get forms to identify professor_eval and observer_eval
+      const { data: allForms } = await supabase.from("simulation_forms").select("id, form_type, room_id").in("room_id", Array.from(roomIds));
+      const evalFormIds = new Set((allForms || []).filter(f => f.form_type === "professor_eval" || f.form_type === "observer_eval").map(f => f.id));
+
+      return relevantParticipants.map(p => {
+        // Only count eval form responses, group by round, average per round
+        const pResponses = responses.filter(r => r.participant_id === p.id && evalFormIds.has(r.form_id));
+        const roundMap = new Map<string, number[]>();
+        pResponses.forEach(r => {
+          if (!roundMap.has(r.round_id)) roundMap.set(r.round_id, []);
+          roundMap.get(r.round_id)!.push(Number(r.score) || 0);
+        });
+        const roundAvgs = Array.from(roundMap.values()).map(scores => scores.reduce((a, b) => a + b, 0) / scores.length);
+        const score = roundAvgs.length > 0 ? roundAvgs.reduce((a, b) => a + b, 0) / roundAvgs.length : null;
+        return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: score != null ? Math.round(score * 100) / 100 : null };
+      });
     },
   });
 
