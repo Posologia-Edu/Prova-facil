@@ -466,6 +466,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
               {/* Section Header */}
               {section.header && (
                 <div
+                  ref={(el) => setFieldRef(section.header!.id, el)}
                   className={`bg-primary/5 border-l-4 border-l-primary rounded-lg p-4 space-y-2 cursor-pointer transition-all ${selectedFieldId === section.header.id ? "ring-2 ring-primary shadow-md" : ""}`}
                   onClick={() => setSelectedFieldId(section.header!.id)}
                 >
