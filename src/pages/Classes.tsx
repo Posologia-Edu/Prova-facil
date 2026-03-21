@@ -108,6 +108,8 @@ export default function ClassesPage() {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [classVPs, setClassVPs] = useState<ClassVirtualPatient[]>([]);
   const [linkVPOpen, setLinkVPOpen] = useState(false);
+  const [linkExamOpen, setLinkExamOpen] = useState(false);
+  const [availableExams, setAvailableExams] = useState<ExamItem[]>([]);
 
   // Assessment mode: "exam" or "vp"
   const [assessmentMode, setAssessmentMode] = useState<"exam" | "vp" | null>(null);
@@ -390,6 +392,52 @@ export default function ClassesPage() {
     setAssessmentMode(mode);
   };
 
+  // Exam linking
+  const openLinkExamDialog = async () => {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return;
+    const { data } = await supabase
+      .from("exams")
+      .select("id, title, status, created_at")
+      .eq("user_id", user.user.id)
+      .is("deleted_at", null)
+      .is("class_id", null)
+      .order("created_at", { ascending: false });
+    setAvailableExams(data || []);
+    setLinkExamOpen(true);
+  };
+
+  const linkExamToClass = async (examId: string) => {
+    if (!selectedClass) return;
+    const { error } = await supabase
+      .from("exams")
+      .update({ class_id: selectedClass.id })
+      .eq("id", examId);
+    if (error) { toast.error("Erro ao vincular prova."); return; }
+    toast.success("Prova vinculada à turma!");
+    setLinkExamOpen(false);
+    // Refresh exams
+    const { data } = await supabase
+      .from("exams")
+      .select("id, title, status, created_at")
+      .eq("class_id", selectedClass.id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+    setClassExams(data || []);
+    fetchClasses();
+  };
+
+  const unlinkExam = async (examId: string) => {
+    const { error } = await supabase
+      .from("exams")
+      .update({ class_id: null })
+      .eq("id", examId);
+    if (error) { toast.error("Erro ao desvincular prova."); return; }
+    toast.success("Prova desvinculada da turma.");
+    setClassExams(prev => prev.filter(e => e.id !== examId));
+    fetchClasses();
+  };
+
   // Shared manage students dialog content
   const manageStudentsContent = (
     <Dialog open={manageStudentsOpen} onOpenChange={setManageStudentsOpen}>
@@ -573,21 +621,33 @@ export default function ClassesPage() {
         {(assessmentMode === "exam" || (!assessmentMode && classExams.length > 0)) && (
           <>
             <div>
-              <h3 className="text-sm font-semibold text-primary mb-3">Provas Vinculadas ({classExams.length})</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                  <FileText className="h-4 w-4" /> Provas Vinculadas ({classExams.length})
+                </h3>
+                <Button variant="outline" size="sm" onClick={openLinkExamDialog}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Vincular Prova Online
+                </Button>
+              </div>
               {classExams.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic py-4">Nenhuma prova vinculada a esta turma. Vincule uma prova no editor de provas selecionando esta turma.</p>
+                <p className="text-sm text-muted-foreground italic py-4">Nenhuma prova vinculada a esta turma.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {classExams.map((exam) => (
-                    <Card key={exam.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/exams/${exam.id}`)}>
-                      <div className="flex items-start gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm font-semibold">{exam.title}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(exam.created_at).toLocaleDateString("pt-BR")}
-                          </p>
+                    <Card key={exam.id} className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-2 cursor-pointer" onClick={() => navigate(`/exams/${exam.id}`)}>
+                          <FileText className="h-4 w-4 text-primary mt-0.5" />
+                          <div>
+                            <p className="text-sm font-semibold">{exam.title}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(exam.created_at).toLocaleDateString("pt-BR")}
+                            </p>
+                          </div>
                         </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => unlinkExam(exam.id)} title="Desvincular prova">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </Card>
                   ))}
@@ -683,6 +743,31 @@ export default function ClassesPage() {
               ))}
               {VP_CATALOG.filter(p => !classVPs.some(v => v.patient_id === p.id)).length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">Todos os pacientes já estão vinculados.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Link Exam Dialog */}
+        <Dialog open={linkExamOpen} onOpenChange={setLinkExamOpen}>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Vincular Prova Online</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground mb-4">Selecione uma prova para vincular a esta turma.</p>
+            <div className="space-y-2">
+              {availableExams.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma prova disponível para vincular. Crie uma prova no Compositor primeiro.</p>
+              ) : (
+                availableExams.map((exam) => (
+                  <div key={exam.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                    <div>
+                      <p className="text-sm font-medium">{exam.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(exam.created_at).toLocaleDateString("pt-BR")} · {exam.status}
+                      </p>
+                    </div>
+                    <Button size="sm" onClick={() => linkExamToClass(exam.id)}>Vincular</Button>
+                  </div>
+                ))
               )}
             </div>
           </DialogContent>
