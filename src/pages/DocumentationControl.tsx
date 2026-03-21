@@ -15,13 +15,15 @@ import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, Table
 type FormField = { id: string; label: string; type: string; options?: string[]; max_score?: number };
 type MedColumn = { id: string; label: string };
 type MedFormContent = { columns: MedColumn[]; rows_score: number; answer_rows?: Record<string, string>[] };
+type MedCaseContent = { columns: MedColumn[]; rows_score: number; answer_rows: Record<string, string>[] };
 
 export default function DocumentationControl() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedPairIndex, setSelectedPairIndex] = useState<number | null>(null);
-  const [adminScore, setAdminScore] = useState("");
+  const [adminReferralScore, setAdminReferralScore] = useState("");
+  const [adminMedScore, setAdminMedScore] = useState("");
   const [adminFeedback, setAdminFeedback] = useState("");
   const [gradingAI, setGradingAI] = useState(false);
 
@@ -90,9 +92,31 @@ export default function DocumentationControl() {
   const medAnswerKey = forms.find((f: any) => f.form_type === "medication_answer_key");
 
   const referralFields: FormField[] = referralForm ? (Array.isArray(referralForm.content_json) ? referralForm.content_json : []) : [];
-  const referralKeyFields: FormField[] = referralAnswerKey ? (Array.isArray(referralAnswerKey.content_json) ? referralAnswerKey.content_json : []) : [];
+
+  // Get answer key fields for a specific clinical case
+  const getReferralKeyFields = (caseId?: string): FormField[] => {
+    if (!referralAnswerKey) return [];
+    const content = referralAnswerKey.content_json;
+    if (content?.case_answers) {
+      if (caseId && content.case_answers[caseId]) return content.case_answers[caseId];
+      const firstKey = Object.keys(content.case_answers)[0];
+      return firstKey ? content.case_answers[firstKey] : [];
+    }
+    return Array.isArray(content) ? content : [];
+  };
+
+  const getMedKeyContent = (caseId?: string): MedFormContent | null => {
+    if (!medAnswerKey) return null;
+    const content = medAnswerKey.content_json;
+    if (content?.case_answers) {
+      if (caseId && content.case_answers[caseId]) return content.case_answers[caseId];
+      const firstKey = Object.keys(content.case_answers)[0];
+      return firstKey ? content.case_answers[firstKey] : null;
+    }
+    return content as MedFormContent;
+  };
+
   const medContent: MedFormContent | null = medForm ? (medForm.content_json as MedFormContent) : null;
-  const medKeyContent: MedFormContent | null = medAnswerKey ? (medAnswerKey.content_json as MedFormContent) : null;
 
   // Get unique pair indices with responses
   const pairIndicesWithResponses = useMemo(() => {
@@ -106,20 +130,27 @@ export default function DocumentationControl() {
 
   const handleSelectPair = (pairIdx: number) => {
     setSelectedPairIndex(pairIdx);
-    // Load admin scores from referral response
-    const resp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
-    setAdminScore(resp?.admin_score != null ? String(resp.admin_score) : "");
-    setAdminFeedback(resp?.admin_feedback || "");
+    const refResp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
+    const mResp = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
+    setAdminReferralScore(refResp?.admin_score != null ? String(refResp.admin_score) : "");
+    setAdminMedScore(mResp?.admin_score != null ? String(mResp.admin_score) : "");
+    setAdminFeedback(refResp?.admin_feedback || mResp?.admin_feedback || "");
   };
 
   const saveAdminEvaluation = async () => {
-    // Save for both referral and med responses
-    const toUpdate = responses.filter(r => r.pair_index === selectedPairIndex);
-    for (const resp of toUpdate) {
+    // Save referral score
+    if (selectedReferralResp) {
       await supabase.from("documentation_responses").update({
-        admin_score: adminScore ? Number(adminScore) : null,
+        admin_score: adminReferralScore ? Math.min(Number(adminReferralScore), 5) : null,
         admin_feedback: adminFeedback || null,
-      }).eq("id", resp.id);
+      }).eq("id", selectedReferralResp.id);
+    }
+    // Save medication score
+    if (selectedMedResp) {
+      await supabase.from("documentation_responses").update({
+        admin_score: adminMedScore ? Math.min(Number(adminMedScore), 5) : null,
+        admin_feedback: adminFeedback || null,
+      }).eq("id", selectedMedResp.id);
     }
     toast({ title: "Avaliação salva!" });
     queryClient.invalidateQueries({ queryKey: ["documentation-responses", roomId] });
@@ -129,24 +160,24 @@ export default function DocumentationControl() {
     if (selectedPairIndex === null) return;
     setGradingAI(true);
     try {
-      const respIds = responses.filter(r => r.pair_index === selectedPairIndex).map(r => r.id);
       const { data, error } = await supabase.functions.invoke("grade-documentation", {
         body: {
           room_id: roomId,
           pair_index: selectedPairIndex,
-          referral_response: selectedReferralResp ? { id: selectedReferralResp.id, answers_json: selectedReferralResp.answers_json } : null,
+          referral_response: selectedReferralResp ? { id: selectedReferralResp.id, answers_json: selectedReferralResp.answers_json, clinical_case_id: selectedReferralResp.clinical_case_id } : null,
           referral_answer_key: referralAnswerKey?.content_json || null,
           referral_fields: referralForm?.content_json || [],
-          med_response: selectedMedResp ? { id: selectedMedResp.id, answers_json: selectedMedResp.answers_json } : null,
-          med_answer_key: medKeyContent || null,
+          med_response: selectedMedResp ? { id: selectedMedResp.id, answers_json: selectedMedResp.answers_json, clinical_case_id: selectedMedResp.clinical_case_id } : null,
+          med_answer_key: medAnswerKey?.content_json || null,
           med_columns: medContent?.columns || [],
         },
       });
       if (error) throw error;
       toast({ title: "Correção concluída!" });
       queryClient.invalidateQueries({ queryKey: ["documentation-responses", roomId] });
-      if (data?.ai_score != null) setAdminScore(String(data.ai_score));
-      if (data?.ai_feedback) setAdminFeedback(data.ai_feedback);
+      if (data?.referral_score != null) setAdminReferralScore(String(data.referral_score));
+      if (data?.medication_score != null) setAdminMedScore(String(data.medication_score));
+      if (data?.general_feedback) setAdminFeedback(data.general_feedback);
     } catch (err: any) {
       toast({ title: "Erro na correção", description: err.message, variant: "destructive" });
     } finally {
@@ -164,6 +195,12 @@ export default function DocumentationControl() {
     if (Array.isArray(value)) return value.join(", ");
     if (typeof value === "object") return JSON.stringify(value);
     return String(value || "—");
+  };
+
+  const computeTotal = () => {
+    const ref = adminReferralScore ? Number(adminReferralScore) : 0;
+    const med = adminMedScore ? Number(adminMedScore) : 0;
+    return (ref + med).toFixed(1);
   };
 
   return (
@@ -220,6 +257,8 @@ export default function DocumentationControl() {
               const refResp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
               const mResp = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
               const caseData = clinicalCases.find(c => c.id === (refResp || mResp)?.clinical_case_id);
+              const caseKeyFields = getReferralKeyFields(caseData?.id);
+              const caseMedKey = getMedKeyContent(caseData?.id);
 
               return (
                 <Card key={pairIdx}>
@@ -231,7 +270,7 @@ export default function DocumentationControl() {
                     {/* Referral side-by-side */}
                     {refResp && (
                       <div>
-                        <h4 className="font-medium text-sm mb-3 flex items-center gap-1"><FileText className="h-4 w-4" />Encaminhamento</h4>
+                        <h4 className="font-medium text-sm mb-3 flex items-center gap-1"><FileText className="h-4 w-4" />Encaminhamento (máx 5,0 pts)</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground mb-2">Resposta da Dupla</p>
@@ -244,7 +283,7 @@ export default function DocumentationControl() {
                           </div>
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground mb-2">Espelho</p>
-                            {referralKeyFields.length ? referralKeyFields.map(field => (
+                            {caseKeyFields.length ? caseKeyFields.map((field: any) => (
                               <div key={field.id} className="mb-2">
                                 <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
                                 <p className="text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800">{field.options?.join(", ") || "Ver espelho"}</p>
@@ -258,7 +297,7 @@ export default function DocumentationControl() {
                     {/* Medication summary side-by-side */}
                     {mResp && medContent && (
                       <div>
-                        <h4 className="font-medium text-sm mb-3 flex items-center gap-1"><Table2 className="h-4 w-4" />Quadro Resumo</h4>
+                        <h4 className="font-medium text-sm mb-3 flex items-center gap-1"><Table2 className="h-4 w-4" />Quadro Resumo (máx 5,0 pts)</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground mb-2">Resposta da Dupla</p>
@@ -275,13 +314,13 @@ export default function DocumentationControl() {
                           </div>
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground mb-2">Espelho</p>
-                            {medKeyContent?.answer_rows?.length ? (
+                            {caseMedKey?.answer_rows?.length ? (
                               <div className="overflow-x-auto">
                                 <table className="w-full text-sm border">
-                                  <thead><tr>{(medKeyContent.columns || medContent.columns).map(c => <th key={c.id} className="border p-2 text-left bg-green-50 dark:bg-green-950">{c.label}</th>)}</tr></thead>
+                                  <thead><tr>{(caseMedKey.columns || medContent.columns).map(c => <th key={c.id} className="border p-2 text-left bg-green-50 dark:bg-green-950">{c.label}</th>)}</tr></thead>
                                   <tbody>
-                                    {medKeyContent.answer_rows.map((row, rIdx) => (
-                                      <tr key={rIdx}>{(medKeyContent.columns || medContent.columns).map(c => <td key={c.id} className="border p-2 bg-green-50 dark:bg-green-950">{row[c.id] || "—"}</td>)}</tr>
+                                    {caseMedKey.answer_rows.map((row, rIdx) => (
+                                      <tr key={rIdx}>{(caseMedKey.columns || medContent.columns).map(c => <td key={c.id} className="border p-2 bg-green-50 dark:bg-green-950">{row[c.id] || "—"}</td>)}</tr>
                                     ))}
                                   </tbody>
                                 </table>
@@ -304,9 +343,30 @@ export default function DocumentationControl() {
                             ))}
                           </div>
                         )}
-                        {mResp?.ai_feedback_json && <p className="text-sm">{typeof mResp.ai_feedback_json === "string" ? mResp.ai_feedback_json : JSON.stringify(mResp.ai_feedback_json)}</p>}
-                        {refResp?.ai_score != null && <p className="font-medium">Nota IA Encaminhamento: {refResp.ai_score}</p>}
-                        {mResp?.ai_score != null && <p className="font-medium">Nota IA Quadro: {mResp.ai_score}</p>}
+                        {mResp?.ai_feedback_json && (
+                          <div className="mb-2">
+                            <p className="text-xs font-semibold">Quadro Resumo:</p>
+                            <p className="text-sm">{typeof mResp.ai_feedback_json === "string" ? mResp.ai_feedback_json : (mResp.ai_feedback_json as any)?.feedback || JSON.stringify(mResp.ai_feedback_json)}</p>
+                          </div>
+                        )}
+                        <div className="flex gap-4 mt-2">
+                          {refResp?.ai_score != null && <p className="font-medium text-sm">Encaminhamento: {refResp.ai_score}/5,0</p>}
+                          {mResp?.ai_score != null && <p className="font-medium text-sm">Quadro: {mResp.ai_score}/5,0</p>}
+                          {(refResp?.ai_score != null || mResp?.ai_score != null) && (
+                            <p className="font-bold text-sm">Total IA: {((Number(refResp?.ai_score) || 0) + (Number(mResp?.ai_score) || 0)).toFixed(1)}/10,0</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Admin scores summary */}
+                    {(refResp?.admin_score != null || mResp?.admin_score != null) && (
+                      <div className="flex gap-4 p-2 bg-muted rounded">
+                        {refResp?.admin_score != null && <Badge>Encaminhamento: {refResp.admin_score}/5,0</Badge>}
+                        {mResp?.admin_score != null && <Badge>Quadro: {mResp.admin_score}/5,0</Badge>}
+                        <Badge variant="default" className="font-bold">
+                          Total: {((Number(refResp?.admin_score) || 0) + (Number(mResp?.admin_score) || 0)).toFixed(1)}/10,0
+                        </Badge>
                       </div>
                     )}
                   </CardContent>
@@ -320,20 +380,24 @@ export default function DocumentationControl() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <h3 className="font-medium text-sm">Selecionar Dupla</h3>
-              {pairIndicesWithResponses.map(pairIdx => (
-                <button key={pairIdx} onClick={() => handleSelectPair(pairIdx)} className={`w-full text-left p-3 rounded border transition-colors ${selectedPairIndex === pairIdx ? "border-primary bg-primary/10" : "border-border hover:bg-muted"}`}>
-                  <p className="text-sm font-medium">{pairNames(pairIdx)}</p>
-                  {(() => {
-                    const refR = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
-                    return (
-                      <div className="flex gap-2 mt-1">
-                        {refR?.ai_score != null && <Badge variant="outline" className="text-xs">IA: {refR.ai_score}</Badge>}
-                        {refR?.admin_score != null && <Badge className="text-xs">Admin: {refR.admin_score}</Badge>}
-                      </div>
-                    );
-                  })()}
-                </button>
-              ))}
+              {pairIndicesWithResponses.map(pairIdx => {
+                const refR = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
+                const mR = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
+                const totalAdmin = (Number(refR?.admin_score) || 0) + (Number(mR?.admin_score) || 0);
+                const totalAI = (Number(refR?.ai_score) || 0) + (Number(mR?.ai_score) || 0);
+                const hasAdmin = refR?.admin_score != null || mR?.admin_score != null;
+                const hasAI = refR?.ai_score != null || mR?.ai_score != null;
+
+                return (
+                  <button key={pairIdx} onClick={() => handleSelectPair(pairIdx)} className={`w-full text-left p-3 rounded border transition-colors ${selectedPairIndex === pairIdx ? "border-primary bg-primary/10" : "border-border hover:bg-muted"}`}>
+                    <p className="text-sm font-medium">{pairNames(pairIdx)}</p>
+                    <div className="flex gap-2 mt-1 flex-wrap">
+                      {hasAI && <Badge variant="outline" className="text-xs">IA: {totalAI.toFixed(1)}</Badge>}
+                      {hasAdmin && <Badge className="text-xs">Admin: {totalAdmin.toFixed(1)}</Badge>}
+                    </div>
+                  </button>
+                );
+              })}
               {!pairIndicesWithResponses.length && <p className="text-sm text-muted-foreground">Sem respostas</p>}
             </div>
 
@@ -352,7 +416,7 @@ export default function DocumentationControl() {
                   <CardContent className="space-y-4">
                     {selectedReferralResp?.ai_feedback_json && (
                       <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800 space-y-2">
-                        <h4 className="text-sm font-medium flex items-center gap-1"><Bot className="h-4 w-4" />Correção da IA</h4>
+                        <h4 className="text-sm font-medium flex items-center gap-1"><Bot className="h-4 w-4" />Correção da IA — Encaminhamento</h4>
                         {typeof selectedReferralResp.ai_feedback_json === "object" && !Array.isArray(selectedReferralResp.ai_feedback_json) && (
                           Object.entries(selectedReferralResp.ai_feedback_json as Record<string, any>).map(([key, val]) => {
                             const field = referralFields.find(f => f.id === key);
@@ -364,11 +428,53 @@ export default function DocumentationControl() {
                             );
                           })
                         )}
-                        {selectedReferralResp.ai_score != null && <p className="font-medium">Nota IA: {selectedReferralResp.ai_score}</p>}
+                        {selectedReferralResp.ai_score != null && <p className="font-medium">Nota IA Encaminhamento: {selectedReferralResp.ai_score}/5,0</p>}
                       </div>
                     )}
-                    <div><Label>Nota Final (Admin)</Label><Input type="number" value={adminScore} onChange={e => setAdminScore(e.target.value)} placeholder="Nota" /></div>
-                    <div><Label>Feedback do Admin</Label><Textarea value={adminFeedback} onChange={e => setAdminFeedback(e.target.value)} rows={4} placeholder="Feedback para a dupla..." /></div>
+
+                    {selectedMedResp?.ai_feedback_json && (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800 space-y-2">
+                        <h4 className="text-sm font-medium flex items-center gap-1"><Bot className="h-4 w-4" />Correção da IA — Quadro Resumo</h4>
+                        <p className="text-sm">{typeof selectedMedResp.ai_feedback_json === "string" ? selectedMedResp.ai_feedback_json : (selectedMedResp.ai_feedback_json as any)?.feedback || JSON.stringify(selectedMedResp.ai_feedback_json)}</p>
+                        {selectedMedResp.ai_score != null && <p className="font-medium">Nota IA Quadro: {selectedMedResp.ai_score}/5,0</p>}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Nota Encaminhamento (máx 5,0)</Label>
+                        <Input
+                          type="number"
+                          value={adminReferralScore}
+                          onChange={e => setAdminReferralScore(e.target.value)}
+                          placeholder="0 - 5"
+                          max={5}
+                          min={0}
+                          step={0.1}
+                        />
+                      </div>
+                      <div>
+                        <Label>Nota Quadro Resumo (máx 5,0)</Label>
+                        <Input
+                          type="number"
+                          value={adminMedScore}
+                          onChange={e => setAdminMedScore(e.target.value)}
+                          placeholder="0 - 5"
+                          max={5}
+                          min={0}
+                          step={0.1}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-muted rounded">
+                      <p className="text-sm font-bold">Nota Total: {computeTotal()}/10,0</p>
+                    </div>
+
+                    <div>
+                      <Label>Feedback do Admin</Label>
+                      <Textarea value={adminFeedback} onChange={e => setAdminFeedback(e.target.value)} rows={4} placeholder="Feedback para a dupla..." />
+                    </div>
                     <Button onClick={saveAdminEvaluation}>Salvar Avaliação</Button>
                   </CardContent>
                 </Card>
