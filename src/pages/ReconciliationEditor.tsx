@@ -235,9 +235,12 @@ export default function ReconciliationEditor() {
   // Auto-save effect
   useEffect(() => {
     if (!roomId || !editingFormId) return;
-    if (!formTitle.trim() && formFields.length === 0) return;
+    if (!formTitle.trim() && formFields.length === 0 && Object.keys(answerKeyByCaseId).length === 0) return;
 
-    const currentSnapshot = JSON.stringify({ formType, title: formTitle, content: formFields });
+    const snapshotData = formType === "answer_key"
+      ? { formType, title: formTitle, content: answerKeyByCaseId }
+      : { formType, title: formTitle, content: formFields };
+    const currentSnapshot = JSON.stringify(snapshotData);
 
     if (skipNextAutoSaveRef.current) {
       skipNextAutoSaveRef.current = false;
@@ -252,7 +255,7 @@ export default function ReconciliationEditor() {
     }, 800);
 
     return () => window.clearTimeout(timeout);
-  }, [roomId, editingFormId, formType, formTitle, formFields]);
+  }, [roomId, editingFormId, formType, formTitle, formFields, answerKeyByCaseId]);
 
   const deleteForm = async (id: string) => {
     await supabase.from("reconciliation_forms").delete().eq("id", id);
@@ -264,9 +267,37 @@ export default function ReconciliationEditor() {
     setEditingFormId(form.id);
     setFormTitle(form.title);
     setFormType(form.form_type);
-    const fields = Array.isArray(form.content_json) ? form.content_json : [];
-    setFormFields(fields);
-    lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: fields });
+    if (form.form_type === "answer_key") {
+      // New per-case structure: { case_answers: { [caseId]: FormField[] } }
+      const content = form.content_json;
+      if (content && typeof content === "object" && !Array.isArray(content) && content.case_answers) {
+        setAnswerKeyByCaseId(content.case_answers);
+        setFormFields([]);
+        const firstCaseId = clinicalCases.length > 0 ? clinicalCases[0].id : "";
+        setActiveAnswerKeyCaseId(firstCaseId);
+        lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: content.case_answers });
+      } else if (Array.isArray(content)) {
+        // Legacy: single answer key — migrate to first case if exists
+        const migrated: Record<string, FormField[]> = {};
+        if (clinicalCases.length > 0) {
+          migrated[clinicalCases[0].id] = content;
+          setActiveAnswerKeyCaseId(clinicalCases[0].id);
+        }
+        setAnswerKeyByCaseId(migrated);
+        setFormFields([]);
+        lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: migrated });
+      } else {
+        setAnswerKeyByCaseId({});
+        setFormFields([]);
+        setActiveAnswerKeyCaseId(clinicalCases.length > 0 ? clinicalCases[0].id : "");
+        lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: {} });
+      }
+    } else {
+      const fields = Array.isArray(form.content_json) ? form.content_json : [];
+      setFormFields(fields);
+      setAnswerKeyByCaseId({});
+      lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: fields });
+    }
   };
 
   // Add field to form
