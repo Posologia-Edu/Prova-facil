@@ -762,62 +762,12 @@ export default function SimulationEditor() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {formFields.map((field, i) => (
-                    <div key={field.id} className="p-3 border rounded-lg space-y-2">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder={t("sim_field_label")}
-                          value={field.label}
-                          onChange={(e) => updateField(i, { label: e.target.value })}
-                          className="flex-1"
-                        />
-                        <Select value={field.type} onValueChange={(v) => updateField(i, { type: v as any })}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text">Texto</SelectItem>
-                            <SelectItem value="textarea">Texto longo</SelectItem>
-                            <SelectItem value="radio">Múltipla escolha</SelectItem>
-                            <SelectItem value="checkbox">Checkbox</SelectItem>
-                            <SelectItem value="scale">Escala</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {isEvalForm && (
-                          <div className="flex items-center gap-1">
-                            <Label className="text-xs whitespace-nowrap">{t("sim_max_score")}</Label>
-                            <Input
-                              type="number"
-                              value={field.max_score || 0}
-                              onChange={(e) => updateField(i, { max_score: Number(e.target.value) })}
-                              className="w-16"
-                              min={0}
-                              step={0.5}
-                            />
-                          </div>
-                        )}
-                        <Button variant="ghost" size="sm" onClick={() => removeField(i)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      {(field.type === "radio" || field.type === "checkbox") && (
-                        <div>
-                          <Label className="text-xs">{t("sim_field_options")}</Label>
-                          <Input
-                            placeholder="Opção 1, Opção 2, Opção 3"
-                            value={field.options?.join(", ") || ""}
-                            onChange={(e) => updateField(i, { options: e.target.value.split(",").map(o => o.trim()) })}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={addField}>
-                    <Plus className="h-4 w-4 mr-1" />{t("sim_add_field")}
-                  </Button>
-                </div>
+                <FormBuilder
+                  fields={formFields}
+                  onChange={setFormFields}
+                  showScores={isEvalForm}
+                  scoreLabel={t("sim_max_score")}
+                />
               )}
 
               <div className="space-y-2">
