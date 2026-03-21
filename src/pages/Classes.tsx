@@ -599,6 +599,9 @@ export default function ClassesPage() {
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleVPStatus(vp)} title={vp.status === "active" ? "Desativar" : "Ativar"}>
                           {vp.status === "active" ? <ToggleRight className="h-4 w-4 text-green-600" /> : <ToggleLeft className="h-4 w-4 text-muted-foreground" />}
                         </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/virtual-patients/analytics`)} title="Ver Resultados">
+                          <BarChart3 className="h-3.5 w-3.5" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeVP(vp.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
