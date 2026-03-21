@@ -108,6 +108,8 @@ export default function ClassesPage() {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [classVPs, setClassVPs] = useState<ClassVirtualPatient[]>([]);
   const [linkVPOpen, setLinkVPOpen] = useState(false);
+  const [linkExamOpen, setLinkExamOpen] = useState(false);
+  const [availableExams, setAvailableExams] = useState<ExamItem[]>([]);
 
   // Assessment mode: "exam" or "vp"
   const [assessmentMode, setAssessmentMode] = useState<"exam" | "vp" | null>(null);
