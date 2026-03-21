@@ -76,7 +76,6 @@ interface ExamItem {
     is_active: boolean;
     created_at: string;
   } | null;
-  previous_class_name?: string | null;
 }
 
 interface ClassVirtualPatient {
@@ -457,6 +456,7 @@ export default function ClassesPage() {
       .select("id, title, status, created_at, class_id")
       .eq("user_id", user.user.id)
       .is("deleted_at", null)
+      .is("class_id", null)
       .order("created_at", { ascending: false });
 
     if (error || !examsData) {
@@ -465,33 +465,18 @@ export default function ClassesPage() {
     }
 
     const examIds = examsData.map((exam) => exam.id);
-    const linkedClassIds = Array.from(new Set(examsData.map((exam) => exam.class_id).filter(Boolean))) as string[];
+    const { data: publicationsData } = await supabase
+      .from("exam_publications")
+      .select("exam_id, access_code, is_active, created_at")
+      .in("exam_id", examIds.length > 0 ? examIds : ["__none__"])
+      .order("created_at", { ascending: false });
 
-    const [classesRes, publicationsRes] = await Promise.all([
-      supabase
-        .from("classes")
-        .select("id, name, deleted_at")
-        .in("id", linkedClassIds.length > 0 ? linkedClassIds : ["__none__"]),
-      supabase
-        .from("exam_publications")
-        .select("exam_id, access_code, is_active, created_at")
-        .in("exam_id", examIds.length > 0 ? examIds : ["__none__"])
-        .order("created_at", { ascending: false }),
-    ]);
-
-    const classMap = new Map((classesRes.data || []).map((cls) => [cls.id, cls]));
-    const publicationMap = buildPublicationMap(publicationsRes.data || null);
+    const publicationMap = buildPublicationMap(publicationsData || null);
 
     const eligibleExams: ExamItem[] = examsData
-      .filter((exam) => {
-        if (!exam.class_id) return true;
-        const linkedClass = classMap.get(exam.class_id);
-        return !linkedClass || linkedClass.deleted_at !== null;
-      })
       .map((exam) => ({
         ...exam,
         publication: publicationMap[exam.id] ?? null,
-        previous_class_name: exam.class_id ? classMap.get(exam.class_id)?.name ?? null : null,
       }))
       .sort((a, b) => {
         const publicationPriority = Number(Boolean(b.publication?.is_active)) - Number(Boolean(a.publication?.is_active));
@@ -870,7 +855,7 @@ export default function ClassesPage() {
             <p className="text-sm text-muted-foreground mb-4">Selecione uma prova para vincular a esta turma.</p>
             <div className="space-y-2">
               {availableExams.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma prova disponível. Crie uma prova em "Minhas Provas" ou todas já estão vinculadas a outras turmas.</p>
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma prova disponível para vínculo. Salve uma prova sem turma em "Minhas Provas" ou desvincule uma prova já associada.</p>
               ) : (
                 availableExams.map((exam) => (
                   <div key={exam.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
@@ -883,11 +868,6 @@ export default function ClassesPage() {
                         <Badge variant={exam.publication?.is_active ? "default" : "secondary"} className="text-[10px]">
                           {exam.publication?.is_active ? `PIN ${exam.publication.access_code.toUpperCase()}` : "Sem publicação"}
                         </Badge>
-                        {exam.previous_class_name && (
-                          <Badge variant="outline" className="text-[10px]">
-                            Liberada de turma excluída
-                          </Badge>
-                        )}
                       </div>
                     </div>
                     <Button size="sm" onClick={() => linkExamToClass(exam.id)}>Vincular</Button>
