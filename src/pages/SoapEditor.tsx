@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy, GraduationCap, Shuffle, RotateCcw } from "lucide-react";
 import SplitSoapRoomDialog from "@/components/SplitSoapRoomDialog";
+import FormBuilder from "@/components/forms/FormBuilder";
+import type { FormField } from "@/components/forms/types";
 
 type FormField = {
   id: string;
