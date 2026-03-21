@@ -240,17 +240,7 @@ export default function SimulationEditor() {
       ? [{ id: "cases_container", cases: clinicalCases, type: "cases" as const }]
       : formFields;
 
-    // Validate score if saving professor or observer eval
-    if (activeFormType === "professor_eval" || activeFormType === "observer_eval") {
-      if (scoreValidation.total !== 10 && scoreValidation.total > 0) {
-        toast({
-          title: t("sim_score_total"),
-          description: scoreValidation.total < 10 ? t("sim_score_warning_low") : t("sim_score_warning_high"),
-          variant: "destructive",
-        });
-        // Still allow saving but warn
-      }
-    }
+    // Score validation is only enforced when starting the simulation
 
     if (activeForm) {
       await supabase.from("simulation_forms").update({
