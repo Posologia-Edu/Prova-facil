@@ -490,7 +490,7 @@ export default function DocumentationEditor() {
               />
 
               <div className="flex gap-2">
-                <Button size="sm" onClick={saveForm} disabled={!formTitle.trim()}>Salvar</Button>
+                <Button size="sm" onClick={() => saveForm()} disabled={!formTitle.trim()}>Salvar</Button>
                 {editingFormId && <Button variant="ghost" size="sm" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); setFormType("referral"); }}>Cancelar</Button>}
               </div>
             </CardContent>

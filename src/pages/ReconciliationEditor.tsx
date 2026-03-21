@@ -564,7 +564,7 @@ export default function ReconciliationEditor() {
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total: {totalMaxScore} pts</span>
-                <Button onClick={saveForm} disabled={!formTitle.trim()}>Salvar Formulário</Button>
+                <Button onClick={() => saveForm()} disabled={!formTitle.trim()}>Salvar Formulário</Button>
               </div>
               {editingFormId && (
                 <Button variant="ghost" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); }}>

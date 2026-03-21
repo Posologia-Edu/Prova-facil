@@ -541,7 +541,7 @@ export default function SoapEditor() {
                 scoreLabel="Pts"
               />
 
-              <Button onClick={saveForm} disabled={!formTitle.trim()} className="w-full">
+              <Button onClick={() => saveForm()} disabled={!formTitle.trim()} className="w-full">
                 {editingFormId ? "Atualizar Formulário" : "Salvar Formulário"}
               </Button>
               {editingFormId && (
