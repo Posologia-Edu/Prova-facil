@@ -17,14 +17,7 @@ import SplitSoapRoomDialog from "@/components/SplitSoapRoomDialog";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 
-type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "radio" | "checkbox" | "scale";
-  options?: string[];
-  max_score?: number;
-  required?: boolean;
-};
+// FormField type imported from @/components/forms/types
 
 export default function SoapEditor() {
   const { roomId } = useParams<{ roomId: string }>();
