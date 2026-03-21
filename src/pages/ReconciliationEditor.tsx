@@ -190,10 +190,14 @@ export default function ReconciliationEditor() {
   const saveForm = async (silent = false) => {
     if (!formTitle.trim()) return;
 
+    const contentToSave = formType === "answer_key"
+      ? { case_answers: answerKeyByCaseId } as any
+      : formFields as any;
+
     if (editingFormId) {
       const { error } = await supabase.from("reconciliation_forms").update({
         title: formTitle,
-        content_json: formFields as any,
+        content_json: contentToSave,
         form_type: formType,
       }).eq("id", editingFormId);
       if (error) { if (!silent) toast({ title: "Erro", variant: "destructive" }); return; }
@@ -201,13 +205,16 @@ export default function ReconciliationEditor() {
       const { error } = await supabase.from("reconciliation_forms").insert({
         room_id: roomId!,
         title: formTitle,
-        content_json: formFields as any,
+        content_json: contentToSave,
         form_type: formType,
       });
       if (error) { if (!silent) toast({ title: "Erro", variant: "destructive" }); return; }
     }
 
-    lastSavedSnapshotRef.current = JSON.stringify({ formType, title: formTitle, content: formFields });
+    const snapshotData = formType === "answer_key"
+      ? { formType, title: formTitle, content: answerKeyByCaseId }
+      : { formType, title: formTitle, content: formFields };
+    lastSavedSnapshotRef.current = JSON.stringify(snapshotData);
     if (!editingFormId) {
       await refetchForms();
     } else if (!silent) {
@@ -218,6 +225,8 @@ export default function ReconciliationEditor() {
       setFormTitle("");
       setFormFields([]);
       setFormType("reconciliation");
+      setAnswerKeyByCaseId({});
+      setActiveAnswerKeyCaseId("");
       refetchForms();
       toast({ title: "Salvo", description: "Formulário salvo com sucesso." });
     }
