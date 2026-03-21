@@ -45,10 +45,10 @@ const Index = () => {
   ];
 
   const stats = [
-    { value: "10.000+", label: t("landing_stats_questions") },
-    { value: "2.500+", label: t("landing_stats_teachers") },
-    { value: "80%", label: t("landing_stats_time") },
-    { value: "4.9/5", label: t("landing_stats_rating") },
+    { value: "9+", label: t("landing_stats_questions") },
+    { value: "4", label: t("landing_stats_teachers") },
+    { value: "3", label: t("landing_stats_time") },
+    { value: "100%", label: t("landing_stats_rating") },
   ];
 
   return (
@@ -182,21 +182,14 @@ const Index = () => {
           </div>
           <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
             {[
-              { name: "Profa. Maria Santos", role: "Medicina — UFMG", text: "Reduzi de 6 horas para 45 minutos o tempo de criação das minhas provas." },
-              { name: "Prof. Carlos Lima", role: "Engenharia — USP", text: "O banco de questões com Bloom's Taxonomy mudou minha forma de avaliar." },
-              { name: "Profa. Ana Oliveira", role: "Biologia — UNICAMP", text: "A funcionalidade de importar questões e o compositor visual são incríveis." },
+              { icon: "🧠", title: "IA em cada módulo", text: "Geração de questões, correção automática, paciente virtual e tutor de IA — tudo integrado sem configuração extra." },
+              { icon: "🔄", title: "Fluxo pedagógico completo", text: "Simulação → SOAP → Reconciliação → Documentação: um ciclo integrado que acompanha o aluno do início ao fim." },
+              { icon: "👥", title: "Avaliação individual ou em grupo", text: "Aplique avaliações individuais ou em grupo com notas sincronizadas. Ideal para atividades práticas colaborativas." },
             ].map((testimonial) => (
-              <div key={testimonial.name} className="rounded-xl border bg-card p-6">
-                <div className="flex gap-1 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-secondary text-secondary" />
-                  ))}
-                </div>
-                <p className="text-foreground text-sm mb-4 italic">"{testimonial.text}"</p>
-                <div>
-                  <div className="font-semibold text-foreground text-sm">{testimonial.name}</div>
-                  <div className="text-xs text-muted-foreground">{testimonial.role}</div>
-                </div>
+              <div key={testimonial.title} className="rounded-xl border bg-card p-6">
+                <div className="text-3xl mb-4">{testimonial.icon}</div>
+                <h3 className="font-semibold text-foreground text-sm mb-2">{testimonial.title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{testimonial.text}</p>
               </div>
             ))}
           </div>

@@ -7,7 +7,8 @@ import {
   Users, Calendar, Shield, Zap, HelpCircle, Settings, Upload,
   Download, Eye, Shuffle, LayoutTemplate, Globe, CreditCard,
   MonitorPlay, CheckCircle, Search, Stethoscope, Store, Bot,
-  Code, Server, Database, Plug, Lock, CloudCog, HardDrive, Radio
+  Code, Server, Database, Plug, Lock, CloudCog, HardDrive, Radio,
+  HeartPulse, ClipboardList, Pill, FileCheck
 } from "lucide-react";
 import {
   Accordion,
@@ -35,6 +36,11 @@ const Documentation = () => {
     { id: "osce", icon: Stethoscope, title: t("docs_osce"), content: t("docs_osce_content") },
     { id: "marketplace", icon: Store, title: t("docs_marketplace"), content: t("docs_marketplace_content") },
     { id: "ai-tutor", icon: Bot, title: t("docs_ai_tutor"), content: t("docs_ai_tutor_content") },
+    { id: "virtual-patients", icon: HeartPulse, title: t("docs_virtual_patients"), content: t("docs_virtual_patients_content") },
+    { id: "simulation", icon: ClipboardList, title: t("docs_simulation"), content: t("docs_simulation_content") },
+    { id: "soap", icon: FileText, title: t("docs_soap"), content: t("docs_soap_content") },
+    { id: "reconciliation", icon: Pill, title: t("docs_reconciliation"), content: t("docs_reconciliation_content") },
+    { id: "documentation-rooms", icon: FileCheck, title: t("docs_documentation_rooms"), content: t("docs_documentation_rooms_content") },
     { id: "plans", icon: CreditCard, title: t("docs_plans"), content: t("docs_plans_content") },
     { id: "security", icon: Shield, title: t("docs_security"), content: t("docs_security_content") },
   ];
