@@ -679,24 +679,25 @@ export default function SimulationEditor() {
 
           {/* Score validation banner */}
           {isEvalForm && (
-            <Card className={`border-2 ${scoreValidation.total === 10 ? "border-green-500/50" : scoreValidation.total === 0 ? "border-muted" : "border-destructive/50"}`}>
+            <Card className={`border-2 ${scoreValidation.allValid && (scoreValidation.profTotal > 0 || scoreValidation.obsTotal > 0) ? "border-green-500/50" : (scoreValidation.profTotal === 0 && scoreValidation.obsTotal === 0) ? "border-muted" : !scoreValidation.allValid ? "border-destructive/50" : "border-muted"}`}>
               <CardContent className="py-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    {scoreValidation.total === 10 ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                    ) : scoreValidation.total > 0 ? (
-                      <AlertTriangle className="h-5 w-5 text-destructive" />
-                    ) : null}
                     <span className="text-sm font-medium">{t("sim_score_total")}</span>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-muted-foreground">{t("sim_form_professor_eval")}: <strong>{scoreValidation.profTotal}</strong></span>
-                    <span className="text-muted-foreground">+</span>
-                    <span className="text-muted-foreground">{t("sim_form_observer_eval")}: <strong>{scoreValidation.obsTotal}</strong></span>
-                    <span className="text-muted-foreground">=</span>
-                    <span className={`font-bold ${scoreValidation.total === 10 ? "text-green-600" : scoreValidation.total > 0 ? "text-destructive" : "text-muted-foreground"}`}>
-                      {scoreValidation.total}/10
+                  <div className="flex items-center gap-4 text-sm flex-wrap">
+                    <span className={`${scoreValidation.profValid ? (scoreValidation.profTotal === 10 ? "text-green-600" : "text-muted-foreground") : "text-destructive"}`}>
+                      {t("sim_form_professor_eval")}: <strong>{scoreValidation.profTotal}/10</strong>
+                      {scoreValidation.profTotal === 10 && " ✓"}
+                    </span>
+                    <span className="text-muted-foreground">|</span>
+                    <span className={`${scoreValidation.obsValid ? (scoreValidation.obsTotal === 10 ? "text-green-600" : "text-muted-foreground") : "text-destructive"}`}>
+                      {t("sim_form_observer_eval")}: <strong>{scoreValidation.obsTotal}/10</strong>
+                      {scoreValidation.obsTotal === 10 && " ✓"}
+                    </span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="text-muted-foreground text-xs">
+                      {t("sim_score_average_info")}
                     </span>
                   </div>
                 </div>
