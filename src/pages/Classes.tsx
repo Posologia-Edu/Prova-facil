@@ -748,8 +748,32 @@ export default function ClassesPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Link Exam Dialog */}
+        <Dialog open={linkExamOpen} onOpenChange={setLinkExamOpen}>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Vincular Prova Online</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground mb-4">Selecione uma prova para vincular a esta turma.</p>
+            <div className="space-y-2">
+              {availableExams.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma prova disponível para vincular. Crie uma prova no Compositor primeiro.</p>
+              ) : (
+                availableExams.map((exam) => (
+                  <div key={exam.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                    <div>
+                      <p className="text-sm font-medium">{exam.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(exam.created_at).toLocaleDateString("pt-BR")} · {exam.status}
+                      </p>
+                    </div>
+                    <Button size="sm" onClick={() => linkExamToClass(exam.id)}>Vincular</Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
-        <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditingClass(null); }}>
+
           <DialogContent>
             <DialogHeader><DialogTitle>Editar Turma</DialogTitle></DialogHeader>
             <div className="space-y-4 py-2">
