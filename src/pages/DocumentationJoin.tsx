@@ -180,12 +180,12 @@ export default function DocumentationJoin() {
           <Card>
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{referralForm.title}</CardTitle></CardHeader>
             <CardContent className="space-y-6">
-              {referralFields.map((field, idx) => (
-                <div key={field.id} className="space-y-2">
-                  <Label className="text-sm font-medium">{idx + 1}. {field.label}{field.max_score ? <span className="text-muted-foreground ml-1">({field.max_score} pts)</span> : null}</Label>
-                  {renderField(field)}
-                </div>
-              ))}
+              <FormRenderer
+                fields={referralFields}
+                answers={referralAnswers}
+                onChange={setReferralAnswers}
+                showScores={true}
+              />
             </CardContent>
           </Card>
         )}
