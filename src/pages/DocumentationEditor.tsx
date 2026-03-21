@@ -16,14 +16,7 @@ import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "radio" | "checkbox" | "scale";
-  options?: string[];
-  max_score?: number;
-  required?: boolean;
-};
+// FormField type imported from @/components/forms/types
 
 type MedColumn = { id: string; label: string };
 type MedFormContent = { columns: MedColumn[]; rows_score: number; answer_rows?: Record<string, string>[] };
