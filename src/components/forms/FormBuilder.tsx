@@ -5,50 +5,97 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, GripVertical, MoreVertical, Copy, ArrowUp, ArrowDown, SeparatorHorizontal, ChevronUp, ChevronDown } from "lucide-react";
-import { FormField, getSections } from "./types";
+import { Switch } from "@/components/ui/switch";
+import {
+  Plus, Trash2, GripVertical, MoreVertical, Copy, ArrowUp, ArrowDown,
+  SeparatorHorizontal, ChevronUp, ChevronDown, FileText, Image, Video,
+  Type, Import,
+} from "lucide-react";
+import { FormField, FormFieldType, FIELD_TYPE_LABELS, getSections } from "./types";
+import FormImportDialog from "./FormImportDialog";
 
 interface FormBuilderProps {
   fields: FormField[];
   onChange: (fields: FormField[]) => void;
   showScores?: boolean;
   scoreLabel?: string;
+  /** Which form table to query for imports: simulation_forms, soap_forms, etc. */
+  formTable?: string;
 }
 
-export default function FormBuilder({ fields, onChange, showScores = false, scoreLabel = "Pts" }: FormBuilderProps) {
+export default function FormBuilder({ fields, onChange, showScores = false, scoreLabel = "Pts", formTable }: FormBuilderProps) {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
-  const addField = (atIndex?: number) => {
-    const newField: FormField = {
-      id: crypto.randomUUID(),
-      label: "",
-      type: "textarea",
-      max_score: 0,
-      required: false,
-    };
-    if (atIndex !== undefined) {
-      const updated = [...fields];
-      updated.splice(atIndex + 1, 0, newField);
-      onChange(updated);
-    } else {
-      onChange([...fields, newField]);
+  // Find the insertion index (after the currently selected field, or at the end)
+  const getInsertIndex = (): number => {
+    if (selectedFieldId) {
+      const idx = fields.findIndex(f => f.id === selectedFieldId);
+      if (idx >= 0) return idx + 1;
     }
+    return fields.length;
   };
 
-  const addSectionHeader = (atIndex?: number) => {
+  const insertField = (newField: FormField) => {
+    const idx = getInsertIndex();
+    const updated = [...fields];
+    updated.splice(idx, 0, newField);
+    onChange(updated);
+    setSelectedFieldId(newField.id);
+  };
+
+  const addField = (type: FormFieldType = "textarea") => {
+    insertField({
+      id: crypto.randomUUID(),
+      label: "",
+      type,
+      max_score: 0,
+      required: false,
+      ...(type === "radio" || type === "checkbox" || type === "dropdown" ? { options: ["Opção 1"] } : {}),
+      ...(type === "rating" ? { rating_max: 5 } : {}),
+    });
+  };
+
+  const addSectionHeader = () => {
+    const idx = getInsertIndex();
     const newSection: FormField = {
       id: crypto.randomUUID(),
       label: "",
       type: "section_header",
       description: "",
     };
-    if (atIndex !== undefined) {
-      const updated = [...fields];
-      updated.splice(atIndex, 0, newSection);
-      onChange(updated);
-    } else {
-      onChange([...fields, newSection]);
-    }
+    const updated = [...fields];
+    updated.splice(idx, 0, newSection);
+    onChange(updated);
+    setSelectedFieldId(newSection.id);
+  };
+
+  const addTitleDescription = () => {
+    insertField({
+      id: crypto.randomUUID(),
+      label: "",
+      type: "section_header",
+      description: "",
+    });
+  };
+
+  const addImageBlock = () => {
+    insertField({
+      id: crypto.randomUUID(),
+      label: "Imagem",
+      type: "image_block",
+      media_url: "",
+    });
+  };
+
+  const addVideoBlock = () => {
+    insertField({
+      id: crypto.randomUUID(),
+      label: "Vídeo",
+      type: "video_block",
+      media_url: "",
+    });
   };
 
   const updateField = (index: number, updates: Partial<FormField>) => {
@@ -59,6 +106,14 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
 
   const removeField = (index: number) => {
     onChange(fields.filter((_, i) => i !== index));
+  };
+
+  const duplicateField = (index: number) => {
+    const copy = { ...fields[index], id: crypto.randomUUID() };
+    const updated = [...fields];
+    updated.splice(index + 1, 0, copy);
+    onChange(updated);
+    setSelectedFieldId(copy.id);
   };
 
   const moveField = (fromIndex: number, direction: "up" | "down") => {
@@ -72,9 +127,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
   // Section operations
   const getSectionRange = (sectionStartIndex: number): [number, number] => {
     let end = sectionStartIndex + 1;
-    while (end < fields.length && fields[end].type !== "section_header") {
-      end++;
-    }
+    while (end < fields.length && fields[end].type !== "section_header") end++;
     return [sectionStartIndex, end];
   };
 
@@ -97,26 +150,15 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
     const remaining = [...fields.filter((_, i) => i < start || i >= end)];
 
     if (direction === "up") {
-      // Find previous section start
-      let prevStart = start - 1;
-      while (prevStart > 0 && remaining[prevStart - 1]?.type !== "section_header") {
-        prevStart--;
-      }
-      if (prevStart < 0) prevStart = 0;
-      // In the remaining array, the previous section start is at a shifted index
-      let insertAt = start - sectionFields.length;
-      // Find the start of the previous section in remaining
       let target = start - 1;
       while (target > 0 && fields[target - 1]?.type !== "section_header") target--;
       if (target < 0) target = 0;
       remaining.splice(target, 0, ...sectionFields);
       onChange(remaining);
     } else {
-      // Find next section
-      if (end >= fields.length) return; // Already last
-      const [nextStart, nextEnd] = getSectionRange(end);
+      if (end >= fields.length) return;
+      const [, nextEnd] = getSectionRange(end);
       const afterRemoval = fields.filter((_, i) => i < start || i >= end);
-      // nextStart shifted by section length
       const shiftedNextEnd = nextEnd - sectionFields.length;
       afterRemoval.splice(shiftedNextEnd, 0, ...sectionFields);
       onChange(afterRemoval);
@@ -125,7 +167,6 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
 
   const mergeSectionWithAbove = (sectionStartIndex: number) => {
     if (sectionStartIndex === 0) return;
-    // Just remove the section header
     onChange(fields.filter((_, i) => i !== sectionStartIndex));
   };
 
@@ -138,40 +179,283 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
     });
   };
 
-  const sections = getSections(fields);
+  const handleImport = (importedFields: FormField[]) => {
+    const idx = getInsertIndex();
+    const updated = [...fields];
+    const newFields = importedFields.map(f => ({ ...f, id: crypto.randomUUID() }));
+    updated.splice(idx, 0, ...newFields);
+    onChange(updated);
+    if (newFields.length > 0) setSelectedFieldId(newFields[newFields.length - 1].id);
+  };
 
+  const sections = getSections(fields);
   const getFieldGlobalIndex = (field: FormField) => fields.findIndex(f => f.id === field.id);
 
-  return (
-    <div className="space-y-4">
-      {sections.map((section, sectionIdx) => {
-        const isCollapsed = section.header ? collapsedSections.has(section.header.id) : false;
-        const sectionGlobalStart = section.header ? getFieldGlobalIndex(section.header) : (section.fields.length > 0 ? getFieldGlobalIndex(section.fields[0]) : 0);
+  // Question types that can be selected in the type dropdown (excludes special blocks)
+  const questionTypes: FormFieldType[] = ["text", "textarea", "radio", "checkbox", "dropdown", "scale", "rating", "date", "file_upload"];
 
-        return (
-          <div key={section.header?.id || `section-${sectionIdx}`} className="space-y-2">
-            {/* Section Header */}
-            {section.header && (
-              <div className="relative">
-                <div className="bg-primary/5 border-l-4 border-l-primary rounded-lg p-4 space-y-2">
+  const renderFieldEditor = (field: FormField, globalIdx: number) => {
+    const isSelected = selectedFieldId === field.id;
+
+    // Image block
+    if (field.type === "image_block") {
+      return (
+        <div
+          key={field.id}
+          className={`group border rounded-lg p-4 bg-card transition-all cursor-pointer ${isSelected ? "ring-2 ring-primary shadow-md" : "hover:shadow-sm"}`}
+          onClick={() => setSelectedFieldId(field.id)}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <Image className="h-4 w-4" /> Bloco de imagem
+            </Label>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); duplicateField(globalIdx); }}>
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); removeField(globalIdx); }}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+          <Input
+            placeholder="URL da imagem"
+            value={field.media_url || ""}
+            onChange={(e) => updateField(globalIdx, { media_url: e.target.value })}
+            className="text-sm"
+          />
+          {field.media_url && (
+            <div className="mt-2 rounded-md overflow-hidden max-h-48">
+              <img src={field.media_url} alt="" className="w-full object-contain max-h-48" />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Video block
+    if (field.type === "video_block") {
+      return (
+        <div
+          key={field.id}
+          className={`group border rounded-lg p-4 bg-card transition-all cursor-pointer ${isSelected ? "ring-2 ring-primary shadow-md" : "hover:shadow-sm"}`}
+          onClick={() => setSelectedFieldId(field.id)}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <Video className="h-4 w-4" /> Bloco de vídeo
+            </Label>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); duplicateField(globalIdx); }}>
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); removeField(globalIdx); }}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+          <Input
+            placeholder="URL do vídeo (YouTube, Vimeo, etc.)"
+            value={field.media_url || ""}
+            onChange={(e) => updateField(globalIdx, { media_url: e.target.value })}
+            className="text-sm"
+          />
+          {field.media_url && (
+            <div className="mt-2 aspect-video rounded-md overflow-hidden bg-muted">
+              <iframe src={field.media_url} className="w-full h-full" allowFullScreen />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Regular question field
+    return (
+      <div
+        key={field.id}
+        className={`group border rounded-lg p-3 bg-card transition-all cursor-pointer ${isSelected ? "ring-2 ring-primary shadow-md" : "hover:shadow-sm"}`}
+        onClick={() => setSelectedFieldId(field.id)}
+      >
+        <div className="flex items-start gap-2">
+          <div className="flex flex-col items-center gap-0.5 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); moveField(globalIdx, "up"); }} disabled={globalIdx === 0}>
+              <ChevronUp className="h-3 w-3" />
+            </Button>
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); moveField(globalIdx, "down"); }} disabled={globalIdx === fields.length - 1}>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </div>
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Input
+                placeholder="Pergunta / Rótulo"
+                value={field.label}
+                onChange={(e) => updateField(globalIdx, { label: e.target.value })}
+                className="flex-1 min-w-[180px]"
+              />
+              <Select value={field.type} onValueChange={(v) => updateField(globalIdx, { type: v as FormFieldType })}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {questionTypes.map(t => (
+                    <SelectItem key={t} value={t}>{FIELD_TYPE_LABELS[t]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {showScores && (
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={field.max_score || 0}
+                    onChange={(e) => updateField(globalIdx, { max_score: Number(e.target.value) })}
+                    className="w-20"
+                    min={0}
+                    step={0.5}
+                    title={scoreLabel}
+                  />
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{scoreLabel}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Description field */}
+            {isSelected && (
+              <Input
+                placeholder="Descrição da pergunta (opcional)"
+                value={field.description || ""}
+                onChange={(e) => updateField(globalIdx, { description: e.target.value })}
+                className="text-sm text-muted-foreground"
+              />
+            )}
+
+            {/* Options for radio/checkbox/dropdown */}
+            {(field.type === "radio" || field.type === "checkbox" || field.type === "dropdown") && (
+              <div className="space-y-1.5">
+                {(field.options || []).map((opt, optIdx) => (
+                  <div key={optIdx} className="flex items-center gap-2">
+                    {field.type === "radio" && <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/40" />}
+                    {field.type === "checkbox" && <div className="h-4 w-4 rounded border-2 border-muted-foreground/40" />}
+                    {field.type === "dropdown" && <span className="text-xs text-muted-foreground w-5">{optIdx + 1}.</span>}
+                    <Input
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...(field.options || [])];
+                        newOpts[optIdx] = e.target.value;
+                        updateField(globalIdx, { options: newOpts });
+                      }}
+                      className="flex-1 text-sm"
+                      placeholder={`Opção ${optIdx + 1}`}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => {
+                        const newOpts = (field.options || []).filter((_, i) => i !== optIdx);
+                        updateField(globalIdx, { options: newOpts });
+                      }}
+                      disabled={(field.options || []).length <= 1}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-primary"
+                  onClick={() => updateField(globalIdx, { options: [...(field.options || []), `Opção ${(field.options?.length || 0) + 1}`] })}
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Adicionar opção
+                </Button>
+              </div>
+            )}
+
+            {/* Scale settings */}
+            {field.type === "scale" && isSelected && (
+              <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground">Mín:</span>
+                  <Input value={field.scale_min_label || ""} onChange={(e) => updateField(globalIdx, { scale_min_label: e.target.value })} className="w-24 h-8 text-xs" placeholder="Rótulo" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground">Máx:</span>
+                  <Input value={field.scale_max_label || ""} onChange={(e) => updateField(globalIdx, { scale_max_label: e.target.value })} className="w-24 h-8 text-xs" placeholder="Rótulo" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground">Até:</span>
+                  <Input type="number" value={field.max_score || 10} onChange={(e) => updateField(globalIdx, { max_score: Number(e.target.value) })} className="w-16 h-8 text-xs" min={2} max={10} />
+                </div>
+              </div>
+            )}
+
+            {/* Rating settings */}
+            {field.type === "rating" && isSelected && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Estrelas:</span>
+                <Select value={String(field.rating_max || 5)} onValueChange={(v) => updateField(globalIdx, { rating_max: Number(v) })}>
+                  <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[3, 4, 5, 7, 10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Bottom toolbar for selected field */}
+            {isSelected && (
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
+                <div className="flex items-center gap-2 mr-auto">
+                  <Label htmlFor={`req-${field.id}`} className="text-xs text-muted-foreground">Obrigatória</Label>
+                  <Switch
+                    id={`req-${field.id}`}
+                    checked={field.required || false}
+                    onCheckedChange={(v) => updateField(globalIdx, { required: v })}
+                  />
+                </div>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); duplicateField(globalIdx); }} title="Duplicar">
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); removeField(globalIdx); }} title="Excluir">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="relative flex gap-3">
+      {/* Main form content */}
+      <div className="flex-1 space-y-4">
+        {sections.map((section, sectionIdx) => {
+          const isCollapsed = section.header ? collapsedSections.has(section.header.id) : false;
+          const sectionGlobalStart = section.header ? getFieldGlobalIndex(section.header) : (section.fields.length > 0 ? getFieldGlobalIndex(section.fields[0]) : 0);
+
+          return (
+            <div key={section.header?.id || `section-${sectionIdx}`} className="space-y-2">
+              {/* Section Header */}
+              {section.header && (
+                <div
+                  className={`bg-primary/5 border-l-4 border-l-primary rounded-lg p-4 space-y-2 cursor-pointer transition-all ${selectedFieldId === section.header.id ? "ring-2 ring-primary shadow-md" : ""}`}
+                  onClick={() => setSelectedFieldId(section.header!.id)}
+                >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                        Seção {sectionIdx + 1} de {sections.length}
-                      </span>
-                    </div>
+                    <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      Seção {sectionIdx + 1} de {sections.length}
+                    </span>
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleCollapse(section.header!.id)}
-                        className="h-7 w-7 p-0"
-                      >
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); toggleCollapse(section.header!.id); }} className="h-7 w-7 p-0">
                         {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => e.stopPropagation()}>
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -189,10 +473,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
                               <ArrowDown className="h-4 w-4 mr-2" />Mover seção abaixo
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => deleteSection(sectionGlobalStart)}
-                            className="text-destructive"
-                          >
+                          <DropdownMenuItem onClick={() => deleteSection(sectionGlobalStart)} className="text-destructive">
                             <Trash2 className="h-4 w-4 mr-2" />Excluir seção
                           </DropdownMenuItem>
                           {sectionIdx > 0 && (
@@ -218,146 +499,96 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
                     rows={1}
                   />
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Fields in this section */}
-            {!isCollapsed && (
-              <div className="space-y-2 pl-1">
-                {section.fields.map((field) => {
-                  const globalIdx = getFieldGlobalIndex(field);
-                  return (
-                    <div key={field.id} className="group border rounded-lg p-3 bg-card hover:shadow-sm transition-shadow">
-                      <div className="flex items-start gap-2">
-                        <div className="flex flex-col items-center gap-0.5 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0"
-                            onClick={() => moveField(globalIdx, "up")}
-                            disabled={globalIdx === 0}
-                          >
-                            <ChevronUp className="h-3 w-3" />
-                          </Button>
-                          <GripVertical className="h-4 w-4 text-muted-foreground" />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0"
-                            onClick={() => moveField(globalIdx, "down")}
-                            disabled={globalIdx === fields.length - 1}
-                          >
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              placeholder="Pergunta / Rótulo"
-                              value={field.label}
-                              onChange={(e) => updateField(globalIdx, { label: e.target.value })}
-                              className="flex-1"
-                            />
-                            <Select value={field.type} onValueChange={(v) => updateField(globalIdx, { type: v as any })}>
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="text">Texto curto</SelectItem>
-                                <SelectItem value="textarea">Texto longo</SelectItem>
-                                <SelectItem value="radio">Múltipla escolha</SelectItem>
-                                <SelectItem value="checkbox">Checkbox</SelectItem>
-                                <SelectItem value="scale">Escala</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {showScores && (
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  type="number"
-                                  value={field.max_score || 0}
-                                  onChange={(e) => updateField(globalIdx, { max_score: Number(e.target.value) })}
-                                  className="w-20"
-                                  min={0}
-                                  step={0.5}
-                                  title={scoreLabel}
-                                />
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">{scoreLabel}</span>
-                              </div>
-                            )}
-                          </div>
-                          {(field.type === "radio" || field.type === "checkbox") && (
-                            <Input
-                              placeholder="Opções separadas por vírgula"
-                              value={field.options?.join(", ") || ""}
-                              onChange={(e) => updateField(globalIdx, { options: e.target.value.split(",").map(o => o.trim()) })}
-                              className="text-sm"
-                            />
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeField(globalIdx)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+              {/* Fields */}
+              {!isCollapsed && (
+                <div className="space-y-2 pl-1">
+                  {section.fields.map((field) => renderFieldEditor(field, getFieldGlobalIndex(field)))}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
-            {/* Add field / section buttons after each section */}
-            {!isCollapsed && (
-              <div className="flex items-center gap-2 pl-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const lastFieldInSection = section.fields.length > 0
-                      ? getFieldGlobalIndex(section.fields[section.fields.length - 1])
-                      : (section.header ? getFieldGlobalIndex(section.header) : -1);
-                    addField(lastFieldInSection);
-                  }}
-                  className="text-xs"
-                >
-                  <Plus className="h-3 w-3 mr-1" />Pergunta
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const lastFieldInSection = section.fields.length > 0
-                      ? getFieldGlobalIndex(section.fields[section.fields.length - 1]) + 1
-                      : (section.header ? getFieldGlobalIndex(section.header) + 1 : fields.length);
-                    addSectionHeader(lastFieldInSection);
-                  }}
-                  className="text-xs"
-                >
-                  <SeparatorHorizontal className="h-3 w-3 mr-1" />Seção
-                </Button>
-              </div>
-            )}
+        {/* Empty state */}
+        {fields.length === 0 && (
+          <div className="text-center py-12 border-2 border-dashed rounded-lg">
+            <FileText className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground mb-1">Nenhum campo adicionado</p>
+            <p className="text-xs text-muted-foreground/60 mb-4">Use o menu lateral para adicionar perguntas e seções</p>
           </div>
-        );
-      })}
+        )}
+      </div>
 
-      {/* Empty state */}
-      {fields.length === 0 && (
-        <div className="text-center py-8 border-2 border-dashed rounded-lg">
-          <p className="text-sm text-muted-foreground mb-3">Nenhum campo adicionado</p>
-          <div className="flex items-center justify-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => addField()}>
-              <Plus className="h-3 w-3 mr-1" />Pergunta
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => addSectionHeader()}>
-              <SeparatorHorizontal className="h-3 w-3 mr-1" />Seção
-            </Button>
-          </div>
+      {/* Floating sidebar toolbar (Google Forms style) */}
+      <div className="sticky top-4 h-fit">
+        <div className="flex flex-col gap-0.5 bg-card border rounded-lg shadow-lg p-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 w-10 p-0"
+            onClick={() => addField("textarea")}
+            title="Adicionar pergunta"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 w-10 p-0"
+            onClick={() => setImportOpen(true)}
+            title="Importar pergunta"
+          >
+            <Import className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 w-10 p-0"
+            onClick={() => addTitleDescription()}
+            title="Adicionar título e descrição"
+          >
+            <Type className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 w-10 p-0"
+            onClick={() => addImageBlock()}
+            title="Adicionar imagem"
+          >
+            <Image className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 w-10 p-0"
+            onClick={() => addVideoBlock()}
+            title="Adicionar vídeo"
+          >
+            <Video className="h-5 w-5" />
+          </Button>
+          <div className="border-t border-border my-1" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 w-10 p-0"
+            onClick={() => addSectionHeader()}
+            title="Adicionar seção"
+          >
+            <SeparatorHorizontal className="h-5 w-5" />
+          </Button>
         </div>
-      )}
+      </div>
+
+      {/* Import dialog */}
+      <FormImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImport={handleImport}
+        formTable={formTable}
+      />
     </div>
   );
 }

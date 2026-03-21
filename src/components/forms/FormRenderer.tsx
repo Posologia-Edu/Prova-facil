@@ -4,6 +4,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Star } from "lucide-react";
 import { FormField, getSections } from "./types";
 
 interface FormRendererProps {
@@ -29,6 +31,26 @@ export default function FormRenderer({
   const renderField = (field: FormField) => {
     if (field.type === "section_header") return null;
 
+    // Image block
+    if (field.type === "image_block") {
+      if (!field.media_url) return null;
+      return (
+        <div key={field.id} className="rounded-lg overflow-hidden">
+          <img src={field.media_url} alt={field.label || "Imagem"} className="w-full max-h-96 object-contain" />
+        </div>
+      );
+    }
+
+    // Video block
+    if (field.type === "video_block") {
+      if (!field.media_url) return null;
+      return (
+        <div key={field.id} className="aspect-video rounded-lg overflow-hidden bg-muted">
+          <iframe src={field.media_url} className="w-full h-full" allowFullScreen title={field.label || "Vídeo"} />
+        </div>
+      );
+    }
+
     return (
       <div key={field.id} className="space-y-1.5">
         <Label className="font-medium">
@@ -38,6 +60,9 @@ export default function FormRenderer({
             <span className="text-muted-foreground ml-2 font-normal">({field.max_score} pts)</span>
           ) : null}
         </Label>
+        {field.description && (
+          <p className="text-xs text-muted-foreground">{field.description}</p>
+        )}
 
         {field.type === "text" && (
           <Input
@@ -95,19 +120,88 @@ export default function FormRenderer({
           </div>
         )}
 
+        {field.type === "dropdown" && field.options && (
+          <Select
+            value={answers[field.id] || ""}
+            onValueChange={(v) => onChange({ ...answers, [field.id]: v })}
+            disabled={readOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione uma opção" />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options.map((opt) => (
+                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         {field.type === "scale" && (
-          <div className="flex items-center gap-4">
-            <Slider
-              value={[answers[field.id] || 0]}
-              onValueChange={([v]) => onChange({ ...answers, [field.id]: v })}
-              max={field.max_score || 10}
-              step={1}
-              className="flex-1"
-              disabled={readOnly}
-            />
-            <span className="font-mono text-sm w-12 text-right">
-              {answers[field.id] || 0}/{field.max_score || 10}
-            </span>
+          <div className="space-y-1">
+            {(field.scale_min_label || field.scale_max_label) && (
+              <div className="flex justify-between text-xs text-muted-foreground px-1">
+                <span>{field.scale_min_label || ""}</span>
+                <span>{field.scale_max_label || ""}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              <Slider
+                value={[answers[field.id] || 0]}
+                onValueChange={([v]) => onChange({ ...answers, [field.id]: v })}
+                max={field.max_score || 10}
+                step={1}
+                className="flex-1"
+                disabled={readOnly}
+              />
+              <span className="font-mono text-sm w-12 text-right">
+                {answers[field.id] || 0}/{field.max_score || 10}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {field.type === "rating" && (
+          <div className="flex gap-1">
+            {Array.from({ length: field.rating_max || 5 }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                disabled={readOnly}
+                onClick={() => onChange({ ...answers, [field.id]: i + 1 })}
+                className="p-0.5 transition-colors"
+              >
+                <Star
+                  className={`h-6 w-6 ${(answers[field.id] || 0) > i ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/30"}`}
+                />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {field.type === "date" && (
+          <Input
+            type="date"
+            value={answers[field.id] || ""}
+            onChange={(e) => onChange({ ...answers, [field.id]: e.target.value })}
+            disabled={readOnly}
+          />
+        )}
+
+        {field.type === "file_upload" && (
+          <div className="border-2 border-dashed rounded-lg p-6 text-center text-muted-foreground text-sm">
+            {readOnly ? (
+              answers[field.id] ? <span>Arquivo enviado</span> : <span>Nenhum arquivo</span>
+            ) : (
+              <Input
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onChange({ ...answers, [field.id]: file.name });
+                }}
+                className="border-none"
+              />
+            )}
           </div>
         )}
       </div>
@@ -115,7 +209,6 @@ export default function FormRenderer({
   };
 
   if (!hasSections) {
-    // Flat rendering (no sections)
     return (
       <div className="space-y-4">
         {fields.filter(f => f.type !== "section_header").map(renderField)}
@@ -123,7 +216,6 @@ export default function FormRenderer({
     );
   }
 
-  // Sectioned rendering
   return (
     <div className="space-y-6">
       {sections.map((section, idx) => (
