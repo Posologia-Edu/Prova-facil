@@ -1188,64 +1188,13 @@ export default function SimulationJoin() {
               </div>
             ) : (
               <>
-                {(form.content_json as FormField[]).map((field) => (
-                  <div key={field.id} className="space-y-2">
-                    <Label className="font-medium">
-                      {field.label}
-                      {field.max_score ? <span className="text-muted-foreground ml-2">({field.max_score} pts)</span> : null}
-                    </Label>
-                    {field.type === "text" && (
-                      <Input value={answers[field.id] || ""} onChange={(e) => setAnswers({ ...answers, [field.id]: e.target.value })} disabled={!canFill} />
-                    )}
-                    {field.type === "textarea" && (
-                      <Textarea value={answers[field.id] || ""} onChange={(e) => setAnswers({ ...answers, [field.id]: e.target.value })} disabled={!canFill} rows={4} />
-                    )}
-                    {field.type === "radio" && field.options && (
-                      <RadioGroup value={answers[field.id] || ""} onValueChange={(v) => setAnswers({ ...answers, [field.id]: v })} disabled={!canFill}>
-                        {field.options.map((opt) => (
-                          <div key={opt} className="flex items-center space-x-2">
-                            <RadioGroupItem value={opt} id={`${field.id}-${opt}`} />
-                            <Label htmlFor={`${field.id}-${opt}`}>{opt}</Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    )}
-                    {field.type === "checkbox" && field.options && (
-                      <div className="space-y-2">
-                        {field.options.map((opt) => (
-                          <div key={opt} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`${field.id}-${opt}`}
-                              checked={(answers[field.id] || []).includes(opt)}
-                              onCheckedChange={(checked) => {
-                                const current = answers[field.id] || [];
-                                setAnswers({
-                                  ...answers,
-                                  [field.id]: checked ? [...current, opt] : current.filter((o: string) => o !== opt),
-                                });
-                              }}
-                              disabled={!canFill}
-                            />
-                            <Label htmlFor={`${field.id}-${opt}`}>{opt}</Label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {field.type === "scale" && (
-                      <div className="flex items-center gap-4">
-                        <Slider
-                          value={[answers[field.id] || 0]}
-                          onValueChange={([v]) => setAnswers({ ...answers, [field.id]: v })}
-                          max={field.max_score || 10}
-                          step={1}
-                          disabled={!canFill}
-                          className="flex-1"
-                        />
-                        <span className="font-mono text-sm w-12 text-right">{answers[field.id] || 0}/{field.max_score || 10}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                <FormRenderer
+                  fields={(form.content_json as FormField[])}
+                  answers={answers}
+                  onChange={setAnswers}
+                  readOnly={!canFill}
+                  showScores={true}
+                />
                 <Button onClick={submitForm} disabled={!canFill} className="w-full mt-4">
                   <Send className="h-4 w-4 mr-2" />{t("sim_submit")}
                 </Button>
