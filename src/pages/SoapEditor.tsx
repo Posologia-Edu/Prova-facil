@@ -213,10 +213,12 @@ export default function SoapEditor() {
   const [formType, setFormType] = useState<string>("soap");
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
+  const lastSavedSnapshotRef = useRef("");
+  const skipNextAutoSaveRef = useRef(false);
 
   // Field management delegated to FormBuilder
 
-  const saveForm = async () => {
+  const saveForm = async (silent = false) => {
     if (!formTitle.trim()) return;
     if (editingFormId) {
       await supabase.from("soap_forms").update({
@@ -232,13 +234,43 @@ export default function SoapEditor() {
         content_json: formFields as any,
       });
     }
-    setFormTitle("");
-    setFormType("soap");
-    setFormFields([]);
-    setEditingFormId(null);
-    refetchForms();
-    toast({ title: "Formulário salvo" });
+    lastSavedSnapshotRef.current = JSON.stringify({ formType, title: formTitle, content: formFields });
+    if (!editingFormId) {
+      await refetchForms();
+    } else if (!silent) {
+      refetchForms();
+    }
+    if (!silent) {
+      setFormTitle("");
+      setFormType("soap");
+      setFormFields([]);
+      setEditingFormId(null);
+      refetchForms();
+      toast({ title: "Formulário salvo" });
+    }
   };
+
+  // Auto-save effect
+  useEffect(() => {
+    if (!roomId || !editingFormId) return;
+    if (!formTitle.trim() && formFields.length === 0) return;
+
+    const currentSnapshot = JSON.stringify({ formType, title: formTitle, content: formFields });
+
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      lastSavedSnapshotRef.current = currentSnapshot;
+      return;
+    }
+
+    if (currentSnapshot === lastSavedSnapshotRef.current) return;
+
+    const timeout = window.setTimeout(() => {
+      void saveForm(true);
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+  }, [roomId, editingFormId, formType, formTitle, formFields]);
 
   const editForm = (form: any) => {
     setEditingFormId(form.id);
