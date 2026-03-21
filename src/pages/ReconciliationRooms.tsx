@@ -244,7 +244,10 @@ export default function ReconciliationRooms() {
                         <Play className="h-3.5 w-3.5 mr-1" />Controle
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)}>
+                    <Button variant="outline" size="sm" onClick={() => duplicateRoom.mutate(room.id)} title="Duplicar">
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
