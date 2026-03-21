@@ -497,7 +497,10 @@ export default function SimulationEditor() {
             <ArrowLeft className="h-4 w-4 mr-1" />{t("pricing_back")}
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{room.title}</h1>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">Anamnese</Badge>
+              <h1 className="text-2xl font-bold text-foreground">{room.title}</h1>
+            </div>
             <p className="text-sm text-muted-foreground">PIN: <span className="font-mono">{room.access_code}</span></p>
           </div>
         </div>

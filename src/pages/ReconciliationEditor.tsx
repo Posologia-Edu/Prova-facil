@@ -103,6 +103,9 @@ export default function ReconciliationEditor() {
   const [formTitle, setFormTitle] = useState("");
   const [formType, setFormType] = useState<"reconciliation" | "answer_key">("reconciliation");
   const [formFields, setFormFields] = useState<FormField[]>([]);
+  // Per-case answer keys: { [caseId]: FormField[] }
+  const [answerKeyByCaseId, setAnswerKeyByCaseId] = useState<Record<string, FormField[]>>({});
+  const [activeAnswerKeyCaseId, setActiveAnswerKeyCaseId] = useState<string>("");
   const lastSavedSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(false);
 
@@ -187,10 +190,14 @@ export default function ReconciliationEditor() {
   const saveForm = async (silent = false) => {
     if (!formTitle.trim()) return;
 
+    const contentToSave = formType === "answer_key"
+      ? { case_answers: answerKeyByCaseId } as any
+      : formFields as any;
+
     if (editingFormId) {
       const { error } = await supabase.from("reconciliation_forms").update({
         title: formTitle,
-        content_json: formFields as any,
+        content_json: contentToSave,
         form_type: formType,
       }).eq("id", editingFormId);
       if (error) { if (!silent) toast({ title: "Erro", variant: "destructive" }); return; }
@@ -198,13 +205,16 @@ export default function ReconciliationEditor() {
       const { error } = await supabase.from("reconciliation_forms").insert({
         room_id: roomId!,
         title: formTitle,
-        content_json: formFields as any,
+        content_json: contentToSave,
         form_type: formType,
       });
       if (error) { if (!silent) toast({ title: "Erro", variant: "destructive" }); return; }
     }
 
-    lastSavedSnapshotRef.current = JSON.stringify({ formType, title: formTitle, content: formFields });
+    const snapshotData = formType === "answer_key"
+      ? { formType, title: formTitle, content: answerKeyByCaseId }
+      : { formType, title: formTitle, content: formFields };
+    lastSavedSnapshotRef.current = JSON.stringify(snapshotData);
     if (!editingFormId) {
       await refetchForms();
     } else if (!silent) {
@@ -215,6 +225,8 @@ export default function ReconciliationEditor() {
       setFormTitle("");
       setFormFields([]);
       setFormType("reconciliation");
+      setAnswerKeyByCaseId({});
+      setActiveAnswerKeyCaseId("");
       refetchForms();
       toast({ title: "Salvo", description: "Formulário salvo com sucesso." });
     }
@@ -223,9 +235,12 @@ export default function ReconciliationEditor() {
   // Auto-save effect
   useEffect(() => {
     if (!roomId || !editingFormId) return;
-    if (!formTitle.trim() && formFields.length === 0) return;
+    if (!formTitle.trim() && formFields.length === 0 && Object.keys(answerKeyByCaseId).length === 0) return;
 
-    const currentSnapshot = JSON.stringify({ formType, title: formTitle, content: formFields });
+    const snapshotData = formType === "answer_key"
+      ? { formType, title: formTitle, content: answerKeyByCaseId }
+      : { formType, title: formTitle, content: formFields };
+    const currentSnapshot = JSON.stringify(snapshotData);
 
     if (skipNextAutoSaveRef.current) {
       skipNextAutoSaveRef.current = false;
@@ -240,7 +255,7 @@ export default function ReconciliationEditor() {
     }, 800);
 
     return () => window.clearTimeout(timeout);
-  }, [roomId, editingFormId, formType, formTitle, formFields]);
+  }, [roomId, editingFormId, formType, formTitle, formFields, answerKeyByCaseId]);
 
   const deleteForm = async (id: string) => {
     await supabase.from("reconciliation_forms").delete().eq("id", id);
@@ -252,9 +267,37 @@ export default function ReconciliationEditor() {
     setEditingFormId(form.id);
     setFormTitle(form.title);
     setFormType(form.form_type);
-    const fields = Array.isArray(form.content_json) ? form.content_json : [];
-    setFormFields(fields);
-    lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: fields });
+    if (form.form_type === "answer_key") {
+      // New per-case structure: { case_answers: { [caseId]: FormField[] } }
+      const content = form.content_json;
+      if (content && typeof content === "object" && !Array.isArray(content) && content.case_answers) {
+        setAnswerKeyByCaseId(content.case_answers);
+        setFormFields([]);
+        const firstCaseId = clinicalCases.length > 0 ? clinicalCases[0].id : "";
+        setActiveAnswerKeyCaseId(firstCaseId);
+        lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: content.case_answers });
+      } else if (Array.isArray(content)) {
+        // Legacy: single answer key — migrate to first case if exists
+        const migrated: Record<string, FormField[]> = {};
+        if (clinicalCases.length > 0) {
+          migrated[clinicalCases[0].id] = content;
+          setActiveAnswerKeyCaseId(clinicalCases[0].id);
+        }
+        setAnswerKeyByCaseId(migrated);
+        setFormFields([]);
+        lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: migrated });
+      } else {
+        setAnswerKeyByCaseId({});
+        setFormFields([]);
+        setActiveAnswerKeyCaseId(clinicalCases.length > 0 ? clinicalCases[0].id : "");
+        lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: {} });
+      }
+    } else {
+      const fields = Array.isArray(form.content_json) ? form.content_json : [];
+      setFormFields(fields);
+      setAnswerKeyByCaseId({});
+      lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: fields });
+    }
   };
 
   // Add field to form
@@ -325,7 +368,10 @@ export default function ReconciliationEditor() {
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar
         </Button>
         <div>
-          <h1 className="text-xl font-bold">{room.title}</h1>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs bg-chart-3/10 text-chart-3 border-chart-3/30">Reconciliação</Badge>
+            <h1 className="text-xl font-bold">{room.title}</h1>
+          </div>
           <p className="text-sm text-muted-foreground">PIN: {room.access_code} · Status: {room.status}</p>
         </div>
         {room.status === "draft" && (
@@ -508,14 +554,19 @@ export default function ReconciliationEditor() {
           )}
 
           {/* Existing forms */}
-          {forms.map((form: any) => (
+          {forms.map((form: any) => {
+            const isAnswerKey = form.form_type === "answer_key";
+            const caseAnswers = isAnswerKey && form.content_json?.case_answers;
+            const caseCount = caseAnswers ? Object.keys(caseAnswers).length : 0;
+            const fieldCount = Array.isArray(form.content_json) ? form.content_json.length : 0;
+            return (
             <Card key={form.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-base">{form.title}</CardTitle>
                     <Badge variant="outline" className="mt-1">
-                      {form.form_type === "answer_key" ? "Espelho de Respostas" : "Ficha de Reconciliação"}
+                      {isAnswerKey ? "Espelho de Respostas" : "Ficha de Reconciliação"}
                     </Badge>
                   </div>
                   <div className="flex gap-1">
@@ -526,11 +577,15 @@ export default function ReconciliationEditor() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  {Array.isArray(form.content_json) ? `${form.content_json.length} campos` : "0 campos"}
+                  {isAnswerKey
+                    ? (caseCount > 0 ? `${caseCount} caso(s) com espelho` : (fieldCount > 0 ? `${fieldCount} campos (legado)` : "Sem espelhos"))
+                    : `${fieldCount} campos`
+                  }
                 </p>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
 
           {/* Form editor */}
           <Card>
@@ -545,7 +600,12 @@ export default function ReconciliationEditor() {
                 </div>
                 <div>
                   <Label>Tipo</Label>
-                  <Select value={formType} onValueChange={(v: any) => setFormType(v)}>
+                  <Select value={formType} onValueChange={(v: any) => {
+                    setFormType(v);
+                    if (v === "answer_key" && clinicalCases.length > 0 && !activeAnswerKeyCaseId) {
+                      setActiveAnswerKeyCaseId(clinicalCases[0].id);
+                    }
+                  }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="reconciliation">Ficha de Reconciliação</SelectItem>
@@ -555,19 +615,64 @@ export default function ReconciliationEditor() {
                 </div>
               </div>
 
-              <FormBuilder
-                fields={formFields}
-                onChange={setFormFields}
-                showScores={true}
-                scoreLabel="Pts"
-              />
+              {formType === "answer_key" ? (
+                /* Per-case answer key editor */
+                clinicalCases.length === 0 ? (
+                  <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
+                    <p className="text-sm">Cadastre casos clínicos na aba "Casos Clínicos" primeiro para definir espelhos de resposta por caso.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Defina o espelho de respostas para cada caso clínico:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {clinicalCases.map((cc: any) => (
+                        <Button
+                          key={cc.id}
+                          variant={activeAnswerKeyCaseId === cc.id ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setActiveAnswerKeyCaseId(cc.id)}
+                        >
+                          {cc.title}
+                          {answerKeyByCaseId[cc.id]?.length ? ` (${answerKeyByCaseId[cc.id].length})` : ""}
+                        </Button>
+                      ))}
+                    </div>
+                    {activeAnswerKeyCaseId && (
+                      <FormBuilder
+                        fields={answerKeyByCaseId[activeAnswerKeyCaseId] || []}
+                        onChange={(fields) => setAnswerKeyByCaseId(prev => ({ ...prev, [activeAnswerKeyCaseId]: fields }))}
+                        showScores={true}
+                        scoreLabel="Pts"
+                      />
+                    )}
+                    {activeAnswerKeyCaseId && (
+                      <p className="text-sm text-muted-foreground">
+                        Total ({clinicalCases.find((c: any) => c.id === activeAnswerKeyCaseId)?.title}): {
+                          (answerKeyByCaseId[activeAnswerKeyCaseId] || []).filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0)
+                        } pts
+                      </p>
+                    )}
+                  </div>
+                )
+              ) : (
+                <>
+                  <FormBuilder
+                    fields={formFields}
+                    onChange={setFormFields}
+                    showScores={true}
+                    scoreLabel="Pts"
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Total: {totalMaxScore} pts</span>
+                  </div>
+                </>
+              )}
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total: {totalMaxScore} pts</span>
+              <div className="flex items-center justify-end gap-2">
                 <Button onClick={() => saveForm()} disabled={!formTitle.trim()}>Salvar Formulário</Button>
               </div>
               {editingFormId && (
-                <Button variant="ghost" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); }}>
+                <Button variant="ghost" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); setAnswerKeyByCaseId({}); setActiveAnswerKeyCaseId(""); }}>
                   Cancelar edição
                 </Button>
               )}

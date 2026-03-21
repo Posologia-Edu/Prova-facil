@@ -116,8 +116,25 @@ export default function ReconciliationControl() {
     ? (Array.isArray(reconciliationForm.content_json) ? reconciliationForm.content_json : [])
     : [];
 
+  // Get answer key for a specific clinical case
+  const getAnswerKeyFieldsForCase = (caseId: string | null): FormField[] => {
+    if (!answerKeyForm) return [];
+    const content = answerKeyForm.content_json;
+    // New per-case structure
+    if (content && typeof content === "object" && !Array.isArray(content) && (content as any).case_answers) {
+      const caseAnswers = (content as any).case_answers;
+      if (caseId && caseAnswers[caseId]) return caseAnswers[caseId];
+      // Fallback: first case
+      const firstKey = Object.keys(caseAnswers)[0];
+      return firstKey ? caseAnswers[firstKey] : [];
+    }
+    // Legacy: flat array
+    if (Array.isArray(content)) return content as FormField[];
+    return [];
+  };
+
   const answerKeyFields: FormField[] = answerKeyForm
-    ? (Array.isArray(answerKeyForm.content_json) ? answerKeyForm.content_json : [])
+    ? getAnswerKeyFieldsForCase(selectedResponse?.clinical_case_id)
     : [];
 
   // Sync admin fields when selection changes
@@ -159,12 +176,19 @@ export default function ReconciliationControl() {
     }
     setGradingAI(true);
     try {
+      // Get the answer key specific to the clinical case this pair was assigned
+      const caseSpecificAnswerKey = getAnswerKeyFieldsForCase(selectedResponse.clinical_case_id);
+      if (!caseSpecificAnswerKey.length) {
+        toast({ title: "Espelho não encontrado", description: "Não há espelho de respostas cadastrado para o caso clínico desta dupla.", variant: "destructive" });
+        setGradingAI(false);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke("grade-reconciliation", {
         body: {
           response_id: selectedResponse.id,
           room_id: roomId,
           answers_json: selectedResponse.answers_json,
-          answer_key_json: answerKeyForm.content_json,
+          answer_key_json: caseSpecificAnswerKey,
           form_fields: reconciliationForm?.content_json || [],
         },
       });
@@ -201,7 +225,10 @@ export default function ReconciliationControl() {
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar
         </Button>
         <div>
-          <h1 className="text-xl font-bold">{room?.title} — Controle</h1>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs bg-chart-3/10 text-chart-3 border-chart-3/30">Reconciliação</Badge>
+            <h1 className="text-xl font-bold">{room?.title} — Controle</h1>
+          </div>
           <p className="text-sm text-muted-foreground">PIN: {room?.access_code}</p>
         </div>
       </div>
@@ -247,6 +274,7 @@ export default function ReconciliationControl() {
           ) : (
             responses.map(resp => {
               const caseData = clinicalCases.find(c => c.id === resp.clinical_case_id);
+              const respAnswerKeyFields = getAnswerKeyFieldsForCase(resp.clinical_case_id);
               return (
                 <Card key={resp.id}>
                   <CardHeader>
@@ -269,21 +297,17 @@ export default function ReconciliationControl() {
                       </div>
                       {/* Answer key */}
                       <div>
-                        <h4 className="font-medium text-sm mb-3 flex items-center gap-1"><CheckCircle className="h-4 w-4" />Espelho de Respostas</h4>
-                        {answerKeyForm ? (
+                        <h4 className="font-medium text-sm mb-3 flex items-center gap-1"><CheckCircle className="h-4 w-4" />Espelho de Respostas{caseData ? ` — ${caseData.title}` : ""}</h4>
+                        {respAnswerKeyFields.length > 0 ? (
                           <div className="space-y-3">
-                            {answerKeyFields.map(field => {
-                              const keyAnswers = answerKeyForm.content_json;
-                              // Answer key stores expected answers in the same field structure
-                              return (
-                                <div key={field.id} className="space-y-1">
-                                  <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
-                                  <p className="text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800">
-                                    {field.options?.join(", ") || "Ver espelho"}
-                                  </p>
-                                </div>
-                              );
-                            })}
+                            {respAnswerKeyFields.map(field => (
+                              <div key={field.id} className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
+                                <p className="text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800">
+                                  {field.options?.join(", ") || "Ver espelho"}
+                                </p>
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <p className="text-sm text-muted-foreground">Nenhum espelho cadastrado.</p>
