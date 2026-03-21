@@ -1496,6 +1496,7 @@ const en: TranslationKeys = {
   sim_score_warning_each: "Each evaluation form must total 10 points.",
   sim_score_valid: "Score valid ✓",
   sim_score_average_info: "Student grade = average of both forms",
+  sim_score_average_label: "Average",
   sim_tab_analytics: "Results",
   sim_analytics_no_data: "No responses found yet.",
   sim_analytics_student: "Student",
