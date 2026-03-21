@@ -226,9 +226,9 @@ export default function SimulationEditor() {
 
     // If currently editing one of these forms, use the local formFields
     if (activeFormType === "professor_eval") {
-      profTotal = formFields.reduce((sum, f) => sum + (f.max_score || 0), 0);
+      profTotal = formFields.filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0);
     } else if (activeFormType === "observer_eval") {
-      obsTotal = formFields.reduce((sum, f) => sum + (f.max_score || 0), 0);
+      obsTotal = formFields.filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0);
     }
 
     const total = profTotal + obsTotal;
