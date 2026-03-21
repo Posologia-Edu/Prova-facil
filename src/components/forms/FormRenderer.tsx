@@ -137,29 +137,32 @@ export default function FormRenderer({
           </Select>
         )}
 
-        {field.type === "scale" && (
-          <div className="space-y-1">
-            {(field.scale_min_label || field.scale_max_label) && (
-              <div className="flex justify-between text-xs text-muted-foreground px-1">
-                <span>{field.scale_min_label || ""}</span>
-                <span>{field.scale_max_label || ""}</span>
+        {field.type === "scale" && (() => {
+          const scaleMax = field.scale_max || field.max_score || 10;
+          return (
+            <div className="space-y-1">
+              {(field.scale_min_label || field.scale_max_label) && (
+                <div className="flex justify-between text-xs text-muted-foreground px-1">
+                  <span>{field.scale_min_label || ""}</span>
+                  <span>{field.scale_max_label || ""}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-4">
+                <Slider
+                  value={[answers[field.id] || 0]}
+                  onValueChange={([v]) => onChange({ ...answers, [field.id]: v })}
+                  max={scaleMax}
+                  step={1}
+                  className="flex-1"
+                  disabled={readOnly}
+                />
+                <span className="font-mono text-sm w-12 text-right">
+                  {answers[field.id] || 0}/{scaleMax}
+                </span>
               </div>
-            )}
-            <div className="flex items-center gap-4">
-              <Slider
-                value={[answers[field.id] || 0]}
-                onValueChange={([v]) => onChange({ ...answers, [field.id]: v })}
-                max={field.max_score || 10}
-                step={1}
-                className="flex-1"
-                disabled={readOnly}
-              />
-              <span className="font-mono text-sm w-12 text-right">
-                {answers[field.id] || 0}/{field.max_score || 10}
-              </span>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {field.type === "rating" && (
           <div className="flex gap-1">

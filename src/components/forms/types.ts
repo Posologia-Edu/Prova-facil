@@ -24,6 +24,8 @@ export type FormField = {
   media_url?: string;
   /** Max value for rating (default 5) */
   rating_max?: number;
+  /** Scale range max (separate from points). For scale type, the slider goes 0..scale_max. Defaults to max_score for backward compat. */
+  scale_max?: number;
   /** Scale labels */
   scale_min_label?: string;
   scale_max_label?: string;
@@ -34,6 +36,30 @@ export type FormField = {
   /** Feedback shown when answer is incorrect */
   feedback_incorrect?: string;
 };
+
+/** Compute the proportional score for a field given the answer value.
+ * For scale/rating fields, the score is proportional to the position on the scale.
+ * E.g., scale 1-4, answer=2, max_score=1 → score = (2/4)*1 = 0.5
+ */
+export function computeFieldScore(field: FormField, answerValue: any): number {
+  if (!field.max_score || answerValue == null) return 0;
+  const value = Number(answerValue) || 0;
+
+  if (field.type === "scale") {
+    const scaleMax = field.scale_max || field.max_score || 10;
+    if (scaleMax === 0) return 0;
+    return (value / scaleMax) * field.max_score;
+  }
+
+  if (field.type === "rating") {
+    const ratingMax = field.rating_max || 5;
+    if (ratingMax === 0) return 0;
+    return (value / ratingMax) * field.max_score;
+  }
+
+  // For other field types, the raw value is the score (capped at max)
+  return Math.min(value, field.max_score);
+}
 
 export const FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   text: "Resposta curta",

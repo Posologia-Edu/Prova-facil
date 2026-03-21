@@ -401,7 +401,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
 
             {/* Scale settings */}
             {field.type === "scale" && isSelected && (
-              <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-3 text-sm flex-wrap">
                 <div className="flex items-center gap-1.5">
                   <span className="text-muted-foreground">Mín:</span>
                   <Input value={field.scale_min_label || ""} onChange={(e) => updateField(globalIdx, { scale_min_label: e.target.value })} className="w-24 h-8 text-xs" placeholder="Rótulo" />
@@ -411,8 +411,8 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
                   <Input value={field.scale_max_label || ""} onChange={(e) => updateField(globalIdx, { scale_max_label: e.target.value })} className="w-24 h-8 text-xs" placeholder="Rótulo" />
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-muted-foreground">Até:</span>
-                  <Input type="number" value={field.max_score || 10} onChange={(e) => updateField(globalIdx, { max_score: Number(e.target.value) })} className="w-16 h-8 text-xs" min={2} max={10} />
+                  <span className="text-muted-foreground">Escala até:</span>
+                  <Input type="number" value={field.scale_max || field.max_score || 10} onChange={(e) => updateField(globalIdx, { scale_max: Number(e.target.value) })} className="w-16 h-8 text-xs" min={2} max={10} />
                 </div>
               </div>
             )}
