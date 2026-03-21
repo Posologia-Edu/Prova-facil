@@ -71,6 +71,8 @@ export default function DocumentationEditor() {
   const [formTitle, setFormTitle] = useState("");
   const [formType, setFormType] = useState<string>("referral");
   const [formFields, setFormFields] = useState<FormField[]>([]);
+  const lastSavedSnapshotRef = useRef("");
+  const skipNextAutoSaveRef = useRef(false);
 
   // Medication summary builder state
   const [medTitle, setMedTitle] = useState("");
