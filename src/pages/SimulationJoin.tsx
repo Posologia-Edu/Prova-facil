@@ -111,6 +111,8 @@ export default function SimulationJoin() {
 
         sessionStorage.setItem("vp_email", normalizedEmail);
         sessionStorage.setItem("vp_student_name", studentInClass.student_name || "");
+        sessionStorage.removeItem("vp_group_emails");
+        sessionStorage.removeItem("vp_group_names");
         navigate(`/virtual-patients/room/${vpRoom.id}`);
         return;
       }

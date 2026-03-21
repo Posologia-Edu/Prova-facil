@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Table,
   TableBody,
@@ -107,6 +108,9 @@ export default function ClassesPage() {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [classVPs, setClassVPs] = useState<ClassVirtualPatient[]>([]);
   const [linkVPOpen, setLinkVPOpen] = useState(false);
+
+  // Assessment mode: "exam" or "vp"
+  const [assessmentMode, setAssessmentMode] = useState<"exam" | "vp" | null>(null);
 
   // Manage students dialog
   const [manageStudentsOpen, setManageStudentsOpen] = useState(false);
@@ -260,7 +264,18 @@ export default function ClassesPage() {
 
     setStudents(studentsRes.data || []);
     setClassExams(examsRes.data || []);
-    setClassVPs((vpsRes.data as ClassVirtualPatient[]) || []);
+    const vps = (vpsRes.data as ClassVirtualPatient[]) || [];
+    setClassVPs(vps);
+
+    // Determine mode based on existing data
+    if (vps.length > 0) {
+      setAssessmentMode("vp");
+    } else if ((examsRes.data || []).length > 0) {
+      setAssessmentMode("exam");
+    } else {
+      setAssessmentMode(null);
+    }
+
     setStudentsLoading(false);
   };
 
@@ -298,7 +313,6 @@ export default function ClassesPage() {
 
     const lines = batchText.trim().split("\n").filter(l => l.trim());
     const inserts = lines.map(line => {
-      // Support: "Name; email; registration" or "Name\temail\tregistration" or just "Name"
       const parts = line.includes(";") ? line.split(";") : line.split("\t");
       return {
         class_id: managingClassId!,
@@ -359,6 +373,22 @@ export default function ClassesPage() {
   };
 
   const getVPInfo = (patientId: string) => VP_CATALOG.find(p => p.id === patientId);
+
+  // Handle assessment mode change
+  const handleAssessmentModeChange = async (mode: "exam" | "vp") => {
+    if (!selectedClass) return;
+
+    if (mode === "vp" && classExams.length > 0) {
+      toast.error("Remova as provas vinculadas antes de trocar para Paciente Virtual.");
+      return;
+    }
+    if (mode === "exam" && classVPs.length > 0) {
+      toast.error("Remova os pacientes virtuais vinculados antes de trocar para Prova Online.");
+      return;
+    }
+
+    setAssessmentMode(mode);
+  };
 
   // Shared manage students dialog content
   const manageStudentsContent = (
@@ -509,94 +539,131 @@ export default function ClassesPage() {
 
         <Separator />
 
-        {/* Provas vinculadas */}
+        {/* Assessment Mode Selector */}
         <div>
-          <h3 className="text-sm font-semibold text-primary mb-3">Provas Vinculadas ({classExams.length})</h3>
-          {classExams.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic py-4">Nenhuma prova vinculada a esta turma.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {classExams.map((exam) => (
-                <Card key={exam.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/exams/${exam.id}`)}>
-                  <div className="flex items-start gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold">{exam.title}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(exam.created_at).toLocaleDateString("pt-BR")}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+          <h3 className="text-sm font-semibold text-primary mb-3">Tipo de Avaliação</h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            Escolha o tipo de avaliação para esta turma. Uma turma pode ter <strong>provas online</strong> ou <strong>pacientes virtuais</strong>, mas não ambos ao mesmo tempo.
+          </p>
+          <RadioGroup
+            value={assessmentMode || ""}
+            onValueChange={(v) => handleAssessmentModeChange(v as "exam" | "vp")}
+            className="flex gap-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="exam" id="mode-exam" />
+              <Label htmlFor="mode-exam" className="flex items-center gap-1.5 cursor-pointer">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Prova Online
+              </Label>
             </div>
-          )}
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="vp" id="mode-vp" />
+              <Label htmlFor="mode-vp" className="flex items-center gap-1.5 cursor-pointer">
+                <HeartPulse className="h-4 w-4 text-muted-foreground" />
+                Paciente Virtual
+              </Label>
+            </div>
+          </RadioGroup>
         </div>
 
         <Separator />
 
-        {/* Pacientes Virtuais vinculados */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-primary flex items-center gap-1.5">
-              <HeartPulse className="h-4 w-4" /> Pacientes Virtuais ({classVPs.length})
-            </h3>
-            <Button variant="outline" size="sm" onClick={() => setLinkVPOpen(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" /> Vincular Paciente
-            </Button>
-          </div>
-          {classVPs.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic py-4">Nenhum paciente virtual vinculado a esta turma.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {classVPs.map((vp) => {
-                const info = getVPInfo(vp.patient_id);
-                return (
-                  <Card key={vp.id} className="p-4">
-                    <div className="flex items-start justify-between">
+        {/* Provas vinculadas - only shown when exam mode */}
+        {(assessmentMode === "exam" || (!assessmentMode && classExams.length > 0)) && (
+          <>
+            <div>
+              <h3 className="text-sm font-semibold text-primary mb-3">Provas Vinculadas ({classExams.length})</h3>
+              {classExams.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic py-4">Nenhuma prova vinculada a esta turma. Vincule uma prova no editor de provas selecionando esta turma.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {classExams.map((exam) => (
+                    <Card key={exam.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/exams/${exam.id}`)}>
                       <div className="flex items-start gap-2">
-                        <HeartPulse className="h-4 w-4 text-primary mt-0.5" />
+                        <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
                         <div>
-                          <p className="text-sm font-semibold">{info?.name || vp.patient_id}</p>
-                          <p className="text-xs text-muted-foreground">{info?.desc}</p>
-                          <Badge variant="outline" className="text-[10px] mt-1">{info?.module}</Badge>
+                          <p className="text-sm font-semibold">{exam.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(exam.created_at).toLocaleDateString("pt-BR")}
+                          </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Badge variant={vp.status === "active" ? "default" : "secondary"} className="text-[10px]">
-                          {vp.status === "active" ? "Ativo" : "Rascunho"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <KeyRound className="h-3 w-3 text-muted-foreground" />
-                        <span className="font-mono text-xs font-bold tracking-widest uppercase">{vp.access_code}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
-                          navigator.clipboard.writeText(vp.access_code);
-                          toast.success("PIN copiado!");
-                        }}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleVPStatus(vp)} title={vp.status === "active" ? "Desativar" : "Ativar"}>
-                          {vp.status === "active" ? <ToggleRight className="h-4 w-4 text-green-600" /> : <ToggleLeft className="h-4 w-4 text-muted-foreground" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/virtual-patients/analytics`)} title="Ver Resultados">
-                          <BarChart3 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeVP(vp.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+            <Separator />
+          </>
+        )}
+
+        {/* Pacientes Virtuais vinculados - only shown when vp mode */}
+        {(assessmentMode === "vp" || (!assessmentMode && classVPs.length > 0)) && (
+          <>
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                  <HeartPulse className="h-4 w-4" /> Pacientes Virtuais ({classVPs.length})
+                </h3>
+                <Button variant="outline" size="sm" onClick={() => setLinkVPOpen(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Vincular Paciente
+                </Button>
+              </div>
+              {classVPs.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic py-4">Nenhum paciente virtual vinculado a esta turma.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {classVPs.map((vp) => {
+                    const info = getVPInfo(vp.patient_id);
+                    return (
+                      <Card key={vp.id} className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-2">
+                            <HeartPulse className="h-4 w-4 text-primary mt-0.5" />
+                            <div>
+                              <p className="text-sm font-semibold">{info?.name || vp.patient_id}</p>
+                              <p className="text-xs text-muted-foreground">{info?.desc}</p>
+                              <Badge variant="outline" className="text-[10px] mt-1">{info?.module}</Badge>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Badge variant={vp.status === "active" ? "default" : "secondary"} className="text-[10px]">
+                              {vp.status === "active" ? "Ativo" : "Rascunho"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <KeyRound className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-mono text-xs font-bold tracking-widest uppercase">{vp.access_code}</span>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                              navigator.clipboard.writeText(vp.access_code);
+                              toast.success("PIN copiado!");
+                            }}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleVPStatus(vp)} title={vp.status === "active" ? "Desativar" : "Ativar"}>
+                              {vp.status === "active" ? <ToggleRight className="h-4 w-4 text-green-600" /> : <ToggleLeft className="h-4 w-4 text-muted-foreground" />}
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/virtual-patients/analytics`)} title="Ver Resultados">
+                              <BarChart3 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeVP(vp.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Link VP Dialog */}
         <Dialog open={linkVPOpen} onOpenChange={setLinkVPOpen}>

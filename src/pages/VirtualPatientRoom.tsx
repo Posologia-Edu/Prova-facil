@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -50,6 +50,10 @@ export default function VirtualPatientRoom() {
   const [patientId, setPatientId] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
   const [studentName, setStudentName] = useState("");
+  const [isGroupSession, setIsGroupSession] = useState(false);
+  const [groupEmails, setGroupEmails] = useState<string[]>([]);
+  const [groupNames, setGroupNames] = useState<string[]>([]);
+  const [groupSessionIds, setGroupSessionIds] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const patient = PATIENT_NAMES[patientId] || null;
@@ -69,8 +73,18 @@ export default function VirtualPatientRoom() {
     // Get student info from sessionStorage
     const email = sessionStorage.getItem("vp_email") || "";
     const name = sessionStorage.getItem("vp_student_name") || "";
+    const groupEmailsRaw = sessionStorage.getItem("vp_group_emails");
+    const groupNamesRaw = sessionStorage.getItem("vp_group_names");
+
     setStudentEmail(email);
     setStudentName(name);
+
+    const parsedGroupEmails: string[] = groupEmailsRaw ? JSON.parse(groupEmailsRaw) : [];
+    const parsedGroupNames: string[] = groupNamesRaw ? JSON.parse(groupNamesRaw) : [];
+    const isGroup = parsedGroupEmails.length > 1;
+    setIsGroupSession(isGroup);
+    setGroupEmails(parsedGroupEmails);
+    setGroupNames(parsedGroupNames);
 
     if (!email) {
       toast.error("Sessão expirada. Faça login novamente.");
@@ -93,52 +107,116 @@ export default function VirtualPatientRoom() {
 
     setPatientId(cvp.patient_id);
 
-    // Find or create session for this student + class_virtual_patient
-    const { data: existingSession } = await supabase
-      .from("virtual_patient_sessions")
-      .select("id, current_encounter, status")
-      .eq("class_virtual_patient_id", cvpId)
-      .eq("student_email", email.toLowerCase())
-      .maybeSingle();
+    if (isGroup) {
+      // Group mode: create/find sessions for ALL group members, sharing the same chat
+      // Use the first email's session as the "primary" session for messages
+      const sessionIds: string[] = [];
+      let primarySessionId = "";
+      let currentEncounter = 1;
+      let isCompleted = false;
 
-    let sid: string;
+      for (let i = 0; i < parsedGroupEmails.length; i++) {
+        const memberEmail = parsedGroupEmails[i];
+        const memberName = parsedGroupNames[i] || "";
 
-    if (existingSession) {
-      sid = existingSession.id;
-      setEncounter(existingSession.current_encounter);
-      if (existingSession.status === "completed") setSessionCompleted(true);
-    } else {
-      const { data: newSession, error: insertError } = await supabase
-        .from("virtual_patient_sessions")
-        .insert({
-          patient_id: cvp.patient_id,
-          module: cvp.patient_id.startsWith("inflammation") ? "inflammation" : "pain",
-          class_virtual_patient_id: cvpId,
-          student_email: email.toLowerCase(),
-          student_name: name,
-        })
-        .select("id")
-        .single();
+        const { data: existingSession } = await supabase
+          .from("virtual_patient_sessions")
+          .select("id, current_encounter, status")
+          .eq("class_virtual_patient_id", cvpId)
+          .eq("student_email", memberEmail)
+          .maybeSingle();
 
-      if (insertError || !newSession) {
-        toast.error("Erro ao criar sessão.");
-        console.error(insertError);
-        setInitialLoading(false);
-        return;
+        if (existingSession) {
+          sessionIds.push(existingSession.id);
+          if (i === 0) {
+            primarySessionId = existingSession.id;
+            currentEncounter = existingSession.current_encounter;
+            if (existingSession.status === "completed") isCompleted = true;
+          }
+        } else {
+          const { data: newSession, error: insertError } = await supabase
+            .from("virtual_patient_sessions")
+            .insert({
+              patient_id: cvp.patient_id,
+              module: cvp.patient_id.startsWith("inflammation") ? "inflammation" : "pain",
+              class_virtual_patient_id: cvpId,
+              student_email: memberEmail,
+              student_name: memberName,
+            })
+            .select("id")
+            .single();
+
+          if (insertError || !newSession) {
+            console.error("Error creating session for", memberEmail, insertError);
+            continue;
+          }
+          sessionIds.push(newSession.id);
+          if (i === 0) primarySessionId = newSession.id;
+        }
       }
-      sid = newSession.id;
+
+      setGroupSessionIds(sessionIds);
+      setSessionId(primarySessionId);
+      setEncounter(currentEncounter);
+      if (isCompleted) setSessionCompleted(true);
+
+      // Load messages from primary session
+      if (primarySessionId) {
+        const { data: msgs } = await supabase
+          .from("virtual_patient_messages")
+          .select("role, content, encounter")
+          .eq("session_id", primarySessionId)
+          .order("created_at", { ascending: true });
+        if (msgs) setMessages(msgs as Message[]);
+      }
+    } else {
+      // Individual mode (original logic)
+      const { data: existingSession } = await supabase
+        .from("virtual_patient_sessions")
+        .select("id, current_encounter, status")
+        .eq("class_virtual_patient_id", cvpId)
+        .eq("student_email", email.toLowerCase())
+        .maybeSingle();
+
+      let sid: string;
+
+      if (existingSession) {
+        sid = existingSession.id;
+        setEncounter(existingSession.current_encounter);
+        if (existingSession.status === "completed") setSessionCompleted(true);
+      } else {
+        const { data: newSession, error: insertError } = await supabase
+          .from("virtual_patient_sessions")
+          .insert({
+            patient_id: cvp.patient_id,
+            module: cvp.patient_id.startsWith("inflammation") ? "inflammation" : "pain",
+            class_virtual_patient_id: cvpId,
+            student_email: email.toLowerCase(),
+            student_name: name,
+          })
+          .select("id")
+          .single();
+
+        if (insertError || !newSession) {
+          toast.error("Erro ao criar sessão.");
+          console.error(insertError);
+          setInitialLoading(false);
+          return;
+        }
+        sid = newSession.id;
+      }
+
+      setSessionId(sid);
+
+      const { data: msgs } = await supabase
+        .from("virtual_patient_messages")
+        .select("role, content, encounter")
+        .eq("session_id", sid)
+        .order("created_at", { ascending: true });
+
+      if (msgs) setMessages(msgs as Message[]);
     }
 
-    setSessionId(sid);
-
-    // Load messages
-    const { data: msgs } = await supabase
-      .from("virtual_patient_messages")
-      .select("role, content, encounter")
-      .eq("session_id", sid)
-      .order("created_at", { ascending: true });
-
-    if (msgs) setMessages(msgs as Message[]);
     setInitialLoading(false);
   };
 
@@ -150,12 +228,26 @@ export default function VirtualPatientRoom() {
     setInput("");
     setLoading(true);
 
+    // Save message to primary session
     await supabase.from("virtual_patient_messages").insert({
       session_id: sessionId,
       encounter,
       role: "user",
       content: userMsg.content,
     });
+
+    // For group sessions, also save to all other sessions
+    if (isGroupSession && groupSessionIds.length > 1) {
+      const otherIds = groupSessionIds.filter(id => id !== sessionId);
+      await Promise.all(otherIds.map(id =>
+        supabase.from("virtual_patient_messages").insert({
+          session_id: id,
+          encounter,
+          role: "user",
+          content: userMsg.content,
+        })
+      ));
+    }
 
     try {
       const aiMessages = messages.concat(userMsg).map((m) => ({ role: m.role, content: m.content }));
@@ -170,12 +262,26 @@ export default function VirtualPatientRoom() {
       const assistantMsg: Message = { role: "assistant", content: reply, encounter };
       setMessages((prev) => [...prev, assistantMsg]);
 
+      // Save assistant message to primary session
       await supabase.from("virtual_patient_messages").insert({
         session_id: sessionId,
         encounter,
         role: "assistant",
         content: reply,
       });
+
+      // For group sessions, also save to all other sessions
+      if (isGroupSession && groupSessionIds.length > 1) {
+        const otherIds = groupSessionIds.filter(id => id !== sessionId);
+        await Promise.all(otherIds.map(id =>
+          supabase.from("virtual_patient_messages").insert({
+            session_id: id,
+            encounter,
+            role: "assistant",
+            content: reply,
+          })
+        ));
+      }
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Erro ao comunicar com o paciente virtual.");
@@ -189,10 +295,11 @@ export default function VirtualPatientRoom() {
     const next = encounter + 1;
     setEncounter(next);
 
-    await supabase
-      .from("virtual_patient_sessions")
-      .update({ current_encounter: next })
-      .eq("id", sessionId);
+    // Update all sessions (group or individual)
+    const allIds = isGroupSession ? groupSessionIds : [sessionId];
+    await Promise.all(allIds.map(id =>
+      supabase.from("virtual_patient_sessions").update({ current_encounter: next }).eq("id", id)
+    ));
 
     const systemNote: Message = {
       role: "assistant",
@@ -201,12 +308,15 @@ export default function VirtualPatientRoom() {
     };
     setMessages((prev) => [...prev, systemNote]);
 
-    await supabase.from("virtual_patient_messages").insert({
-      session_id: sessionId,
-      encounter: next,
-      role: "assistant",
-      content: systemNote.content,
-    });
+    // Save system note to all sessions
+    await Promise.all(allIds.map(id =>
+      supabase.from("virtual_patient_messages").insert({
+        session_id: id,
+        encounter: next,
+        role: "assistant",
+        content: systemNote.content,
+      })
+    ));
 
     toast.success(`Avançou para o ${next}º encontro`);
   };
@@ -222,11 +332,15 @@ export default function VirtualPatientRoom() {
     setShowMAI(false);
     setSessionCompleted(true);
 
-    // Trigger grading
+    // Trigger grading for ALL sessions (group or individual)
+    const allIds = isGroupSession ? groupSessionIds : [sessionId];
+
     try {
-      await supabase.functions.invoke("grade-virtual-patient", {
-        body: { session_id: sessionId, class_virtual_patient_id: cvpId },
-      });
+      await Promise.all(allIds.map(id =>
+        supabase.functions.invoke("grade-virtual-patient", {
+          body: { session_id: id, class_virtual_patient_id: cvpId },
+        })
+      ));
     } catch (err) {
       console.warn("Auto-grading failed:", err);
     }
@@ -264,9 +378,16 @@ export default function VirtualPatientRoom() {
               <Badge variant="outline" className="text-xs">{patient.module}</Badge>
               <Badge variant="secondary" className="text-xs">{ENCOUNTER_LABELS[encounter - 1]}</Badge>
             </div>
-            {studentName && (
+            {isGroupSession ? (
+              <div className="flex items-center gap-1.5 mt-1">
+                <Users className="h-3 w-3 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">
+                  Grupo: {groupNames.join(", ")}
+                </p>
+              </div>
+            ) : studentName ? (
               <p className="text-xs text-muted-foreground mt-1">Estudante: {studentName}</p>
-            )}
+            ) : null}
           </div>
         </div>
 
