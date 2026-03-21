@@ -520,54 +520,16 @@ export default function ReconciliationEditor() {
                 </div>
               </div>
 
-              {formFields.map((field, idx) => (
-                <Card key={field.id} className="p-3">
-                  <div className="grid gap-2">
-                    <div className="flex gap-2">
-                      <Input
-                        value={field.label}
-                        onChange={e => updateField(idx, { label: e.target.value })}
-                        placeholder="Pergunta / Item"
-                        className="flex-1"
-                      />
-                      <Select value={field.type} onValueChange={(v: any) => updateField(idx, { type: v })}>
-                        <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="text">Texto curto</SelectItem>
-                          <SelectItem value="textarea">Texto longo</SelectItem>
-                          <SelectItem value="radio">Múltipla escolha</SelectItem>
-                          <SelectItem value="checkbox">Checkbox</SelectItem>
-                          <SelectItem value="scale">Escala</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="number"
-                        value={field.max_score || 0}
-                        onChange={e => updateField(idx, { max_score: Number(e.target.value) })}
-                        className="w-20"
-                        placeholder="Pts"
-                      />
-                      <Button variant="ghost" size="sm" onClick={() => removeField(idx)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    {(field.type === "radio" || field.type === "checkbox") && (
-                      <Input
-                        value={field.options?.join(", ") || ""}
-                        onChange={e => updateField(idx, { options: e.target.value.split(",").map(o => o.trim()) })}
-                        placeholder="Opções separadas por vírgula"
-                      />
-                    )}
-                  </div>
-                </Card>
-              ))}
+              <FormBuilder
+                fields={formFields}
+                onChange={setFormFields}
+                showScores={true}
+                scoreLabel="Pts"
+              />
 
               <div className="flex items-center justify-between">
-                <Button variant="outline" onClick={addField}><Plus className="h-4 w-4 mr-1" />Adicionar Campo</Button>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">Total: {totalMaxScore} pts</span>
-                  <Button onClick={saveForm} disabled={!formTitle.trim()}>Salvar Formulário</Button>
-                </div>
+                <span className="text-sm text-muted-foreground">Total: {totalMaxScore} pts</span>
+                <Button onClick={saveForm} disabled={!formTitle.trim()}>Salvar Formulário</Button>
               </div>
               {editingFormId && (
                 <Button variant="ghost" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); }}>
