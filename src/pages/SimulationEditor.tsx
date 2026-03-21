@@ -705,11 +705,6 @@ export default function SimulationEditor() {
                     </span>
                   </div>
                 </div>
-                {scoreValidation.total > 0 && scoreValidation.total !== 10 && (
-                  <p className="text-xs text-destructive mt-1">
-                    {scoreValidation.total < 10 ? t("sim_score_warning_low") : t("sim_score_warning_high")}
-                  </p>
-                )}
               </CardContent>
             </Card>
           )}
