@@ -274,6 +274,7 @@ export default function ReconciliationControl() {
           ) : (
             responses.map(resp => {
               const caseData = clinicalCases.find(c => c.id === resp.clinical_case_id);
+              const respAnswerKeyFields = getAnswerKeyFieldsForCase(resp.clinical_case_id);
               return (
                 <Card key={resp.id}>
                   <CardHeader>
@@ -296,18 +297,15 @@ export default function ReconciliationControl() {
                       </div>
                       {/* Answer key */}
                       <div>
-                        <h4 className="font-medium text-sm mb-3 flex items-center gap-1"><CheckCircle className="h-4 w-4" />Espelho de Respostas</h4>
-                        {answerKeyForm ? (
+                        <h4 className="font-medium text-sm mb-3 flex items-center gap-1"><CheckCircle className="h-4 w-4" />Espelho de Respostas{caseData ? ` — ${caseData.title}` : ""}</h4>
+                        {respAnswerKeyFields.length > 0 ? (
                           <div className="space-y-3">
-                            {answerKeyFields.map(field => {
-                              const keyAnswers = answerKeyForm.content_json;
-                              // Answer key stores expected answers in the same field structure
-                              return (
-                                <div key={field.id} className="space-y-1">
-                                  <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
-                                  <p className="text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800">
-                                    {field.options?.join(", ") || "Ver espelho"}
-                                  </p>
+                            {respAnswerKeyFields.map(field => (
+                              <div key={field.id} className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
+                                <p className="text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800">
+                                  {field.options?.join(", ") || "Ver espelho"}
+                                </p>
                                 </div>
                               );
                             })}
