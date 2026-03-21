@@ -16,14 +16,7 @@ import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSq
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 
-type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "radio" | "checkbox" | "scale";
-  options?: string[];
-  max_score?: number;
-  required?: boolean;
-};
+// FormField type imported from @/components/forms/types
 
 export default function ReconciliationEditor() {
   const { roomId } = useParams<{ roomId: string }>();
