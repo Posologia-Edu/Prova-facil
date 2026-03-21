@@ -7,7 +7,8 @@ import {
   Users, Calendar, Shield, Zap, HelpCircle, Settings, Upload,
   Download, Eye, Shuffle, LayoutTemplate, Globe, CreditCard,
   MonitorPlay, CheckCircle, Search, Stethoscope, Store, Bot,
-  Code, Server, Database, Plug, Lock, CloudCog, HardDrive, Radio
+  Code, Server, Database, Plug, Lock, CloudCog, HardDrive, Radio,
+  HeartPulse, ClipboardList, Pill, FileCheck
 } from "lucide-react";
 import {
   Accordion,
