@@ -454,9 +454,9 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
   };
 
   return (
-    <div className="relative flex gap-3" ref={containerRef}>
+    <div className="relative pr-14" ref={containerRef}>
       {/* Main form content */}
-      <div className="flex-1 space-y-4">
+      <div className="space-y-4">
         {sections.map((section, sectionIdx) => {
           const isCollapsed = section.header ? collapsedSections.has(section.header.id) : false;
           const sectionGlobalStart = section.header ? getFieldGlobalIndex(section.header) : (section.fields.length > 0 ? getFieldGlobalIndex(section.fields[0]) : 0);
