@@ -997,6 +997,7 @@ const pt: TranslationKeys = {
   sim_score_warning_each: "Cada formulário de avaliação deve totalizar 10 pontos.",
   sim_score_valid: "Pontuação válida ✓",
   sim_score_average_info: "Nota do aluno = média dos dois formulários",
+  sim_score_average_label: "Média",
   sim_tab_analytics: "Resultados",
   sim_analytics_no_data: "Nenhuma resposta encontrada ainda.",
   sim_analytics_student: "Aluno",
