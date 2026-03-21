@@ -661,11 +661,11 @@ export default function Simulations() {
                       <span className="font-mono text-xs">PIN: {room.access_code}</span>
                     </div>
                     <div className="flex gap-2 flex-wrap">
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/documentation/${room.id}/edit`)}>
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/documentation/editor/${room.id}`)}>
                         <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
                       </Button>
                       {room.status === "active" && (
-                        <Button size="sm" onClick={() => navigate(`/simulations/documentation/${room.id}/control`)}>
+                        <Button size="sm" onClick={() => navigate(`/simulations/documentation/control/${room.id}`)}>
                           <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
                         </Button>
                       )}
