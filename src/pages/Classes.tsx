@@ -397,37 +397,16 @@ export default function ClassesPage() {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return;
 
-    const { data: publications, error: publicationsError } = await supabase
-      .from("exam_publications")
-      .select("exam_id")
-      .eq("user_id", user.user.id);
-
-    if (publicationsError) {
-      toast.error("Erro ao carregar provas online.");
-      return;
-    }
-
-    const publishedExamIds = Array.from(
-      new Set((publications || []).map((publication) => publication.exam_id))
-    );
-
-    if (publishedExamIds.length === 0) {
-      setAvailableExams([]);
-      setLinkExamOpen(true);
-      return;
-    }
-
     const { data, error } = await supabase
       .from("exams")
       .select("id, title, status, created_at")
       .eq("user_id", user.user.id)
-      .in("id", publishedExamIds)
       .is("deleted_at", null)
       .is("class_id", null)
       .order("created_at", { ascending: false });
 
     if (error) {
-      toast.error("Erro ao carregar provas online.");
+      toast.error("Erro ao carregar provas.");
       return;
     }
 
