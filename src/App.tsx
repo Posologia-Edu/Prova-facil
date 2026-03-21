@@ -58,6 +58,7 @@ import SimulationAggregator from "./pages/SimulationAggregator";
 import VirtualPatients from "./pages/VirtualPatients";
 import VirtualPatientChat from "./pages/VirtualPatientChat";
 import VirtualPatientRoom from "./pages/VirtualPatientRoom";
+import VPAnalytics from "./pages/VPAnalytics";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
 import PublicContact from "./pages/PublicContact";
