@@ -621,21 +621,33 @@ export default function ClassesPage() {
         {(assessmentMode === "exam" || (!assessmentMode && classExams.length > 0)) && (
           <>
             <div>
-              <h3 className="text-sm font-semibold text-primary mb-3">Provas Vinculadas ({classExams.length})</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                  <FileText className="h-4 w-4" /> Provas Vinculadas ({classExams.length})
+                </h3>
+                <Button variant="outline" size="sm" onClick={openLinkExamDialog}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Vincular Prova Online
+                </Button>
+              </div>
               {classExams.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic py-4">Nenhuma prova vinculada a esta turma. Vincule uma prova no editor de provas selecionando esta turma.</p>
+                <p className="text-sm text-muted-foreground italic py-4">Nenhuma prova vinculada a esta turma.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {classExams.map((exam) => (
-                    <Card key={exam.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/exams/${exam.id}`)}>
-                      <div className="flex items-start gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm font-semibold">{exam.title}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(exam.created_at).toLocaleDateString("pt-BR")}
-                          </p>
+                    <Card key={exam.id} className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-2 cursor-pointer" onClick={() => navigate(`/exams/${exam.id}`)}>
+                          <FileText className="h-4 w-4 text-primary mt-0.5" />
+                          <div>
+                            <p className="text-sm font-semibold">{exam.title}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(exam.created_at).toLocaleDateString("pt-BR")}
+                            </p>
+                          </div>
                         </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => unlinkExam(exam.id)} title="Desvincular prova">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </Card>
                   ))}
