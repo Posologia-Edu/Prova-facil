@@ -464,11 +464,14 @@ export default function SimulationEditor() {
       return;
     }
 
-    // Validate scores before starting
-    if (scoreValidation.total !== 10 && scoreValidation.total > 0) {
+    // Validate scores before starting - each form must total 10
+    if (!scoreValidation.allValid) {
+      const msgs: string[] = [];
+      if (!scoreValidation.profValid) msgs.push(`${t("sim_form_professor_eval")}: ${scoreValidation.profTotal}/10`);
+      if (!scoreValidation.obsValid) msgs.push(`${t("sim_form_observer_eval")}: ${scoreValidation.obsTotal}/10`);
       toast({
         title: t("sim_score_total"),
-        description: scoreValidation.total < 10 ? t("sim_score_warning_low") : t("sim_score_warning_high"),
+        description: t("sim_score_warning_each") + " " + msgs.join(", "),
         variant: "destructive",
       });
       return;
