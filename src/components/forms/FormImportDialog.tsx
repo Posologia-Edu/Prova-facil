@@ -174,24 +174,13 @@ export default function FormImportDialog({ open, onOpenChange, onImport, formTab
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <Button variant="ghost" size="sm" onClick={() => setSelectedFormId(null)}>
                 ← Voltar
               </Button>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={selectAll} className="text-xs">
-                  Selecionar todas
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleImport}
-                  disabled={selectedFieldIds.size === 0}
-                  className="text-xs"
-                >
-                  <Import className="h-3 w-3 mr-1" />
-                  Importar ({selectedFieldIds.size})
-                </Button>
-              </div>
+              <Button variant="outline" size="sm" onClick={selectAll} className="text-xs">
+                Selecionar todas
+              </Button>
             </div>
 
             <div className="bg-muted/30 rounded-lg p-3">
@@ -199,7 +188,7 @@ export default function FormImportDialog({ open, onOpenChange, onImport, formTab
               <p className="text-xs text-muted-foreground">{selectedForm.source} · {selectedForm.form_type}</p>
             </div>
 
-            <ScrollArea className="h-[350px]">
+            <ScrollArea className="h-[300px]">
               <div className="space-y-1.5">
                 {selectedForm.fields.map((field) => {
                   if (field.type === "section_header" || field.type === "image_block" || field.type === "video_block") {
@@ -229,6 +218,16 @@ export default function FormImportDialog({ open, onOpenChange, onImport, formTab
                 })}
               </div>
             </ScrollArea>
+
+            <div className="border-t pt-3 flex justify-end">
+              <Button
+                onClick={handleImport}
+                disabled={selectedFieldIds.size === 0}
+              >
+                <Import className="h-4 w-4 mr-2" />
+                Importar {selectedFieldIds.size > 0 ? `(${selectedFieldIds.size})` : ""} perguntas selecionadas
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
