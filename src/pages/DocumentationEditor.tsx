@@ -169,17 +169,7 @@ export default function DocumentationEditor() {
     refetchForms();
   };
 
-  const addField = () => {
-    setFormFields([...formFields, { id: crypto.randomUUID(), label: "", type: "textarea", max_score: 1, required: true }]);
-  };
-
-  const updateField = (idx: number, updates: Partial<FormField>) => {
-    setFormFields(formFields.map((f, i) => i === idx ? { ...f, ...updates } : f));
-  };
-
-  const removeField = (idx: number) => {
-    setFormFields(formFields.filter((_, i) => i !== idx));
-  };
+  // Field management delegated to FormBuilder
 
   // Medication summary form
   const saveMedForm = async () => {
