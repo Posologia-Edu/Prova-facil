@@ -223,6 +223,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
       return (
         <div
           key={field.id}
+          ref={(el) => setFieldRef(field.id, el)}
           className={`group border rounded-lg p-4 bg-card transition-all cursor-pointer ${isSelected ? "ring-2 ring-primary shadow-md" : "hover:shadow-sm"}`}
           onClick={() => setSelectedFieldId(field.id)}
         >
