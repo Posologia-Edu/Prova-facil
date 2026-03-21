@@ -87,6 +87,26 @@ interface ExamItem {
   created_at: string;
 }
 
+interface ClassVirtualPatient {
+  id: string;
+  patient_id: string;
+  access_code: string;
+  status: string;
+}
+
+const VP_CATALOG = [
+  { id: "pain_helena", name: "Dona Helena, 67 anos", module: "Dor", desc: "Dor neuropática pós-herpética" },
+  { id: "pain_luciana", name: "Luciana, 42 anos", module: "Dor", desc: "Fibromialgia" },
+  { id: "pain_rogerio", name: "Rogério, 58 anos", module: "Dor", desc: "Lombalgia crônica" },
+  { id: "pain_pedro", name: "Pedro, 65 anos", module: "Dor", desc: "Dor oncológica" },
+  { id: "pain_ana", name: "Ana, 36 anos", module: "Dor", desc: "Cefaleia por uso excessivo" },
+  { id: "inflammation_maria", name: "Dona Maria, 72 anos", module: "Inflamação", desc: "Osteoartrite de joelho" },
+  { id: "inflammation_antonio", name: "Seu Antônio, 66 anos", module: "Inflamação", desc: "Osteoartrite de quadril" },
+  { id: "inflammation_renata", name: "Renata, 39 anos", module: "Inflamação", desc: "Artrite reumatoide inicial" },
+  { id: "inflammation_wilson", name: "Seu Wilson, 57 anos", module: "Inflamação", desc: "AR refratária" },
+  { id: "inflammation_jose", name: "José, 57 anos", module: "Inflamação", desc: "Complicações do corticoide" },
+];
+
 export default function ClassesPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
