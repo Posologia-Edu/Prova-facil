@@ -525,7 +525,15 @@ export default function Simulations() {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {soapRooms.map((room) => (
+              {soapRooms.map((room) => {
+                const soapForms = soapFormsByRoom?.[room.id] || [];
+                const peerForm = soapForms.find((f: any) => f.form_type === "peer_evaluation");
+                let peerTotal = 0;
+                if (peerForm && Array.isArray(peerForm.content_json)) {
+                  (peerForm.content_json as any[]).forEach((f: any) => { if (f.type !== "section_header") peerTotal += (f.max_score || 0); });
+                }
+                const peerValid = peerTotal === 10;
+                return (
                 <Card key={room.id} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
@@ -539,9 +547,22 @@ export default function Simulations() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                       <span className="font-mono text-xs">PIN: {room.access_code}</span>
                     </div>
+                    {/* Scoring info */}
+                    {peerForm && (
+                      <div className={`p-2 rounded border mb-3 text-sm ${peerValid ? "border-green-500/50 bg-green-50 dark:bg-green-950/30" : "border-muted"}`}>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Pontuação do formulário (vale 10)</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={peerValid ? "text-green-600" : "text-muted-foreground"}>
+                            Avaliação entre Pares: <strong>{peerTotal}/10</strong>{peerValid && " ✓"}
+                          </span>
+                          <span className="text-muted-foreground">→</span>
+                          <span className="text-xs text-muted-foreground">Nota do aluno = nota da avaliação entre pares</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-2 flex-wrap">
                       <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/editor/${room.id}`)}>
                         <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
@@ -560,7 +581,8 @@ export default function Simulations() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </TabsContent>

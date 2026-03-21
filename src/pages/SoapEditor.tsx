@@ -314,7 +314,10 @@ export default function SoapEditor() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{room.title}</h1>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs bg-chart-2/10 text-chart-2 border-chart-2/30">SOAP</Badge>
+            <h1 className="text-2xl font-bold">{room.title}</h1>
+          </div>
           <p className="text-muted-foreground text-sm flex items-center gap-2">
             PIN: {room.access_code} • Status: {room.status}
             <span className="inline-flex items-center gap-1 ml-2"><GraduationCap className="h-3.5 w-3.5" />{displayProfessor}</span>

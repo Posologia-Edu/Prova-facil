@@ -325,7 +325,10 @@ export default function ReconciliationEditor() {
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar
         </Button>
         <div>
-          <h1 className="text-xl font-bold">{room.title}</h1>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs bg-chart-3/10 text-chart-3 border-chart-3/30">Reconciliação</Badge>
+            <h1 className="text-xl font-bold">{room.title}</h1>
+          </div>
           <p className="text-sm text-muted-foreground">PIN: {room.access_code} · Status: {room.status}</p>
         </div>
         {room.status === "draft" && (
