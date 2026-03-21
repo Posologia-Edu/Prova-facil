@@ -306,9 +306,8 @@ export default function ReconciliationControl() {
                                 <p className="text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800">
                                   {field.options?.join(", ") || "Ver espelho"}
                                 </p>
-                                </div>
-                              );
-                            })}
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <p className="text-sm text-muted-foreground">Nenhum espelho cadastrado.</p>
