@@ -240,75 +240,7 @@ export default function SoapJoin() {
   };
 
   const renderFormFields = (fields: FormField[], answers: Record<string, any>, setAnswers: (a: Record<string, any>) => void, readOnly = false) => (
-    <div className="space-y-4">
-      {fields.map((field) => (
-        <div key={field.id} className="space-y-1.5">
-          <Label className="font-medium">{field.label}</Label>
-          {field.type === "text" && (
-            <Input
-              value={answers[field.id] || ""}
-              onChange={(e) => setAnswers({ ...answers, [field.id]: e.target.value })}
-              disabled={readOnly}
-            />
-          )}
-          {field.type === "textarea" && (
-            <Textarea
-              value={answers[field.id] || ""}
-              onChange={(e) => setAnswers({ ...answers, [field.id]: e.target.value })}
-              disabled={readOnly}
-              rows={4}
-            />
-          )}
-          {field.type === "radio" && field.options && (
-            <RadioGroup
-              value={answers[field.id] || ""}
-              onValueChange={(v) => setAnswers({ ...answers, [field.id]: v })}
-              disabled={readOnly}
-            >
-              {field.options.map((opt) => (
-                <div key={opt} className="flex items-center gap-2">
-                  <RadioGroupItem value={opt} id={`${field.id}-${opt}`} />
-                  <Label htmlFor={`${field.id}-${opt}`}>{opt}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-          )}
-          {field.type === "checkbox" && field.options && (
-            <div className="space-y-2">
-              {field.options.map((opt) => (
-                <div key={opt} className="flex items-center gap-2">
-                  <Checkbox
-                    checked={(answers[field.id] || []).includes(opt)}
-                    onCheckedChange={(checked) => {
-                      const current = answers[field.id] || [];
-                      setAnswers({
-                        ...answers,
-                        [field.id]: checked ? [...current, opt] : current.filter((v: string) => v !== opt),
-                      });
-                    }}
-                    disabled={readOnly}
-                  />
-                  <Label>{opt}</Label>
-                </div>
-              ))}
-            </div>
-          )}
-          {field.type === "scale" && (
-            <div className="flex items-center gap-4">
-              <Slider
-                value={[answers[field.id] || 0]}
-                onValueChange={([v]) => setAnswers({ ...answers, [field.id]: v })}
-                max={field.max_score || 10}
-                step={1}
-                disabled={readOnly}
-                className="flex-1"
-              />
-              <span className="text-sm font-medium min-w-[3ch] text-right">{answers[field.id] || 0}/{field.max_score || 10}</span>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
+    <FormRenderer fields={fields} answers={answers} onChange={setAnswers} readOnly={readOnly} />
   );
 
   // Login screen
