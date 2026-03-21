@@ -218,10 +218,10 @@ export default function SimulationEditor() {
     let obsTotal = 0;
 
     if (profForm && Array.isArray(profForm.content_json)) {
-      (profForm.content_json as FormField[]).forEach(f => { profTotal += (f.max_score || 0); });
+      (profForm.content_json as FormField[]).forEach(f => { if (f.type !== "section_header") profTotal += (f.max_score || 0); });
     }
     if (obsForm && Array.isArray(obsForm.content_json)) {
-      (obsForm.content_json as FormField[]).forEach(f => { obsTotal += (f.max_score || 0); });
+      (obsForm.content_json as FormField[]).forEach(f => { if (f.type !== "section_header") obsTotal += (f.max_score || 0); });
     }
 
     // If currently editing one of these forms, use the local formFields
