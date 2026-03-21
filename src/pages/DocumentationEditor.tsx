@@ -447,45 +447,14 @@ export default function DocumentationEditor() {
                 </div>
               </div>
 
-              {formFields.map((field, idx) => (
-                <Card key={field.id} className="p-3">
-                  <div className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-5">
-                      <Label className="text-xs">Rótulo</Label>
-                      <Input value={field.label} onChange={e => updateField(idx, { label: e.target.value })} placeholder="Nome do campo" />
-                    </div>
-                    <div className="col-span-3">
-                      <Label className="text-xs">Tipo</Label>
-                      <Select value={field.type} onValueChange={(v: any) => updateField(idx, { type: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="text">Texto curto</SelectItem>
-                          <SelectItem value="textarea">Texto longo</SelectItem>
-                          <SelectItem value="radio">Múltipla escolha</SelectItem>
-                          <SelectItem value="checkbox">Checkbox</SelectItem>
-                          <SelectItem value="scale">Escala</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-2">
-                      <Label className="text-xs">Pontuação</Label>
-                      <Input type="number" value={field.max_score || 0} onChange={e => updateField(idx, { max_score: Number(e.target.value) })} min={0} />
-                    </div>
-                    <div className="col-span-2 flex justify-end">
-                      <Button variant="ghost" size="sm" onClick={() => removeField(idx)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </div>
-                  {(field.type === "radio" || field.type === "checkbox") && (
-                    <div className="mt-2">
-                      <Label className="text-xs">Opções (separadas por vírgula)</Label>
-                      <Input value={field.options?.join(", ") || ""} onChange={e => updateField(idx, { options: e.target.value.split(",").map(o => o.trim()).filter(Boolean) })} />
-                    </div>
-                  )}
-                </Card>
-              ))}
+              <FormBuilder
+                fields={formFields}
+                onChange={setFormFields}
+                showScores={true}
+                scoreLabel="Pts"
+              />
 
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={addField}><Plus className="h-3.5 w-3.5 mr-1" />Campo</Button>
                 <Button size="sm" onClick={saveForm} disabled={!formTitle.trim()}>Salvar</Button>
                 {editingFormId && <Button variant="ghost" size="sm" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); setFormType("referral"); }}>Cancelar</Button>}
               </div>
