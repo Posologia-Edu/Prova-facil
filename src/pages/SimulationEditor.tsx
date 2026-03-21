@@ -306,25 +306,7 @@ export default function SimulationEditor() {
     return () => window.clearTimeout(timeout);
   }, [roomId, activeForm, activeFormType, clinicalCases, formFields, formTitle]);
 
-  const addField = () => {
-    setFormFields([...formFields, {
-      id: crypto.randomUUID(),
-      label: "",
-      type: "text",
-      max_score: 0,
-      required: false,
-    }]);
-  };
-
-  const updateField = (index: number, updates: Partial<FormField>) => {
-    const updated = [...formFields];
-    updated[index] = { ...updated[index], ...updates };
-    setFormFields(updated);
-  };
-
-  const removeField = (index: number) => {
-    setFormFields(formFields.filter((_, i) => i !== index));
-  };
+  // Field management delegated to FormBuilder component
 
   const [roomTitle, setRoomTitle] = useState("");
   const [roomDesc, setRoomDesc] = useState("");
