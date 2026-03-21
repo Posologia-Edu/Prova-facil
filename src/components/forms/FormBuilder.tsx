@@ -9,8 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Trash2, GripVertical, MoreVertical, Copy, ArrowUp, ArrowDown,
   SeparatorHorizontal, ChevronUp, ChevronDown, FileText, Image, Video,
-  Type, Import,
+  Type, Import, CheckCircle2, Key,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FormField, FormFieldType, FIELD_TYPE_LABELS, getSections } from "./types";
 import FormImportDialog from "./FormImportDialog";
 
@@ -425,6 +427,136 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
                     {[3, 4, 5, 7, 10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {/* Answer key section - shown when scores are enabled and field has points */}
+            {showScores && (field.max_score || 0) > 0 && isSelected && (
+              <div className="mt-3 p-3 bg-accent/30 border border-accent rounded-lg space-y-2">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-primary">
+                  <Key className="h-4 w-4" />
+                  <span>Chave de resposta</span>
+                </div>
+
+                {/* Radio / Dropdown: select one correct option */}
+                {(field.type === "radio" || field.type === "dropdown") && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">Selecione a alternativa correta:</p>
+                    <RadioGroup
+                      value={field.correct_answer != null ? String(field.correct_answer) : ""}
+                      onValueChange={(v) => updateField(globalIdx, { correct_answer: Number(v) })}
+                    >
+                      {(field.options || []).map((opt, optIdx) => (
+                        <div key={optIdx} className="flex items-center gap-2">
+                          <RadioGroupItem value={String(optIdx)} id={`ans-${field.id}-${optIdx}`} />
+                          <Label htmlFor={`ans-${field.id}-${optIdx}`} className="text-sm cursor-pointer">
+                            {opt || `Opção ${optIdx + 1}`}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                    {field.correct_answer != null && (
+                      <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => updateField(globalIdx, { correct_answer: undefined })}>
+                        Limpar seleção
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {/* Checkbox: select multiple correct options */}
+                {field.type === "checkbox" && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">Selecione as alternativas corretas:</p>
+                    {(field.options || []).map((opt, optIdx) => {
+                      const correctIndices = Array.isArray(field.correct_answer) ? field.correct_answer : [];
+                      const isChecked = correctIndices.includes(optIdx);
+                      return (
+                        <div key={optIdx} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`ans-${field.id}-${optIdx}`}
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              const updated = checked
+                                ? [...correctIndices, optIdx]
+                                : correctIndices.filter((i: number) => i !== optIdx);
+                              updateField(globalIdx, { correct_answer: updated.length > 0 ? updated : undefined });
+                            }}
+                          />
+                          <Label htmlFor={`ans-${field.id}-${optIdx}`} className="text-sm cursor-pointer">
+                            {opt || `Opção ${optIdx + 1}`}
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Text / Textarea: type the correct answer */}
+                {(field.type === "text" || field.type === "textarea") && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Resposta correta esperada:</p>
+                    <Input
+                      placeholder="Digite a resposta correta"
+                      value={typeof field.correct_answer === "string" ? field.correct_answer : ""}
+                      onChange={(e) => updateField(globalIdx, { correct_answer: e.target.value || undefined })}
+                      className="text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Scale: correct value */}
+                {field.type === "scale" && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Valor correto na escala:</p>
+                    <Input
+                      type="number"
+                      placeholder="Ex: 5"
+                      value={typeof field.correct_answer === "number" ? field.correct_answer : ""}
+                      onChange={(e) => updateField(globalIdx, { correct_answer: e.target.value ? Number(e.target.value) : undefined })}
+                      className="w-24 text-sm"
+                      min={1}
+                      max={field.max_score || 10}
+                    />
+                  </div>
+                )}
+
+                {/* Rating: correct number of stars */}
+                {field.type === "rating" && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Classificação correta:</p>
+                    <Input
+                      type="number"
+                      placeholder="Ex: 4"
+                      value={typeof field.correct_answer === "number" ? field.correct_answer : ""}
+                      onChange={(e) => updateField(globalIdx, { correct_answer: e.target.value ? Number(e.target.value) : undefined })}
+                      className="w-24 text-sm"
+                      min={1}
+                      max={field.rating_max || 5}
+                    />
+                  </div>
+                )}
+
+                {/* Feedback fields */}
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/50">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Feedback (correto)</Label>
+                    <Input
+                      placeholder="Parabéns! Resposta correta."
+                      value={field.feedback_correct || ""}
+                      onChange={(e) => updateField(globalIdx, { feedback_correct: e.target.value })}
+                      className="text-xs mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Feedback (incorreto)</Label>
+                    <Input
+                      placeholder="Resposta incorreta."
+                      value={field.feedback_incorrect || ""}
+                      onChange={(e) => updateField(globalIdx, { feedback_incorrect: e.target.value })}
+                      className="text-xs mt-1"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
