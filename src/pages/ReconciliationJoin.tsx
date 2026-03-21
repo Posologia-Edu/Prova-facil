@@ -139,51 +139,7 @@ export default function ReconciliationJoin() {
 
   const fields: FormField[] = form ? (Array.isArray(form.content_json) ? form.content_json : []) : [];
 
-  const renderField = (field: FormField) => {
-    switch (field.type) {
-      case "text":
-        return <Input value={answers[field.id] || ""} onChange={e => setAnswers({ ...answers, [field.id]: e.target.value })} />;
-      case "textarea":
-        return <Textarea value={answers[field.id] || ""} onChange={e => setAnswers({ ...answers, [field.id]: e.target.value })} rows={4} />;
-      case "radio":
-        return (
-          <RadioGroup value={answers[field.id] || ""} onValueChange={v => setAnswers({ ...answers, [field.id]: v })}>
-            {field.options?.map(opt => (
-              <div key={opt} className="flex items-center gap-2">
-                <RadioGroupItem value={opt} id={`${field.id}-${opt}`} />
-                <Label htmlFor={`${field.id}-${opt}`}>{opt}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-        );
-      case "checkbox":
-        return (
-          <div className="space-y-2">
-            {field.options?.map(opt => (
-              <div key={opt} className="flex items-center gap-2">
-                <Checkbox
-                  checked={(answers[field.id] || []).includes(opt)}
-                  onCheckedChange={(checked) => {
-                    const current = answers[field.id] || [];
-                    setAnswers({ ...answers, [field.id]: checked ? [...current, opt] : current.filter((o: string) => o !== opt) });
-                  }}
-                />
-                <Label>{opt}</Label>
-              </div>
-            ))}
-          </div>
-        );
-      case "scale":
-        return (
-          <div className="flex items-center gap-4">
-            <Slider value={[answers[field.id] || 0]} onValueChange={([v]) => setAnswers({ ...answers, [field.id]: v })} min={0} max={field.max_score || 10} step={1} />
-            <span className="text-sm font-medium w-8">{answers[field.id] || 0}</span>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+  // Form rendering delegated to FormRenderer
 
   if (phase === "login") {
     return (
