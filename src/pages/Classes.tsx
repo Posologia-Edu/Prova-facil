@@ -396,10 +396,12 @@ export default function ClassesPage() {
   const openLinkExamDialog = async () => {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return;
+    // Fetch published exams (status = 'published') not linked to any class
     const { data } = await supabase
       .from("exams")
       .select("id, title, status, created_at")
       .eq("user_id", user.user.id)
+      .eq("status", "published")
       .is("deleted_at", null)
       .is("class_id", null)
       .order("created_at", { ascending: false });
