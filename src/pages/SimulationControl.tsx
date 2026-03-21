@@ -164,7 +164,8 @@ export default function SimulationControl() {
 
       const profScore = profResponse?.score || 0;
       const obsScore = obsResponse?.score || 0;
-      const totalScore = profScore + obsScore;
+      const scoresAvailable = (profResponse?.score != null ? 1 : 0) + (obsResponse?.score != null ? 1 : 0);
+      const totalScore = scoresAvailable > 0 ? (profScore + obsScore) / scoresAvailable : 0;
 
       return {
         round,
