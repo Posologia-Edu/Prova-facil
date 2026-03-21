@@ -218,15 +218,12 @@ export default function ReconciliationJoin() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {fields.map((field, idx) => (
-                <div key={field.id} className="space-y-2">
-                  <Label className="text-sm font-medium">
-                    {idx + 1}. {field.label}
-                    {field.max_score ? <span className="text-muted-foreground ml-1">({field.max_score} pts)</span> : null}
-                  </Label>
-                  {renderField(field)}
-                </div>
-              ))}
+              <FormRenderer
+                fields={fields}
+                answers={answers}
+                onChange={setAnswers}
+                showScores={true}
+              />
 
               <Button className="w-full" onClick={handleSubmit} disabled={submitted}>
                 <Send className="h-4 w-4 mr-2" />Enviar Ficha de Reconciliação
