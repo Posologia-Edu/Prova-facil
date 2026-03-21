@@ -454,7 +454,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
   };
 
   return (
-    <div className="relative flex gap-3">
+    <div className="relative flex gap-3" ref={containerRef}>
       {/* Main form content */}
       <div className="flex-1 space-y-4">
         {sections.map((section, sectionIdx) => {
