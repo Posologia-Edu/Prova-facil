@@ -492,9 +492,9 @@ type TranslationKeys = {
   sim_import_nothing: string;
   sim_no_other_rooms: string;
   sim_score_total: string;
-  sim_score_warning_low: string;
-  sim_score_warning_high: string;
+  sim_score_warning_each: string;
   sim_score_valid: string;
+  sim_score_average_info: string;
   sim_tab_analytics: string;
   sim_analytics_no_data: string;
   sim_analytics_student: string;
