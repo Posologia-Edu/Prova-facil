@@ -166,13 +166,88 @@ export function OracleAgent() {
     }
   };
 
+  // Smart positioning: detect if the button overlaps interactive elements
+  const [buttonPosition, setButtonPosition] = useState<{ bottom: number; right: number }>({ bottom: 24, right: 24 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const checkOverlap = useCallback(() => {
+    if (isOpen) return;
+    
+    const positions = [
+      { bottom: 24, right: 24 },
+      { bottom: 80, right: 24 },
+      { bottom: 24, right: 80 },
+      { bottom: 136, right: 24 },
+    ];
+
+    const btnSize = 56; // h-14 = 56px
+
+    for (const pos of positions) {
+      const btnCenterX = window.innerWidth - pos.right - btnSize / 2;
+      const btnCenterY = window.innerHeight - pos.bottom - btnSize / 2;
+      const btnRect = {
+        left: btnCenterX - btnSize / 2,
+        right: btnCenterX + btnSize / 2,
+        top: btnCenterY - btnSize / 2,
+        bottom: btnCenterY + btnSize / 2,
+      };
+
+      // Get all interactive elements at the button corners and center
+      const testPoints = [
+        [btnRect.left + 4, btnRect.top + 4],
+        [btnRect.right - 4, btnRect.top + 4],
+        [btnRect.left + 4, btnRect.bottom - 4],
+        [btnRect.right - 4, btnRect.bottom - 4],
+        [btnCenterX, btnCenterY],
+      ];
+
+      let hasOverlap = false;
+      for (const [x, y] of testPoints) {
+        const els = document.elementsFromPoint(x, y);
+        for (const el of els) {
+          if (buttonRef.current && (el === buttonRef.current || buttonRef.current.contains(el))) continue;
+          const tag = el.tagName.toLowerCase();
+          const isInteractive = tag === 'button' || tag === 'a' || tag === 'input' || tag === 'select' || tag === 'textarea'
+            || (el as HTMLElement).getAttribute('role') === 'button'
+            || (el as HTMLElement).getAttribute('role') === 'menuitem'
+            || el.closest('[data-sidebar]') !== null;
+          if (isInteractive) {
+            hasOverlap = true;
+            break;
+          }
+        }
+        if (hasOverlap) break;
+      }
+
+      if (!hasOverlap) {
+        setButtonPosition(pos);
+        return;
+      }
+    }
+    // Fallback to higher position
+    setButtonPosition({ bottom: 136, right: 24 });
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) return;
+    checkOverlap();
+    const interval = setInterval(checkOverlap, 1000);
+    window.addEventListener('resize', checkOverlap);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('resize', checkOverlap);
+    };
+  }, [isOpen, checkOverlap]);
+
   return (
     <>
       {/* Floating button */}
       {!isOpen && (
         <button
+          ref={buttonRef}
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center"
+          style={{ bottom: buttonPosition.bottom, right: buttonPosition.right }}
+          className="fixed z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
           title="Assistente ProvaFácil"
         >
           <Sparkles className="h-6 w-6" />
