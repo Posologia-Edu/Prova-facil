@@ -83,6 +83,38 @@ export default function SimulationJoin() {
       .maybeSingle();
 
     if (roomErr || !roomData) {
+      // Check if PIN belongs to a virtual patient room and redirect
+      const { data: vpRoom } = await supabase
+        .from("class_virtual_patients")
+        .select("id, class_id, patient_id, status")
+        .eq("access_code", normalizedPin)
+        .limit(1)
+        .maybeSingle();
+
+      if (vpRoom) {
+        if (vpRoom.status !== "active") {
+          toast({ title: t("student_error"), description: "Este paciente virtual ainda não foi ativado pelo professor.", variant: "destructive" });
+          return;
+        }
+        const { data: studentInClass } = await supabase
+          .from("class_students")
+          .select("id, student_name")
+          .eq("class_id", vpRoom.class_id)
+          .ilike("student_email", normalizedEmail)
+          .limit(1)
+          .maybeSingle();
+
+        if (!studentInClass) {
+          toast({ title: t("student_access_denied"), description: "Seu e-mail não está cadastrado na turma vinculada a este paciente virtual.", variant: "destructive" });
+          return;
+        }
+
+        sessionStorage.setItem("vp_email", normalizedEmail);
+        sessionStorage.setItem("vp_student_name", studentInClass.student_name || "");
+        navigate(`/virtual-patients/room/${vpRoom.id}`);
+        return;
+      }
+
       toast({ title: t("student_error"), description: t("sim_room_not_found"), variant: "destructive" });
       return;
     }
