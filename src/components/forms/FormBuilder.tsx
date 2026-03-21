@@ -546,8 +546,11 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
         )}
       </div>
 
-      {/* Floating sidebar toolbar (Google Forms style) */}
-      <div className="sticky top-4 h-fit">
+      {/* Floating toolbar that follows selected field */}
+      <div
+        className="absolute right-0 transition-all duration-200 ease-out"
+        style={{ top: `${toolbarTop}px`, width: '48px' }}
+      >
         <div className="flex flex-col gap-0.5 bg-card border rounded-lg shadow-lg p-1.5">
           <Button
             variant="ghost"
