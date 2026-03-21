@@ -15,13 +15,32 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     let comparisonPrompt = "Avalie as respostas do aluno comparando com o espelho de respostas.\n\n";
+    comparisonPrompt += "IMPORTANTE: A nota total é dividida em duas partes:\n";
+    comparisonPrompt += "- Encaminhamento: máximo 5,0 pontos\n";
+    comparisonPrompt += "- Quadro Resumo de Medicamentos: máximo 5,0 pontos\n";
+    comparisonPrompt += "- Total: máximo 10,0 pontos\n\n";
 
     // Referral comparison
     if (referral_response && referral_answer_key) {
-      const fields = Array.isArray(referral_fields) ? referral_fields : [];
-      const keyFields = Array.isArray(referral_answer_key) ? referral_answer_key : [];
+      // Support per-case answer keys
+      let keyFields: any[] = [];
+      if (referral_answer_key.case_answers) {
+        // Per-case structure: find the right case
+        const caseId = referral_response.clinical_case_id;
+        if (caseId && referral_answer_key.case_answers[caseId]) {
+          keyFields = referral_answer_key.case_answers[caseId];
+        } else {
+          // Fallback: use first case
+          const firstKey = Object.keys(referral_answer_key.case_answers)[0];
+          if (firstKey) keyFields = referral_answer_key.case_answers[firstKey];
+        }
+      } else if (Array.isArray(referral_answer_key)) {
+        keyFields = referral_answer_key;
+      }
 
-      comparisonPrompt += "## FICHA DE ENCAMINHAMENTO\n\n";
+      const fields = Array.isArray(referral_fields) ? referral_fields : [];
+
+      comparisonPrompt += "## FICHA DE ENCAMINHAMENTO (máximo 5,0 pontos)\n\n";
       fields.forEach((field: any, idx: number) => {
         const studentAnswer = referral_response.answers_json?.[field.id] || "(sem resposta)";
         const keyField = keyFields.find((k: any) => k.id === field.id);
@@ -34,11 +53,34 @@ serve(async (req) => {
 
     // Medication summary comparison
     if (med_response && med_answer_key) {
-      comparisonPrompt += "## QUADRO RESUMO DE MEDICAMENTOS\n\n";
-      const columns = Array.isArray(med_columns) ? med_columns : [];
+      comparisonPrompt += "## QUADRO RESUMO DE MEDICAMENTOS (máximo 5,0 pontos)\n\n";
+
+      // Support per-case answer keys
+      let columns: any[] = [];
+      let expectedRows: any[] = [];
+      let rowScore = 1;
+
+      if (med_answer_key.case_answers) {
+        const caseId = med_response.clinical_case_id;
+        let caseData: any = null;
+        if (caseId && med_answer_key.case_answers[caseId]) {
+          caseData = med_answer_key.case_answers[caseId];
+        } else {
+          const firstKey = Object.keys(med_answer_key.case_answers)[0];
+          if (firstKey) caseData = med_answer_key.case_answers[firstKey];
+        }
+        if (caseData) {
+          columns = caseData.columns || [];
+          expectedRows = caseData.answer_rows || [];
+          rowScore = caseData.rows_score || 1;
+        }
+      } else {
+        columns = Array.isArray(med_columns) ? med_columns : (med_answer_key.columns || []);
+        expectedRows = med_answer_key.answer_rows || [];
+        rowScore = med_answer_key.rows_score || 1;
+      }
+
       const studentRows = med_response.answers_json?.rows || [];
-      const expectedRows = med_answer_key.answer_rows || [];
-      const rowScore = med_answer_key.rows_score || 1;
 
       comparisonPrompt += `Colunas: ${columns.map((c: any) => c.label).join(", ")}\n`;
       comparisonPrompt += `Pontuação por linha correta: ${rowScore} pts\n\n`;
@@ -64,9 +106,14 @@ serve(async (req) => {
           {
             role: "system",
             content: `Você é um avaliador acadêmico de saúde. Avalie as respostas dos alunos comparando com o espelho de respostas.
-Para cada item do encaminhamento, dê uma nota (0 até máximo) e feedback em português.
+A nota do módulo de Documentação é dividida em duas partes:
+- Ficha de Encaminhamento: nota de 0 a 5,0 pontos
+- Quadro Resumo de Medicamentos: nota de 0 a 5,0 pontos
+- Nota total: soma das duas, máximo 10,0 pontos
+
+Para cada item do encaminhamento, dê uma nota proporcional e feedback em português.
 Para o quadro resumo, avalie cada linha comparando com o espelho.
-Retorne usando a função fornecida.`,
+Retorne usando a função fornecida. Garanta que referral_total <= 5.0 e medication_score <= 5.0.`,
           },
           { role: "user", content: comparisonPrompt },
         ],
@@ -91,13 +138,13 @@ Retorne usando a função fornecida.`,
                       required: ["field_id", "score", "feedback"],
                     },
                   },
-                  referral_total: { type: "number" },
-                  medication_score: { type: "number" },
+                  referral_total: { type: "number", description: "Nota do encaminhamento (0-5)" },
+                  medication_score: { type: "number", description: "Nota do quadro resumo (0-5)" },
                   medication_feedback: { type: "string" },
                   general_feedback: { type: "string" },
-                  total_score: { type: "number" },
+                  total_score: { type: "number", description: "Soma de referral_total + medication_score (0-10)" },
                 },
-                required: ["total_score", "general_feedback"],
+                required: ["referral_total", "medication_score", "total_score", "general_feedback"],
               },
             },
           },
@@ -117,6 +164,10 @@ Retorne usando a função fornecida.`,
     let grading: any = {};
     if (toolCall?.function?.arguments) grading = JSON.parse(toolCall.function.arguments);
 
+    // Clamp scores to 5.0 max each
+    const referralScore = Math.min(Number(grading.referral_total) || 0, 5);
+    const medicationScore = Math.min(Number(grading.medication_score) || 0, 5);
+
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
     const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -125,7 +176,7 @@ Retorne usando a função fornecida.`,
       const feedbackJson: Record<string, any> = {};
       (grading.referral_items || []).forEach((item: any) => { feedbackJson[item.field_id] = { score: item.score, feedback: item.feedback }; });
       await supabaseAdmin.from("documentation_responses").update({
-        ai_score: grading.referral_total || grading.total_score || 0,
+        ai_score: referralScore,
         ai_feedback_json: feedbackJson,
       }).eq("id", referral_response.id);
     }
@@ -133,14 +184,16 @@ Retorne usando a função fornecida.`,
     // Update medication response
     if (med_response?.id) {
       await supabaseAdmin.from("documentation_responses").update({
-        ai_score: grading.medication_score || 0,
+        ai_score: medicationScore,
         ai_feedback_json: { feedback: grading.medication_feedback || grading.general_feedback || "" },
       }).eq("id", med_response.id);
     }
 
     return new Response(JSON.stringify({
-      ai_score: grading.total_score || 0,
-      ai_feedback: grading.general_feedback || "",
+      referral_score: referralScore,
+      medication_score: medicationScore,
+      total_score: referralScore + medicationScore,
+      general_feedback: grading.general_feedback || "",
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("grade-documentation error:", e);
