@@ -209,7 +209,7 @@ export default function SimulationEditor() {
     skipNextAutoSaveRef.current = true;
   }, [activeForm, activeFormType]);
 
-  // Calculate total scores for professor and observer forms
+  // Calculate total scores for professor and observer forms (each should be 10, student grade = average)
   const scoreValidation = useMemo(() => {
     const profForm = forms.find((f: any) => f.form_type === "professor_eval");
     const obsForm = forms.find((f: any) => f.form_type === "observer_eval");
@@ -231,8 +231,10 @@ export default function SimulationEditor() {
       obsTotal = formFields.filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0);
     }
 
-    const total = profTotal + obsTotal;
-    return { profTotal, obsTotal, total };
+    const profValid = profTotal === 10 || profTotal === 0;
+    const obsValid = obsTotal === 10 || obsTotal === 0;
+    const allValid = profValid && obsValid;
+    return { profTotal, obsTotal, profValid, obsValid, allValid };
   }, [forms, formFields, activeFormType]);
 
   const saveForm = async (silent = false) => {
@@ -462,11 +464,14 @@ export default function SimulationEditor() {
       return;
     }
 
-    // Validate scores before starting
-    if (scoreValidation.total !== 10 && scoreValidation.total > 0) {
+    // Validate scores before starting - each form must total 10
+    if (!scoreValidation.allValid) {
+      const msgs: string[] = [];
+      if (!scoreValidation.profValid) msgs.push(`${t("sim_form_professor_eval")}: ${scoreValidation.profTotal}/10`);
+      if (!scoreValidation.obsValid) msgs.push(`${t("sim_form_observer_eval")}: ${scoreValidation.obsTotal}/10`);
       toast({
         title: t("sim_score_total"),
-        description: scoreValidation.total < 10 ? t("sim_score_warning_low") : t("sim_score_warning_high"),
+        description: t("sim_score_warning_each") + " " + msgs.join(", "),
         variant: "destructive",
       });
       return;
@@ -674,24 +679,25 @@ export default function SimulationEditor() {
 
           {/* Score validation banner */}
           {isEvalForm && (
-            <Card className={`border-2 ${scoreValidation.total === 10 ? "border-green-500/50" : scoreValidation.total === 0 ? "border-muted" : "border-destructive/50"}`}>
+            <Card className={`border-2 ${scoreValidation.allValid && (scoreValidation.profTotal > 0 || scoreValidation.obsTotal > 0) ? "border-green-500/50" : (scoreValidation.profTotal === 0 && scoreValidation.obsTotal === 0) ? "border-muted" : !scoreValidation.allValid ? "border-destructive/50" : "border-muted"}`}>
               <CardContent className="py-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    {scoreValidation.total === 10 ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                    ) : scoreValidation.total > 0 ? (
-                      <AlertTriangle className="h-5 w-5 text-destructive" />
-                    ) : null}
                     <span className="text-sm font-medium">{t("sim_score_total")}</span>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-muted-foreground">{t("sim_form_professor_eval")}: <strong>{scoreValidation.profTotal}</strong></span>
-                    <span className="text-muted-foreground">+</span>
-                    <span className="text-muted-foreground">{t("sim_form_observer_eval")}: <strong>{scoreValidation.obsTotal}</strong></span>
-                    <span className="text-muted-foreground">=</span>
-                    <span className={`font-bold ${scoreValidation.total === 10 ? "text-green-600" : scoreValidation.total > 0 ? "text-destructive" : "text-muted-foreground"}`}>
-                      {scoreValidation.total}/10
+                  <div className="flex items-center gap-4 text-sm flex-wrap">
+                    <span className={`${scoreValidation.profValid ? (scoreValidation.profTotal === 10 ? "text-green-600" : "text-muted-foreground") : "text-destructive"}`}>
+                      {t("sim_form_professor_eval")}: <strong>{scoreValidation.profTotal}/10</strong>
+                      {scoreValidation.profTotal === 10 && " ✓"}
+                    </span>
+                    <span className="text-muted-foreground">|</span>
+                    <span className={`${scoreValidation.obsValid ? (scoreValidation.obsTotal === 10 ? "text-green-600" : "text-muted-foreground") : "text-destructive"}`}>
+                      {t("sim_form_observer_eval")}: <strong>{scoreValidation.obsTotal}/10</strong>
+                      {scoreValidation.obsTotal === 10 && " ✓"}
+                    </span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="text-muted-foreground text-xs">
+                      {t("sim_score_average_info")}
                     </span>
                   </div>
                 </div>

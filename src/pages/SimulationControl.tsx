@@ -164,7 +164,8 @@ export default function SimulationControl() {
 
       const profScore = profResponse?.score || 0;
       const obsScore = obsResponse?.score || 0;
-      const totalScore = profScore + obsScore;
+      const scoresAvailable = (profResponse?.score != null ? 1 : 0) + (obsResponse?.score != null ? 1 : 0);
+      const totalScore = scoresAvailable > 0 ? (profScore + obsScore) / scoresAvailable : 0;
 
       return {
         round,
@@ -387,14 +388,14 @@ export default function SimulationControl() {
                           <div className="grid grid-cols-3 gap-2">
                             <Card className="p-3">
                               <p className="text-xs text-muted-foreground">{t("sim_form_professor_eval")}</p>
-                              <p className="text-lg font-bold">{ra.profScore.toFixed(1)}</p>
+                              <p className="text-lg font-bold">{ra.profScore.toFixed(1)}/10</p>
                             </Card>
                             <Card className="p-3">
                               <p className="text-xs text-muted-foreground">{t("sim_form_observer_eval")}</p>
-                              <p className="text-lg font-bold">{ra.obsScore.toFixed(1)}</p>
+                              <p className="text-lg font-bold">{ra.obsScore.toFixed(1)}/10</p>
                             </Card>
                             <Card className="p-3">
-                              <p className="text-xs text-muted-foreground">Total</p>
+                              <p className="text-xs text-muted-foreground">{t("sim_score_average_label")}</p>
                               <p className="text-lg font-bold text-primary">{ra.totalScore.toFixed(1)}/10</p>
                             </Card>
                           </div>

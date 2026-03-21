@@ -492,9 +492,10 @@ type TranslationKeys = {
   sim_import_nothing: string;
   sim_no_other_rooms: string;
   sim_score_total: string;
-  sim_score_warning_low: string;
-  sim_score_warning_high: string;
+  sim_score_warning_each: string;
   sim_score_valid: string;
+  sim_score_average_info: string;
+  sim_score_average_label: string;
   sim_tab_analytics: string;
   sim_analytics_no_data: string;
   sim_analytics_student: string;
@@ -992,10 +993,11 @@ const pt: TranslationKeys = {
   sim_import_success: "Importação realizada com sucesso!",
   sim_import_nothing: "Selecione ao menos um item para importar.",
   sim_no_other_rooms: "Não há outras salas de simulação disponíveis.",
-  sim_score_total: "Nota total (Professor + Observador)",
-  sim_score_warning_low: "A soma das notas é inferior a 10. Ajuste as pontuações.",
-  sim_score_warning_high: "A soma das notas é superior a 10. Ajuste as pontuações.",
-  sim_score_valid: "Nota total: 10 ✓",
+  sim_score_total: "Pontuação dos formulários (cada um vale 10)",
+  sim_score_warning_each: "Cada formulário de avaliação deve totalizar 10 pontos.",
+  sim_score_valid: "Pontuação válida ✓",
+  sim_score_average_info: "Nota do aluno = média dos dois formulários",
+  sim_score_average_label: "Média",
   sim_tab_analytics: "Resultados",
   sim_analytics_no_data: "Nenhuma resposta encontrada ainda.",
   sim_analytics_student: "Aluno",
@@ -1490,10 +1492,11 @@ const en: TranslationKeys = {
   sim_import_success: "Import completed successfully!",
   sim_import_nothing: "Select at least one item to import.",
   sim_no_other_rooms: "No other simulation rooms available.",
-  sim_score_total: "Total score (Professor + Observer)",
-  sim_score_warning_low: "The total score is less than 10. Adjust the scores.",
-  sim_score_warning_high: "The total score is greater than 10. Adjust the scores.",
-  sim_score_valid: "Total score: 10 ✓",
+  sim_score_total: "Form scores (each worth 10)",
+  sim_score_warning_each: "Each evaluation form must total 10 points.",
+  sim_score_valid: "Score valid ✓",
+  sim_score_average_info: "Student grade = average of both forms",
+  sim_score_average_label: "Average",
   sim_tab_analytics: "Results",
   sim_analytics_no_data: "No responses found yet.",
   sim_analytics_student: "Student",
@@ -1988,10 +1991,11 @@ const es: TranslationKeys = {
   sim_import_success: "¡Importación realizada con éxito!",
   sim_import_nothing: "Seleccione al menos un elemento para importar.",
   sim_no_other_rooms: "No hay otras salas de simulación disponibles.",
-  sim_score_total: "Nota total (Profesor + Observador)",
-  sim_score_warning_low: "La suma de las notas es inferior a 10. Ajuste las puntuaciones.",
-  sim_score_warning_high: "La suma de las notas es superior a 10. Ajuste las puntuaciones.",
-  sim_score_valid: "Nota total: 10 ✓",
+  sim_score_total: "Puntuación de formularios (cada uno vale 10)",
+  sim_score_warning_each: "Cada formulario de evaluación debe totalizar 10 puntos.",
+  sim_score_valid: "Puntuación válida ✓",
+  sim_score_average_info: "Nota del alumno = promedio de ambos formularios",
+  sim_score_average_label: "Promedio",
   sim_tab_analytics: "Resultados",
   sim_analytics_no_data: "No se encontraron respuestas aún.",
   sim_analytics_student: "Alumno",
