@@ -678,6 +678,7 @@ export default function ReconciliationEditor() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
 
         {/* Clinical Cases Tab */}
         <TabsContent value="cases" className="space-y-4">
