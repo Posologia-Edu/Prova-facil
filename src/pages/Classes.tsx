@@ -397,37 +397,16 @@ export default function ClassesPage() {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return;
 
-    const { data: publications, error: publicationsError } = await supabase
-      .from("exam_publications")
-      .select("exam_id")
-      .eq("user_id", user.user.id);
-
-    if (publicationsError) {
-      toast.error("Erro ao carregar provas online.");
-      return;
-    }
-
-    const publishedExamIds = Array.from(
-      new Set((publications || []).map((publication) => publication.exam_id))
-    );
-
-    if (publishedExamIds.length === 0) {
-      setAvailableExams([]);
-      setLinkExamOpen(true);
-      return;
-    }
-
     const { data, error } = await supabase
       .from("exams")
       .select("id, title, status, created_at")
       .eq("user_id", user.user.id)
-      .in("id", publishedExamIds)
       .is("deleted_at", null)
       .is("class_id", null)
       .order("created_at", { ascending: false });
 
     if (error) {
-      toast.error("Erro ao carregar provas online.");
+      toast.error("Erro ao carregar provas.");
       return;
     }
 
@@ -783,7 +762,7 @@ export default function ClassesPage() {
             <p className="text-sm text-muted-foreground mb-4">Selecione uma prova para vincular a esta turma.</p>
             <div className="space-y-2">
               {availableExams.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma prova publicada disponível para vincular. Publique uma prova em "Minhas Provas" primeiro.</p>
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma prova disponível. Crie uma prova em "Minhas Provas" ou todas já estão vinculadas a outras turmas.</p>
               ) : (
                 availableExams.map((exam) => (
                   <div key={exam.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
