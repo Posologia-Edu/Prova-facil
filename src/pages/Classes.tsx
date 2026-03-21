@@ -268,13 +268,15 @@ export default function ClassesPage() {
     setSelectedClass(cls);
     setStudentsLoading(true);
 
-    const [studentsRes, examsRes] = await Promise.all([
+    const [studentsRes, examsRes, vpsRes] = await Promise.all([
       supabase.from("class_students").select("*").eq("class_id", cls.id).order("student_name"),
       supabase.from("exams").select("id, title, status, created_at").eq("class_id", cls.id).is("deleted_at", null).order("created_at", { ascending: false }),
+      supabase.from("class_virtual_patients").select("id, patient_id, access_code, status").eq("class_id", cls.id).order("created_at"),
     ]);
 
     setStudents(studentsRes.data || []);
     setClassExams(examsRes.data || []);
+    setClassVPs((vpsRes.data as ClassVirtualPatient[]) || []);
     setStudentsLoading(false);
   };
 
