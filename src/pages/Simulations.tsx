@@ -610,6 +610,12 @@ export default function Simulations() {
                           <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
                         </Button>
                       )}
+                      <Button variant="outline" size="sm" onClick={() => duplicateReconciliationRoom.mutate(room.id)} title="Duplicar">
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteReconciliationRoom.mutate(room.id)} title="Excluir">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
