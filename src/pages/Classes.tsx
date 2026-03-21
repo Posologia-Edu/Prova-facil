@@ -343,6 +343,39 @@ export default function ClassesPage() {
     fetchClasses();
   };
 
+  // Virtual patient linking
+  const linkVirtualPatient = async (patientId: string) => {
+    if (!selectedClass) return;
+    const { error } = await supabase.from("class_virtual_patients").insert({
+      class_id: selectedClass.id,
+      patient_id: patientId,
+    });
+    if (error) {
+      if (error.code === "23505") toast.error("Este paciente já está vinculado a esta turma.");
+      else toast.error("Erro ao vincular paciente.");
+      return;
+    }
+    toast.success("Paciente virtual vinculado!");
+    setLinkVPOpen(false);
+    const { data } = await supabase.from("class_virtual_patients").select("id, patient_id, access_code, status").eq("class_id", selectedClass.id).order("created_at");
+    setClassVPs((data as ClassVirtualPatient[]) || []);
+  };
+
+  const toggleVPStatus = async (vp: ClassVirtualPatient) => {
+    const newStatus = vp.status === "active" ? "draft" : "active";
+    await supabase.from("class_virtual_patients").update({ status: newStatus }).eq("id", vp.id);
+    setClassVPs(prev => prev.map(v => v.id === vp.id ? { ...v, status: newStatus } : v));
+    toast.success(newStatus === "active" ? "Paciente virtual ativado!" : "Paciente virtual desativado.");
+  };
+
+  const removeVP = async (vpId: string) => {
+    await supabase.from("class_virtual_patients").delete().eq("id", vpId);
+    setClassVPs(prev => prev.filter(v => v.id !== vpId));
+    toast.success("Paciente virtual removido da turma.");
+  };
+
+  const getVPInfo = (patientId: string) => VP_CATALOG.find(p => p.id === patientId);
+
   // Shared manage students dialog content
   const manageStudentsContent = (
     <Dialog open={manageStudentsOpen} onOpenChange={setManageStudentsOpen}>
