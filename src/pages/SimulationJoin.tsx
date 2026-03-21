@@ -25,13 +25,7 @@ import {
   getStudyRole,
 } from "@/lib/simulation-materials";
 
-type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "radio" | "checkbox" | "scale";
-  options?: string[];
-  max_score?: number;
-};
+// FormField type imported from @/components/forms/types
 
 const normalizeParticipantEmail = (value: string) => value.trim().toLowerCase();
 const normalizeAccessCode = (value: string) => value.trim().toLowerCase();
