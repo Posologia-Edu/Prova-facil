@@ -103,6 +103,8 @@ export default function ReconciliationEditor() {
   const [formTitle, setFormTitle] = useState("");
   const [formType, setFormType] = useState<"reconciliation" | "answer_key">("reconciliation");
   const [formFields, setFormFields] = useState<FormField[]>([]);
+  const lastSavedSnapshotRef = useRef("");
+  const skipNextAutoSaveRef = useRef(false);
 
   // Clinical case editor
   const [caseTitle, setCaseTitle] = useState("");
