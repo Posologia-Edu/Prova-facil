@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,6 +71,8 @@ export default function DocumentationEditor() {
   const [formTitle, setFormTitle] = useState("");
   const [formType, setFormType] = useState<string>("referral");
   const [formFields, setFormFields] = useState<FormField[]>([]);
+  const lastSavedSnapshotRef = useRef("");
+  const skipNextAutoSaveRef = useRef(false);
 
   // Medication summary builder state
   const [medTitle, setMedTitle] = useState("");
@@ -140,7 +142,7 @@ export default function DocumentationEditor() {
   }, {});
 
   // Save referral form
-  const saveForm = async () => {
+  const saveForm = async (silent = false) => {
     if (!formTitle.trim()) return;
     const payload = { title: formTitle, content_json: formFields as any, form_type: formType };
     if (editingFormId) {
@@ -148,20 +150,53 @@ export default function DocumentationEditor() {
     } else {
       await supabase.from("documentation_forms").insert({ ...payload, room_id: roomId! });
     }
-    setEditingFormId(null); setFormTitle(""); setFormFields([]); setFormType("referral");
-    refetchForms();
-    toast({ title: "Formulário salvo" });
+    lastSavedSnapshotRef.current = JSON.stringify({ formType, title: formTitle, content: formFields });
+    if (!editingFormId) {
+      await refetchForms();
+    } else if (!silent) {
+      refetchForms();
+    }
+    if (!silent) {
+      setEditingFormId(null); setFormTitle(""); setFormFields([]); setFormType("referral");
+      refetchForms();
+      toast({ title: "Formulário salvo" });
+    }
   };
+
+  // Auto-save effect
+  useEffect(() => {
+    if (!roomId || !editingFormId) return;
+    if (!formTitle.trim() && formFields.length === 0) return;
+
+    const currentSnapshot = JSON.stringify({ formType, title: formTitle, content: formFields });
+
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      lastSavedSnapshotRef.current = currentSnapshot;
+      return;
+    }
+
+    if (currentSnapshot === lastSavedSnapshotRef.current) return;
+
+    const timeout = window.setTimeout(() => {
+      void saveForm(true);
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+  }, [roomId, editingFormId, formType, formTitle, formFields]);
 
   const editForm = (form: any) => {
     if (form.form_type === "medication_summary" || form.form_type === "medication_answer_key") {
       editMedForm(form);
       return;
     }
+    skipNextAutoSaveRef.current = true;
     setEditingFormId(form.id);
     setFormTitle(form.title);
     setFormType(form.form_type);
-    setFormFields(Array.isArray(form.content_json) ? form.content_json : []);
+    const fields = Array.isArray(form.content_json) ? form.content_json : [];
+    setFormFields(fields);
+    lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: fields });
   };
 
   const deleteForm = async (id: string) => {
@@ -455,7 +490,7 @@ export default function DocumentationEditor() {
               />
 
               <div className="flex gap-2">
-                <Button size="sm" onClick={saveForm} disabled={!formTitle.trim()}>Salvar</Button>
+                <Button size="sm" onClick={() => saveForm()} disabled={!formTitle.trim()}>Salvar</Button>
                 {editingFormId && <Button variant="ghost" size="sm" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); setFormType("referral"); }}>Cancelar</Button>}
               </div>
             </CardContent>

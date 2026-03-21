@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -213,10 +213,12 @@ export default function SoapEditor() {
   const [formType, setFormType] = useState<string>("soap");
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
+  const lastSavedSnapshotRef = useRef("");
+  const skipNextAutoSaveRef = useRef(false);
 
   // Field management delegated to FormBuilder
 
-  const saveForm = async () => {
+  const saveForm = async (silent = false) => {
     if (!formTitle.trim()) return;
     if (editingFormId) {
       await supabase.from("soap_forms").update({
@@ -232,19 +234,52 @@ export default function SoapEditor() {
         content_json: formFields as any,
       });
     }
-    setFormTitle("");
-    setFormType("soap");
-    setFormFields([]);
-    setEditingFormId(null);
-    refetchForms();
-    toast({ title: "Formulário salvo" });
+    lastSavedSnapshotRef.current = JSON.stringify({ formType, title: formTitle, content: formFields });
+    if (!editingFormId) {
+      await refetchForms();
+    } else if (!silent) {
+      refetchForms();
+    }
+    if (!silent) {
+      setFormTitle("");
+      setFormType("soap");
+      setFormFields([]);
+      setEditingFormId(null);
+      refetchForms();
+      toast({ title: "Formulário salvo" });
+    }
   };
 
+  // Auto-save effect
+  useEffect(() => {
+    if (!roomId || !editingFormId) return;
+    if (!formTitle.trim() && formFields.length === 0) return;
+
+    const currentSnapshot = JSON.stringify({ formType, title: formTitle, content: formFields });
+
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      lastSavedSnapshotRef.current = currentSnapshot;
+      return;
+    }
+
+    if (currentSnapshot === lastSavedSnapshotRef.current) return;
+
+    const timeout = window.setTimeout(() => {
+      void saveForm(true);
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+  }, [roomId, editingFormId, formType, formTitle, formFields]);
+
   const editForm = (form: any) => {
+    skipNextAutoSaveRef.current = true;
     setEditingFormId(form.id);
     setFormTitle(form.title);
     setFormType(form.form_type);
-    setFormFields(Array.isArray(form.content_json) ? form.content_json : []);
+    const fields = Array.isArray(form.content_json) ? form.content_json : [];
+    setFormFields(fields);
+    lastSavedSnapshotRef.current = JSON.stringify({ formType: form.form_type, title: form.title, content: fields });
   };
 
   const deleteForm = async (id: string) => {
@@ -506,7 +541,7 @@ export default function SoapEditor() {
                 scoreLabel="Pts"
               />
 
-              <Button onClick={saveForm} disabled={!formTitle.trim()} className="w-full">
+              <Button onClick={() => saveForm()} disabled={!formTitle.trim()} className="w-full">
                 {editingFormId ? "Atualizar Formulário" : "Salvar Formulário"}
               </Button>
               {editingFormId && (
