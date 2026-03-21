@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import FloatingAuth from "@/components/FloatingAuth";
 import { LandingFooter } from "@/components/LandingFooter";
+import { SalesAgent } from "@/components/SalesAgent";
 import { useLanguage, LANGUAGE_FLAGS, LANGUAGE_LABELS, type Language } from "@/i18n/LanguageContext";
 import {
   DropdownMenu,
@@ -213,6 +214,7 @@ const Index = () => {
       </section>
 
       <LandingFooter />
+      <SalesAgent />
     </div>
   );
 };
