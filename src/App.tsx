@@ -380,6 +380,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/virtual-patients/analytics"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><VPAnalytics /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
             {/* Public Virtual Patient Room (student access via PIN) */}
             <Route path="/virtual-patients/room/:cvpId" element={<VirtualPatientRoom />} />
             <Route path="/docs" element={<Documentation />} />

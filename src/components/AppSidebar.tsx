@@ -81,6 +81,7 @@ export function AppSidebar() {
     { title: t("nav_classes"), url: "/classes", icon: GraduationCap },
     { title: t("nav_calendar"), url: "/calendar", icon: CalendarDays },
     { title: t("nav_analytics"), url: "/analytics", icon: BarChart3 },
+    { title: "Análises VP", url: "/virtual-patients/analytics", icon: BarChart3 },
     { title: "Marketplace", url: "/marketplace", icon: Store },
   ];
 
