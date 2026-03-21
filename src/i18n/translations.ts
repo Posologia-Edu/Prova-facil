@@ -1276,7 +1276,7 @@ const en: TranslationKeys = {
   docs_online_exams: "Online Exams",
   docs_online_exams_content: "Publish exams for digital application with real-time monitoring.\n\n• Set an access code for students to enter the exam.\n• Configure time limit and availability period (start and end).\n• Students access through the Student Portal using the code.\n• Monitoring: track in real time who is taking the exam.\n• Automatic grading for objective questions.\n• AI grading available for essay questions (Premium plan).",
   docs_classes: "Class Management",
-  docs_classes_content: "Organize your students into classes to facilitate exam application.\n\n• Create classes with name, semester, and description.\n• Manage the student list for each class.\n• Link exams to classes for targeted application.\n• Duplicate classes to reuse the structure in new semesters.",
+  docs_classes_content: "Organize your students into classes to facilitate assessment application.\n\n• Create classes with name, semester, and description.\n• Manage the student list for each class (name, email, registration).\n• Exclusive Assessment Mode: each class can be linked to an Online Exam OR a Virtual Patient, never both simultaneously.\n• Link online exams to classes for targeted application.\n• Link virtual patients to classes with automatic access codes (PIN).\n• Duplicate classes to reuse the structure in new semesters.",
   docs_analytics: "Analytics & Reports",
   docs_analytics_content: "View insights about your question bank and class performance.\n\n• Question distribution by topic and difficulty.\n• History of applied exams.\n• Visual charts to identify patterns and improvement areas.\n• Data updated in real time as you use the platform.",
   docs_calendar: "Exam Calendar",
