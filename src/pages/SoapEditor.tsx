@@ -214,17 +214,7 @@ export default function SoapEditor() {
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
 
-  const addField = () => {
-    setFormFields([...formFields, { id: crypto.randomUUID(), label: "", type: "text", required: false }]);
-  };
-
-  const updateField = (idx: number, updates: Partial<FormField>) => {
-    setFormFields(formFields.map((f, i) => i === idx ? { ...f, ...updates } : f));
-  };
-
-  const removeField = (idx: number) => {
-    setFormFields(formFields.filter((_, i) => i !== idx));
-  };
+  // Field management delegated to FormBuilder
 
   const saveForm = async () => {
     if (!formTitle.trim()) return;
