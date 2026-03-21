@@ -176,12 +176,19 @@ export default function ReconciliationControl() {
     }
     setGradingAI(true);
     try {
+      // Get the answer key specific to the clinical case this pair was assigned
+      const caseSpecificAnswerKey = getAnswerKeyFieldsForCase(selectedResponse.clinical_case_id);
+      if (!caseSpecificAnswerKey.length) {
+        toast({ title: "Espelho não encontrado", description: "Não há espelho de respostas cadastrado para o caso clínico desta dupla.", variant: "destructive" });
+        setGradingAI(false);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke("grade-reconciliation", {
         body: {
           response_id: selectedResponse.id,
           room_id: roomId,
           answers_json: selectedResponse.answers_json,
-          answer_key_json: answerKeyForm.content_json,
+          answer_key_json: caseSpecificAnswerKey,
           form_fields: reconciliationForm?.content_json || [],
         },
       });
