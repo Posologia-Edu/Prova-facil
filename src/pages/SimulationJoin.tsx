@@ -294,9 +294,10 @@ export default function SimulationJoin() {
     let score = 0;
     if (form.form_type === "observer_eval" || form.form_type === "professor_eval") {
       const fields = form.content_json as FormField[];
+      const { computeFieldScore } = await import("@/components/forms/types");
       fields.forEach((field) => {
         if (field.max_score && answers[field.id]) {
-          score += Number(answers[field.id]) || 0;
+          score += computeFieldScore(field, answers[field.id]);
         }
       });
     }
@@ -1128,8 +1129,9 @@ export default function SimulationJoin() {
 
                 <Button onClick={async () => {
                   let score = 0;
+                  const { computeFieldScore } = await import("@/components/forms/types");
                   fields.forEach((field) => {
-                    if (field.max_score && answers[field.id]) score += Number(answers[field.id]) || 0;
+                    if (field.max_score && answers[field.id]) score += computeFieldScore(field, answers[field.id]);
                   });
                   const { error } = await supabase.from("simulation_responses").insert({
                     round_id: activeRound.id,

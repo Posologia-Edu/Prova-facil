@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3 } from "lucide-react";
+import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import SplitRoomDialog from "@/components/SplitRoomDialog";
 
@@ -186,6 +186,147 @@ export default function Simulations() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["simulation-rooms"] }),
   });
 
+  const deleteSoapRoom = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("soap_rooms").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["soap-rooms-list"] }),
+  });
+
+  const deleteReconciliationRoom = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("reconciliation_rooms").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reconciliation-rooms-list"] }),
+  });
+
+  const deleteDocumentationRoom = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("documentation_rooms").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["documentation-rooms-list"] }),
+  });
+
+  const duplicateAnamnesisRoom = useMutation({
+    mutationFn: async (roomId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const original = rooms?.find(r => r.id === roomId);
+      if (!original) throw new Error("Room not found");
+      const { data: newRoom, error } = await supabase.from("simulation_rooms").insert({
+        user_id: session.user.id,
+        title: `${original.title} (cópia)`,
+        description: original.description,
+        duration_minutes: original.duration_minutes,
+      }).select().single();
+      if (error) throw error;
+      // Copy forms
+      const { data: forms } = await supabase.from("simulation_forms").select("*").eq("room_id", roomId);
+      if (forms?.length) {
+        await supabase.from("simulation_forms").insert(forms.map(f => ({ room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: f.content_json })));
+      }
+      return newRoom;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["simulation-rooms"] });
+      toast({ title: "Sala duplicada", description: "A sala foi duplicada com sucesso." });
+      navigate(`/simulations/${data.id}/edit`);
+    },
+    onError: () => toast({ title: "Erro", description: "Erro ao duplicar sala.", variant: "destructive" }),
+  });
+
+  const duplicateSoapRoom = useMutation({
+    mutationFn: async (roomId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const original = soapRooms?.find(r => r.id === roomId);
+      if (!original) throw new Error("Room not found");
+      const { data: newRoom, error } = await supabase.from("soap_rooms").insert({
+        user_id: session.user.id,
+        title: `${original.title} (cópia)`,
+        description: original.description,
+        anamnesis_room_id: original.anamnesis_room_id,
+      }).select().single();
+      if (error) throw error;
+      const { data: forms } = await supabase.from("soap_forms").select("*").eq("room_id", roomId);
+      if (forms?.length) {
+        await supabase.from("soap_forms").insert(forms.map(f => ({ room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: f.content_json })));
+      }
+      return newRoom;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["soap-rooms-list"] });
+      toast({ title: "Sala duplicada", description: "A sala SOAP foi duplicada com sucesso." });
+      navigate(`/simulations/soap/editor/${data.id}`);
+    },
+    onError: () => toast({ title: "Erro", description: "Erro ao duplicar sala.", variant: "destructive" }),
+  });
+
+  const duplicateReconciliationRoom = useMutation({
+    mutationFn: async (roomId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const original = reconciliationRooms?.find(r => r.id === roomId);
+      if (!original) throw new Error("Room not found");
+      const { data: newRoom, error } = await supabase.from("reconciliation_rooms").insert({
+        user_id: session.user.id,
+        title: `${original.title} (cópia)`,
+        description: original.description,
+        soap_room_id: original.soap_room_id,
+      }).select().single();
+      if (error) throw error;
+      const { data: forms } = await supabase.from("reconciliation_forms").select("*").eq("room_id", roomId);
+      if (forms?.length) {
+        await supabase.from("reconciliation_forms").insert(forms.map(f => ({ room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: f.content_json })));
+      }
+      const { data: cases } = await supabase.from("reconciliation_clinical_cases").select("*").eq("room_id", roomId);
+      if (cases?.length) {
+        await supabase.from("reconciliation_clinical_cases").insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })));
+      }
+      return newRoom;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["reconciliation-rooms-list"] });
+      toast({ title: "Sala duplicada", description: "A sala de reconciliação foi duplicada com sucesso." });
+      navigate(`/simulations/reconciliation/editor/${data.id}`);
+    },
+    onError: () => toast({ title: "Erro", description: "Erro ao duplicar sala.", variant: "destructive" }),
+  });
+
+  const duplicateDocumentationRoom = useMutation({
+    mutationFn: async (roomId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const original = documentationRooms?.find(r => r.id === roomId);
+      if (!original) throw new Error("Room not found");
+      const { data: newRoom, error } = await supabase.from("documentation_rooms").insert({
+        user_id: session.user.id,
+        title: `${original.title} (cópia)`,
+        description: original.description,
+        reconciliation_room_id: original.reconciliation_room_id,
+      }).select().single();
+      if (error) throw error;
+      const { data: forms } = await supabase.from("documentation_forms").select("*").eq("room_id", roomId);
+      if (forms?.length) {
+        await supabase.from("documentation_forms").insert(forms.map(f => ({ room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: f.content_json })));
+      }
+      const { data: cases } = await supabase.from("documentation_clinical_cases").select("*").eq("room_id", roomId);
+      if (cases?.length) {
+        await supabase.from("documentation_clinical_cases").insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })));
+      }
+      return newRoom;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["documentation-rooms-list"] });
+      toast({ title: "Sala duplicada", description: "A sala de documentação foi duplicada com sucesso." });
+      navigate(`/simulations/documentation/editor/${data.id}`);
+    },
+    onError: () => toast({ title: "Erro", description: "Erro ao duplicar sala.", variant: "destructive" }),
+  });
+
   const statusColor: Record<string, string> = {
     draft: "bg-muted text-muted-foreground",
     active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
@@ -350,7 +491,10 @@ export default function Simulations() {
                             <Scissors className="h-3.5 w-3.5 mr-1" />Dividir
                           </Button>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)}>
+                        <Button variant="outline" size="sm" onClick={() => duplicateAnamnesisRoom.mutate(room.id)} title="Duplicar">
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -407,6 +551,12 @@ export default function Simulations() {
                           <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
                         </Button>
                       )}
+                      <Button variant="outline" size="sm" onClick={() => duplicateSoapRoom.mutate(room.id)} title="Duplicar">
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteSoapRoom.mutate(room.id)} title="Excluir">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -460,6 +610,12 @@ export default function Simulations() {
                           <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
                         </Button>
                       )}
+                      <Button variant="outline" size="sm" onClick={() => duplicateReconciliationRoom.mutate(room.id)} title="Duplicar">
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteReconciliationRoom.mutate(room.id)} title="Excluir">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -513,6 +669,12 @@ export default function Simulations() {
                           <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
                         </Button>
                       )}
+                      <Button variant="outline" size="sm" onClick={() => duplicateDocumentationRoom.mutate(room.id)} title="Duplicar">
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteDocumentationRoom.mutate(room.id)} title="Excluir">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
