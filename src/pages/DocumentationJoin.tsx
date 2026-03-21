@@ -4,12 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
 import { FileText, Send, CheckCircle, BookOpen, Users, Table2, Plus, Trash2 } from "lucide-react";
+import FormRenderer from "@/components/forms/FormRenderer";
+import type { FormField } from "@/components/forms/types";
 
 type FormField = { id: string; label: string; type: "text" | "textarea" | "radio" | "checkbox" | "scale"; options?: string[]; max_score?: number; required?: boolean };
 type MedColumn = { id: string; label: string };
