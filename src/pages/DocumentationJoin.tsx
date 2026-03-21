@@ -115,37 +115,7 @@ export default function DocumentationJoin() {
   const referralFields: FormField[] = referralForm ? (Array.isArray(referralForm.content_json) ? referralForm.content_json : []) : [];
   const medContent: MedFormContent | null = medForm ? (medForm.content_json as MedFormContent) : null;
 
-  const renderField = (field: FormField) => {
-    switch (field.type) {
-      case "text": return <Input value={referralAnswers[field.id] || ""} onChange={e => setReferralAnswers({ ...referralAnswers, [field.id]: e.target.value })} />;
-      case "textarea": return <Textarea value={referralAnswers[field.id] || ""} onChange={e => setReferralAnswers({ ...referralAnswers, [field.id]: e.target.value })} rows={4} />;
-      case "radio": return (
-        <RadioGroup value={referralAnswers[field.id] || ""} onValueChange={v => setReferralAnswers({ ...referralAnswers, [field.id]: v })}>
-          {field.options?.map(opt => (<div key={opt} className="flex items-center gap-2"><RadioGroupItem value={opt} id={`${field.id}-${opt}`} /><Label htmlFor={`${field.id}-${opt}`}>{opt}</Label></div>))}
-        </RadioGroup>
-      );
-      case "checkbox": return (
-        <div className="space-y-2">
-          {field.options?.map(opt => (
-            <div key={opt} className="flex items-center gap-2">
-              <Checkbox checked={(referralAnswers[field.id] || []).includes(opt)} onCheckedChange={(checked) => {
-                const current = referralAnswers[field.id] || [];
-                setReferralAnswers({ ...referralAnswers, [field.id]: checked ? [...current, opt] : current.filter((o: string) => o !== opt) });
-              }} />
-              <Label>{opt}</Label>
-            </div>
-          ))}
-        </div>
-      );
-      case "scale": return (
-        <div className="flex items-center gap-4">
-          <Slider value={[referralAnswers[field.id] || 0]} onValueChange={([v]) => setReferralAnswers({ ...referralAnswers, [field.id]: v })} min={0} max={field.max_score || 10} step={1} />
-          <span className="text-sm font-medium w-8">{referralAnswers[field.id] || 0}</span>
-        </div>
-      );
-      default: return null;
-    }
-  };
+  // Form rendering delegated to FormRenderer
 
   const addMedRow = () => {
     const row: Record<string, string> = {};
