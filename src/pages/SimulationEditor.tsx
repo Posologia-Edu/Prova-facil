@@ -29,14 +29,7 @@ type Participant = {
   participant_role: string;
 };
 
-type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "radio" | "checkbox" | "scale";
-  options?: string[];
-  max_score?: number;
-  required?: boolean;
-};
+// FormField type imported from @/components/forms/types
 
 type SimForm = {
   id?: string;
