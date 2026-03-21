@@ -57,6 +57,7 @@ import DocumentationControl from "./pages/DocumentationControl";
 import SimulationAggregator from "./pages/SimulationAggregator";
 import VirtualPatients from "./pages/VirtualPatients";
 import VirtualPatientChat from "./pages/VirtualPatientChat";
+import VirtualPatientRoom from "./pages/VirtualPatientRoom";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
 import PublicContact from "./pages/PublicContact";
