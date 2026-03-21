@@ -214,6 +214,7 @@ const Index = () => {
       </section>
 
       <LandingFooter />
+      <SalesAgent />
     </div>
   );
 };
