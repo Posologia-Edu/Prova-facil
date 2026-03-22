@@ -553,14 +553,17 @@ export default function ReconciliationEditor() {
             </Card>
           )}
 
-          {/* Existing forms */}
-          {forms.map((form: any) => {
+          {/* Existing forms — grouped: reconciliation first, then answer_key below */}
+          {[...forms].sort((a, b) => {
+            const order: Record<string, number> = { reconciliation: 0, answer_key: 1 };
+            return (order[a.form_type] ?? 2) - (order[b.form_type] ?? 2);
+          }).map((form: any) => {
             const isAnswerKey = form.form_type === "answer_key";
             const caseAnswers = isAnswerKey && form.content_json?.case_answers;
             const caseCount = caseAnswers ? Object.keys(caseAnswers).length : 0;
             const fieldCount = Array.isArray(form.content_json) ? form.content_json.length : 0;
             return (
-            <Card key={form.id}>
+            <Card key={form.id} className={isAnswerKey ? "ml-4 border-l-4 border-l-primary/30" : ""}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
