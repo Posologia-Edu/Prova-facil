@@ -394,6 +394,26 @@ const App = () => (
             />
             {/* Public Virtual Patient Room (student access via PIN) */}
             <Route path="/virtual-patients/room/:cvpId" element={<VirtualPatientRoom />} />
+            {/* SCT Routes */}
+            <Route
+              path="/sct"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><SctExams /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sct/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><SctEditor /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Public SCT routes */}
+            <Route path="/sct/expert/:examId" element={<SctExpertPortal />} />
+            <Route path="/sct/student/:examId" element={<SctStudentPortal />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
