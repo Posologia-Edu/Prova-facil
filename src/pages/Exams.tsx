@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { useSubscription, FREE_LIMITS } from "@/hooks/use-subscription";
 import { useMonthlyExamCount } from "@/hooks/use-monthly-usage";
