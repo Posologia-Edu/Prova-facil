@@ -1413,6 +1413,7 @@ export type Database = {
       }
       mock_trials: {
         Row: {
+          access_code: string
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -1424,6 +1425,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          access_code?: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -1435,6 +1437,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          access_code?: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null
