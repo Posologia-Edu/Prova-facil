@@ -408,6 +408,7 @@ export default function QuestionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="questions" />
           <Button variant="outline" onClick={() => setAiOpen(true)}>
             <Sparkles className="h-4 w-4 mr-2 text-secondary" />
             {t("questions_generate_ai")}

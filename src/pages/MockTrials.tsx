@@ -123,10 +123,13 @@ export default function MockTrials() {
           </h1>
           <p className="text-muted-foreground">Crie e gerencie sessões de júri simulado clínico</p>
         </div>
-        <Button onClick={createTrial}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Júri Simulado
-        </Button>
+        <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="mock-trials" />
+          <Button onClick={createTrial}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Júri Simulado
+          </Button>
+        </div>
       </div>
 
       {trials.length === 0 ? (

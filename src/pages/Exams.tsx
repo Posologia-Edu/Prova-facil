@@ -314,6 +314,7 @@ export default function ExamsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="exams" />
           <Button
             variant="outline"
             size="sm"
