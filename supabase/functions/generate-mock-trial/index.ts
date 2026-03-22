@@ -10,7 +10,41 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { learningObjectives, pdfContent, caseNumber } = await req.json();
+    const { learningObjectives, pdfBase64, pdfContent, caseNumber } = await req.json();
+
+    // If PDF was uploaded as base64, decode and extract text
+    let extractedPdfText = pdfContent || "";
+    if (pdfBase64 && !extractedPdfText) {
+      // Use AI to extract text from the PDF by sending it as a document
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (LOVABLE_API_KEY) {
+        try {
+          const extractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-3-flash-preview",
+              messages: [
+                { role: "system", content: "Extract ALL text content from this PDF document. Return the complete text preserving structure, headings, and paragraphs. Do not summarize." },
+                { role: "user", content: [
+                  { type: "text", text: "Extract all text from this PDF:" },
+                  { type: "image_url", image_url: { url: `data:application/pdf;base64,${pdfBase64}` } }
+                ]}
+              ],
+            }),
+          });
+          if (extractResponse.ok) {
+            const extractData = await extractResponse.json();
+            extractedPdfText = extractData.choices?.[0]?.message?.content || "";
+          }
+        } catch (e) {
+          console.error("PDF extraction error:", e);
+        }
+      }
+    }
 
     const systemPrompt = `Você é um especialista em educação médica e simulações jurídicas clínicas. Você cria processos jurídicos simulados para fins educacionais em saúde.
 
@@ -44,7 +78,7 @@ O processo deve:
 
     const userPrompt = `Objetivos de Aprendizagem: ${learningObjectives || "Não especificados"}
 Número do Processo: ${caseNumber || "001/2025"}
-${pdfContent ? `\nConteúdo de referência:\n${pdfContent}` : ""}
+${extractedPdfText ? `\nConteúdo de referência da aula (PDF):\n${extractedPdfText}` : ""}
 
 Gere o processo completo em formato JSON.`;
 
