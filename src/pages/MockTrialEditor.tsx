@@ -405,9 +405,43 @@ export default function MockTrialEditor() {
               <div className="space-y-4">
                 <div>
                   <Label>Objetivos de Aprendizagem</Label>
-                  <Textarea value={aiObjectives} onChange={e => setAiObjectives(e.target.value)} placeholder="Descreva os objetivos de aprendizagem para o caso clínico..." rows={5} />
+                  <Textarea value={aiObjectives} onChange={e => setAiObjectives(e.target.value)} placeholder="Descreva os objetivos de aprendizagem para o caso clínico..." rows={4} />
                 </div>
-                <Button onClick={generateWithAI} disabled={aiGenerating} className="w-full">
+                <div>
+                  <Label>PDF de Referência (opcional)</Label>
+                  <div className="mt-1.5">
+                    {aiPdfFile ? (
+                      <div className="flex items-center gap-2 p-3 rounded-md border bg-muted/50">
+                        <FileText className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-sm truncate flex-1">{aiPdfFile.name}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setAiPdfFile(null)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="flex items-center justify-center gap-2 p-4 rounded-md border-2 border-dashed cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors">
+                        <Upload className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Clique para enviar um PDF da aula</span>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 20 * 1024 * 1024) {
+                                toast.error("Arquivo muito grande (máx. 20MB)");
+                                return;
+                              }
+                              setAiPdfFile(file);
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+                <Button onClick={generateWithAI} disabled={aiGenerating || (!aiObjectives.trim() && !aiPdfFile)} className="w-full">
                   {aiGenerating ? "Gerando..." : "Gerar Processo"}
                   <Sparkles className="h-4 w-4 ml-2" />
                 </Button>
