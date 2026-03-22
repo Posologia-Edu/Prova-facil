@@ -1139,6 +1139,314 @@ export type Database = {
           },
         ]
       }
+      mock_trial_assignments: {
+        Row: {
+          case_id: string
+          created_at: string
+          group_id: string
+          id: string
+          role: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          group_id: string
+          id?: string
+          role?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_assignments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_trial_assignments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mock_trial_cases: {
+        Row: {
+          case_number: string
+          characters_json: Json
+          created_at: string
+          id: string
+          learning_objectives: string | null
+          mock_trial_id: string
+          position: number
+          process_content: string | null
+          title: string
+        }
+        Insert: {
+          case_number?: string
+          characters_json?: Json
+          created_at?: string
+          id?: string
+          learning_objectives?: string | null
+          mock_trial_id: string
+          position?: number
+          process_content?: string | null
+          title?: string
+        }
+        Update: {
+          case_number?: string
+          characters_json?: Json
+          created_at?: string
+          id?: string
+          learning_objectives?: string | null
+          mock_trial_id?: string
+          position?: number
+          process_content?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_cases_mock_trial_id_fkey"
+            columns: ["mock_trial_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mock_trial_forms: {
+        Row: {
+          created_at: string
+          fields_json: Json
+          id: string
+          mock_trial_id: string
+          target_role: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          fields_json?: Json
+          id?: string
+          mock_trial_id: string
+          target_role?: string
+          title?: string
+        }
+        Update: {
+          created_at?: string
+          fields_json?: Json
+          id?: string
+          mock_trial_id?: string
+          target_role?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_forms_mock_trial_id_fkey"
+            columns: ["mock_trial_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mock_trial_groups: {
+        Row: {
+          created_at: string
+          group_number: number
+          id: string
+          mock_trial_id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          group_number?: number
+          id?: string
+          mock_trial_id: string
+          name?: string
+        }
+        Update: {
+          created_at?: string
+          group_number?: number
+          id?: string
+          mock_trial_id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_groups_mock_trial_id_fkey"
+            columns: ["mock_trial_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mock_trial_responses: {
+        Row: {
+          created_at: string
+          form_id: string
+          group_id: string
+          id: string
+          response_json: Json
+          session_id: string
+          student_email: string | null
+          student_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          form_id: string
+          group_id: string
+          id?: string
+          response_json?: Json
+          session_id: string
+          student_email?: string | null
+          student_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          form_id?: string
+          group_id?: string
+          id?: string
+          response_json?: Json
+          session_id?: string
+          student_email?: string | null
+          student_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_trial_responses_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_trial_responses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mock_trial_sessions: {
+        Row: {
+          case_id: string
+          created_at: string
+          current_phase_started_at: string | null
+          id: string
+          judge_notes: string | null
+          status: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          current_phase_started_at?: string | null
+          id?: string
+          judge_notes?: string | null
+          status?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          current_phase_started_at?: string | null
+          id?: string
+          judge_notes?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_sessions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mock_trial_students: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          student_email?: string | null
+          student_name: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_students_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mock_trials: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          judge_name: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          judge_name?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          judge_name?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       osce_chat_messages: {
         Row: {
           circuit_id: string
