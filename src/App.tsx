@@ -417,6 +417,25 @@ const App = () => (
             {/* Public SCT routes */}
             <Route path="/sct/expert/:examId" element={<SctExpertPortal />} />
             <Route path="/sct/student/:examId" element={<SctStudentPortal />} />
+            {/* KFE Routes */}
+            <Route
+              path="/kfe"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><KfeExams /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/kfe/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><KfeEditor /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Public KFE route */}
+            <Route path="/kfe/student/:examId" element={<KfeStudentPortal />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
