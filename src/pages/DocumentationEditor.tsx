@@ -87,6 +87,34 @@ export default function DocumentationEditor() {
   const [activeMedAnswerKeyCaseId, setActiveMedAnswerKeyCaseId] = useState<string>("");
   const [editingMedFormId, setEditingMedFormId] = useState<string | null>(null);
   const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedImportRoom, setSelectedImportRoom] = useState("");
+
+  const addParticipant = async () => {
+    if (!newName.trim()) return;
+    const { error } = await supabase.from("documentation_participants").insert({
+      room_id: roomId!,
+      student_name: newName.trim(),
+      student_email: newEmail.trim(),
+      pair_index: -1,
+      pair_position: "X",
+      reconciliation_participant_id: null,
+      participant_role: "student",
+    });
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    setNewName("");
+    setNewEmail("");
+    refetchParticipants();
+  };
+
+  const importFromReconDialog = async () => {
+    if (!selectedImportRoom) return;
+    await importFromReconciliation(selectedImportRoom);
+    setImportDialogOpen(false);
+    setSelectedImportRoom("");
+  };
 
   const getDefaultFormTitle = (type: string) => {
     const defaultTitles: Record<string, string> = {
