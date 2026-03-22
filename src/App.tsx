@@ -464,9 +464,9 @@ const App = () => (
             {/* Mock Trial Routes */}
             <Route path="/mock-trials" element={<ProtectedRoute><AppLayout><MockTrials /></AppLayout></ProtectedRoute>} />
             <Route path="/mock-trials/:id/edit" element={<ProtectedRoute><AppLayout><MockTrialEditor /></AppLayout></ProtectedRoute>} />
-            {/* Public Mock Trial routes */}
-            <Route path="/mock-trial/judge/:trialId" element={<MockTrialJudge />} />
-            <Route path="/mock-trial/student/:trialId" element={<MockTrialStudent />} />
+            {/* Public Mock Trial routes — accessed via StudentAuth PIN */}
+            <Route path="/mock-trial/portal/:accessCode" element={<MockTrialStudent />} />
+            <Route path="/mock-trial/judge/:accessCode" element={<MockTrialJudge />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />

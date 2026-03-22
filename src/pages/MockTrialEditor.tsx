@@ -320,8 +320,8 @@ export default function MockTrialEditor() {
 
   const roleLabels: Record<string, string> = { prosecution: "Acusação", defense: "Defesa", jury: "Júri" };
 
-  const judgeLink = trial ? `${window.location.origin}/mock-trial/judge/${id}` : "";
-  const studentLink = trial ? `${window.location.origin}/mock-trial/student/${id}` : "";
+  const accessCode = trial?.access_code || "";
+  const judgeLink = trial ? `${window.location.origin}/mock-trial/judge/${accessCode}` : "";
 
   if (isLoading) return <div className="p-6"><div className="animate-pulse h-8 bg-muted rounded w-1/3" /></div>;
 
