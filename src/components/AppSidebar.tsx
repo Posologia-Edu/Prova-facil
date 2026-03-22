@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   Scale,
   TrendingUp,
+  Gavel,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
