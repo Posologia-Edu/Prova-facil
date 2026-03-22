@@ -255,6 +255,112 @@ export type Database = {
         }
         Relationships: []
       }
+      clinical_observation_sessions: {
+        Row: {
+          complexity: string
+          created_at: string
+          duration_minutes: number | null
+          evaluator_email: string
+          evaluator_name: string
+          feedback: string | null
+          global_score: number | null
+          id: string
+          observation_id: string
+          scores_json: Json
+          setting: string | null
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          complexity?: string
+          created_at?: string
+          duration_minutes?: number | null
+          evaluator_email?: string
+          evaluator_name?: string
+          feedback?: string | null
+          global_score?: number | null
+          id?: string
+          observation_id: string
+          scores_json?: Json
+          setting?: string | null
+          student_email?: string | null
+          student_name?: string
+        }
+        Update: {
+          complexity?: string
+          created_at?: string
+          duration_minutes?: number | null
+          evaluator_email?: string
+          evaluator_name?: string
+          feedback?: string | null
+          global_score?: number | null
+          id?: string
+          observation_id?: string
+          scores_json?: Json
+          setting?: string | null
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_observation_sessions_observation_id_fkey"
+            columns: ["observation_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_observations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinical_observations: {
+        Row: {
+          access_code: string
+          class_id: string | null
+          competency_domains_json: Json
+          created_at: string
+          deleted_at: string | null
+          id: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          class_id?: string | null
+          competency_domains_json?: Json
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          class_id?: string | null
+          competency_domains_json?: Json
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_observations_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documentation_clinical_cases: {
         Row: {
           content: string | null
@@ -2325,6 +2431,180 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "simulation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sjt_answers: {
+        Row: {
+          created_at: string
+          id: string
+          scenario_id: string
+          score: number | null
+          session_id: string
+          student_ranking_json: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          scenario_id: string
+          score?: number | null
+          session_id: string
+          student_ranking_json?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          scenario_id?: string
+          score?: number | null
+          session_id?: string
+          student_ranking_json?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sjt_answers_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "sjt_scenarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sjt_answers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sjt_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sjt_exams: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          scoring_method: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          scoring_method?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          scoring_method?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sjt_exams_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sjt_scenarios: {
+        Row: {
+          actions_json: Json
+          correct_ranking_json: Json
+          created_at: string
+          id: string
+          position: number
+          scenario_text: string
+          sjt_exam_id: string
+        }
+        Insert: {
+          actions_json?: Json
+          correct_ranking_json?: Json
+          created_at?: string
+          id?: string
+          position?: number
+          scenario_text?: string
+          sjt_exam_id: string
+        }
+        Update: {
+          actions_json?: Json
+          correct_ranking_json?: Json
+          created_at?: string
+          id?: string
+          position?: number
+          scenario_text?: string
+          sjt_exam_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sjt_scenarios_sjt_exam_id_fkey"
+            columns: ["sjt_exam_id"]
+            isOneToOne: false
+            referencedRelation: "sjt_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sjt_sessions: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          id: string
+          max_score: number | null
+          sjt_exam_id: string
+          started_at: string
+          status: string
+          student_email: string | null
+          student_name: string | null
+          total_score: number | null
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          max_score?: number | null
+          sjt_exam_id: string
+          started_at?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string | null
+          total_score?: number | null
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          max_score?: number | null
+          sjt_exam_id?: string
+          started_at?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string | null
+          total_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sjt_sessions_sjt_exam_id_fkey"
+            columns: ["sjt_exam_id"]
+            isOneToOne: false
+            referencedRelation: "sjt_exams"
             referencedColumns: ["id"]
           },
         ]
