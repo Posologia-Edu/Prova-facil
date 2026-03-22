@@ -18,6 +18,7 @@ import {
   Store,
   HeartPulse,
   UserRound,
+  BrainCircuit,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
