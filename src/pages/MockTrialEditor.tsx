@@ -166,16 +166,34 @@ export default function MockTrialEditor() {
     toast.success("Processo salvo");
   };
 
+  const extractPdfText = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // Send as base64 to edge function for extraction
+        const base64 = (reader.result as string).split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+      reader.readAsDataURL(file);
+    });
+  };
+
   const generateWithAI = async () => {
-    if (!aiObjectives.trim()) {
-      toast.error("Informe os objetivos de aprendizagem");
+    if (!aiObjectives.trim() && !aiPdfFile) {
+      toast.error("Informe os objetivos ou envie um PDF");
       return;
     }
     setAiGenerating(true);
     try {
+      let pdfBase64: string | undefined;
+      if (aiPdfFile) {
+        pdfBase64 = await extractPdfText(aiPdfFile);
+      }
+
       const caseNumber = `${String(cases.length + 1).padStart(3, "0")}/${new Date().getFullYear()}`;
       const { data, error } = await supabase.functions.invoke("generate-mock-trial", {
-        body: { learningObjectives: aiObjectives, caseNumber },
+        body: { learningObjectives: aiObjectives, caseNumber, pdfBase64 },
       });
       if (error) throw error;
       
@@ -193,6 +211,7 @@ export default function MockTrialEditor() {
       toast.success("Processo gerado com sucesso!");
       setAiDialogOpen(false);
       setAiObjectives("");
+      setAiPdfFile(null);
       refetchCases();
     } catch (e: any) {
       toast.error(e.message || "Erro ao gerar processo");
