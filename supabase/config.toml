@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.grade-virtual-patient]
 verify_jwt = false
+
+[functions.generate-mock-trial]
+verify_jwt = false
