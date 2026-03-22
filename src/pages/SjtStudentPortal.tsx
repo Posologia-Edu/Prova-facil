@@ -39,7 +39,7 @@ export default function SjtStudentPortal() {
       if (exam) { setExamTitle(exam.title); setExamStatus(exam.status); }
 
       const { data: sc } = await supabase.from("sjt_scenarios").select("*").eq("sjt_exam_id", examId!).order("position");
-      const scenarioData = (sc || []) as SjtScenario[];
+      const scenarioData = (sc || []) as unknown as SjtScenario[];
       setScenarios(scenarioData);
 
       // Initialize rankings with shuffled actions

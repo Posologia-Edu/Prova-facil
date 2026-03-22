@@ -74,7 +74,7 @@ export default function SjtEditor() {
       correct_ranking_json: ["a", "b", "c", "d"],
     }).select().single();
     if (error) { toast.error("Erro"); return; }
-    setScenarios([...scenarios, data as SjtScenario]);
+    setScenarios([...scenarios, data as unknown as SjtScenario]);
   };
 
   const updateScenario = async (sId: string, updates: Partial<SjtScenario>) => {

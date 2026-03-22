@@ -46,7 +46,7 @@ export default function ClinicalObservationEval() {
       const { data } = await supabase.from("clinical_observations").select("*").eq("id", obsId!).single();
       if (data) {
         setObs(data);
-        const d = (data.competency_domains_json || []) as Domain[];
+        const d = (data.competency_domains_json as unknown as Domain[]) || [];
         setDomains(d);
         const initial: Record<string, number> = {};
         d.forEach(dom => { initial[dom.id] = 5; });

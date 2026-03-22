@@ -60,7 +60,7 @@ export default function ClinicalObservationEditor() {
 
   const handleSave = async () => {
     setSaving(true);
-    await supabase.from("clinical_observations").update({ title, status, competency_domains_json: domains, updated_at: new Date().toISOString() }).eq("id", id!);
+    await supabase.from("clinical_observations").update({ title, status, competency_domains_json: domains as unknown as any, updated_at: new Date().toISOString() }).eq("id", id!);
     toast.success("Salvo!");
     setSaving(false);
   };
