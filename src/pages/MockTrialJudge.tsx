@@ -189,9 +189,9 @@ export default function MockTrialJudge() {
       )}
 
       {session?.status === "finished" && (
-        <Card className="border-2 border-green-500">
+        <Card className="border-2 border-primary">
           <CardContent className="py-12 text-center">
-            <Gavel className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <Gavel className="h-12 w-12 text-primary mx-auto mb-4" />
             <h3 className="text-xl font-bold">Sessão Finalizada</h3>
           </CardContent>
         </Card>

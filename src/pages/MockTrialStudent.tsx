@@ -294,7 +294,7 @@ function MockTrialFormCard({ form, onSubmit }: { form: any; onSubmit: (answers: 
     return (
       <Card className="mb-4">
         <CardContent className="py-8 text-center">
-          <p className="text-green-600 font-medium">✓ Resposta enviada com sucesso!</p>
+          <p className="text-primary font-medium">✓ Resposta enviada com sucesso!</p>
         </CardContent>
       </Card>
     );
