@@ -52,7 +52,7 @@ export default function ClinicalObservationEditor() {
       setTitle(obs.title);
       setType(obs.type);
       setStatus(obs.status);
-      setDomains((obs.competency_domains_json || []) as Domain[]);
+      setDomains((obs.competency_domains_json as unknown as Domain[]) || []);
     }
     const { data: sess } = await supabase.from("clinical_observation_sessions").select("*").eq("observation_id", id!).order("created_at", { ascending: false });
     setSessions((sess || []) as Session[]);
