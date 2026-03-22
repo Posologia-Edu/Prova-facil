@@ -692,6 +692,221 @@ export type Database = {
           },
         ]
       }
+      kfe_answers: {
+        Row: {
+          answer_json: Json
+          created_at: string
+          id: string
+          key_feature_id: string
+          score: number | null
+          session_id: string
+        }
+        Insert: {
+          answer_json?: Json
+          created_at?: string
+          id?: string
+          key_feature_id: string
+          score?: number | null
+          session_id: string
+        }
+        Update: {
+          answer_json?: Json
+          created_at?: string
+          id?: string
+          key_feature_id?: string
+          score?: number | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kfe_answers_key_feature_id_fkey"
+            columns: ["key_feature_id"]
+            isOneToOne: false
+            referencedRelation: "kfe_key_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kfe_answers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "kfe_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kfe_cases: {
+        Row: {
+          clinical_scenario: string
+          created_at: string
+          id: string
+          kfe_exam_id: string
+          position: number
+          title: string
+        }
+        Insert: {
+          clinical_scenario?: string
+          created_at?: string
+          id?: string
+          kfe_exam_id: string
+          position?: number
+          title?: string
+        }
+        Update: {
+          clinical_scenario?: string
+          created_at?: string
+          id?: string
+          kfe_exam_id?: string
+          position?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kfe_cases_kfe_exam_id_fkey"
+            columns: ["kfe_exam_id"]
+            isOneToOne: false
+            referencedRelation: "kfe_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kfe_exams: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kfe_exams_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kfe_key_features: {
+        Row: {
+          case_id: string
+          correct_answer_json: Json
+          created_at: string
+          explanation: string | null
+          id: string
+          max_score: number
+          options_json: Json
+          position: number
+          question_text: string
+          question_type: string
+        }
+        Insert: {
+          case_id: string
+          correct_answer_json?: Json
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          max_score?: number
+          options_json?: Json
+          position?: number
+          question_text?: string
+          question_type?: string
+        }
+        Update: {
+          case_id?: string
+          correct_answer_json?: Json
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          max_score?: number
+          options_json?: Json
+          position?: number
+          question_text?: string
+          question_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kfe_key_features_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "kfe_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kfe_sessions: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          id: string
+          kfe_exam_id: string
+          max_score: number | null
+          started_at: string
+          status: string
+          student_email: string | null
+          student_name: string | null
+          total_score: number | null
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          kfe_exam_id: string
+          max_score?: number | null
+          started_at?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string | null
+          total_score?: number | null
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          kfe_exam_id?: string
+          max_score?: number | null
+          started_at?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string | null
+          total_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kfe_sessions_kfe_exam_id_fkey"
+            columns: ["kfe_exam_id"]
+            isOneToOne: false
+            referencedRelation: "kfe_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_comments: {
         Row: {
           content: string
