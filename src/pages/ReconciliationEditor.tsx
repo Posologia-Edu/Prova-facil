@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw, Download } from "lucide-react";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 
@@ -130,6 +130,33 @@ export default function ReconciliationEditor() {
   const [caseContent, setCaseContent] = useState("");
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
   const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedImportRoom, setSelectedImportRoom] = useState("");
+
+  const addParticipant = async () => {
+    if (!newName.trim()) return;
+    const { error } = await supabase.from("reconciliation_participants").insert({
+      room_id: roomId!,
+      student_name: newName.trim(),
+      student_email: newEmail.trim(),
+      pair_index: -1,
+      pair_position: "X",
+      participant_role: "student",
+    });
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    setNewName("");
+    setNewEmail("");
+    refetchParticipants();
+  };
+
+  const importFromSoapDialog = async () => {
+    if (!selectedImportRoom) return;
+    await importFromSoap(selectedImportRoom);
+    setImportDialogOpen(false);
+    setSelectedImportRoom("");
+  };
 
   const students = participants.filter(p => p.participant_role === "student");
   const pairs = students.reduce((acc: Record<number, any[]>, p) => {
@@ -416,20 +443,35 @@ export default function ReconciliationEditor() {
         {/* Participants Tab */}
         <TabsContent value="participants" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Importar Alunos do SOAP</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">Adicionar Aluno</CardTitle></CardHeader>
             <CardContent>
-              <div className="flex gap-2 flex-wrap">
-                {soapRooms?.map(sr => (
-                  <Button key={sr.id} variant="outline" size="sm" onClick={() => importFromSoap(sr.id)}>
-                    <Copy className="h-3.5 w-3.5 mr-1" />{sr.title}
-                  </Button>
-                ))}
-                {!soapRooms?.length && <p className="text-sm text-muted-foreground">Nenhuma sala SOAP encontrada</p>}
+              <div className="flex gap-2">
+                <Input placeholder="Nome" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                <Input placeholder="E-mail" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                <Button onClick={addParticipant} disabled={!newName.trim()}><Plus className="h-4 w-4" /></Button>
               </div>
             </CardContent>
           </Card>
+
+          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><Download className="h-4 w-4 mr-2" />Importar do SOAP</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Importar Alunos do SOAP</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <Select value={selectedImportRoom} onValueChange={setSelectedImportRoom}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a sala SOAP" /></SelectTrigger>
+                  <SelectContent>
+                    {soapRooms?.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.title} (PIN: {r.access_code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={importFromSoapDialog} disabled={!selectedImportRoom} className="w-full">Importar</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Pair formation - same pattern as SOAP */}
           {(() => {
