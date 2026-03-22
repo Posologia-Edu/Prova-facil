@@ -130,6 +130,33 @@ export default function ReconciliationEditor() {
   const [caseContent, setCaseContent] = useState("");
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
   const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedImportRoom, setSelectedImportRoom] = useState("");
+
+  const addParticipant = async () => {
+    if (!newName.trim()) return;
+    const { error } = await supabase.from("reconciliation_participants").insert({
+      room_id: roomId!,
+      student_name: newName.trim(),
+      student_email: newEmail.trim(),
+      pair_index: -1,
+      pair_position: "X",
+      participant_role: "student",
+    });
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    setNewName("");
+    setNewEmail("");
+    refetchParticipants();
+  };
+
+  const importFromSoapDialog = async () => {
+    if (!selectedImportRoom) return;
+    await importFromSoap(selectedImportRoom);
+    setImportDialogOpen(false);
+    setSelectedImportRoom("");
+  };
 
   const students = participants.filter(p => p.participant_role === "student");
   const pairs = students.reduce((acc: Record<number, any[]>, p) => {
