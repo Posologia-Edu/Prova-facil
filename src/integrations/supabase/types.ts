@@ -1631,6 +1631,218 @@ export type Database = {
           },
         ]
       }
+      sct_exams: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          expert_panel_size: number
+          id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          expert_panel_size?: number
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          expert_panel_size?: number
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sct_exams_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sct_expert_responses: {
+        Row: {
+          created_at: string
+          expert_email: string
+          expert_name: string
+          id: string
+          likert_value: number
+          scenario_id: string
+        }
+        Insert: {
+          created_at?: string
+          expert_email?: string
+          expert_name?: string
+          id?: string
+          likert_value?: number
+          scenario_id: string
+        }
+        Update: {
+          created_at?: string
+          expert_email?: string
+          expert_name?: string
+          id?: string
+          likert_value?: number
+          scenario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sct_expert_responses_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "sct_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sct_scenarios: {
+        Row: {
+          clinical_vignette: string
+          created_at: string
+          hypothesis: string
+          id: string
+          new_information: string
+          position: number
+          sct_exam_id: string
+        }
+        Insert: {
+          clinical_vignette?: string
+          created_at?: string
+          hypothesis?: string
+          id?: string
+          new_information?: string
+          position?: number
+          sct_exam_id: string
+        }
+        Update: {
+          clinical_vignette?: string
+          created_at?: string
+          hypothesis?: string
+          id?: string
+          new_information?: string
+          position?: number
+          sct_exam_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sct_scenarios_sct_exam_id_fkey"
+            columns: ["sct_exam_id"]
+            isOneToOne: false
+            referencedRelation: "sct_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sct_student_answers: {
+        Row: {
+          created_at: string
+          id: string
+          likert_value: number
+          scenario_id: string
+          score: number | null
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          likert_value?: number
+          scenario_id: string
+          score?: number | null
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          likert_value?: number
+          scenario_id?: string
+          score?: number | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sct_student_answers_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "sct_scenarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sct_student_answers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sct_student_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sct_student_sessions: {
+        Row: {
+          access_code: string
+          created_at: string
+          finished_at: string | null
+          id: string
+          max_score: number | null
+          sct_exam_id: string
+          started_at: string
+          status: string
+          student_email: string | null
+          student_name: string | null
+          total_score: number | null
+        }
+        Insert: {
+          access_code?: string
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          max_score?: number | null
+          sct_exam_id: string
+          started_at?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string | null
+          total_score?: number | null
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          max_score?: number | null
+          sct_exam_id?: string
+          started_at?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string | null
+          total_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sct_student_sessions_sct_exam_id_fkey"
+            columns: ["sct_exam_id"]
+            isOneToOne: false
+            referencedRelation: "sct_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       simulation_forms: {
         Row: {
           content_json: Json
