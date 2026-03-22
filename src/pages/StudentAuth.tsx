@@ -212,6 +212,28 @@ export default function StudentAuth() {
         }
       }
 
+      // Check if PIN belongs to a Mock Trial
+      const { data: mockTrialRoom } = await supabase
+        .from("mock_trials")
+        .select("id, access_code, status, judge_name")
+        .eq("access_code", normalizedPin)
+        .limit(1)
+        .maybeSingle();
+
+      if (mockTrialRoom) {
+        if (mockTrialRoom.status === "draft") {
+          toast({ title: "Atividade não disponível", description: "Este júri simulado ainda não foi ativado pelo professor.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+        sessionStorage.setItem("mt_pin", normalizedPin);
+        sessionStorage.setItem("mt_email", primaryEmail);
+        // Determine if user is judge (match judge_name is not reliable here, use email)
+        // Route to combined page that detects role
+        navigate(`/mock-trial/portal/${normalizedPin}`);
+        return;
+      }
+
       const { data: osceCircuit } = await supabase
         .from("osce_circuits")
         .select("id, access_code")
