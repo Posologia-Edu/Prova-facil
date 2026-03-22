@@ -669,13 +669,16 @@ export default function DocumentationEditor() {
         {/* Medication summary tab */}
         <TabsContent value="medication" className="space-y-4">
           {/* Existing medication forms */}
-          {forms.filter((f: any) => f.form_type === "medication_summary" || f.form_type === "medication_answer_key").map((form: any) => {
+          {[...forms.filter((f: any) => f.form_type === "medication_summary" || f.form_type === "medication_answer_key")].sort((a, b) => {
+            const order: Record<string, number> = { medication_summary: 0, medication_answer_key: 1 };
+            return (order[a.form_type] ?? 2) - (order[b.form_type] ?? 2);
+          }).map((form: any) => {
             const isAnswerKey = form.form_type === "medication_answer_key";
             const caseAnswers = isAnswerKey && form.content_json?.case_answers;
             const caseCount = caseAnswers ? Object.keys(caseAnswers).length : 0;
 
             return (
-              <Card key={form.id}>
+              <Card key={form.id} className={isAnswerKey ? "ml-4 border-l-4 border-l-primary/30" : ""}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div>
