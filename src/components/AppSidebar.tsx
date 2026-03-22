@@ -20,6 +20,8 @@ import {
   UserRound,
   BrainCircuit,
   Target,
+  ClipboardCheck,
+  Scale,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,6 +81,8 @@ export function AppSidebar() {
     { title: "Pacientes Virtuais", url: "/virtual-patients", icon: UserRound },
     { title: "SCT", url: "/sct", icon: BrainCircuit },
     { title: "KFE", url: "/kfe", icon: Target },
+    { title: "Mini-CEX/DOPS", url: "/clinical-observations", icon: ClipboardCheck },
+    { title: "SJT", url: "/sjt", icon: Scale },
   ];
 
   const managementNav = [

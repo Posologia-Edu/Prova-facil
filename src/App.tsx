@@ -39,6 +39,12 @@ import SctStudentPortal from "./pages/SctStudentPortal";
 import KfeExams from "./pages/KfeExams";
 import KfeEditor from "./pages/KfeEditor";
 import KfeStudentPortal from "./pages/KfeStudentPortal";
+import ClinicalObservations from "./pages/ClinicalObservations";
+import ClinicalObservationEditor from "./pages/ClinicalObservationEditor";
+import ClinicalObservationEval from "./pages/ClinicalObservationEval";
+import SjtExams from "./pages/SjtExams";
+import SjtEditor from "./pages/SjtEditor";
+import SjtStudentPortal from "./pages/SjtStudentPortal";
 import OsceEditor from "./pages/OsceEditor";
 import OsceCircuitControl from "./pages/OsceCircuitControl";
 import OsceEvaluator from "./pages/OsceEvaluator";
@@ -436,6 +442,14 @@ const App = () => (
             />
             {/* Public KFE route */}
             <Route path="/kfe/student/:examId" element={<KfeStudentPortal />} />
+            {/* Mini-CEX/DOPS Routes */}
+            <Route path="/clinical-observations" element={<ProtectedRoute><AppLayout><ClinicalObservations /></AppLayout></ProtectedRoute>} />
+            <Route path="/clinical-observations/:id/edit" element={<ProtectedRoute><AppLayout><ClinicalObservationEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/clinical-observations/eval/:obsId" element={<ClinicalObservationEval />} />
+            {/* SJT Routes */}
+            <Route path="/sjt" element={<ProtectedRoute><AppLayout><SjtExams /></AppLayout></ProtectedRoute>} />
+            <Route path="/sjt/:id/edit" element={<ProtectedRoute><AppLayout><SjtEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/sjt/student/:examId" element={<SjtStudentPortal />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
