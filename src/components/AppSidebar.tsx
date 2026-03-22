@@ -79,6 +79,8 @@ export function AppSidebar() {
     { title: "Pacientes Virtuais", url: "/virtual-patients", icon: UserRound },
     { title: "SCT", url: "/sct", icon: BrainCircuit },
     { title: "KFE", url: "/kfe", icon: Target },
+    { title: "Mini-CEX/DOPS", url: "/clinical-observations", icon: ClipboardCheck },
+    { title: "SJT", url: "/sjt", icon: Scale },
   ];
 
   const managementNav = [
