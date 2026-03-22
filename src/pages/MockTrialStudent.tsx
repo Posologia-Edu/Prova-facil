@@ -267,22 +267,52 @@ export default function MockTrialStudent() {
           {myForms.length > 0 && (
             <TabsContent value="forms">
               {myForms.map((form: any) => (
-                <Card key={form.id} className="mb-4">
-                  <CardHeader>
-                    <CardTitle className="text-base">{form.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FormRenderer
-                      fields={(form.fields_json || []) as FormField[]}
-                      onSubmit={(answers) => submitResponse(form.id, answers)}
-                    />
-                  </CardContent>
-                </Card>
+                <MockTrialFormCard
+                  key={form.id}
+                  form={form}
+                  onSubmit={(answers) => submitResponse(form.id, answers)}
+                />
               ))}
             </TabsContent>
           )}
         </Tabs>
       )}
     </div>
+  );
+}
+
+function MockTrialFormCard({ form, onSubmit }: { form: any; onSubmit: (answers: Record<string, any>) => void }) {
+  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = () => {
+    onSubmit(answers);
+    setSubmitted(true);
+  };
+
+  if (submitted) {
+    return (
+      <Card className="mb-4">
+        <CardContent className="py-8 text-center">
+          <p className="text-green-600 font-medium">✓ Resposta enviada com sucesso!</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mb-4">
+      <CardHeader>
+        <CardTitle className="text-base">{form.title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <FormRenderer
+          fields={(form.fields_json || []) as FormField[]}
+          answers={answers}
+          onChange={setAnswers}
+        />
+        <Button onClick={handleSubmit} className="w-full">Enviar Resposta</Button>
+      </CardContent>
+    </Card>
   );
 }
