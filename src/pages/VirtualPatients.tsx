@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -120,9 +121,12 @@ export default function VirtualPatients() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Pacientes Virtuais</h1>
-        <p className="text-muted-foreground">Simule atendimentos clínicos com pacientes virtuais de IA em 3 encontros progressivos.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Pacientes Virtuais</h1>
+          <p className="text-muted-foreground">Simule atendimentos clínicos com pacientes virtuais de IA em 3 encontros progressivos.</p>
+        </div>
+        <SystemPromptViewer toolKey="virtual-patients" />
       </div>
 
       <Tabs defaultValue="pain">

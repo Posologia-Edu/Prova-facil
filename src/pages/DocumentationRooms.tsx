@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -203,10 +204,12 @@ export default function DocumentationRooms() {
           <h1 className="text-2xl font-bold text-foreground">Módulo Documentação</h1>
           <p className="text-muted-foreground">Encaminhamento e quadro resumo de medicamentos vinculados à Reconciliação</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Nova Sala</Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="documentation" />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" />Nova Sala</Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Criar Sala de Documentação</DialogTitle>
@@ -237,7 +240,8 @@ export default function DocumentationRooms() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {isLoading ? (

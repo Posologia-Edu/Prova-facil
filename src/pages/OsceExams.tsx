@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,9 +99,12 @@ export default function OsceExams() {
             Crie e gerencie exames de Avaliação Clínica Objetiva Estruturada
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Novo Exame OSCE
-        </Button>
+        <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="osce" />
+          <Button onClick={() => setShowCreate(true)} className="gap-2">
+            <Plus className="h-4 w-4" /> Novo Exame OSCE
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

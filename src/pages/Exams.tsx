@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { useSubscription, FREE_LIMITS } from "@/hooks/use-subscription";
 import { useMonthlyExamCount } from "@/hooks/use-monthly-usage";
@@ -314,6 +315,7 @@ export default function ExamsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="exams" />
           <Button
             variant="outline"
             size="sm"

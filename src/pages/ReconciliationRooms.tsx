@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -160,10 +161,12 @@ export default function ReconciliationRooms() {
           <h1 className="text-2xl font-bold text-foreground">Módulo Reconciliação</h1>
           <p className="text-muted-foreground">Gerencie salas de reconciliação vinculadas ao SOAP</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Nova Sala</Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="reconciliation" />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" />Nova Sala</Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Criar Sala de Reconciliação</DialogTitle>
@@ -196,7 +199,8 @@ export default function ReconciliationRooms() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
