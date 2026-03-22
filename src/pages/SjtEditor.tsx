@@ -47,7 +47,7 @@ export default function SjtEditor() {
     if (exam) { setTitle(exam.title); setDescription(exam.description || ""); setStatus(exam.status); }
 
     const { data: sc } = await supabase.from("sjt_scenarios").select("*").eq("sjt_exam_id", id!).order("position");
-    setScenarios((sc || []) as SjtScenario[]);
+    setScenarios((sc || []) as unknown as SjtScenario[]);
 
     const { data: sess } = await supabase.from("sjt_sessions").select("*").eq("sjt_exam_id", id!).order("created_at", { ascending: false });
     setSessions((sess || []) as Session[]);
