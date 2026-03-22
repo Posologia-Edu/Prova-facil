@@ -48,6 +48,10 @@ import SjtStudentPortal from "./pages/SjtStudentPortal";
 import ProgressTests from "./pages/ProgressTests";
 import ProgressTestEditor from "./pages/ProgressTestEditor";
 import ProgressTestStudentPortal from "./pages/ProgressTestStudentPortal";
+import MockTrials from "./pages/MockTrials";
+import MockTrialEditor from "./pages/MockTrialEditor";
+import MockTrialJudge from "./pages/MockTrialJudge";
+import MockTrialStudent from "./pages/MockTrialStudent";
 import OsceEditor from "./pages/OsceEditor";
 import OsceCircuitControl from "./pages/OsceCircuitControl";
 import OsceEvaluator from "./pages/OsceEvaluator";
@@ -457,6 +461,12 @@ const App = () => (
             <Route path="/progress-test" element={<ProtectedRoute><AppLayout><ProgressTests /></AppLayout></ProtectedRoute>} />
             <Route path="/progress-test/:id/edit" element={<ProtectedRoute><AppLayout><ProgressTestEditor /></AppLayout></ProtectedRoute>} />
             <Route path="/progress-test/student/:testId" element={<ProgressTestStudentPortal />} />
+            {/* Mock Trial Routes */}
+            <Route path="/mock-trials" element={<ProtectedRoute><AppLayout><MockTrials /></AppLayout></ProtectedRoute>} />
+            <Route path="/mock-trials/:id/edit" element={<ProtectedRoute><AppLayout><MockTrialEditor /></AppLayout></ProtectedRoute>} />
+            {/* Public Mock Trial routes */}
+            <Route path="/mock-trial/judge/:trialId" element={<MockTrialJudge />} />
+            <Route path="/mock-trial/student/:trialId" element={<MockTrialStudent />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />

@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   Scale,
   TrendingUp,
+  Gavel,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,6 +86,7 @@ export function AppSidebar() {
     { title: "Mini-CEX/DOPS", url: "/clinical-observations", icon: ClipboardCheck },
     { title: "SJT", url: "/sjt", icon: Scale },
     { title: "Progress Test", url: "/progress-test", icon: TrendingUp },
+    { title: "Júri Simulado", url: "/mock-trials", icon: Gavel },
   ];
 
   const managementNav = [
