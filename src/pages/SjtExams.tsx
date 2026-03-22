@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,10 @@ export default function SjtExams() {
           <h1 className="text-2xl font-bold text-foreground">SJT — Situational Judgment Test</h1>
           <p className="text-muted-foreground text-sm mt-1">Avalie ética, profissionalismo e tomada de decisão</p>
         </div>
-        <Button onClick={handleCreate}><Plus className="h-4 w-4 mr-2" /> Novo SJT</Button>
+        <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="sjt" />
+          <Button onClick={handleCreate}><Plus className="h-4 w-4 mr-2" /> Novo SJT</Button>
+        </div>
       </div>
 
       {loading ? (

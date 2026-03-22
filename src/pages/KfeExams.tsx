@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -62,7 +63,10 @@ export default function KfeExams() {
           <h1 className="text-2xl font-bold text-foreground">KFE — Key Feature Exam</h1>
           <p className="text-muted-foreground text-sm mt-1">Avalie decisões críticas em casos clínicos</p>
         </div>
-        <Button onClick={handleCreate}><Plus className="h-4 w-4 mr-2" /> Novo KFE</Button>
+        <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="kfe" />
+          <Button onClick={handleCreate}><Plus className="h-4 w-4 mr-2" /> Novo KFE</Button>
+        </div>
       </div>
 
       {loading ? (

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,9 +65,12 @@ export default function ProgressTests() {
           <h1 className="text-2xl font-bold text-foreground">Progress Test</h1>
           <p className="text-muted-foreground">Avaliação longitudinal do progresso dos alunos</p>
         </div>
-        <Button onClick={handleCreate} disabled={creating}>
-          <Plus className="h-4 w-4 mr-2" /> Novo Progress Test
-        </Button>
+        <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="progress-test" />
+          <Button onClick={handleCreate} disabled={creating}>
+            <Plus className="h-4 w-4 mr-2" /> Novo Progress Test
+          </Button>
+        </div>
       </div>
 
       {(!tests || tests.length === 0) ? (

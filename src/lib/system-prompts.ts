@@ -280,4 +280,207 @@ REGRAS:
 - Faça no máximo 1-2 perguntas por vez`,
     },
   ],
+
+  sct: [
+    {
+      id: "sct-scoring",
+      label: "Pontuação SCT",
+      description: "Lógica de pontuação do Script Concordance Test baseada no painel de especialistas",
+      edgeFunction: "student-exam-access",
+      prompt: `O SCT avalia o raciocínio clínico sob incerteza. Cada cenário apresenta:
+- Uma vinheta clínica
+- Uma hipótese diagnóstica/investigativa/terapêutica
+- Uma nova informação clínica
+- Escala Likert de -2 a +2 (muito menos provável → muito mais provável)
+
+PONTUAÇÃO AGREGADA:
+- A resposta de cada especialista do painel é registrada.
+- Para cada item, calcula-se a distribuição de respostas do painel.
+- O score do aluno = frequência relativa da resposta do aluno no painel.
+- Exemplo: se 8 de 10 especialistas marcaram "+1", quem marcar "+1" recebe 1.0 ponto; quem marcar "+2" e 2 especialistas marcaram "+2", recebe 0.25.
+- Score final = soma dos scores / número de itens × 100.
+
+Isso permite avaliar sem "gabarito absoluto", respeitando a incerteza clínica.`,
+    },
+  ],
+
+  kfe: [
+    {
+      id: "kfe-evaluation",
+      label: "Avaliação KFE",
+      description: "Lógica de avaliação do Key Feature Exam — decisões-chave em casos clínicos",
+      edgeFunction: "student-exam-access",
+      prompt: `O KFE (Key Feature Exam) avalia a capacidade do aluno de identificar e tomar decisões-chave em momentos críticos de um caso clínico.
+
+ESTRUTURA:
+- Cada caso clínico apresenta um cenário progressivo com 2-5 key features (decisões-chave).
+- Tipos de questão por key feature: múltipla escolha, seleção múltipla, menu dropdown ou texto curto.
+- Cada key feature tem pontuação independente (max_score configurável).
+
+CORREÇÃO:
+- Múltipla escolha / dropdown: comparação direta com correct_answer_json.
+- Seleção múltipla: pontuação parcial proporcional aos acertos (com penalização por seleção incorreta).
+- Texto curto: comparação case-insensitive com lista de respostas aceitas.
+
+REGRAS:
+- O aluno NÃO pode voltar a um caso anterior (fluxo sequencial).
+- Score final = soma dos pontos obtidos / soma dos pontos máximos × 100.`,
+    },
+  ],
+
+  sjt: [
+    {
+      id: "sjt-evaluation",
+      label: "Avaliação SJT",
+      description: "Lógica de avaliação do Situational Judgment Test",
+      edgeFunction: "student-exam-access",
+      prompt: `O SJT (Situational Judgment Test) avalia ética, profissionalismo e tomada de decisão.
+
+ESTRUTURA:
+- Cada cenário descreve uma situação profissional com dilema ético/comportamental.
+- O aluno deve RANQUEAR as opções da mais à menos apropriada, ou SELECIONAR as 3 mais apropriadas.
+
+PONTUAÇÃO (Ranking):
+- Comparação da ordem do aluno com a ordem do gabarito.
+- Score parcial: pontos proporcionais à proximidade do ranking correto.
+- Exemplo: se a ordem correta é A-B-C-D e o aluno marcou A-C-B-D, recebe pontuação parcial.
+
+PONTUAÇÃO (Seleção múltipla):
+- 1 ponto por opção correta selecionada.
+- 0 pontos por opção incorreta.
+- Sem penalização negativa.
+
+DOMÍNIOS AVALIADOS:
+- Integridade profissional, Comunicação, Trabalho em equipe, Gestão de conflitos, Segurança do paciente.`,
+    },
+  ],
+
+  "clinical-observations": [
+    {
+      id: "mini-cex",
+      label: "Mini-CEX",
+      description: "Avaliação por observação direta de competências clínicas (Mini Clinical Evaluation Exercise)",
+      edgeFunction: "N/A (avaliação presencial)",
+      prompt: `O Mini-CEX é uma avaliação formativa por observação direta de um encontro clínico real.
+
+DOMÍNIOS DE COMPETÊNCIA (escala Likert 1-9):
+1. Anamnese — qualidade da coleta de história
+2. Exame Físico — técnica e abrangência
+3. Raciocínio Clínico — diagnóstico diferencial e plano
+4. Comunicação — relação com paciente e familiares
+5. Profissionalismo — ética, empatia, respeito
+6. Organização/Eficiência — gestão do tempo e recursos
+7. Competência Clínica Global — avaliação holística
+
+CLASSIFICAÇÃO:
+- 1-3: Abaixo do esperado
+- 4-6: Dentro do esperado
+- 7-9: Acima do esperado
+
+FEEDBACK: O avaliador deve fornecer feedback construtivo imediato ao aluno após cada observação.
+O sistema registra: complexidade do caso, setting (ambulatório/enfermaria/PS), duração e scores por domínio.`,
+    },
+    {
+      id: "dops",
+      label: "DOPS",
+      description: "Avaliação por observação direta de procedimentos (Direct Observation of Procedural Skills)",
+      edgeFunction: "N/A (avaliação presencial)",
+      prompt: `O DOPS avalia competências procedimentais por observação direta.
+
+DOMÍNIOS DE COMPETÊNCIA (escala Likert 1-9):
+1. Indicação e conhecimento do procedimento
+2. Consentimento informado
+3. Preparação pré-procedimento (materiais, antissepsia)
+4. Analgesia/sedação adequada
+5. Habilidade técnica
+6. Técnica asséptica
+7. Manejo de complicações
+8. Comunicação com paciente e equipe
+9. Competência Global
+
+Os mesmos critérios de classificação do Mini-CEX se aplicam (1-3, 4-6, 7-9).
+O avaliador registra o procedimento específico realizado e fornece feedback imediato.`,
+    },
+  ],
+
+  "progress-test": [
+    {
+      id: "progress-test-scoring",
+      label: "Pontuação Progress Test",
+      description: "Lógica de avaliação longitudinal do Progress Test com metalinguagem",
+      edgeFunction: "student-exam-access",
+      prompt: `O Progress Test avalia o crescimento longitudinal do conhecimento ao longo dos anos do curso.
+
+ESTRUTURA:
+- Questões importadas do banco de questões, categorizadas por "ano esperado" (1º ao 6º ano).
+- Todos os alunos (de todos os anos) respondem as MESMAS questões.
+- O aluno pode responder com METALINGUAGEM:
+  • "Sei" → marca a resposta normalmente
+  • "Chutei" → marca resposta mas é classificado como chute
+  • "Não sei" → não perde nem ganha pontos
+
+PONTUAÇÃO:
+- Resposta correta com "Sei": +1 ponto
+- Resposta correta com "Chutei": +0.5 ponto (penalização parcial)
+- Resposta "Não sei": 0 pontos (sem penalização)
+- Resposta incorreta com "Sei": -0.25 pontos (penalização por afirmação incorreta)
+- Resposta incorreta com "Chutei": 0 pontos
+
+ANÁLISE:
+- Comparação do desempenho por ano esperado vs ano do aluno.
+- Espera-se que alunos do 4º ano acertem questões do 1º-4º ano, mas não necessariamente do 5º-6º.
+- Gráfico radar por área de conhecimento para visualização do progresso.`,
+    },
+  ],
+
+  simulations: [
+    {
+      id: "simulation-distribution",
+      label: "Distribuição de Papéis",
+      description: "Lógica de distribuição automática de papéis e materiais na simulação realística",
+      edgeFunction: "N/A (lógica client-side)",
+      prompt: `A Simulação Realística distribui alunos em papéis rotativos dentro de cenários clínicos.
+
+MÓDULOS DISPONÍVEIS:
+1. Anamnese — papéis: Profissional de Saúde, Paciente, Observador, Professor
+2. SOAP — documentação estruturada: Subjetivo, Objetivo, Avaliação, Plano
+3. Reconciliação Medicamentosa — duplas analisam medicações do paciente
+4. Documentação Clínica — fichas de encaminhamento e quadro de medicamentos
+
+DISTRIBUIÇÃO DE PAPÉIS (Anamnese):
+- Alunos são divididos em pares automaticamente.
+- Cada par recebe: 1 profissional + 1 paciente + 1 observador.
+- A cada rodada, os papéis rotacionam.
+- Materiais são entregues conforme o papel (paciente recebe script, profissional recebe briefing).
+
+FLUXO COMPLETO:
+Anamnese → SOAP → Reconciliação → Documentação
+Cada módulo herda os participantes e pares do anterior.`,
+    },
+  ],
+
+  soap: [
+    {
+      id: "soap-structure",
+      label: "Estrutura SOAP",
+      description: "Metodologia de documentação SOAP utilizada no módulo",
+      edgeFunction: "grade-reconciliation",
+      prompt: `O módulo SOAP implementa a documentação clínica estruturada em 4 seções:
+
+S — SUBJETIVO: Queixa principal, história da doença atual, revisão de sistemas.
+O — OBJETIVO: Sinais vitais, exame físico, resultados de exames.
+A — AVALIAÇÃO: Diagnóstico ou hipóteses diagnósticas, raciocínio clínico.
+P — PLANO: Plano terapêutico, exames solicitados, encaminhamentos, orientações.
+
+AVALIAÇÃO:
+- O professor configura formulários com campos SOAP customizados.
+- Cada campo pode ter pontuação (max_score) e chave de resposta.
+- A correção pode ser feita por IA (comparando com espelho de respostas) ou manualmente pelo professor.
+- Avaliação entre pares: o observador avalia o profissional usando checklist configurável.
+
+VINCULAÇÃO:
+- Salas SOAP são vinculadas a salas de Anamnese (herdam participantes e distribuição de pares).
+- O fluxo segue: Anamnese → SOAP → Reconciliação → Documentação.`,
+    },
+  ],
 };

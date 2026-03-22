@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -366,6 +367,7 @@ export default function Simulations() {
           <h1 className="text-2xl font-bold text-foreground">{t("sim_title")}</h1>
           <p className="text-muted-foreground">{t("sim_subtitle")}</p>
         </div>
+        <SystemPromptViewer toolKey="simulations" />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

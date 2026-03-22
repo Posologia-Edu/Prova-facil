@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -126,9 +127,12 @@ export default function SctExams() {
           <h1 className="text-2xl font-bold text-foreground">SCT — Script Concordance Test</h1>
           <p className="text-muted-foreground text-sm mt-1">Avalie o raciocínio clínico sob incerteza</p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="h-4 w-4 mr-2" /> Novo SCT
-        </Button>
+        <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="sct" />
+          <Button onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-2" /> Novo SCT
+          </Button>
+        </div>
       </div>
 
       {loading ? (
