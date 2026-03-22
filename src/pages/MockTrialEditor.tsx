@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3, Upload, X } from "lucide-react";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { generateDistribution } from "@/lib/mock-trial-distribution";
