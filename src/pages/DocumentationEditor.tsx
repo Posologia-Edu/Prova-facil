@@ -88,6 +88,41 @@ export default function DocumentationEditor() {
   const [editingMedFormId, setEditingMedFormId] = useState<string | null>(null);
   const [selectedForPairing, setSelectedForPairing] = useState<string[]>([]);
 
+  const getDefaultFormTitle = (type: string) => {
+    const defaultTitles: Record<string, string> = {
+      referral: "Ficha de Encaminhamento",
+      referral_answer_key: "Espelho do Encaminhamento",
+      medication_summary: "Quadro Resumo",
+      medication_answer_key: "Espelho do Quadro Resumo",
+    };
+
+    return defaultTitles[type] || "Formulário";
+  };
+
+  const hasReferralAnswerKeyDraftContent = (cases: Record<string, FormField[]>) => {
+    return Object.values(cases).some((fields) => fields.length > 0);
+  };
+
+  const hasMedicationAnswerKeyDraftContent = (cases: Record<string, MedCaseContent>) => {
+    return Object.values(cases).some((content) => content.columns.length > 0 || content.answer_rows.length > 0);
+  };
+
+  const canSaveReferralForm = () => {
+    if (formType === "referral_answer_key") {
+      return Boolean(formTitle.trim()) || hasReferralAnswerKeyDraftContent(answerKeyByCaseId);
+    }
+
+    return Boolean(formTitle.trim());
+  };
+
+  const canSaveMedicationForm = () => {
+    if (medType === "medication_answer_key") {
+      return Boolean(medTitle.trim()) || hasMedicationAnswerKeyDraftContent(medAnswerKeyByCaseId);
+    }
+
+    return Boolean(medTitle.trim());
+  };
+
   // Reconciliation rooms for import
   const { data: reconRooms } = useQuery({
     queryKey: ["recon-rooms-for-doc-import"],
@@ -143,13 +178,17 @@ export default function DocumentationEditor() {
 
   // ─── Referral form save ───
   const saveForm = async (silent = false) => {
-    if (!formTitle.trim()) return;
+    const normalizedTitle = formTitle.trim() || (formType === "referral_answer_key" && hasReferralAnswerKeyDraftContent(answerKeyByCaseId)
+      ? getDefaultFormTitle(formType)
+      : "");
+
+    if (!normalizedTitle) return;
 
     const contentToSave = formType === "referral_answer_key"
       ? { case_answers: answerKeyByCaseId } as any
       : formFields as any;
 
-    const payload = { title: formTitle, content_json: contentToSave, form_type: formType };
+    const payload = { title: normalizedTitle, content_json: contentToSave, form_type: formType };
 
     if (editingFormId) {
       await supabase.from("documentation_forms").update(payload).eq("id", editingFormId);
@@ -158,8 +197,8 @@ export default function DocumentationEditor() {
     }
 
     const snapshotData = formType === "referral_answer_key"
-      ? { formType, title: formTitle, content: answerKeyByCaseId }
-      : { formType, title: formTitle, content: formFields };
+      ? { formType, title: normalizedTitle, content: answerKeyByCaseId }
+      : { formType, title: normalizedTitle, content: formFields };
     lastSavedSnapshotRef.current = JSON.stringify(snapshotData);
 
     if (!editingFormId) {
@@ -249,7 +288,11 @@ export default function DocumentationEditor() {
 
   // ─── Medication summary form ───
   const saveMedForm = async () => {
-    if (!medTitle.trim()) return;
+    const normalizedTitle = medTitle.trim() || (medType === "medication_answer_key" && hasMedicationAnswerKeyDraftContent(medAnswerKeyByCaseId)
+      ? getDefaultFormTitle(medType)
+      : "");
+
+    if (!normalizedTitle) return;
 
     let contentToSave: any;
     if (medType === "medication_answer_key") {
@@ -260,7 +303,7 @@ export default function DocumentationEditor() {
       contentToSave = content;
     }
 
-    const payload = { title: medTitle, content_json: contentToSave, form_type: medType };
+    const payload = { title: normalizedTitle, content_json: contentToSave, form_type: medType };
     if (editingMedFormId) {
       await supabase.from("documentation_forms").update(payload).eq("id", editingMedFormId);
     } else {
@@ -595,6 +638,9 @@ export default function DocumentationEditor() {
                   <Label>Tipo</Label>
                   <Select value={formType} onValueChange={(v: any) => {
                     setFormType(v);
+                    if (!formTitle.trim()) {
+                      setFormTitle(getDefaultFormTitle(v));
+                    }
                     if (v === "referral_answer_key" && clinicalCases.length > 0 && !activeAnswerKeyCaseId) {
                       setActiveAnswerKeyCaseId(clinicalCases[0].id);
                     }
@@ -659,7 +705,7 @@ export default function DocumentationEditor() {
               )}
 
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => saveForm()} disabled={!formTitle.trim()}>Salvar</Button>
+                <Button size="sm" onClick={() => saveForm()} disabled={!canSaveReferralForm()}>Salvar</Button>
                 {editingFormId && <Button variant="ghost" size="sm" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); setFormType("referral"); setAnswerKeyByCaseId({}); setActiveAnswerKeyCaseId(""); }}>Cancelar</Button>}
               </div>
             </CardContent>
@@ -716,6 +762,9 @@ export default function DocumentationEditor() {
                   <Label>Tipo</Label>
                   <Select value={medType} onValueChange={(v) => {
                     setMedType(v);
+                    if (!medTitle.trim()) {
+                      setMedTitle(getDefaultFormTitle(v));
+                    }
                     if (v === "medication_answer_key" && clinicalCases.length > 0 && !activeMedAnswerKeyCaseId) {
                       setActiveMedAnswerKeyCaseId(clinicalCases[0].id);
                     }
@@ -867,7 +916,7 @@ export default function DocumentationEditor() {
               )}
 
               <div className="flex gap-2">
-                <Button size="sm" onClick={saveMedForm} disabled={!medTitle.trim()}>Salvar</Button>
+                <Button size="sm" onClick={saveMedForm} disabled={!canSaveMedicationForm()}>Salvar</Button>
                 {editingMedFormId && <Button variant="ghost" size="sm" onClick={resetMedForm}>Cancelar</Button>}
               </div>
             </CardContent>

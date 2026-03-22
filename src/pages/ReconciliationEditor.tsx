@@ -109,6 +109,22 @@ export default function ReconciliationEditor() {
   const lastSavedSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(false);
 
+  const getDefaultFormTitle = (type: "reconciliation" | "answer_key") => {
+    return type === "answer_key" ? "Espelho de Respostas" : "Ficha de Reconciliação";
+  };
+
+  const hasAnswerKeyDraftContent = (cases: Record<string, FormField[]>) => {
+    return Object.values(cases).some((fields) => fields.length > 0);
+  };
+
+  const canSaveCurrentForm = () => {
+    if (formType === "answer_key") {
+      return Boolean(formTitle.trim()) || hasAnswerKeyDraftContent(answerKeyByCaseId);
+    }
+
+    return Boolean(formTitle.trim());
+  };
+
   // Clinical case editor
   const [caseTitle, setCaseTitle] = useState("");
   const [caseContent, setCaseContent] = useState("");
@@ -188,7 +204,11 @@ export default function ReconciliationEditor() {
 
   // Save form
   const saveForm = async (silent = false) => {
-    if (!formTitle.trim()) return;
+    const normalizedTitle = formTitle.trim() || (formType === "answer_key" && hasAnswerKeyDraftContent(answerKeyByCaseId)
+      ? getDefaultFormTitle(formType)
+      : "");
+
+    if (!normalizedTitle) return;
 
     const contentToSave = formType === "answer_key"
       ? { case_answers: answerKeyByCaseId } as any
@@ -196,7 +216,7 @@ export default function ReconciliationEditor() {
 
     if (editingFormId) {
       const { error } = await supabase.from("reconciliation_forms").update({
-        title: formTitle,
+        title: normalizedTitle,
         content_json: contentToSave,
         form_type: formType,
       }).eq("id", editingFormId);
@@ -204,7 +224,7 @@ export default function ReconciliationEditor() {
     } else {
       const { error } = await supabase.from("reconciliation_forms").insert({
         room_id: roomId!,
-        title: formTitle,
+        title: normalizedTitle,
         content_json: contentToSave,
         form_type: formType,
       });
@@ -212,8 +232,8 @@ export default function ReconciliationEditor() {
     }
 
     const snapshotData = formType === "answer_key"
-      ? { formType, title: formTitle, content: answerKeyByCaseId }
-      : { formType, title: formTitle, content: formFields };
+      ? { formType, title: normalizedTitle, content: answerKeyByCaseId }
+      : { formType, title: normalizedTitle, content: formFields };
     lastSavedSnapshotRef.current = JSON.stringify(snapshotData);
     if (!editingFormId) {
       await refetchForms();
@@ -605,6 +625,9 @@ export default function ReconciliationEditor() {
                   <Label>Tipo</Label>
                   <Select value={formType} onValueChange={(v: any) => {
                     setFormType(v);
+                    if (!formTitle.trim()) {
+                      setFormTitle(getDefaultFormTitle(v));
+                    }
                     if (v === "answer_key" && clinicalCases.length > 0 && !activeAnswerKeyCaseId) {
                       setActiveAnswerKeyCaseId(clinicalCases[0].id);
                     }
@@ -672,7 +695,7 @@ export default function ReconciliationEditor() {
               )}
 
               <div className="flex items-center justify-end gap-2">
-                <Button onClick={() => saveForm()} disabled={!formTitle.trim()}>Salvar Formulário</Button>
+                <Button onClick={() => saveForm()} disabled={!canSaveCurrentForm()}>Salvar Formulário</Button>
               </div>
               {editingFormId && (
                 <Button variant="ghost" onClick={() => { setEditingFormId(null); setFormTitle(""); setFormFields([]); setAnswerKeyByCaseId({}); setActiveAnswerKeyCaseId(""); }}>
