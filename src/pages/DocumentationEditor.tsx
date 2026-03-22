@@ -859,9 +859,16 @@ export default function DocumentationEditor() {
                                 </Button>
                               </div>
                             ))}
-                            <Button variant="outline" size="sm" onClick={addMedCaseColumn}>
-                              <Plus className="h-3.5 w-3.5 mr-1" />Coluna
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" onClick={addMedCaseColumn}>
+                                <Plus className="h-3.5 w-3.5 mr-1" />Coluna
+                              </Button>
+                              {forms.some((f: any) => f.form_type === "medication_summary") && (
+                                <Button variant="outline" size="sm" onClick={importColumnsFromSummary}>
+                                  <Download className="h-3.5 w-3.5 mr-1" />Importar do Quadro Resumo
+                                </Button>
+                              )}
+                            </div>
                           </div>
 
                           {caseData.columns.length > 0 && (
