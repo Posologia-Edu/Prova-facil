@@ -158,10 +158,12 @@ export default function SoapRooms() {
           <h1 className="text-2xl font-bold text-foreground">Módulo SOAP</h1>
           <p className="text-muted-foreground">Gerencie salas do módulo SOAP vinculadas à anamnese</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Nova Sala SOAP</Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="soap" />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" />Nova Sala SOAP</Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Criar Sala SOAP</DialogTitle>

@@ -83,7 +83,8 @@ export default function ClinicalObservations() {
           <h1 className="text-2xl font-bold text-foreground">Mini-CEX & DOPS</h1>
           <p className="text-muted-foreground text-sm mt-1">Observação direta de competências clínicas e procedimentais</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <SystemPromptViewer toolKey="clinical-observations" />
           <Button onClick={() => handleCreate("mini_cex")} variant="outline"><Stethoscope className="h-4 w-4 mr-2" /> Novo Mini-CEX</Button>
           <Button onClick={() => handleCreate("dops")}><ClipboardCheck className="h-4 w-4 mr-2" /> Novo DOPS</Button>
         </div>
