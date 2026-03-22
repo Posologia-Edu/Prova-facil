@@ -495,11 +495,11 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
                 {(field.type === "text" || field.type === "textarea") && (
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Resposta correta esperada:</p>
-                    <Input
-                      placeholder="Digite a resposta correta"
+                    <Textarea
+                      placeholder="Digite a resposta correta (use Enter para quebrar linhas)"
                       value={typeof field.correct_answer === "string" ? field.correct_answer : ""}
                       onChange={(e) => updateField(globalIdx, { correct_answer: e.target.value || undefined })}
-                      className="text-sm"
+                      className="text-sm min-h-[100px] whitespace-pre-wrap"
                     />
                   </div>
                 )}
