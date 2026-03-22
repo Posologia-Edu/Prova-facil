@@ -394,6 +394,27 @@ export default function DocumentationEditor() {
     updateActiveMedCase({ answer_rows: [...current.answer_rows, row] });
   };
 
+  const importColumnsFromSummary = () => {
+    const summaryForm = forms.find((f: any) => f.form_type === "medication_summary");
+    if (!summaryForm) {
+      toast({ title: "Nenhum Quadro Resumo encontrado", description: "Cadastre um Quadro Resumo primeiro.", variant: "destructive" });
+      return;
+    }
+    const content = summaryForm.content_json as MedFormContent;
+    if (!content?.columns?.length) {
+      toast({ title: "Sem colunas", description: "O Quadro Resumo não possui colunas definidas.", variant: "destructive" });
+      return;
+    }
+    const importedColumns = content.columns.map(c => ({ id: crypto.randomUUID(), label: c.label }));
+    const current = getActiveMedCase();
+    updateActiveMedCase({
+      columns: importedColumns,
+      rows_score: content.rows_score || current.rows_score,
+      answer_rows: [],
+    });
+    toast({ title: "Colunas importadas", description: `${importedColumns.length} colunas importadas do Quadro Resumo.` });
+  };
+
   // Activate room
   const activateRoom = async () => {
     const referralForm = forms.find((f: any) => f.form_type === "referral");
