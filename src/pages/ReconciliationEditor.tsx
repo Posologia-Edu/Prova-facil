@@ -443,20 +443,35 @@ export default function ReconciliationEditor() {
         {/* Participants Tab */}
         <TabsContent value="participants" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Importar Alunos do SOAP</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">Adicionar Aluno</CardTitle></CardHeader>
             <CardContent>
-              <div className="flex gap-2 flex-wrap">
-                {soapRooms?.map(sr => (
-                  <Button key={sr.id} variant="outline" size="sm" onClick={() => importFromSoap(sr.id)}>
-                    <Copy className="h-3.5 w-3.5 mr-1" />{sr.title}
-                  </Button>
-                ))}
-                {!soapRooms?.length && <p className="text-sm text-muted-foreground">Nenhuma sala SOAP encontrada</p>}
+              <div className="flex gap-2">
+                <Input placeholder="Nome" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                <Input placeholder="E-mail" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                <Button onClick={addParticipant} disabled={!newName.trim()}><Plus className="h-4 w-4" /></Button>
               </div>
             </CardContent>
           </Card>
+
+          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><Download className="h-4 w-4 mr-2" />Importar do SOAP</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Importar Alunos do SOAP</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <Select value={selectedImportRoom} onValueChange={setSelectedImportRoom}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a sala SOAP" /></SelectTrigger>
+                  <SelectContent>
+                    {soapRooms?.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.title} (PIN: {r.access_code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={importFromSoapDialog} disabled={!selectedImportRoom} className="w-full">Importar</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Pair formation - same pattern as SOAP */}
           {(() => {

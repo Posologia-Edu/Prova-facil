@@ -504,20 +504,35 @@ export default function DocumentationEditor() {
         {/* Participants - manual pair formation */}
         <TabsContent value="participants" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Importar Alunos da Reconciliação</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">Adicionar Aluno</CardTitle></CardHeader>
             <CardContent>
-              <div className="flex gap-2 flex-wrap">
-                {reconRooms?.map(rr => (
-                  <Button key={rr.id} variant="outline" size="sm" onClick={() => importFromReconciliation(rr.id)}>
-                    <Copy className="h-3.5 w-3.5 mr-1" />{rr.title}
-                  </Button>
-                ))}
-                {!reconRooms?.length && <p className="text-sm text-muted-foreground">Nenhuma sala de Reconciliação encontrada</p>}
+              <div className="flex gap-2">
+                <Input placeholder="Nome" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                <Input placeholder="E-mail" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                <Button onClick={addParticipant} disabled={!newName.trim()}><Plus className="h-4 w-4" /></Button>
               </div>
             </CardContent>
           </Card>
+
+          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><Download className="h-4 w-4 mr-2" />Importar da Reconciliação</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Importar Alunos da Reconciliação</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <Select value={selectedImportRoom} onValueChange={setSelectedImportRoom}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a sala de reconciliação" /></SelectTrigger>
+                  <SelectContent>
+                    {reconRooms?.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.title} (PIN: {r.access_code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={importFromReconDialog} disabled={!selectedImportRoom} className="w-full">Importar</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {(() => {
             const unpaired = students.filter(s => s.pair_index < 0);
