@@ -1672,6 +1672,182 @@ export type Database = {
         }
         Relationships: []
       }
+      progress_test_answers: {
+        Row: {
+          answer_json: Json
+          created_at: string
+          id: string
+          is_correct: boolean | null
+          question_id: string
+          response_type: string
+          session_id: string
+        }
+        Insert: {
+          answer_json?: Json
+          created_at?: string
+          id?: string
+          is_correct?: boolean | null
+          question_id: string
+          response_type?: string
+          session_id: string
+        }
+        Update: {
+          answer_json?: Json
+          created_at?: string
+          id?: string
+          is_correct?: boolean | null
+          question_id?: string
+          response_type?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_test_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "progress_test_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progress_test_answers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "progress_test_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      progress_test_questions: {
+        Row: {
+          created_at: string
+          expected_year: number
+          id: string
+          position: number
+          question_id: string
+          test_id: string
+        }
+        Insert: {
+          created_at?: string
+          expected_year?: number
+          id?: string
+          position?: number
+          question_id: string
+          test_id: string
+        }
+        Update: {
+          created_at?: string
+          expected_year?: number
+          id?: string
+          position?: number
+          question_id?: string
+          test_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_test_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "question_bank"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progress_test_questions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "progress_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      progress_test_sessions: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          id: string
+          max_score: number | null
+          started_at: string
+          status: string
+          student_email: string | null
+          student_name: string | null
+          student_year: number
+          test_id: string
+          total_score: number | null
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          max_score?: number | null
+          started_at?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string | null
+          student_year?: number
+          test_id: string
+          total_score?: number | null
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          max_score?: number | null
+          started_at?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string | null
+          student_year?: number
+          test_id?: string
+          total_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_test_sessions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "progress_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      progress_tests: {
+        Row: {
+          application_date: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          status: string
+          target_years_json: Json
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_date?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          status?: string
+          target_years_json?: Json
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_date?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          status?: string
+          target_years_json?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       question_bank: {
         Row: {
           bloom_level: string | null
