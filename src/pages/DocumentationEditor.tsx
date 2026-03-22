@@ -841,39 +841,25 @@ export default function DocumentationEditor() {
                             />
                           </div>
 
-                          <div className="space-y-2">
-                            <Label>Colunas da tabela</Label>
-                            {caseData.columns.map((col, idx) => (
-                              <div key={col.id} className="flex gap-2 items-center">
-                                <Input
-                                  value={col.label}
-                                  onChange={e => {
-                                    const updated = [...caseData.columns];
-                                    updated[idx] = { ...updated[idx], label: e.target.value };
-                                    updateActiveMedCase({ columns: updated });
-                                  }}
-                                  placeholder={`Coluna ${idx + 1}`}
-                                />
-                                <Button variant="ghost" size="sm" onClick={() => updateActiveMedCase({ columns: caseData.columns.filter((_, i) => i !== idx) })}>
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            ))}
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm" onClick={addMedCaseColumn}>
-                                <Plus className="h-3.5 w-3.5 mr-1" />Coluna
-                              </Button>
-                              {forms.some((f: any) => f.form_type === "medication_summary") && (
+                          {caseData.columns.length === 0 ? (
+                            <div className="p-4 border border-dashed rounded-lg text-center space-y-2">
+                              <p className="text-sm text-muted-foreground">Importe as colunas do Quadro Resumo para definir a estrutura da tabela.</p>
+                              {forms.some((f: any) => f.form_type === "medication_summary") ? (
                                 <Button variant="outline" size="sm" onClick={importColumnsFromSummary}>
-                                  <Download className="h-3.5 w-3.5 mr-1" />Importar do Quadro Resumo
+                                  <Download className="h-3.5 w-3.5 mr-1" />Importar Colunas do Quadro Resumo
                                 </Button>
+                              ) : (
+                                <p className="text-xs text-destructive">Cadastre um Quadro Resumo primeiro.</p>
                               )}
                             </div>
-                          </div>
-
-                          {caseData.columns.length > 0 && (
+                          ) : (
                             <div className="space-y-2">
-                              <Label>Linhas esperadas (espelho)</Label>
+                              <div className="flex items-center justify-between">
+                                <Label>Linhas esperadas (espelho)</Label>
+                                <Button variant="outline" size="sm" onClick={importColumnsFromSummary} title="Reimportar colunas do Quadro Resumo">
+                                  <Download className="h-3.5 w-3.5 mr-1" />Reimportar Colunas
+                                </Button>
+                              </div>
                               <div className="overflow-x-auto">
                                 <table className="w-full text-sm border">
                                   <thead>
@@ -909,7 +895,7 @@ export default function DocumentationEditor() {
                                 </table>
                               </div>
                               <Button variant="outline" size="sm" onClick={addMedCaseAnswerRow}>
-                                <Plus className="h-3.5 w-3.5 mr-1" />Linha
+                                <Plus className="h-3.5 w-3.5 mr-1" />Adicionar Linha
                               </Button>
                             </div>
                           )}
