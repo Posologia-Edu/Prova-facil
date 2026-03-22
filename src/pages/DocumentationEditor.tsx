@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, Table2, Copy, RotateCcw } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, Table2, Copy, RotateCcw, Download } from "lucide-react";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -392,6 +392,27 @@ export default function DocumentationEditor() {
     const row: Record<string, string> = {};
     current.columns.forEach(c => { row[c.id] = ""; });
     updateActiveMedCase({ answer_rows: [...current.answer_rows, row] });
+  };
+
+  const importColumnsFromSummary = () => {
+    const summaryForm = forms.find((f: any) => f.form_type === "medication_summary");
+    if (!summaryForm) {
+      toast({ title: "Nenhum Quadro Resumo encontrado", description: "Cadastre um Quadro Resumo primeiro.", variant: "destructive" });
+      return;
+    }
+    const content = summaryForm.content_json as MedFormContent;
+    if (!content?.columns?.length) {
+      toast({ title: "Sem colunas", description: "O Quadro Resumo não possui colunas definidas.", variant: "destructive" });
+      return;
+    }
+    const importedColumns = content.columns.map(c => ({ id: crypto.randomUUID(), label: c.label }));
+    const current = getActiveMedCase();
+    updateActiveMedCase({
+      columns: importedColumns,
+      rows_score: content.rows_score || current.rows_score,
+      answer_rows: [],
+    });
+    toast({ title: "Colunas importadas", description: `${importedColumns.length} colunas importadas do Quadro Resumo.` });
   };
 
   // Activate room
@@ -838,9 +859,16 @@ export default function DocumentationEditor() {
                                 </Button>
                               </div>
                             ))}
-                            <Button variant="outline" size="sm" onClick={addMedCaseColumn}>
-                              <Plus className="h-3.5 w-3.5 mr-1" />Coluna
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" onClick={addMedCaseColumn}>
+                                <Plus className="h-3.5 w-3.5 mr-1" />Coluna
+                              </Button>
+                              {forms.some((f: any) => f.form_type === "medication_summary") && (
+                                <Button variant="outline" size="sm" onClick={importColumnsFromSummary}>
+                                  <Download className="h-3.5 w-3.5 mr-1" />Importar do Quadro Resumo
+                                </Button>
+                              )}
+                            </div>
                           </div>
 
                           {caseData.columns.length > 0 && (
