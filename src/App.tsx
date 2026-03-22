@@ -32,6 +32,10 @@ import Trash from "./pages/Trash";
 import ResetPassword from "./pages/ResetPassword";
 import Marketplace from "./pages/Marketplace";
 import OsceExams from "./pages/OsceExams";
+import SctExams from "./pages/SctExams";
+import SctEditor from "./pages/SctEditor";
+import SctExpertPortal from "./pages/SctExpertPortal";
+import SctStudentPortal from "./pages/SctStudentPortal";
 import OsceEditor from "./pages/OsceEditor";
 import OsceCircuitControl from "./pages/OsceCircuitControl";
 import OsceEvaluator from "./pages/OsceEvaluator";
@@ -390,6 +394,26 @@ const App = () => (
             />
             {/* Public Virtual Patient Room (student access via PIN) */}
             <Route path="/virtual-patients/room/:cvpId" element={<VirtualPatientRoom />} />
+            {/* SCT Routes */}
+            <Route
+              path="/sct"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><SctExams /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sct/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><SctEditor /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Public SCT routes */}
+            <Route path="/sct/expert/:examId" element={<SctExpertPortal />} />
+            <Route path="/sct/student/:examId" element={<SctStudentPortal />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
