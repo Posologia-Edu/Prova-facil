@@ -1,0 +1,1 @@
+ALTER TABLE public.mock_trials ADD COLUMN IF NOT EXISTS access_code TEXT NOT NULL DEFAULT substr(md5(random()::text), 1, 6) UNIQUE;

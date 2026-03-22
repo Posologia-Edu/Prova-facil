@@ -24,8 +24,8 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 export default function MockTrialStudent() {
-  const { trialId } = useParams<{ trialId: string }>();
-  const [studentEmail, setStudentEmail] = useState("");
+  const { accessCode } = useParams<{ accessCode: string }>();
+  const [studentEmail, setStudentEmail] = useState(() => sessionStorage.getItem("mt_email") || "");
   const [studentName, setStudentName] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
 
@@ -39,18 +39,33 @@ export default function MockTrialStudent() {
   const [forms, setForms] = useState<any[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
 
-  const authenticate = async () => {
-    if (!studentEmail.trim()) {
+  // Auto-join from StudentAuth redirect
+  useEffect(() => {
+    const savedPin = sessionStorage.getItem("mt_pin");
+    const savedEmail = sessionStorage.getItem("mt_email");
+    if (savedPin && savedEmail && !authenticated) {
+      sessionStorage.removeItem("mt_pin");
+      setStudentEmail(savedEmail);
+      setTimeout(() => authenticateWithEmail(savedEmail), 100);
+    }
+  }, []);
+
+  const authenticateWithEmail = async (email: string) => {
+    if (!email.trim()) {
       toast.error("Informe seu email");
       return;
     }
 
-    // Find student by email across groups of this trial
-    const { data: trialData } = await supabase.from("mock_trials").select("*").eq("id", trialId!).single();
+    // Find trial by access code
+    const { data: trialData } = await supabase
+      .from("mock_trials")
+      .select("*")
+      .eq("access_code", accessCode!)
+      .single();
     if (!trialData) { toast.error("Júri não encontrado"); return; }
     setTrial(trialData);
 
-    const { data: grps } = await supabase.from("mock_trial_groups").select("*").eq("mock_trial_id", trialId!).order("group_number");
+    const { data: grps } = await supabase.from("mock_trial_groups").select("*").eq("mock_trial_id", trialData.id).order("group_number");
     setGroups(grps || []);
 
     if (!grps || grps.length === 0) { toast.error("Nenhum grupo encontrado"); return; }
@@ -59,7 +74,7 @@ export default function MockTrialStudent() {
     const { data: studs } = await supabase.from("mock_trial_students").select("*").in("group_id", groupIds);
 
     const normalizeEmail = (e: string) => e.trim().toLowerCase();
-    const found = studs?.find(s => normalizeEmail(s.student_email || "") === normalizeEmail(studentEmail));
+    const found = studs?.find(s => normalizeEmail(s.student_email || "") === normalizeEmail(email));
 
     if (!found) {
       toast.error("Email não encontrado neste júri simulado");
@@ -72,7 +87,7 @@ export default function MockTrialStudent() {
     setMyGroup(group);
 
     // Load cases, assignments, sessions, forms
-    const { data: cs } = await supabase.from("mock_trial_cases").select("*").eq("mock_trial_id", trialId!).order("position");
+    const { data: cs } = await supabase.from("mock_trial_cases").select("*").eq("mock_trial_id", trialData.id).order("position");
     setCases(cs || []);
     if (cs && cs.length > 0) setSelectedCaseId(cs[0].id);
 
@@ -85,10 +100,14 @@ export default function MockTrialStudent() {
       setSessions(sess || []);
     }
 
-    const { data: frms } = await supabase.from("mock_trial_forms").select("*").eq("mock_trial_id", trialId!);
+    const { data: frms } = await supabase.from("mock_trial_forms").select("*").eq("mock_trial_id", trialData.id);
     setForms(frms || []);
 
     setAuthenticated(true);
+  };
+
+  const authenticate = async () => {
+    await authenticateWithEmail(studentEmail);
   };
 
   // Realtime for sessions

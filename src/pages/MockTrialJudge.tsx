@@ -3,8 +3,11 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import { Gavel, Play, Pause, SkipForward, Volume2 } from "lucide-react";
 
 const PHASES = [
@@ -17,7 +20,9 @@ const PHASES = [
 ];
 
 export default function MockTrialJudge() {
-  const { trialId } = useParams<{ trialId: string }>();
+  const { accessCode } = useParams<{ accessCode: string }>();
+  const [judgeName, setJudgeName] = useState("");
+  const [authenticated, setAuthenticated] = useState(false);
   const [trial, setTrial] = useState<any>(null);
   const [cases, setCases] = useState<any[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
@@ -28,19 +33,37 @@ export default function MockTrialJudge() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const alertPlayedRef = useRef(false);
 
-  // Fetch trial and cases
+  // Auto-join from StudentAuth redirect
   useEffect(() => {
-    const load = async () => {
-      if (!trialId) return;
-      const { data: t } = await supabase.from("mock_trials").select("*").eq("id", trialId).single();
-      setTrial(t);
+    const savedPin = sessionStorage.getItem("mt_judge_pin");
+    const savedName = sessionStorage.getItem("mt_judge_name");
+    if (savedPin && savedName && !authenticated) {
+      sessionStorage.removeItem("mt_judge_pin");
+      sessionStorage.removeItem("mt_judge_name");
+      setJudgeName(savedName);
+      setTimeout(() => authenticateJudge(savedName), 100);
+    }
+  }, []);
 
-      const { data: c } = await supabase.from("mock_trial_cases").select("*").eq("mock_trial_id", trialId).order("position");
-      setCases(c || []);
-      if (c && c.length > 0 && !selectedCaseId) setSelectedCaseId(c[0].id);
-    };
-    load();
-  }, [trialId]);
+  const authenticateJudge = async (name: string) => {
+    if (!name.trim()) {
+      toast.error("Informe seu nome");
+      return;
+    }
+    const { data: t } = await supabase
+      .from("mock_trials")
+      .select("*")
+      .eq("access_code", accessCode!)
+      .single();
+    if (!t) { toast.error("Júri não encontrado"); return; }
+    setTrial(t);
+
+    const { data: c } = await supabase.from("mock_trial_cases").select("*").eq("mock_trial_id", t.id).order("position");
+    setCases(c || []);
+    if (c && c.length > 0) setSelectedCaseId(c[0].id);
+
+    setAuthenticated(true);
+  };
 
   // Load/create session for selected case
   useEffect(() => {
@@ -54,8 +77,8 @@ export default function MockTrialJudge() {
         setSession(newSession);
       }
     };
-    loadSession();
-  }, [selectedCaseId]);
+    if (authenticated) loadSession();
+  }, [selectedCaseId, authenticated]);
 
   // Realtime subscription for session
   useEffect(() => {
@@ -83,11 +106,9 @@ export default function MockTrialJudge() {
       setTimeLeft(prev => {
         if (prev <= 1) {
           setIsRunning(false);
-          // Play alert sound at 0
           try { audioRef.current?.play(); } catch {}
           return 0;
         }
-        // Alert at 60 seconds
         if (prev === 61 && !alertPlayedRef.current) {
           alertPlayedRef.current = true;
           try { audioRef.current?.play(); } catch {}
@@ -130,6 +151,26 @@ export default function MockTrialJudge() {
     return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   };
 
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <Gavel className="h-10 w-10 text-primary mx-auto mb-2" />
+            <CardTitle>Painel do Juiz</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Nome do(a) Juiz(a)</Label>
+              <Input value={judgeName} onChange={e => setJudgeName(e.target.value)} placeholder="Seu nome" />
+            </div>
+            <Button onClick={() => authenticateJudge(judgeName)} className="w-full">Entrar como Juiz</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
       {/* Hidden audio for alerts */}
@@ -139,7 +180,7 @@ export default function MockTrialJudge() {
         <Gavel className="h-8 w-8 text-primary" />
         <div>
           <h1 className="text-2xl font-bold">{trial?.title || "Júri Simulado"}</h1>
-          {trial?.judge_name && <p className="text-muted-foreground">Juiz(a): {trial.judge_name}</p>}
+          <p className="text-muted-foreground">Juiz(a): {judgeName}</p>
         </div>
       </div>
 
