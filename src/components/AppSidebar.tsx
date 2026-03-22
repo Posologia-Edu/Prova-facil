@@ -77,6 +77,7 @@ export function AppSidebar() {
     { title: t("sim_nav"), url: "/simulations", icon: HeartPulse },
     { title: "Pacientes Virtuais", url: "/virtual-patients", icon: UserRound },
     { title: "SCT", url: "/sct", icon: BrainCircuit },
+    { title: "KFE", url: "/kfe", icon: Target },
   ];
 
   const managementNav = [
