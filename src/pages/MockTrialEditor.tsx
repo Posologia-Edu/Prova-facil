@@ -647,23 +647,26 @@ export default function MockTrialEditor() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Links de Acesso</CardTitle>
+              <CardTitle className="text-base">Acesso via Portal de Avaliação</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label>Link do Juiz</Label>
+                <Label>PIN de Acesso (alunos e juiz)</Label>
                 <div className="flex gap-2">
-                  <Input readOnly value={judgeLink} />
-                  <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(judgeLink); toast.success("Link copiado!"); }}>
+                  <Input readOnly value={accessCode} className="font-mono uppercase tracking-widest text-center text-lg" />
+                  <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(accessCode); toast.success("PIN copiado!"); }}>
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Alunos e juiz acessam pelo Portal de Avaliação informando email e este PIN.
+                </p>
               </div>
               <div>
-                <Label>Link dos Alunos</Label>
+                <Label>Link direto do Juiz (opcional)</Label>
                 <div className="flex gap-2">
-                  <Input readOnly value={studentLink} />
-                  <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(studentLink); toast.success("Link copiado!"); }}>
+                  <Input readOnly value={judgeLink} />
+                  <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(judgeLink); toast.success("Link copiado!"); }}>
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
