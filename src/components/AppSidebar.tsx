@@ -84,6 +84,7 @@ export function AppSidebar() {
     { title: "KFE", url: "/kfe", icon: Target },
     { title: "Mini-CEX/DOPS", url: "/clinical-observations", icon: ClipboardCheck },
     { title: "SJT", url: "/sjt", icon: Scale },
+    { title: "Progress Test", url: "/progress-test", icon: TrendingUp },
   ];
 
   const managementNav = [
