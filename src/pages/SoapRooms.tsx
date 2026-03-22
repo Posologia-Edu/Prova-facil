@@ -197,6 +197,7 @@ export default function SoapRooms() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
