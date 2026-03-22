@@ -76,6 +76,7 @@ export function AppSidebar() {
     { title: "OSCE", url: "/osce", icon: Stethoscope },
     { title: t("sim_nav"), url: "/simulations", icon: HeartPulse },
     { title: "Pacientes Virtuais", url: "/virtual-patients", icon: UserRound },
+    { title: "SCT", url: "/sct", icon: BrainCircuit },
   ];
 
   const managementNav = [
