@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3, Upload, X } from "lucide-react";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { generateDistribution } from "@/lib/mock-trial-distribution";
@@ -114,6 +114,8 @@ export default function MockTrialEditor() {
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiObjectives, setAiObjectives] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiPdfFile, setAiPdfFile] = useState<File | null>(null);
+  const [aiPdfExtracting, setAiPdfExtracting] = useState(false);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
   const [editingCaseContent, setEditingCaseContent] = useState("");
 
@@ -164,16 +166,34 @@ export default function MockTrialEditor() {
     toast.success("Processo salvo");
   };
 
+  const extractPdfText = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // Send as base64 to edge function for extraction
+        const base64 = (reader.result as string).split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+      reader.readAsDataURL(file);
+    });
+  };
+
   const generateWithAI = async () => {
-    if (!aiObjectives.trim()) {
-      toast.error("Informe os objetivos de aprendizagem");
+    if (!aiObjectives.trim() && !aiPdfFile) {
+      toast.error("Informe os objetivos ou envie um PDF");
       return;
     }
     setAiGenerating(true);
     try {
+      let pdfBase64: string | undefined;
+      if (aiPdfFile) {
+        pdfBase64 = await extractPdfText(aiPdfFile);
+      }
+
       const caseNumber = `${String(cases.length + 1).padStart(3, "0")}/${new Date().getFullYear()}`;
       const { data, error } = await supabase.functions.invoke("generate-mock-trial", {
-        body: { learningObjectives: aiObjectives, caseNumber },
+        body: { learningObjectives: aiObjectives, caseNumber, pdfBase64 },
       });
       if (error) throw error;
       
@@ -191,6 +211,7 @@ export default function MockTrialEditor() {
       toast.success("Processo gerado com sucesso!");
       setAiDialogOpen(false);
       setAiObjectives("");
+      setAiPdfFile(null);
       refetchCases();
     } catch (e: any) {
       toast.error(e.message || "Erro ao gerar processo");
@@ -384,9 +405,43 @@ export default function MockTrialEditor() {
               <div className="space-y-4">
                 <div>
                   <Label>Objetivos de Aprendizagem</Label>
-                  <Textarea value={aiObjectives} onChange={e => setAiObjectives(e.target.value)} placeholder="Descreva os objetivos de aprendizagem para o caso clínico..." rows={5} />
+                  <Textarea value={aiObjectives} onChange={e => setAiObjectives(e.target.value)} placeholder="Descreva os objetivos de aprendizagem para o caso clínico..." rows={4} />
                 </div>
-                <Button onClick={generateWithAI} disabled={aiGenerating} className="w-full">
+                <div>
+                  <Label>PDF de Referência (opcional)</Label>
+                  <div className="mt-1.5">
+                    {aiPdfFile ? (
+                      <div className="flex items-center gap-2 p-3 rounded-md border bg-muted/50">
+                        <FileText className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-sm truncate flex-1">{aiPdfFile.name}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setAiPdfFile(null)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="flex items-center justify-center gap-2 p-4 rounded-md border-2 border-dashed cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors">
+                        <Upload className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Clique para enviar um PDF da aula</span>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 20 * 1024 * 1024) {
+                                toast.error("Arquivo muito grande (máx. 20MB)");
+                                return;
+                              }
+                              setAiPdfFile(file);
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+                <Button onClick={generateWithAI} disabled={aiGenerating || (!aiObjectives.trim() && !aiPdfFile)} className="w-full">
                   {aiGenerating ? "Gerando..." : "Gerar Processo"}
                   <Sparkles className="h-4 w-4 ml-2" />
                 </Button>
