@@ -45,6 +45,9 @@ import ClinicalObservationEval from "./pages/ClinicalObservationEval";
 import SjtExams from "./pages/SjtExams";
 import SjtEditor from "./pages/SjtEditor";
 import SjtStudentPortal from "./pages/SjtStudentPortal";
+import ProgressTests from "./pages/ProgressTests";
+import ProgressTestEditor from "./pages/ProgressTestEditor";
+import ProgressTestStudentPortal from "./pages/ProgressTestStudentPortal";
 import OsceEditor from "./pages/OsceEditor";
 import OsceCircuitControl from "./pages/OsceCircuitControl";
 import OsceEvaluator from "./pages/OsceEvaluator";
@@ -450,6 +453,10 @@ const App = () => (
             <Route path="/sjt" element={<ProtectedRoute><AppLayout><SjtExams /></AppLayout></ProtectedRoute>} />
             <Route path="/sjt/:id/edit" element={<ProtectedRoute><AppLayout><SjtEditor /></AppLayout></ProtectedRoute>} />
             <Route path="/sjt/student/:examId" element={<SjtStudentPortal />} />
+            {/* Progress Test Routes */}
+            <Route path="/progress-test" element={<ProtectedRoute><AppLayout><ProgressTests /></AppLayout></ProtectedRoute>} />
+            <Route path="/progress-test/:id/edit" element={<ProtectedRoute><AppLayout><ProgressTestEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/progress-test/student/:testId" element={<ProgressTestStudentPortal />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />

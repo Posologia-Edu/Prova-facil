@@ -22,6 +22,7 @@ import {
   Target,
   ClipboardCheck,
   Scale,
+  TrendingUp,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,6 +84,7 @@ export function AppSidebar() {
     { title: "KFE", url: "/kfe", icon: Target },
     { title: "Mini-CEX/DOPS", url: "/clinical-observations", icon: ClipboardCheck },
     { title: "SJT", url: "/sjt", icon: Scale },
+    { title: "Progress Test", url: "/progress-test", icon: TrendingUp },
   ];
 
   const managementNav = [
