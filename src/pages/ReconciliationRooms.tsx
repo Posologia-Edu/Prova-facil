@@ -198,7 +198,8 @@ export default function ReconciliationRooms() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {isLoading ? (

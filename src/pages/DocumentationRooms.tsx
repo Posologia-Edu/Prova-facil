@@ -239,7 +239,8 @@ export default function DocumentationRooms() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
