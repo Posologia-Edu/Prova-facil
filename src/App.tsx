@@ -442,6 +442,14 @@ const App = () => (
             />
             {/* Public KFE route */}
             <Route path="/kfe/student/:examId" element={<KfeStudentPortal />} />
+            {/* Mini-CEX/DOPS Routes */}
+            <Route path="/clinical-observations" element={<ProtectedRoute><AppLayout><ClinicalObservations /></AppLayout></ProtectedRoute>} />
+            <Route path="/clinical-observations/:id/edit" element={<ProtectedRoute><AppLayout><ClinicalObservationEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/clinical-observations/eval/:obsId" element={<ClinicalObservationEval />} />
+            {/* SJT Routes */}
+            <Route path="/sjt" element={<ProtectedRoute><AppLayout><SjtExams /></AppLayout></ProtectedRoute>} />
+            <Route path="/sjt/:id/edit" element={<ProtectedRoute><AppLayout><SjtEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/sjt/student/:examId" element={<SjtStudentPortal />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />
