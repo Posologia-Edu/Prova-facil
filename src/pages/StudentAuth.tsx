@@ -52,12 +52,17 @@ export default function StudentAuth() {
       // Check if PIN belongs to a simulation room first
       const { data: simRoom } = await supabase
         .from("simulation_rooms")
-        .select("id, access_code")
+        .select("id, access_code, status")
         .eq("access_code", normalizedPin)
         .limit(1)
         .maybeSingle();
 
       if (simRoom) {
+        if (simRoom.status === "draft") {
+          toast({ title: "Sala não disponível", description: "Esta sala de simulação ainda não foi ativada pelo professor.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
         sessionStorage.setItem("sim_pin", normalizedPin);
         sessionStorage.setItem("sim_email", primaryEmail);
         navigate("/simulation/join");
