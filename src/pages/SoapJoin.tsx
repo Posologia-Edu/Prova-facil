@@ -152,6 +152,17 @@ export default function SoapJoin() {
     }
   };
 
+  const handleLogin = () => doLogin(pin.trim(), email.trim());
+
+  // Auto-login if session data exists
+  useEffect(() => {
+    const savedPin = sessionStorage.getItem("soap_pin");
+    const savedEmail = sessionStorage.getItem("soap_email");
+    if (savedPin && savedEmail && phase === "login" && !room) {
+      doLogin(savedPin.trim(), savedEmail.trim());
+    }
+  }, []);
+
   const checkPartnerAndPeerStatus = async (roomId: string, me: any) => {
     // Check if partner submitted SOAP
     if (partner || me.pair_index >= 0) {
