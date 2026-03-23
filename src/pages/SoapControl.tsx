@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle } from "lucide-react";
+import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trophy } from "lucide-react";
+import { computeFieldScore, FormField } from "@/components/forms/types";
 
 export default function SoapControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -309,6 +310,7 @@ export default function SoapControl() {
           <TabsTrigger value="responses">Respostas SOAP</TabsTrigger>
           <TabsTrigger value="evaluations">Avaliações entre Pares</TabsTrigger>
           <TabsTrigger value="admin">Notas do Admin</TabsTrigger>
+          <TabsTrigger value="final"><Trophy className="h-4 w-4 mr-1" />Notas Finais</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pairs" className="space-y-4">
@@ -493,6 +495,119 @@ export default function SoapControl() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+        <TabsContent value="final" className="space-y-4">
+          {(() => {
+            // Build per-student final grades
+            const evalForm = forms.find((f: any) => f.form_type === "peer_evaluation" || f.title?.toLowerCase().includes("avaliação"));
+            const evalFields: FormField[] = evalForm ? (evalForm.content_json as FormField[]) : [];
+
+            const studentGrades: {
+              id: string;
+              name: string;
+              peerScore: number | null;
+              peerMaxScore: number;
+              adminScore: number | null;
+              finalScore: number | null;
+            }[] = [];
+
+            const allStudents = participants.filter((p: any) => p.participant_role !== "teacher");
+
+            for (const student of allStudents) {
+              // Peer score: find peer evaluation targeting this student
+              const peerEval = peerResponses.find((r: any) => r.target_participant_id === student.id);
+              let peerScore: number | null = null;
+              let peerMaxScore = 0;
+
+              if (peerEval && evalFields.length > 0) {
+                let totalScore = 0;
+                let totalMax = 0;
+                for (const field of evalFields) {
+                  if (!field.max_score) continue;
+                  totalMax += field.max_score;
+                  const answer = (peerEval.answers_json as Record<string, any>)?.[field.id];
+                  totalScore += computeFieldScore(field, answer);
+                }
+                peerMaxScore = totalMax;
+                // Normalize to 0-10
+                peerScore = totalMax > 0 ? (totalScore / totalMax) * 10 : 0;
+              }
+
+              // Admin score: from SOAP response
+              const soapResp = soapResponses.find((r: any) => r.participant_id === student.id);
+              const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
+
+              // Final: average of available scores
+              const scores = [peerScore, adminSc].filter((s): s is number => s != null);
+              const finalScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+
+              studentGrades.push({
+                id: student.id,
+                name: student.student_name,
+                peerScore,
+                peerMaxScore,
+                adminScore: adminSc,
+                finalScore,
+              });
+            }
+
+            if (studentGrades.length === 0) {
+              return (
+                <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum aluno encontrado.</CardContent></Card>
+              );
+            }
+
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Nota Final do Módulo SOAP por Aluno</CardTitle>
+                  <p className="text-sm text-muted-foreground">Média entre a nota do professor e a avaliação entre pares (escala 0-10)</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left">
+                          <th className="py-2 pr-4 font-medium">Aluno</th>
+                          <th className="py-2 px-4 font-medium text-center">Nota Pares</th>
+                          <th className="py-2 px-4 font-medium text-center">Nota Professor</th>
+                          <th className="py-2 pl-4 font-medium text-center">Nota Final</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {studentGrades.map((sg) => (
+                          <tr key={sg.id} className="border-b last:border-0">
+                            <td className="py-3 pr-4 font-medium">{sg.name}</td>
+                            <td className="py-3 px-4 text-center">
+                              {sg.peerScore != null ? (
+                                <Badge variant="outline">{sg.peerScore.toFixed(1)}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {sg.adminScore != null ? (
+                                <Badge variant="outline">{sg.adminScore.toFixed(1)}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 pl-4 text-center">
+                              {sg.finalScore != null ? (
+                                <Badge variant="default" className="text-base px-3 py-1">{sg.finalScore.toFixed(1)}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
         </TabsContent>
       </Tabs>
     </div>
