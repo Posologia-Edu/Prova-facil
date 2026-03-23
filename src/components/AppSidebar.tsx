@@ -82,6 +82,8 @@ export function AppSidebar() {
     { title: "OSCE", url: "/osce", icon: Stethoscope },
     { title: t("sim_nav"), url: "/simulations", icon: HeartPulse },
     { title: "Enfermagem Clínica", url: "/nursing", icon: Heart },
+    { title: "Nutrição Clínica", url: "/nutrition", icon: HeartPulse },
+    { title: "Odontologia Clínica", url: "/dentistry", icon: Stethoscope },
     { title: "Pacientes Virtuais", url: "/virtual-patients", icon: UserRound },
     { title: "SCT", url: "/sct", icon: BrainCircuit },
     { title: "KFE", url: "/kfe", icon: Target },

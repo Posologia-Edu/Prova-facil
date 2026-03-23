@@ -80,6 +80,16 @@ import NursingEditor from "./pages/NursingEditor";
 import NursingControl from "./pages/NursingControl";
 import NursingJoin from "./pages/NursingJoin";
 import NursingAggregator from "./pages/NursingAggregator";
+import NutritionSimulations from "./pages/NutritionSimulations";
+import NutritionEditor from "./pages/NutritionEditor";
+import NutritionControl from "./pages/NutritionControl";
+import NutritionJoin from "./pages/NutritionJoin";
+import NutritionAggregator from "./pages/NutritionAggregator";
+import DentistrySimulations from "./pages/DentistrySimulations";
+import DentistryEditor from "./pages/DentistryEditor";
+import DentistryControl from "./pages/DentistryControl";
+import DentistryJoin from "./pages/DentistryJoin";
+import DentistryAggregator from "./pages/DentistryAggregator";
 import VirtualPatients from "./pages/VirtualPatients";
 import VirtualPatientChat from "./pages/VirtualPatientChat";
 import VirtualPatientRoom from "./pages/VirtualPatientRoom";
@@ -395,6 +405,18 @@ const App = () => (
             <Route path="/nursing/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><NursingControl /></AppLayout></ProtectedRoute>} />
             {/* Public Nursing route */}
             <Route path="/nursing/join" element={<NursingJoin />} />
+            {/* Nutrition routes */}
+            <Route path="/nutrition" element={<ProtectedRoute><AppLayout><NutritionSimulations /></AppLayout></ProtectedRoute>} />
+            <Route path="/nutrition/aggregator" element={<ProtectedRoute><AppLayout><NutritionAggregator /></AppLayout></ProtectedRoute>} />
+            <Route path="/nutrition/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><NutritionEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/nutrition/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><NutritionControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/nutrition/join" element={<NutritionJoin />} />
+            {/* Dentistry routes */}
+            <Route path="/dentistry" element={<ProtectedRoute><AppLayout><DentistrySimulations /></AppLayout></ProtectedRoute>} />
+            <Route path="/dentistry/aggregator" element={<ProtectedRoute><AppLayout><DentistryAggregator /></AppLayout></ProtectedRoute>} />
+            <Route path="/dentistry/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><DentistryEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/dentistry/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><DentistryControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/dentistry/join" element={<DentistryJoin />} />
             {/* Virtual Patients */}
             <Route
               path="/virtual-patients"
