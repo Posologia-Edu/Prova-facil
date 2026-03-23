@@ -75,6 +75,11 @@ import DocumentationEditor from "./pages/DocumentationEditor";
 import DocumentationJoin from "./pages/DocumentationJoin";
 import DocumentationControl from "./pages/DocumentationControl";
 import SimulationAggregator from "./pages/SimulationAggregator";
+import NursingSimulations from "./pages/NursingSimulations";
+import NursingEditor from "./pages/NursingEditor";
+import NursingControl from "./pages/NursingControl";
+import NursingJoin from "./pages/NursingJoin";
+import NursingAggregator from "./pages/NursingAggregator";
 import VirtualPatients from "./pages/VirtualPatients";
 import VirtualPatientChat from "./pages/VirtualPatientChat";
 import VirtualPatientRoom from "./pages/VirtualPatientRoom";
@@ -383,6 +388,13 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Nursing routes */}
+            <Route path="/nursing" element={<ProtectedRoute><AppLayout><NursingSimulations /></AppLayout></ProtectedRoute>} />
+            <Route path="/nursing/aggregator" element={<ProtectedRoute><AppLayout><NursingAggregator /></AppLayout></ProtectedRoute>} />
+            <Route path="/nursing/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><NursingEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/nursing/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><NursingControl /></AppLayout></ProtectedRoute>} />
+            {/* Public Nursing route */}
+            <Route path="/nursing/join" element={<NursingJoin />} />
             {/* Virtual Patients */}
             <Route
               path="/virtual-patients"
