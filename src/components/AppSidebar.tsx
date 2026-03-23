@@ -17,6 +17,7 @@ import {
   Trash2,
   Store,
   HeartPulse,
+  Heart,
   UserRound,
   BrainCircuit,
   Target,
