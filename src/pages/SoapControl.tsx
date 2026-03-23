@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle } from "lucide-react";
+import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trophy } from "lucide-react";
+import { computeFieldScore, FormField } from "@/components/forms/types";
 
 export default function SoapControl() {
   const { roomId } = useParams<{ roomId: string }>();
