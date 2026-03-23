@@ -177,17 +177,6 @@ export default function ReconciliationJoin() {
     );
   }
 
-  // Auto-redirect after submission
-  useEffect(() => {
-    if (phase !== "done") return;
-    if (countdown <= 0) {
-      window.location.href = "/";
-      return;
-    }
-    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [phase, countdown]);
-
   if (phase === "done") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
