@@ -752,7 +752,7 @@ export default function Simulations() {
 
         {/* Reconciliation rooms */}
         <TabsContent value="reconciliation" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-between">
             <Button onClick={() => navigate("/simulations/reconciliation")}>
               <Plus className="h-4 w-4 mr-2" />Nova Sala de Reconciliação
             </Button>
