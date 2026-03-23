@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ type MedFormContent = { columns: MedColumn[]; rows_score: number };
 type Phase = "login" | "active" | "done";
 
 export default function DocumentationJoin() {
+  const [countdown, setCountdown] = useState(15);
   const [pin, setPin] = useState(() => sessionStorage.getItem("doc_pin") || "");
   const [email, setEmail] = useState(() => sessionStorage.getItem("doc_email") || "");
   const [phase, setPhase] = useState<Phase>("login");
@@ -115,6 +116,17 @@ export default function DocumentationJoin() {
   const referralFields: FormField[] = referralForm ? (Array.isArray(referralForm.content_json) ? referralForm.content_json : []) : [];
   const medContent: MedFormContent | null = medForm ? (medForm.content_json as MedFormContent) : null;
 
+  // Auto-redirect after submission
+  useEffect(() => {
+    if (phase !== "done") return;
+    if (countdown <= 0) {
+      window.location.href = "/";
+      return;
+    }
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [phase, countdown]);
+
   // Form rendering delegated to FormRenderer
 
   const addMedRow = () => {
@@ -149,6 +161,7 @@ export default function DocumentationJoin() {
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2">Documentação Enviada!</h2>
             <p className="text-muted-foreground">Aguarde a avaliação do professor.</p>
+            <p className="text-sm text-muted-foreground mt-4">Redirecionando em {countdown}s...</p>
           </CardContent>
         </Card>
       </div>

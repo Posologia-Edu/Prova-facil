@@ -9,13 +9,35 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, Table2 } from "lucide-react";
+import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, Table2, ChevronDown, ChevronRight, Lock } from "lucide-react";
 
 type FormField = { id: string; label: string; type: string; options?: string[]; max_score?: number };
 type MedColumn = { id: string; label: string };
 type MedFormContent = { columns: MedColumn[]; rows_score: number; answer_rows?: Record<string, string>[] };
 type MedCaseContent = { columns: MedColumn[]; rows_score: number; answer_rows: Record<string, string>[] };
+
+export function CollapsibleAnswerField({ field }: { field: any }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const answerText = field.options?.join(", ") || "Sem conteúdo";
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">
+      <div className="text-xs font-medium text-muted-foreground uppercase">{field.label} ({field.max_score || 0} pts)</div>
+      <CollapsibleTrigger asChild>
+        <button className="w-full text-left text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800 flex items-center justify-between hover:bg-green-100 dark:hover:bg-green-900 transition-colors">
+          <span>{isOpen ? "Ocultar espelho" : "Ver espelho"}</span>
+          {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="text-sm bg-green-50 dark:bg-green-950 p-3 rounded-b border border-t-0 border-green-200 dark:border-green-800">
+          {answerText}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 export default function DocumentationControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -247,6 +269,29 @@ export default function DocumentationControl() {
               );
             })}
           </div>
+
+          {room?.status === "active" && responses.length > 0 && (
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium text-sm">Encerrar atividade</p>
+                <p className="text-xs text-muted-foreground">Todas as duplas finalizaram? Conclua a sala.</p>
+              </div>
+              <Button
+                variant="default"
+                onClick={async () => {
+                  await supabase.from("documentation_rooms").update({ status: "completed" }).eq("id", roomId!);
+                  queryClient.invalidateQueries({ queryKey: ["documentation-room", roomId] });
+                  toast({ title: "Sala concluída!" });
+                }}
+              >
+                <Lock className="h-4 w-4 mr-1" />Concluir Sala
+              </Button>
+            </div>
+          )}
+
+          {room?.status === "completed" && (
+            <Badge variant="outline" className="text-sm"><CheckCircle className="h-4 w-4 mr-1" />Sala concluída</Badge>
+          )}
         </TabsContent>
 
         <TabsContent value="responses" className="space-y-4">
@@ -284,10 +329,7 @@ export default function DocumentationControl() {
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground mb-2">Espelho</p>
                             {caseKeyFields.length ? caseKeyFields.map((field: any) => (
-                              <div key={field.id} className="mb-2">
-                                <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
-                                <p className="text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800">{field.options?.join(", ") || "Ver espelho"}</p>
-                              </div>
+                              <CollapsibleAnswerField key={field.id} field={field} />
                             )) : <p className="text-sm text-muted-foreground">Sem espelho cadastrado.</p>}
                           </div>
                         </div>
