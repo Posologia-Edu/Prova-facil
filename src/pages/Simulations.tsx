@@ -16,7 +16,7 @@ import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, Clipb
 import { toast } from "@/hooks/use-toast";
 import SplitRoomDialog from "@/components/SplitRoomDialog";
 
-const modules = [
+const pharmacyModules = [
   {
     id: "anamnesis",
     title: "Anamnese",
@@ -61,6 +61,72 @@ const modules = [
     route: "/simulations/aggregator",
     color: "text-chart-5",
     bgColor: "bg-chart-5/10",
+  },
+];
+
+const areas = [
+  {
+    id: "pharmacy",
+    title: "Farmácia Clínica",
+    description: "Anamnese, SOAP, Reconciliação e Documentação farmacêutica.",
+    icon: HeartPulse,
+    color: "text-primary",
+    bgColor: "bg-primary/10",
+    tab: "pharmacy",
+  },
+  {
+    id: "nursing",
+    title: "Enfermagem Clínica",
+    description: "Acolhimento, SAE, Evolução e Passagem de Plantão.",
+    icon: Heart,
+    color: "text-chart-2",
+    bgColor: "bg-chart-2/10",
+    route: "/nursing",
+  },
+  {
+    id: "nutrition",
+    title: "Nutrição Clínica",
+    description: "Anamnese Nutricional, Avaliação Antropométrica, Plano Alimentar e Orientação.",
+    icon: HeartPulse,
+    color: "text-chart-3",
+    bgColor: "bg-chart-3/10",
+    route: "/nutrition",
+  },
+  {
+    id: "dentistry",
+    title: "Odontologia Clínica",
+    description: "Anamnese Odontológica, Exame Clínico, Plano de Tratamento e Orientação.",
+    icon: Stethoscope,
+    color: "text-chart-4",
+    bgColor: "bg-chart-4/10",
+    route: "/dentistry",
+  },
+  {
+    id: "medicine",
+    title: "Medicina",
+    description: "Anamnese Médica, Exame Físico, Raciocínio Clínico e Plano Terapêutico.",
+    icon: Activity,
+    color: "text-chart-5",
+    bgColor: "bg-chart-5/10",
+    route: "/medicine",
+  },
+  {
+    id: "physiotherapy",
+    title: "Fisioterapia",
+    description: "Avaliação Funcional, Diagnóstico Cinético-Funcional, Plano e Evolução.",
+    icon: Dumbbell,
+    color: "text-primary",
+    bgColor: "bg-primary/10",
+    route: "/physiotherapy",
+  },
+  {
+    id: "biomedicine",
+    title: "Biomedicina",
+    description: "Análise Laboratorial, Controle de Qualidade, Interpretação e Laudo Técnico.",
+    icon: Microscope,
+    color: "text-chart-2",
+    bgColor: "bg-chart-2/10",
+    route: "/biomedicine",
   },
 ];
 
