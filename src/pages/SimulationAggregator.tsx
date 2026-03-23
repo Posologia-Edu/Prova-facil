@@ -268,6 +268,32 @@ export default function SimulationAggregator() {
     return rooms;
   }, [anamnesisRooms, soapRooms, reconRooms, docRooms]);
 
+  // Build a global email→scores map for cross-referencing all modules
+  const globalScoreMap = useMemo(() => {
+    const map = new Map<string, { anamnesis: number | null; soap: number | null; reconciliation: number | null; documentation: number | null }>();
+
+    const process = (scores: { roomId: string; students: { email: string; name: string; score: number | null }[] }[], key: "anamnesis" | "soap" | "reconciliation" | "documentation", rooms: RoomInfo[]) => {
+      scores.forEach(({ roomId, students }) => {
+        if (hiddenRoomIds.has(roomId)) return;
+        students.forEach(s => {
+          if (!s.email) return;
+          const existing = map.get(s.email) || { anamnesis: null, soap: null, reconciliation: null, documentation: null };
+          if (s.score != null && (existing[key] == null || s.score > existing[key]!)) {
+            existing[key] = s.score;
+          }
+          map.set(s.email, existing);
+        });
+      });
+    };
+
+    process(anamnesisScores, "anamnesis", anamnesisRooms);
+    process(soapScores, "soap", soapRooms);
+    process(reconScores, "reconciliation", reconRooms);
+    process(docScores, "documentation", docRooms);
+
+    return map;
+  }, [anamnesisScores, soapScores, reconScores, docScores, anamnesisRooms, soapRooms, reconRooms, docRooms, hiddenRoomIds]);
+
   // Build room groups for each module (excluding hidden rooms)
   const roomGroups = useMemo(() => {
     const groups: RoomGroup[] = [];
@@ -477,29 +503,47 @@ export default function SimulationAggregator() {
                       {group.students.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Nenhum participante nesta sala.</p>
                       ) : (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Aluno</TableHead>
-                              <TableHead className="text-center w-32">Nota</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {group.students.sort((a, b) => a.name.localeCompare(b.name)).map((s, i) => (
-                              <TableRow key={`${s.email}-${i}`}>
-                                <TableCell>
-                                  <div>
-                                    <p className="font-medium text-sm">{s.name}</p>
-                                    <p className="text-xs text-muted-foreground">{s.email}</p>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-center font-semibold">
-                                  {s.score != null ? s.score : "—"}
-                                </TableCell>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Aluno</TableHead>
+                                <TableHead className="text-center">Anamnese</TableHead>
+                                <TableHead className="text-center">SOAP</TableHead>
+                                <TableHead className="text-center">Reconciliação</TableHead>
+                                <TableHead className="text-center">Documentação</TableHead>
+                                <TableHead className="text-center font-bold">Média</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {group.students.sort((a, b) => a.name.localeCompare(b.name)).map((s, i) => {
+                                const global = s.email ? globalScoreMap.get(s.email) : null;
+                                const anamnesis = global?.anamnesis ?? null;
+                                const soap = global?.soap ?? null;
+                                const reconciliation = global?.reconciliation ?? null;
+                                const documentation = global?.documentation ?? null;
+                                const scores = [anamnesis, soap, reconciliation, documentation].filter(v => v != null) as number[];
+                                const average = scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100 : null;
+
+                                return (
+                                  <TableRow key={`${s.email}-${i}`}>
+                                    <TableCell>
+                                      <div>
+                                        <p className="font-medium text-sm">{s.name}</p>
+                                        <p className="text-xs text-muted-foreground">{s.email}</p>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">{anamnesis != null ? anamnesis : "—"}</TableCell>
+                                    <TableCell className="text-center">{soap != null ? soap : "—"}</TableCell>
+                                    <TableCell className="text-center">{reconciliation != null ? reconciliation : "—"}</TableCell>
+                                    <TableCell className="text-center">{documentation != null ? documentation : "—"}</TableCell>
+                                    <TableCell className="text-center font-bold">{average != null ? average : "—"}</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
                       )}
                     </CardContent>
                   </Card>
