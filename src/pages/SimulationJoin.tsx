@@ -669,34 +669,6 @@ export default function SimulationJoin() {
     );
   };
 
-  // Login screen
-  if (!joined) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Stethoscope className="h-10 w-10 mx-auto text-primary mb-2" />
-            <CardTitle>{t("sim_join_title")}</CardTitle>
-            <CardDescription>{t("sim_join_desc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>{t("student_email_label")}</Label>
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" />
-            </div>
-            <div>
-              <Label>PIN</Label>
-              <Input value={pin} onChange={(e) => setPin(e.target.value)} placeholder="abc123" className="font-mono text-center text-lg" />
-            </div>
-            <Button onClick={joinRoom} className="w-full" disabled={!pin || !email}>
-              {t("student_access_btn")}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   const RoleIcon = assignment ? roleIcons[assignment.assigned_role] || Users : Users;
   const form = getFormForRole();
   const isActive = !!activeRound;
@@ -732,6 +704,34 @@ export default function SimulationJoin() {
       window.clearInterval(countdownInterval);
     };
   }, [allRoundsCompleted, isActive, isProfessor, joined, navigate]);
+
+  // Login screen
+  if (!joined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <Stethoscope className="h-10 w-10 mx-auto text-primary mb-2" />
+            <CardTitle>{t("sim_join_title")}</CardTitle>
+            <CardDescription>{t("sim_join_desc")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>{t("student_email_label")}</Label>
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" />
+            </div>
+            <div>
+              <Label>PIN</Label>
+              <Input value={pin} onChange={(e) => setPin(e.target.value)} placeholder="abc123" className="font-mono text-center text-lg" />
+            </div>
+            <Button onClick={joinRoom} className="w-full" disabled={!pin || !email}>
+              {t("student_access_btn")}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Material release stage check
   const isMaterialStage = isActive && activeRound && !activeRound.started_at && activeRound.materials_released;
