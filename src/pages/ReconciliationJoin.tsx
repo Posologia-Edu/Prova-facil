@@ -13,6 +13,7 @@ import type { FormField } from "@/components/forms/types";
 type Phase = "login" | "waiting" | "active" | "done";
 
 export default function ReconciliationJoin() {
+  const [countdown, setCountdown] = useState(15);
   const [pin, setPin] = useState(() => sessionStorage.getItem("recon_pin") || "");
   const [email, setEmail] = useState(() => sessionStorage.getItem("recon_email") || "");
   const [phase, setPhase] = useState<Phase>("login");
