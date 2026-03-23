@@ -249,6 +249,11 @@ export default function Simulations() {
       if (forms?.length) {
         await supabase.from("simulation_forms").insert(forms.map(f => ({ room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: f.content_json })));
       }
+      // Copy participants
+      const { data: participants } = await supabase.from("simulation_participants").select("*").eq("room_id", roomId);
+      if (participants?.length) {
+        await supabase.from("simulation_participants").insert(participants.map(p => ({ room_id: newRoom.id, student_name: p.student_name, student_email: p.student_email, pair_index: p.pair_index, pair_position: p.pair_position, participant_role: p.participant_role, assigned_role: p.assigned_role })));
+      }
       return newRoom;
     },
     onSuccess: (data) => {
