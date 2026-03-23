@@ -243,6 +243,31 @@ export default function ReconciliationControl() {
 
         {/* Participants */}
         <TabsContent value="participants" className="space-y-4">
+          {room?.status === "active" && Object.keys(pairs).length > 0 && responses.length > 0 && (
+            <div className="flex justify-end">
+              <Button
+                variant="default"
+                onClick={async () => {
+                  const { error } = await supabase
+                    .from("reconciliation_rooms")
+                    .update({ status: "completed" })
+                    .eq("id", roomId!);
+                  if (error) {
+                    toast({ title: "Erro ao concluir sala", variant: "destructive" });
+                    return;
+                  }
+                  toast({ title: "Sala concluída com sucesso!" });
+                  queryClient.invalidateQueries({ queryKey: ["reconciliation-room", roomId] });
+                }}
+              >
+                <Lock className="h-4 w-4 mr-1" />
+                Concluir Sala
+              </Button>
+            </div>
+          )}
+          {room?.status === "completed" && (
+            <Badge variant="secondary" className="text-sm">Sala concluída</Badge>
+          )}
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {Object.entries(pairs).map(([idx, pair]) => {
               const pairIdx = Number(idx);
