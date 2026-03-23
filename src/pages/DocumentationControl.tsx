@@ -284,12 +284,26 @@ export default function DocumentationControl() {
                           </div>
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground mb-2">Espelho</p>
-                            {caseKeyFields.length ? caseKeyFields.map((field: any) => (
-                              <div key={field.id} className="mb-2">
-                                <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
-                                <p className="text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800">{field.options?.join(", ") || "Ver espelho"}</p>
-                              </div>
-                            )) : <p className="text-sm text-muted-foreground">Sem espelho cadastrado.</p>}
+                            {caseKeyFields.length ? caseKeyFields.map((field: any) => {
+                              const [isOpen, setIsOpen] = useState(false);
+                              const answerText = field.options?.join(", ") || "Sem conteúdo";
+                              return (
+                                <Collapsible key={field.id} open={isOpen} onOpenChange={setIsOpen} className="mb-2">
+                                  <div className="text-xs font-medium text-muted-foreground uppercase">{field.label} ({field.max_score || 0} pts)</div>
+                                  <CollapsibleTrigger asChild>
+                                    <button className="w-full text-left text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800 flex items-center justify-between hover:bg-green-100 dark:hover:bg-green-900 transition-colors">
+                                      <span>{isOpen ? "Ocultar espelho" : "Ver espelho"}</span>
+                                      {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                    </button>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <div className="text-sm bg-green-50 dark:bg-green-950 p-3 rounded-b border border-t-0 border-green-200 dark:border-green-800">
+                                      {answerText}
+                                    </div>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              );
+                            }) : <p className="text-sm text-muted-foreground">Sem espelho cadastrado.</p>}
                           </div>
                         </div>
                       </div>
