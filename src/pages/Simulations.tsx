@@ -503,6 +503,15 @@ export default function Simulations() {
                         <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/${room.id}/edit`)}>
                           <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
                         </Button>
+                        {room.status === "draft" && (
+                          <Button size="sm" onClick={async () => {
+                            await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
+                            queryClient.invalidateQueries({ queryKey: ["simulation-rooms"] });
+                            toast({ title: "Sala ativada!" });
+                          }}>
+                            <Play className="h-3.5 w-3.5 mr-1" />Ativar Sala
+                          </Button>
+                        )}
                         {(room.status === "active" || room.status === "completed") && (
                           <Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/simulations/${room.id}/control`)}>
                             {room.status === "completed" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
