@@ -503,10 +503,10 @@ export default function Simulations() {
                         <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/${room.id}/edit`)}>
                           <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
                         </Button>
-                        {(room.status === "active" || room.status === "finished") && (
-                          <Button size="sm" variant={room.status === "finished" ? "outline" : "default"} onClick={() => navigate(`/simulations/${room.id}/control`)}>
-                            {room.status === "finished" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
-                            {room.status === "finished" ? "Resultados" : t("sim_control")}
+                        {(room.status === "active" || room.status === "completed") && (
+                          <Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/simulations/${room.id}/control`)}>
+                            {room.status === "completed" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
+                            {room.status === "completed" ? "Resultados" : t("sim_control")}
                           </Button>
                         )}
                         {room.status === "draft" && studentCount > 0 && (
