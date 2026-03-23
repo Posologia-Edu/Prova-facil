@@ -124,7 +124,7 @@ export default function MedicineControl() {
     if (selectedPairIndex === null) return;
     setGradingAI(true);
     try {
-      const { data, error } = await supabase.functions.invoke("grade-nursing", {
+      const { data, error } = await supabase.functions.invoke("grade-medicine", {
         body: {
           room_id: roomId, module_type: mt, pair_index: selectedPairIndex,
           response: selectedResp ? { id: selectedResp.id, answers_json: selectedResp.answers_json, clinical_case_id: selectedResp.clinical_case_id } : null,
