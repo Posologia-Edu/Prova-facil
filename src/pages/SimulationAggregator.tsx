@@ -5,9 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, BarChart3 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, BarChart3, Stethoscope, ClipboardList, Handshake, FileText } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type StudentRow = {
+type RoomInfo = { id: string; title: string; status: string };
+
+type StudentScore = {
   email: string;
   name: string;
   anamnesis: number | null;
@@ -17,137 +21,272 @@ type StudentRow = {
   average: number | null;
 };
 
+type RoomGroup = {
+  room: RoomInfo;
+  module: string;
+  students: { email: string; name: string; score: number | null }[];
+};
+
 export default function SimulationAggregator() {
   const navigate = useNavigate();
 
-  // Anamnesis scores from simulation_responses
-  const { data: simResponses = [] } = useQuery({
-    queryKey: ["agg-sim-responses"],
+  // Fetch all rooms per module
+  const { data: anamnesisRooms = [] } = useQuery({
+    queryKey: ["agg-anamnesis-rooms"],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [];
-      // Get all participant data with their scores
-      const { data: participants } = await supabase.from("simulation_participants").select("id, student_email, student_name, room_id");
-      const { data: rooms } = await supabase.from("simulation_rooms").select("id").eq("user_id", session.user.id);
-      if (!rooms || !participants) return [];
-      const roomIds = new Set(rooms.map(r => r.id));
-      const relevantParticipants = participants.filter(p => roomIds.has(p.room_id));
+      const { data } = await supabase.from("simulation_rooms").select("id, title, status").eq("user_id", session.user.id).is("deleted_at", null).order("created_at", { ascending: false });
+      return (data || []) as RoomInfo[];
+    },
+  });
 
+  const { data: soapRooms = [] } = useQuery({
+    queryKey: ["agg-soap-rooms"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data } = await supabase.from("soap_rooms").select("id, title, status").eq("user_id", session.user.id).is("deleted_at", null).order("created_at", { ascending: false });
+      return (data || []) as RoomInfo[];
+    },
+  });
+
+  const { data: reconRooms = [] } = useQuery({
+    queryKey: ["agg-recon-rooms"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data } = await supabase.from("reconciliation_rooms").select("id, title, status").eq("user_id", session.user.id).order("created_at", { ascending: false });
+      return (data || []) as RoomInfo[];
+    },
+  });
+
+  const { data: docRooms = [] } = useQuery({
+    queryKey: ["agg-doc-rooms"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
+      const { data } = await supabase.from("documentation_rooms").select("id, title, status").eq("user_id", session.user.id).order("created_at", { ascending: false });
+      return (data || []) as RoomInfo[];
+    },
+  });
+
+  // Anamnesis scores grouped by room
+  const { data: anamnesisScores = [] } = useQuery({
+    queryKey: ["agg-anamnesis-scores", anamnesisRooms.map(r => r.id)],
+    queryFn: async () => {
+      const roomIds = anamnesisRooms.map(r => r.id);
+      if (!roomIds.length) return [];
+
+      const { data: participants } = await supabase.from("simulation_participants").select("id, student_email, student_name, room_id").in("room_id", roomIds);
       const { data: responses } = await supabase.from("simulation_responses").select("participant_id, score, round_id, form_id");
-      if (!responses) return [];
+      const { data: allForms } = await supabase.from("simulation_forms").select("id, form_type, room_id").in("room_id", roomIds);
 
-      // Get forms to identify professor_eval and observer_eval
-      const { data: allForms } = await supabase.from("simulation_forms").select("id, form_type, room_id").in("room_id", Array.from(roomIds));
-      const evalFormIds = new Set((allForms || []).filter(f => f.form_type === "professor_eval" || f.form_type === "observer_eval").map(f => f.id));
+      if (!participants || !responses || !allForms) return [];
 
-      return relevantParticipants.map(p => {
-        // Only count eval form responses, group by round, average per round
-        const pResponses = responses.filter(r => r.participant_id === p.id && evalFormIds.has(r.form_id));
-        const roundMap = new Map<string, number[]>();
-        pResponses.forEach(r => {
-          if (!roundMap.has(r.round_id)) roundMap.set(r.round_id, []);
-          roundMap.get(r.round_id)!.push(Number(r.score) || 0);
+      const evalFormIds = new Set(allForms.filter(f => f.form_type === "professor_eval" || f.form_type === "observer_eval").map(f => f.id));
+
+      return roomIds.map(roomId => {
+        const roomParticipants = participants.filter(p => p.room_id === roomId);
+        const students = roomParticipants.map(p => {
+          const pResponses = responses.filter(r => r.participant_id === p.id && evalFormIds.has(r.form_id));
+          const roundMap = new Map<string, number[]>();
+          pResponses.forEach(r => {
+            if (!roundMap.has(r.round_id)) roundMap.set(r.round_id, []);
+            roundMap.get(r.round_id)!.push(Number(r.score) || 0);
+          });
+          const roundAvgs = Array.from(roundMap.values()).map(scores => scores.reduce((a, b) => a + b, 0) / scores.length);
+          const score = roundAvgs.length > 0 ? Math.round((roundAvgs.reduce((a, b) => a + b, 0) / roundAvgs.length) * 100) / 100 : null;
+          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score };
         });
-        const roundAvgs = Array.from(roundMap.values()).map(scores => scores.reduce((a, b) => a + b, 0) / scores.length);
-        const score = roundAvgs.length > 0 ? roundAvgs.reduce((a, b) => a + b, 0) / roundAvgs.length : null;
-        return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: score != null ? Math.round(score * 100) / 100 : null };
+        return { roomId, students };
       });
     },
+    enabled: anamnesisRooms.length > 0,
   });
 
-  // SOAP scores
-  const { data: soapData = [] } = useQuery({
-    queryKey: ["agg-soap-responses"],
+  // SOAP scores grouped by room
+  const { data: soapScores = [] } = useQuery({
+    queryKey: ["agg-soap-scores", soapRooms.map(r => r.id)],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return [];
-      const { data: rooms } = await supabase.from("soap_rooms").select("id").eq("user_id", session.user.id);
-      if (!rooms) return [];
-      const roomIds = rooms.map(r => r.id);
+      const roomIds = soapRooms.map(r => r.id);
+      if (!roomIds.length) return [];
 
       const { data: participants } = await supabase.from("soap_participants").select("id, student_email, student_name, room_id").in("room_id", roomIds);
-      const { data: responses } = await supabase.from("soap_responses").select("participant_id, admin_score").in("room_id", roomIds);
+      const { data: responses } = await supabase.from("soap_responses").select("participant_id, admin_score, room_id").in("room_id", roomIds);
+
       if (!participants || !responses) return [];
 
-      return participants.map(p => ({
-        email: p.student_email?.toLowerCase() || "",
-        name: p.student_name,
-        score: responses.filter(r => r.participant_id === p.id).reduce((sum, r) => sum + (Number(r.admin_score) || 0), 0) || null,
-      }));
+      return roomIds.map(roomId => {
+        const roomParticipants = participants.filter(p => p.room_id === roomId);
+        const students = roomParticipants.map(p => {
+          const score = responses.filter(r => r.participant_id === p.id).reduce((sum, r) => sum + (Number(r.admin_score) || 0), 0) || null;
+          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score };
+        });
+        return { roomId, students };
+      });
     },
+    enabled: soapRooms.length > 0,
   });
 
-  // Reconciliation scores
-  const { data: reconData = [] } = useQuery({
-    queryKey: ["agg-recon-responses"],
+  // Reconciliation scores grouped by room
+  const { data: reconScores = [] } = useQuery({
+    queryKey: ["agg-recon-scores", reconRooms.map(r => r.id)],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return [];
-      const { data: rooms } = await supabase.from("reconciliation_rooms").select("id").eq("user_id", session.user.id);
-      if (!rooms) return [];
-      const roomIds = rooms.map(r => r.id);
+      const roomIds = reconRooms.map(r => r.id);
+      if (!roomIds.length) return [];
 
       const { data: participants } = await supabase.from("reconciliation_participants").select("id, student_email, student_name, room_id, pair_index").in("room_id", roomIds);
       const { data: responses } = await supabase.from("reconciliation_responses").select("room_id, pair_index, admin_score, ai_score").in("room_id", roomIds);
+
       if (!participants || !responses) return [];
 
-      return participants.map(p => {
-        const resp = responses.find(r => r.room_id === p.room_id && r.pair_index === p.pair_index);
-        return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: Number(resp?.admin_score ?? resp?.ai_score) || null };
+      return roomIds.map(roomId => {
+        const roomParticipants = participants.filter(p => p.room_id === roomId);
+        const students = roomParticipants.map(p => {
+          const resp = responses.find(r => r.room_id === p.room_id && r.pair_index === p.pair_index);
+          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: Number(resp?.admin_score ?? resp?.ai_score) || null };
+        });
+        return { roomId, students };
       });
     },
+    enabled: reconRooms.length > 0,
   });
 
-  // Documentation scores
-  const { data: docData = [] } = useQuery({
-    queryKey: ["agg-doc-responses"],
+  // Documentation scores grouped by room
+  const { data: docScores = [] } = useQuery({
+    queryKey: ["agg-doc-scores", docRooms.map(r => r.id)],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return [];
-      const { data: rooms } = await supabase.from("documentation_rooms").select("id").eq("user_id", session.user.id);
-      if (!rooms) return [];
-      const roomIds = rooms.map(r => r.id);
+      const roomIds = docRooms.map(r => r.id);
+      if (!roomIds.length) return [];
 
       const { data: participants } = await supabase.from("documentation_participants").select("id, student_email, student_name, room_id, pair_index").in("room_id", roomIds);
       const { data: responses } = await supabase.from("documentation_responses").select("room_id, pair_index, admin_score, ai_score").in("room_id", roomIds);
+
       if (!participants || !responses) return [];
 
-      return participants.map(p => {
-        const resps = responses.filter(r => r.room_id === p.room_id && r.pair_index === p.pair_index);
-        const totalScore = resps.reduce((sum, r) => sum + (Number(r.admin_score ?? r.ai_score) || 0), 0);
-        return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: totalScore || null };
+      return roomIds.map(roomId => {
+        const roomParticipants = participants.filter(p => p.room_id === roomId);
+        const students = roomParticipants.map(p => {
+          const resps = responses.filter(r => r.room_id === p.room_id && r.pair_index === p.pair_index);
+          const totalScore = resps.reduce((sum, r) => sum + (Number(r.admin_score ?? r.ai_score) || 0), 0);
+          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: totalScore || null };
+        });
+        return { roomId, students };
       });
     },
+    enabled: docRooms.length > 0,
   });
 
-  const aggregated: StudentRow[] = useMemo(() => {
-    const map = new Map<string, StudentRow>();
+  // Build room groups for each module
+  const roomGroups = useMemo(() => {
+    const groups: RoomGroup[] = [];
 
-    const addData = (items: { email: string; name: string; score: number | null }[], key: keyof Pick<StudentRow, "anamnesis" | "soap" | "reconciliation" | "documentation">) => {
-      items.forEach(item => {
-        if (!item.email) return;
-        const existing = map.get(item.email) || { email: item.email, name: item.name, anamnesis: null, soap: null, reconciliation: null, documentation: null, average: null };
-        if (item.score != null) {
-          existing[key] = (existing[key] || 0) + item.score;
-        }
-        if (!existing.name && item.name) existing.name = item.name;
-        map.set(item.email, existing);
+    anamnesisRooms.forEach(room => {
+      const scoreData = anamnesisScores.find(s => s.roomId === room.id);
+      groups.push({ room, module: "anamnesis", students: scoreData?.students || [] });
+    });
+
+    soapRooms.forEach(room => {
+      const scoreData = soapScores.find(s => s.roomId === room.id);
+      groups.push({ room, module: "soap", students: scoreData?.students || [] });
+    });
+
+    reconRooms.forEach(room => {
+      const scoreData = reconScores.find(s => s.roomId === room.id);
+      groups.push({ room, module: "reconciliation", students: scoreData?.students || [] });
+    });
+
+    docRooms.forEach(room => {
+      const scoreData = docScores.find(s => s.roomId === room.id);
+      groups.push({ room, module: "documentation", students: scoreData?.students || [] });
+    });
+
+    return groups;
+  }, [anamnesisRooms, soapRooms, reconRooms, docRooms, anamnesisScores, soapScores, reconScores, docScores]);
+
+  // Consolidated view: group by unique student email across all rooms
+  const consolidated = useMemo(() => {
+    const map = new Map<string, StudentScore>();
+
+    const processModule = (rooms: RoomInfo[], scores: { roomId: string; students: { email: string; name: string; score: number | null }[] }[], key: keyof Pick<StudentScore, "anamnesis" | "soap" | "reconciliation" | "documentation">) => {
+      scores.forEach(({ students }) => {
+        students.forEach(s => {
+          if (!s.email) return;
+          const existing = map.get(s.email) || { email: s.email, name: s.name, anamnesis: null, soap: null, reconciliation: null, documentation: null, average: null };
+          if (s.score != null) {
+            // Take the latest (or highest) score if student appears in multiple rooms
+            if (existing[key] == null || s.score > existing[key]!) {
+              existing[key] = s.score;
+            }
+          }
+          if (!existing.name && s.name) existing.name = s.name;
+          map.set(s.email, existing);
+        });
       });
     };
 
-    addData(simResponses, "anamnesis");
-    addData(soapData, "soap");
-    addData(reconData, "reconciliation");
-    addData(docData, "documentation");
+    processModule(anamnesisRooms, anamnesisScores, "anamnesis");
+    processModule(soapRooms, soapScores, "soap");
+    processModule(reconRooms, reconScores, "reconciliation");
+    processModule(docRooms, docScores, "documentation");
 
-    // Calculate average
     map.forEach(row => {
       const scores = [row.anamnesis, row.soap, row.reconciliation, row.documentation].filter(s => s != null) as number[];
       row.average = scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100 : null;
     });
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [simResponses, soapData, reconData, docData]);
+  }, [anamnesisRooms, soapRooms, reconRooms, docRooms, anamnesisScores, soapScores, reconScores, docScores]);
+
+  const moduleLabel = (mod: string) => {
+    switch (mod) {
+      case "anamnesis": return "Anamnese";
+      case "soap": return "SOAP";
+      case "reconciliation": return "Reconciliação";
+      case "documentation": return "Documentação";
+      default: return mod;
+    }
+  };
+
+  const moduleIcon = (mod: string) => {
+    switch (mod) {
+      case "anamnesis": return <Stethoscope className="h-4 w-4" />;
+      case "soap": return <ClipboardList className="h-4 w-4" />;
+      case "reconciliation": return <Handshake className="h-4 w-4" />;
+      case "documentation": return <FileText className="h-4 w-4" />;
+      default: return null;
+    }
+  };
+
+  const moduleBadgeVariant = (mod: string): "default" | "secondary" | "outline" | "destructive" => {
+    switch (mod) {
+      case "anamnesis": return "default";
+      case "soap": return "secondary";
+      case "reconciliation": return "outline";
+      case "documentation": return "destructive";
+      default: return "default";
+    }
+  };
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case "draft": return "Rascunho";
+      case "active": return "Ativa";
+      case "finished": return "Concluída";
+      default: return status;
+    }
+  };
+
+  const statusVariant = (status: string): "default" | "secondary" | "outline" => {
+    switch (status) {
+      case "finished": return "secondary";
+      case "active": return "default";
+      default: return "outline";
+    }
+  };
+
+  const getModuleGroups = (mod: string) => roomGroups.filter(g => g.module === mod);
 
   return (
     <div className="space-y-6">
@@ -163,48 +302,118 @@ export default function SimulationAggregator() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Notas por Aluno</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {aggregated.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum dado encontrado. Complete atividades nos módulos para ver as notas aqui.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Aluno</TableHead>
-                    <TableHead className="text-center">Anamnese</TableHead>
-                    <TableHead className="text-center">SOAP</TableHead>
-                    <TableHead className="text-center">Reconciliação</TableHead>
-                    <TableHead className="text-center">Documentação</TableHead>
-                    <TableHead className="text-center font-bold">Média</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {aggregated.map(row => (
-                    <TableRow key={row.email}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{row.name}</p>
-                          <p className="text-xs text-muted-foreground">{row.email}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">{row.anamnesis != null ? row.anamnesis : "—"}</TableCell>
-                      <TableCell className="text-center">{row.soap != null ? row.soap : "—"}</TableCell>
-                      <TableCell className="text-center">{row.reconciliation != null ? row.reconciliation : "—"}</TableCell>
-                      <TableCell className="text-center">{row.documentation != null ? row.documentation : "—"}</TableCell>
-                      <TableCell className="text-center font-bold">{row.average != null ? row.average : "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+      <Tabs defaultValue="by-room">
+        <TabsList>
+          <TabsTrigger value="by-room">Por Sala</TabsTrigger>
+          <TabsTrigger value="consolidated">Consolidado</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="by-room" className="space-y-6 mt-4">
+          {["anamnesis", "soap", "reconciliation", "documentation"].map(mod => {
+            const groups = getModuleGroups(mod);
+            if (groups.length === 0) return null;
+
+            return (
+              <div key={mod} className="space-y-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                  {moduleIcon(mod)} {moduleLabel(mod)}
+                </h2>
+
+                {groups.map(group => (
+                  <Card key={group.room.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          {group.room.title}
+                        </CardTitle>
+                        <Badge variant={statusVariant(group.room.status)}>{statusLabel(group.room.status)}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {group.students.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhum participante nesta sala.</p>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Aluno</TableHead>
+                              <TableHead className="text-center w-32">Nota</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {group.students.sort((a, b) => a.name.localeCompare(b.name)).map((s, i) => (
+                              <TableRow key={`${s.email}-${i}`}>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium text-sm">{s.name}</p>
+                                    <p className="text-xs text-muted-foreground">{s.email}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center font-semibold">
+                                  {s.score != null ? s.score : "—"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            );
+          })}
+
+          {roomGroups.length === 0 && (
+            <p className="text-sm text-muted-foreground">Nenhuma sala encontrada. Crie salas nos módulos para ver as notas aqui.</p>
           )}
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        <TabsContent value="consolidated" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Visão Consolidada por Aluno</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {consolidated.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum dado encontrado.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Aluno</TableHead>
+                        <TableHead className="text-center">Anamnese</TableHead>
+                        <TableHead className="text-center">SOAP</TableHead>
+                        <TableHead className="text-center">Reconciliação</TableHead>
+                        <TableHead className="text-center">Documentação</TableHead>
+                        <TableHead className="text-center font-bold">Média</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {consolidated.map(row => (
+                        <TableRow key={row.email}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{row.name}</p>
+                              <p className="text-xs text-muted-foreground">{row.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">{row.anamnesis != null ? row.anamnesis : "—"}</TableCell>
+                          <TableCell className="text-center">{row.soap != null ? row.soap : "—"}</TableCell>
+                          <TableCell className="text-center">{row.reconciliation != null ? row.reconciliation : "—"}</TableCell>
+                          <TableCell className="text-center">{row.documentation != null ? row.documentation : "—"}</TableCell>
+                          <TableCell className="text-center font-bold">{row.average != null ? row.average : "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
