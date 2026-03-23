@@ -149,6 +149,223 @@ export type Database = {
         }
         Relationships: []
       }
+      biomedicine_clinical_cases: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          position: number
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biomedicine_clinical_cases_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "biomedicine_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biomedicine_forms: {
+        Row: {
+          content_json: Json
+          created_at: string
+          form_type: string
+          id: string
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biomedicine_forms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "biomedicine_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biomedicine_participants: {
+        Row: {
+          created_at: string
+          id: string
+          pair_index: number
+          pair_position: string
+          participant_role: string
+          room_id: string
+          status: string
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biomedicine_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "biomedicine_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biomedicine_responses: {
+        Row: {
+          admin_feedback: string | null
+          admin_score: number | null
+          ai_feedback_json: Json | null
+          ai_score: number | null
+          answers_json: Json
+          clinical_case_id: string | null
+          created_at: string
+          form_id: string
+          id: string
+          pair_index: number
+          room_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id: string
+          id?: string
+          pair_index?: number
+          room_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id?: string
+          id?: string
+          pair_index?: number
+          room_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biomedicine_responses_clinical_case_id_fkey"
+            columns: ["clinical_case_id"]
+            isOneToOne: false
+            referencedRelation: "biomedicine_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "biomedicine_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "biomedicine_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "biomedicine_responses_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "biomedicine_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biomedicine_rooms: {
+        Row: {
+          access_code: string
+          created_at: string
+          description: string | null
+          id: string
+          module_type: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       class_students: {
         Row: {
           class_id: string
@@ -1355,6 +1572,223 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      medicine_clinical_cases: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          position: number
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicine_clinical_cases_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "medicine_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicine_forms: {
+        Row: {
+          content_json: Json
+          created_at: string
+          form_type: string
+          id: string
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicine_forms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "medicine_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicine_participants: {
+        Row: {
+          created_at: string
+          id: string
+          pair_index: number
+          pair_position: string
+          participant_role: string
+          room_id: string
+          status: string
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicine_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "medicine_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicine_responses: {
+        Row: {
+          admin_feedback: string | null
+          admin_score: number | null
+          ai_feedback_json: Json | null
+          ai_score: number | null
+          answers_json: Json
+          clinical_case_id: string | null
+          created_at: string
+          form_id: string
+          id: string
+          pair_index: number
+          room_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id: string
+          id?: string
+          pair_index?: number
+          room_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id?: string
+          id?: string
+          pair_index?: number
+          room_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicine_responses_clinical_case_id_fkey"
+            columns: ["clinical_case_id"]
+            isOneToOne: false
+            referencedRelation: "medicine_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medicine_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "medicine_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medicine_responses_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "medicine_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicine_rooms: {
+        Row: {
+          access_code: string
+          created_at: string
+          description: string | null
+          id: string
+          module_type: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       mock_trial_assignments: {
         Row: {
@@ -2600,6 +3034,223 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      physiotherapy_clinical_cases: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          position: number
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "physiotherapy_clinical_cases_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "physiotherapy_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      physiotherapy_forms: {
+        Row: {
+          content_json: Json
+          created_at: string
+          form_type: string
+          id: string
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "physiotherapy_forms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "physiotherapy_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      physiotherapy_participants: {
+        Row: {
+          created_at: string
+          id: string
+          pair_index: number
+          pair_position: string
+          participant_role: string
+          room_id: string
+          status: string
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "physiotherapy_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "physiotherapy_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      physiotherapy_responses: {
+        Row: {
+          admin_feedback: string | null
+          admin_score: number | null
+          ai_feedback_json: Json | null
+          ai_score: number | null
+          answers_json: Json
+          clinical_case_id: string | null
+          created_at: string
+          form_id: string
+          id: string
+          pair_index: number
+          room_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id: string
+          id?: string
+          pair_index?: number
+          room_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id?: string
+          id?: string
+          pair_index?: number
+          room_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "physiotherapy_responses_clinical_case_id_fkey"
+            columns: ["clinical_case_id"]
+            isOneToOne: false
+            referencedRelation: "physiotherapy_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "physiotherapy_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "physiotherapy_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "physiotherapy_responses_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "physiotherapy_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      physiotherapy_rooms: {
+        Row: {
+          access_code: string
+          created_at: string
+          description: string | null
+          id: string
+          module_type: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
