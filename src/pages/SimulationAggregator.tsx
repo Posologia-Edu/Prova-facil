@@ -268,6 +268,32 @@ export default function SimulationAggregator() {
     return rooms;
   }, [anamnesisRooms, soapRooms, reconRooms, docRooms]);
 
+  // Build a global email→scores map for cross-referencing all modules
+  const globalScoreMap = useMemo(() => {
+    const map = new Map<string, { anamnesis: number | null; soap: number | null; reconciliation: number | null; documentation: number | null }>();
+
+    const process = (scores: { roomId: string; students: { email: string; name: string; score: number | null }[] }[], key: "anamnesis" | "soap" | "reconciliation" | "documentation", rooms: RoomInfo[]) => {
+      scores.forEach(({ roomId, students }) => {
+        if (hiddenRoomIds.has(roomId)) return;
+        students.forEach(s => {
+          if (!s.email) return;
+          const existing = map.get(s.email) || { anamnesis: null, soap: null, reconciliation: null, documentation: null };
+          if (s.score != null && (existing[key] == null || s.score > existing[key]!)) {
+            existing[key] = s.score;
+          }
+          map.set(s.email, existing);
+        });
+      });
+    };
+
+    process(anamnesisScores, "anamnesis", anamnesisRooms);
+    process(soapScores, "soap", soapRooms);
+    process(reconScores, "reconciliation", reconRooms);
+    process(docScores, "documentation", docRooms);
+
+    return map;
+  }, [anamnesisScores, soapScores, reconScores, docScores, anamnesisRooms, soapRooms, reconRooms, docRooms, hiddenRoomIds]);
+
   // Build room groups for each module (excluding hidden rooms)
   const roomGroups = useMemo(() => {
     const groups: RoomGroup[] = [];
