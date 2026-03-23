@@ -18,6 +18,27 @@ type MedColumn = { id: string; label: string };
 type MedFormContent = { columns: MedColumn[]; rows_score: number; answer_rows?: Record<string, string>[] };
 type MedCaseContent = { columns: MedColumn[]; rows_score: number; answer_rows: Record<string, string>[] };
 
+export function CollapsibleAnswerField({ field }: { field: any }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const answerText = field.options?.join(", ") || "Sem conteúdo";
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">
+      <div className="text-xs font-medium text-muted-foreground uppercase">{field.label} ({field.max_score || 0} pts)</div>
+      <CollapsibleTrigger asChild>
+        <button className="w-full text-left text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800 flex items-center justify-between hover:bg-green-100 dark:hover:bg-green-900 transition-colors">
+          <span>{isOpen ? "Ocultar espelho" : "Ver espelho"}</span>
+          {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="text-sm bg-green-50 dark:bg-green-950 p-3 rounded-b border border-t-0 border-green-200 dark:border-green-800">
+          {answerText}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 export default function DocumentationControl() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
