@@ -661,7 +661,7 @@ export default function Simulations() {
 
         {/* SOAP rooms */}
         <TabsContent value="soap" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-between">
             <Button onClick={() => navigate("/simulations/soap")}>
               <Plus className="h-4 w-4 mr-2" />Nova Sala SOAP
             </Button>
