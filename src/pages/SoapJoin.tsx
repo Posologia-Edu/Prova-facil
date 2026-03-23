@@ -57,6 +57,8 @@ export default function SoapJoin() {
     }
     const me = parts[0];
     setParticipant(me);
+    sessionStorage.setItem("soap_pin", usedPin);
+    sessionStorage.setItem("soap_email", usedEmail);
 
     // Find partner
     if (me.pair_index >= 0) {
