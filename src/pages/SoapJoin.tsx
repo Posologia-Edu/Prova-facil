@@ -30,8 +30,10 @@ export default function SoapJoin() {
   const [submittedSoap, setSubmittedSoap] = useState(false);
   const [submittedPeer, setSubmittedPeer] = useState(false);
 
-  const handleLogin = async () => {
-    if (!pin.trim() || !email.trim()) return;
+  const handleLogin = async (autoPin?: string, autoEmail?: string) => {
+    const usedPin = (autoPin || pin).trim();
+    const usedEmail = (autoEmail || email).trim();
+    if (!usedPin || !usedEmail) return;
     // Find room by access code
     const { data: rooms, error: roomErr } = await supabase
       .from("soap_rooms")
