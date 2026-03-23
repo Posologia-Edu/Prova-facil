@@ -554,7 +554,10 @@ export default function Simulations() {
 
         {/* Anamnesis rooms */}
         <TabsContent value="anamnesis" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-between">
+            <Button variant="ghost" size="sm" onClick={() => setActiveTab("pharmacy")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />Farmácia Clínica
+            </Button>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 mr-2" />{t("sim_new")}</Button>
