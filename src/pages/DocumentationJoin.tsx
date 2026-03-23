@@ -116,6 +116,17 @@ export default function DocumentationJoin() {
   const referralFields: FormField[] = referralForm ? (Array.isArray(referralForm.content_json) ? referralForm.content_json : []) : [];
   const medContent: MedFormContent | null = medForm ? (medForm.content_json as MedFormContent) : null;
 
+  // Auto-redirect after submission
+  useEffect(() => {
+    if (phase !== "done") return;
+    if (countdown <= 0) {
+      window.location.href = "/";
+      return;
+    }
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [phase, countdown]);
+
   // Form rendering delegated to FormRenderer
 
   const addMedRow = () => {
