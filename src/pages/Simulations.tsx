@@ -821,7 +821,7 @@ export default function Simulations() {
 
         {/* Documentation rooms */}
         <TabsContent value="documentation" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-between">
             <Button onClick={() => navigate("/simulations/documentation")}>
               <Plus className="h-4 w-4 mr-2" />Nova Sala de Documentação
             </Button>
