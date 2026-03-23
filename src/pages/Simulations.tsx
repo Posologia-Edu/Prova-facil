@@ -503,9 +503,10 @@ export default function Simulations() {
                         <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/${room.id}/edit`)}>
                           <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
                         </Button>
-                        {room.status === "active" && (
-                          <Button size="sm" onClick={() => navigate(`/simulations/${room.id}/control`)}>
-                            <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                        {(room.status === "active" || room.status === "finished") && (
+                          <Button size="sm" variant={room.status === "finished" ? "outline" : "default"} onClick={() => navigate(`/simulations/${room.id}/control`)}>
+                            {room.status === "finished" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
+                            {room.status === "finished" ? "Resultados" : t("sim_control")}
                           </Button>
                         )}
                         {room.status === "draft" && studentCount > 0 && (
@@ -589,9 +590,10 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/editor/${room.id}`)}>
                         <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
                       </Button>
-                      {room.status === "active" && (
-                        <Button size="sm" onClick={() => navigate(`/simulations/soap/control/${room.id}`)}>
-                          <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                      {(room.status === "active" || room.status === "finished") && (
+                        <Button size="sm" variant={room.status === "finished" ? "outline" : "default"} onClick={() => navigate(`/simulations/soap/control/${room.id}`)}>
+                          {room.status === "finished" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
+                          {room.status === "finished" ? "Resultados" : t("sim_control")}
                         </Button>
                       )}
                       <Button variant="outline" size="sm" onClick={() => duplicateSoapRoom.mutate(room.id)} title="Duplicar">
@@ -649,9 +651,10 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/reconciliation/editor/${room.id}`)}>
                         <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
                       </Button>
-                      {room.status === "active" && (
-                        <Button size="sm" onClick={() => navigate(`/simulations/reconciliation/control/${room.id}`)}>
-                          <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                      {(room.status === "active" || room.status === "finished") && (
+                        <Button size="sm" variant={room.status === "finished" ? "outline" : "default"} onClick={() => navigate(`/simulations/reconciliation/control/${room.id}`)}>
+                          {room.status === "finished" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
+                          {room.status === "finished" ? "Resultados" : t("sim_control")}
                         </Button>
                       )}
                       <Button variant="outline" size="sm" onClick={() => duplicateReconciliationRoom.mutate(room.id)} title="Duplicar">
@@ -708,9 +711,10 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/documentation/editor/${room.id}`)}>
                         <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
                       </Button>
-                      {room.status === "active" && (
-                        <Button size="sm" onClick={() => navigate(`/simulations/documentation/control/${room.id}`)}>
-                          <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                      {(room.status === "active" || room.status === "finished") && (
+                        <Button size="sm" variant={room.status === "finished" ? "outline" : "default"} onClick={() => navigate(`/simulations/documentation/control/${room.id}`)}>
+                          {room.status === "finished" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
+                          {room.status === "finished" ? "Resultados" : t("sim_control")}
                         </Button>
                       )}
                       <Button variant="outline" size="sm" onClick={() => duplicateDocumentationRoom.mutate(room.id)} title="Duplicar">
