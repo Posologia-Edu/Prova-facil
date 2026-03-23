@@ -275,7 +275,8 @@ export default function SimulationAggregator() {
         const roomParticipants = participants.filter(p => p.room_id === roomId);
         const students = roomParticipants.map(p => {
           const resp = responses.find(r => r.room_id === p.room_id && r.pair_index === p.pair_index);
-          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: Number(resp?.admin_score ?? resp?.ai_score) || null };
+          const rawScore = resp ? (resp.admin_score ?? resp.ai_score) : null;
+          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: rawScore != null ? Number(rawScore) : null };
         });
         return { roomId, students };
       });
