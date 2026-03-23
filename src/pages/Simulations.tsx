@@ -139,7 +139,7 @@ export default function Simulations() {
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(10);
   const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("modules");
+  const [activeTab, setActiveTab] = useState("areas");
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["simulation-rooms"],
