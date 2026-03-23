@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, BarChart3, Stethoscope, ClipboardList, Handshake, FileText } from "lucide-react";
+import { ArrowLeft, BarChart3, Stethoscope, ClipboardList, Handshake, FileText, EyeOff, Eye, Filter } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type RoomInfo = { id: string; title: string; status: string };
 
@@ -29,6 +30,23 @@ type RoomGroup = {
 
 export default function SimulationAggregator() {
   const navigate = useNavigate();
+  const [hiddenRoomIds, setHiddenRoomIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("agg-hidden-rooms");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [showFilter, setShowFilter] = useState(false);
+
+  const toggleRoom = (roomId: string) => {
+    setHiddenRoomIds(prev => {
+      const next = new Set(prev);
+      if (next.has(roomId)) next.delete(roomId);
+      else next.add(roomId);
+      localStorage.setItem("agg-hidden-rooms", JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   // Fetch all rooms per module
   const { data: anamnesisRooms = [] } = useQuery({
@@ -178,44 +196,55 @@ export default function SimulationAggregator() {
     enabled: docRooms.length > 0,
   });
 
-  // Build room groups for each module
+  // All rooms for filter panel
+  const allRooms = useMemo(() => {
+    const rooms: { id: string; title: string; status: string; module: string }[] = [];
+    anamnesisRooms.forEach(r => rooms.push({ ...r, module: "anamnesis" }));
+    soapRooms.forEach(r => rooms.push({ ...r, module: "soap" }));
+    reconRooms.forEach(r => rooms.push({ ...r, module: "reconciliation" }));
+    docRooms.forEach(r => rooms.push({ ...r, module: "documentation" }));
+    return rooms;
+  }, [anamnesisRooms, soapRooms, reconRooms, docRooms]);
+
+  // Build room groups for each module (excluding hidden rooms)
   const roomGroups = useMemo(() => {
     const groups: RoomGroup[] = [];
 
-    anamnesisRooms.forEach(room => {
+    anamnesisRooms.filter(r => !hiddenRoomIds.has(r.id)).forEach(room => {
       const scoreData = anamnesisScores.find(s => s.roomId === room.id);
       groups.push({ room, module: "anamnesis", students: scoreData?.students || [] });
     });
 
-    soapRooms.forEach(room => {
+    soapRooms.filter(r => !hiddenRoomIds.has(r.id)).forEach(room => {
       const scoreData = soapScores.find(s => s.roomId === room.id);
       groups.push({ room, module: "soap", students: scoreData?.students || [] });
     });
 
-    reconRooms.forEach(room => {
+    reconRooms.filter(r => !hiddenRoomIds.has(r.id)).forEach(room => {
       const scoreData = reconScores.find(s => s.roomId === room.id);
       groups.push({ room, module: "reconciliation", students: scoreData?.students || [] });
     });
 
-    docRooms.forEach(room => {
+    docRooms.filter(r => !hiddenRoomIds.has(r.id)).forEach(room => {
       const scoreData = docScores.find(s => s.roomId === room.id);
       groups.push({ room, module: "documentation", students: scoreData?.students || [] });
     });
 
     return groups;
-  }, [anamnesisRooms, soapRooms, reconRooms, docRooms, anamnesisScores, soapScores, reconScores, docScores]);
+  }, [anamnesisRooms, soapRooms, reconRooms, docRooms, anamnesisScores, soapScores, reconScores, docScores, hiddenRoomIds]);
 
-  // Consolidated view: group by unique student email across all rooms
+  // Consolidated view (excluding hidden rooms)
   const consolidated = useMemo(() => {
     const map = new Map<string, StudentScore>();
+    const visibleRoomIds = new Set(roomGroups.map(g => g.room.id));
 
     const processModule = (rooms: RoomInfo[], scores: { roomId: string; students: { email: string; name: string; score: number | null }[] }[], key: keyof Pick<StudentScore, "anamnesis" | "soap" | "reconciliation" | "documentation">) => {
-      scores.forEach(({ students }) => {
+      scores.forEach(({ roomId, students }) => {
+        if (!visibleRoomIds.has(roomId)) return;
         students.forEach(s => {
           if (!s.email) return;
           const existing = map.get(s.email) || { email: s.email, name: s.name, anamnesis: null, soap: null, reconciliation: null, documentation: null, average: null };
           if (s.score != null) {
-            // Take the latest (or highest) score if student appears in multiple rooms
             if (existing[key] == null || s.score > existing[key]!) {
               existing[key] = s.score;
             }
@@ -237,7 +266,7 @@ export default function SimulationAggregator() {
     });
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [anamnesisRooms, soapRooms, reconRooms, docRooms, anamnesisScores, soapScores, reconScores, docScores]);
+  }, [anamnesisRooms, soapRooms, reconRooms, docRooms, anamnesisScores, soapScores, reconScores, docScores, roomGroups]);
 
   const moduleLabel = (mod: string) => {
     switch (mod) {
@@ -259,28 +288,18 @@ export default function SimulationAggregator() {
     }
   };
 
-  const moduleBadgeVariant = (mod: string): "default" | "secondary" | "outline" | "destructive" => {
-    switch (mod) {
-      case "anamnesis": return "default";
-      case "soap": return "secondary";
-      case "reconciliation": return "outline";
-      case "documentation": return "destructive";
-      default: return "default";
-    }
-  };
-
   const statusLabel = (status: string) => {
     switch (status) {
       case "draft": return "Rascunho";
       case "active": return "Ativa";
-      case "finished": return "Concluída";
+      case "completed": return "Concluída";
       default: return status;
     }
   };
 
   const statusVariant = (status: string): "default" | "secondary" | "outline" => {
     switch (status) {
-      case "finished": return "secondary";
+      case "completed": return "secondary";
       case "active": return "default";
       default: return "outline";
     }
@@ -294,13 +313,75 @@ export default function SimulationAggregator() {
         <Button variant="ghost" onClick={() => navigate("/simulations")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <BarChart3 className="h-6 w-6" />Agregador de Notas
           </h1>
           <p className="text-muted-foreground">Visão geral das notas dos 4 módulos da simulação realística</p>
         </div>
+        <Button
+          variant={showFilter ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowFilter(!showFilter)}
+        >
+          <Filter className="h-4 w-4 mr-1" />
+          Filtrar Salas
+          {hiddenRoomIds.size > 0 && (
+            <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">{hiddenRoomIds.size} ocultas</Badge>
+          )}
+        </Button>
       </div>
+
+      {showFilter && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium">Selecione as salas que deseja exibir</CardTitle>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => { setHiddenRoomIds(new Set()); localStorage.removeItem("agg-hidden-rooms"); }}>
+                  <Eye className="h-3.5 w-3.5 mr-1" />Mostrar todas
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {["anamnesis", "soap", "reconciliation", "documentation"].map(mod => {
+                const rooms = allRooms.filter(r => r.module === mod);
+                if (rooms.length === 0) return null;
+                return (
+                  <div key={mod}>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      {moduleIcon(mod)} {moduleLabel(mod)}
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {rooms.map(room => (
+                        <label
+                          key={room.id}
+                          className={`flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors ${
+                            hiddenRoomIds.has(room.id)
+                              ? "bg-muted/50 border-muted text-muted-foreground opacity-60"
+                              : "bg-background border-border hover:bg-accent/50"
+                          }`}
+                        >
+                          <Checkbox
+                            checked={!hiddenRoomIds.has(room.id)}
+                            onCheckedChange={() => toggleRoom(room.id)}
+                          />
+                          <span className="text-sm truncate flex-1">{room.title}</span>
+                          <Badge variant={statusVariant(room.status)} className="text-[10px] px-1.5 py-0 shrink-0">
+                            {statusLabel(room.status)}
+                          </Badge>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="by-room">
         <TabsList>
