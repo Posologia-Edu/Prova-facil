@@ -361,6 +361,223 @@ export type Database = {
           },
         ]
       }
+      dentistry_clinical_cases: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          position: number
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dentistry_clinical_cases_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "dentistry_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dentistry_forms: {
+        Row: {
+          content_json: Json
+          created_at: string
+          form_type: string
+          id: string
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dentistry_forms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "dentistry_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dentistry_participants: {
+        Row: {
+          created_at: string
+          id: string
+          pair_index: number
+          pair_position: string
+          participant_role: string
+          room_id: string
+          status: string
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dentistry_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "dentistry_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dentistry_responses: {
+        Row: {
+          admin_feedback: string | null
+          admin_score: number | null
+          ai_feedback_json: Json | null
+          ai_score: number | null
+          answers_json: Json
+          clinical_case_id: string | null
+          created_at: string
+          form_id: string
+          id: string
+          pair_index: number
+          room_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id: string
+          id?: string
+          pair_index?: number
+          room_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id?: string
+          id?: string
+          pair_index?: number
+          room_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dentistry_responses_clinical_case_id_fkey"
+            columns: ["clinical_case_id"]
+            isOneToOne: false
+            referencedRelation: "dentistry_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dentistry_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "dentistry_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dentistry_responses_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "dentistry_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dentistry_rooms: {
+        Row: {
+          access_code: string
+          created_at: string
+          description: string | null
+          id: string
+          module_type: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       documentation_clinical_cases: {
         Row: {
           content: string | null
@@ -1632,6 +1849,223 @@ export type Database = {
         ]
       }
       nursing_rooms: {
+        Row: {
+          access_code: string
+          created_at: string
+          description: string | null
+          id: string
+          module_type: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nutrition_clinical_cases: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          position: number
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_clinical_cases_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_forms: {
+        Row: {
+          content_json: Json
+          created_at: string
+          form_type: string
+          id: string
+          room_id: string
+          title: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id: string
+          title?: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          room_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_forms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_participants: {
+        Row: {
+          created_at: string
+          id: string
+          pair_index: number
+          pair_position: string
+          participant_role: string
+          room_id: string
+          status: string
+          student_email: string | null
+          student_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pair_index?: number
+          pair_position?: string
+          participant_role?: string
+          room_id?: string
+          status?: string
+          student_email?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_responses: {
+        Row: {
+          admin_feedback: string | null
+          admin_score: number | null
+          ai_feedback_json: Json | null
+          ai_score: number | null
+          answers_json: Json
+          clinical_case_id: string | null
+          created_at: string
+          form_id: string
+          id: string
+          pair_index: number
+          room_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id: string
+          id?: string
+          pair_index?: number
+          room_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          admin_feedback?: string | null
+          admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
+          answers_json?: Json
+          clinical_case_id?: string | null
+          created_at?: string
+          form_id?: string
+          id?: string
+          pair_index?: number
+          room_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_responses_clinical_case_id_fkey"
+            columns: ["clinical_case_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_responses_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_rooms: {
         Row: {
           access_code: string
           created_at: string
