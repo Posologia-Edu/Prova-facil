@@ -30,13 +30,13 @@ export default function SoapJoin() {
   const [submittedSoap, setSubmittedSoap] = useState(false);
   const [submittedPeer, setSubmittedPeer] = useState(false);
 
-  const handleLogin = async () => {
-    if (!pin.trim() || !email.trim()) return;
+  const doLogin = async (usedPin: string, usedEmail: string) => {
+    if (!usedPin || !usedEmail) return;
     // Find room by access code
     const { data: rooms, error: roomErr } = await supabase
       .from("soap_rooms")
       .select("*")
-      .eq("access_code", pin.trim().toLowerCase())
+      .eq("access_code", usedPin.toLowerCase())
       .eq("status", "active");
     if (roomErr || !rooms?.length) {
       toast({ title: "Sala não encontrada", description: "Verifique o PIN.", variant: "destructive" });
@@ -50,13 +50,15 @@ export default function SoapJoin() {
       .from("soap_participants")
       .select("*")
       .eq("room_id", foundRoom.id)
-      .eq("student_email", email.trim().toLowerCase());
+      .eq("student_email", usedEmail.toLowerCase());
     if (!parts?.length) {
       toast({ title: "E-mail não encontrado", description: "Você não está cadastrado nesta sala.", variant: "destructive" });
       return;
     }
     const me = parts[0];
     setParticipant(me);
+    sessionStorage.setItem("soap_pin", usedPin);
+    sessionStorage.setItem("soap_email", usedEmail);
 
     // Find partner
     if (me.pair_index >= 0) {
@@ -151,6 +153,17 @@ export default function SoapJoin() {
       setPhase("soap");
     }
   };
+
+  const handleLogin = () => doLogin(pin.trim(), email.trim());
+
+  // Auto-login if session data exists
+  useEffect(() => {
+    const savedPin = sessionStorage.getItem("soap_pin");
+    const savedEmail = sessionStorage.getItem("soap_email");
+    if (savedPin && savedEmail && phase === "login" && !room) {
+      doLogin(savedPin.trim(), savedEmail.trim());
+    }
+  }, []);
 
   const checkPartnerAndPeerStatus = async (roomId: string, me: any) => {
     // Check if partner submitted SOAP
