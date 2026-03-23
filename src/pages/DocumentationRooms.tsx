@@ -179,6 +179,10 @@ export default function DocumentationRooms() {
       if (cases?.length) {
         await supabase.from("documentation_clinical_cases").insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })));
       }
+      const { data: participants } = await supabase.from("documentation_participants").select("*").eq("room_id", roomId);
+      if (participants?.length) {
+        await supabase.from("documentation_participants").insert(participants.map(p => ({ room_id: newRoom.id, student_name: p.student_name, student_email: p.student_email, pair_index: p.pair_index, pair_position: p.pair_position, participant_role: p.participant_role })));
+      }
       return newRoom;
     },
     onSuccess: (data) => {

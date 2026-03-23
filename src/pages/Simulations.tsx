@@ -249,6 +249,11 @@ export default function Simulations() {
       if (forms?.length) {
         await supabase.from("simulation_forms").insert(forms.map(f => ({ room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: f.content_json })));
       }
+      // Copy participants
+      const { data: participants } = await supabase.from("simulation_participants").select("*").eq("room_id", roomId);
+      if (participants?.length) {
+        await supabase.from("simulation_participants").insert(participants.map(p => ({ room_id: newRoom.id, student_name: p.student_name, student_email: p.student_email, pair_index: p.pair_index, pair_position: p.pair_position, participant_role: p.participant_role, assigned_role: p.assigned_role })));
+      }
       return newRoom;
     },
     onSuccess: (data) => {
@@ -275,6 +280,11 @@ export default function Simulations() {
       const { data: forms } = await supabase.from("soap_forms").select("*").eq("room_id", roomId);
       if (forms?.length) {
         await supabase.from("soap_forms").insert(forms.map(f => ({ room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: f.content_json })));
+      }
+      // Copy participants
+      const { data: participants } = await supabase.from("soap_participants").select("*").eq("room_id", roomId);
+      if (participants?.length) {
+        await supabase.from("soap_participants").insert(participants.map(p => ({ room_id: newRoom.id, student_name: p.student_name, student_email: p.student_email, pair_index: p.pair_index, pair_position: p.pair_position, participant_role: p.participant_role })));
       }
       return newRoom;
     },
@@ -307,6 +317,11 @@ export default function Simulations() {
       if (cases?.length) {
         await supabase.from("reconciliation_clinical_cases").insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })));
       }
+      // Copy participants
+      const { data: participants } = await supabase.from("reconciliation_participants").select("*").eq("room_id", roomId);
+      if (participants?.length) {
+        await supabase.from("reconciliation_participants").insert(participants.map(p => ({ room_id: newRoom.id, student_name: p.student_name, student_email: p.student_email, pair_index: p.pair_index, pair_position: p.pair_position, participant_role: p.participant_role })));
+      }
       return newRoom;
     },
     onSuccess: (data) => {
@@ -337,6 +352,11 @@ export default function Simulations() {
       const { data: cases } = await supabase.from("documentation_clinical_cases").select("*").eq("room_id", roomId);
       if (cases?.length) {
         await supabase.from("documentation_clinical_cases").insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })));
+      }
+      // Copy participants
+      const { data: participants } = await supabase.from("documentation_participants").select("*").eq("room_id", roomId);
+      if (participants?.length) {
+        await supabase.from("documentation_participants").insert(participants.map(p => ({ room_id: newRoom.id, student_name: p.student_name, student_email: p.student_email, pair_index: p.pair_index, pair_position: p.pair_position, participant_role: p.participant_role })));
       }
       return newRoom;
     },
