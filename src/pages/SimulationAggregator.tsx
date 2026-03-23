@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, BarChart3, Stethoscope, ClipboardList, Handshake, FileText, EyeOff, Eye, Filter } from "lucide-react";
+import { ArrowLeft, BarChart3, Stethoscope, ClipboardList, Handshake, FileText, Eye, Filter } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -89,32 +89,94 @@ export default function SimulationAggregator() {
     },
   });
 
-  // Anamnesis scores grouped by room
+  // Anamnesis scores: attribute scores to the PROFESSIONAL of each round
   const { data: anamnesisScores = [] } = useQuery({
     queryKey: ["agg-anamnesis-scores", anamnesisRooms.map(r => r.id)],
     queryFn: async () => {
       const roomIds = anamnesisRooms.map(r => r.id);
       if (!roomIds.length) return [];
 
-      const { data: participants } = await supabase.from("simulation_participants").select("id, student_email, student_name, room_id").in("room_id", roomIds);
-      const { data: responses } = await supabase.from("simulation_responses").select("participant_id, score, round_id, form_id");
-      const { data: allForms } = await supabase.from("simulation_forms").select("id, form_type, room_id").in("room_id", roomIds);
+      // Get participants
+      const { data: participants } = await supabase
+        .from("simulation_participants")
+        .select("id, student_email, student_name, room_id")
+        .in("room_id", roomIds);
 
-      if (!participants || !responses || !allForms) return [];
+      // Get rounds for these rooms
+      const { data: rounds } = await supabase
+        .from("simulation_rounds")
+        .select("id, room_id, status")
+        .in("room_id", roomIds);
 
-      const evalFormIds = new Set(allForms.filter(f => f.form_type === "professor_eval" || f.form_type === "observer_eval").map(f => f.id));
+      if (!participants || !rounds) return [];
+
+      const completedRoundIds = rounds.filter(r => r.status === "completed").map(r => r.id);
+      if (!completedRoundIds.length) return [];
+
+      // Get assignments to find professional per round
+      const { data: assignments } = await supabase
+        .from("simulation_round_assignments")
+        .select("round_id, participant_id, assigned_role")
+        .in("round_id", completedRoundIds);
+
+      // Get eval forms
+      const { data: allForms } = await supabase
+        .from("simulation_forms")
+        .select("id, form_type, room_id")
+        .in("room_id", roomIds);
+
+      // Get responses for completed rounds
+      const { data: responses } = await supabase
+        .from("simulation_responses")
+        .select("round_id, score, form_id, submitted_at")
+        .in("round_id", completedRoundIds);
+
+      if (!assignments || !allForms || !responses) return [];
+
+      const evalFormIds = new Set(
+        allForms
+          .filter(f => f.form_type === "professor_eval" || f.form_type === "observer_eval")
+          .map(f => f.id)
+      );
+
+      // Build a map: round_id → room_id
+      const roundRoomMap = new Map<string, string>();
+      rounds.forEach(r => roundRoomMap.set(r.id, r.room_id));
+
+      // For each round, find the professional and compute the average of eval scores
+      // Group by professional participant
+      const professionalScores = new Map<string, number[]>();
+
+      completedRoundIds.forEach(roundId => {
+        const roundAssigns = assignments.filter(a => a.round_id === roundId);
+        const professionalAssign = roundAssigns.find(a => a.assigned_role === "professional");
+        if (!professionalAssign) return;
+
+        const roundResponses = responses.filter(
+          r => r.round_id === roundId && evalFormIds.has(r.form_id) && r.submitted_at
+        );
+
+        if (roundResponses.length === 0) return;
+
+        const avgScore = roundResponses.reduce((sum, r) => sum + (Number(r.score) || 0), 0) / roundResponses.length;
+
+        if (!professionalScores.has(professionalAssign.participant_id)) {
+          professionalScores.set(professionalAssign.participant_id, []);
+        }
+        professionalScores.get(professionalAssign.participant_id)!.push(avgScore);
+      });
 
       return roomIds.map(roomId => {
         const roomParticipants = participants.filter(p => p.room_id === roomId);
+        const roomRoundIds = rounds.filter(r => r.room_id === roomId).map(r => r.id);
+
         const students = roomParticipants.map(p => {
-          const pResponses = responses.filter(r => r.participant_id === p.id && evalFormIds.has(r.form_id));
-          const roundMap = new Map<string, number[]>();
-          pResponses.forEach(r => {
-            if (!roundMap.has(r.round_id)) roundMap.set(r.round_id, []);
-            roundMap.get(r.round_id)!.push(Number(r.score) || 0);
-          });
-          const roundAvgs = Array.from(roundMap.values()).map(scores => scores.reduce((a, b) => a + b, 0) / scores.length);
-          const score = roundAvgs.length > 0 ? Math.round((roundAvgs.reduce((a, b) => a + b, 0) / roundAvgs.length) * 100) / 100 : null;
+          const scores = professionalScores.get(p.id);
+          // Only include scores from rounds that belong to this room
+          let score: number | null = null;
+          if (scores && scores.length > 0) {
+            score = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100;
+          }
           return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score };
         });
         return { roomId, students };
@@ -323,6 +385,7 @@ export default function SimulationAggregator() {
           variant={showFilter ? "default" : "outline"}
           size="sm"
           onClick={() => setShowFilter(!showFilter)}
+          className="hover:text-accent-foreground"
         >
           <Filter className="h-4 w-4 mr-1" />
           Filtrar Salas
