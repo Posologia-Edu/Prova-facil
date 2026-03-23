@@ -43,6 +43,33 @@ export type FormField = {
  */
 export function computeFieldScore(field: FormField, answerValue: any): number {
   if (!field.max_score || answerValue == null) return 0;
+
+  // Handle radio/dropdown: compare selected option to correct_answer (option index)
+  if (field.type === "radio" || field.type === "dropdown") {
+    if (field.correct_answer != null && field.options) {
+      const correctIdx = Number(field.correct_answer);
+      const selectedIdx = field.options.indexOf(String(answerValue));
+      return selectedIdx === correctIdx ? field.max_score : 0;
+    }
+    // Fallback: try numeric value
+    const numVal = Number(answerValue) || 0;
+    return Math.min(numVal, field.max_score);
+  }
+
+  // Handle checkbox: compare selected indices to correct_answer (array of indices)
+  if (field.type === "checkbox") {
+    if (field.correct_answer != null && Array.isArray(field.correct_answer) && field.options) {
+      const correctIndices = new Set((field.correct_answer as number[]).map(Number));
+      const selectedValues = Array.isArray(answerValue) ? answerValue : [answerValue];
+      const selectedIndices = new Set(selectedValues.map((v: any) => field.options!.indexOf(String(v))).filter((i: number) => i >= 0));
+      // All correct selected and no extras
+      const isCorrect = correctIndices.size === selectedIndices.size && [...correctIndices].every(i => selectedIndices.has(i));
+      return isCorrect ? field.max_score : 0;
+    }
+    const numVal = Number(answerValue) || 0;
+    return Math.min(numVal, field.max_score);
+  }
+
   const value = Number(answerValue) || 0;
 
   if (field.type === "scale") {
