@@ -12,11 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy } from "lucide-react";
+import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy, Heart, Activity, Dumbbell, Microscope, ArrowLeft } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import SplitRoomDialog from "@/components/SplitRoomDialog";
 
-const modules = [
+const pharmacyModules = [
   {
     id: "anamnesis",
     title: "Anamnese",
@@ -64,6 +64,72 @@ const modules = [
   },
 ];
 
+const areas = [
+  {
+    id: "pharmacy",
+    title: "Farmácia Clínica",
+    description: "Anamnese, SOAP, Reconciliação e Documentação farmacêutica.",
+    icon: HeartPulse,
+    color: "text-primary",
+    bgColor: "bg-primary/10",
+    tab: "pharmacy",
+  },
+  {
+    id: "nursing",
+    title: "Enfermagem Clínica",
+    description: "Acolhimento, SAE, Evolução e Passagem de Plantão.",
+    icon: Heart,
+    color: "text-chart-2",
+    bgColor: "bg-chart-2/10",
+    route: "/nursing",
+  },
+  {
+    id: "nutrition",
+    title: "Nutrição Clínica",
+    description: "Anamnese Nutricional, Avaliação Antropométrica, Plano Alimentar e Orientação.",
+    icon: HeartPulse,
+    color: "text-chart-3",
+    bgColor: "bg-chart-3/10",
+    route: "/nutrition",
+  },
+  {
+    id: "dentistry",
+    title: "Odontologia Clínica",
+    description: "Anamnese Odontológica, Exame Clínico, Plano de Tratamento e Orientação.",
+    icon: Stethoscope,
+    color: "text-chart-4",
+    bgColor: "bg-chart-4/10",
+    route: "/dentistry",
+  },
+  {
+    id: "medicine",
+    title: "Medicina",
+    description: "Anamnese Médica, Exame Físico, Raciocínio Clínico e Plano Terapêutico.",
+    icon: Activity,
+    color: "text-chart-5",
+    bgColor: "bg-chart-5/10",
+    route: "/medicine",
+  },
+  {
+    id: "physiotherapy",
+    title: "Fisioterapia",
+    description: "Avaliação Funcional, Diagnóstico Cinético-Funcional, Plano e Evolução.",
+    icon: Dumbbell,
+    color: "text-primary",
+    bgColor: "bg-primary/10",
+    route: "/physiotherapy",
+  },
+  {
+    id: "biomedicine",
+    title: "Biomedicina",
+    description: "Análise Laboratorial, Controle de Qualidade, Interpretação e Laudo Técnico.",
+    icon: Microscope,
+    color: "text-chart-2",
+    bgColor: "bg-chart-2/10",
+    route: "/biomedicine",
+  },
+];
+
 export default function Simulations() {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -73,7 +139,7 @@ export default function Simulations() {
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(10);
   const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("modules");
+  const [activeTab, setActiveTab] = useState("areas");
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["simulation-rooms"],
@@ -390,29 +456,46 @@ export default function Simulations() {
         <SystemPromptViewer toolKey="simulations" />
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="modules">
-            <HeartPulse className="h-4 w-4 mr-1" />Módulos
-          </TabsTrigger>
-          <TabsTrigger value="anamnesis">
-            <Stethoscope className="h-4 w-4 mr-1" />Salas de Anamnese
-          </TabsTrigger>
-          <TabsTrigger value="soap">
-            <ClipboardList className="h-4 w-4 mr-1" />Salas de SOAP
-          </TabsTrigger>
-          <TabsTrigger value="reconciliation">
-            <Handshake className="h-4 w-4 mr-1" />Salas de Reconciliação
-          </TabsTrigger>
-          <TabsTrigger value="documentation">
-            <FileText className="h-4 w-4 mr-1" />Salas de Documentação
-          </TabsTrigger>
-        </TabsList>
+      {activeTab === "areas" && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {areas.map((area) => (
+            <Card
+              key={area.id}
+              className="group cursor-pointer hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-primary/20"
+              onClick={() => {
+                if (area.route) {
+                  navigate(area.route);
+                } else if (area.tab) {
+                  setActiveTab(area.tab);
+                }
+              }}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-4">
+                  <div className={`h-12 w-12 rounded-xl ${area.bgColor} flex items-center justify-center shrink-0`}>
+                    <area.icon className={`h-6 w-6 ${area.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg flex items-center justify-between">
+                      {area.title}
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </CardTitle>
+                    <CardDescription className="mt-1">{area.description}</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      )}
 
-        {/* Modules overview */}
-        <TabsContent value="modules" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {modules.map((mod) => (
+      {activeTab === "pharmacy" && (
+        <>
+          <Button variant="ghost" size="sm" onClick={() => setActiveTab("areas")} className="mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />Voltar para Áreas
+          </Button>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+            {pharmacyModules.map((mod) => (
               <Card
                 key={mod.id}
                 className="group cursor-pointer hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-primary/20"
@@ -449,14 +532,32 @@ export default function Simulations() {
                 </CardContent>
               </Card>
             ))}
-
-
           </div>
-        </TabsContent>
+        </>
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className={activeTab === "areas" || activeTab === "pharmacy" ? "hidden" : ""}>
+        <TabsList className="flex-wrap">
+          <TabsTrigger value="anamnesis">
+            <Stethoscope className="h-4 w-4 mr-1" />Salas de Anamnese
+          </TabsTrigger>
+          <TabsTrigger value="soap">
+            <ClipboardList className="h-4 w-4 mr-1" />Salas de SOAP
+          </TabsTrigger>
+          <TabsTrigger value="reconciliation">
+            <Handshake className="h-4 w-4 mr-1" />Salas de Reconciliação
+          </TabsTrigger>
+          <TabsTrigger value="documentation">
+            <FileText className="h-4 w-4 mr-1" />Salas de Documentação
+          </TabsTrigger>
+        </TabsList>
 
         {/* Anamnesis rooms */}
         <TabsContent value="anamnesis" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-between">
+            <Button variant="ghost" size="sm" onClick={() => setActiveTab("pharmacy")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />Farmácia Clínica
+            </Button>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 mr-2" />{t("sim_new")}</Button>
@@ -560,7 +661,7 @@ export default function Simulations() {
 
         {/* SOAP rooms */}
         <TabsContent value="soap" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-between">
             <Button onClick={() => navigate("/simulations/soap")}>
               <Plus className="h-4 w-4 mr-2" />Nova Sala SOAP
             </Button>
@@ -651,7 +752,7 @@ export default function Simulations() {
 
         {/* Reconciliation rooms */}
         <TabsContent value="reconciliation" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-between">
             <Button onClick={() => navigate("/simulations/reconciliation")}>
               <Plus className="h-4 w-4 mr-2" />Nova Sala de Reconciliação
             </Button>
@@ -720,7 +821,7 @@ export default function Simulations() {
 
         {/* Documentation rooms */}
         <TabsContent value="documentation" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-between">
             <Button onClick={() => navigate("/simulations/documentation")}>
               <Plus className="h-4 w-4 mr-2" />Nova Sala de Documentação
             </Button>
