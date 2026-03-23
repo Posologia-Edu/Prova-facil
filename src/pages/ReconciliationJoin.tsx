@@ -166,6 +166,17 @@ export default function ReconciliationJoin() {
     );
   }
 
+  // Auto-redirect after submission
+  useEffect(() => {
+    if (phase !== "done") return;
+    if (countdown <= 0) {
+      window.location.href = "/";
+      return;
+    }
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [phase, countdown]);
+
   if (phase === "done") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -174,6 +185,7 @@ export default function ReconciliationJoin() {
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2">Ficha Enviada!</h2>
             <p className="text-muted-foreground">Sua ficha de reconciliação foi enviada com sucesso. Aguarde a avaliação do professor.</p>
+            <p className="text-sm text-muted-foreground mt-4">Redirecionando em {countdown}s...</p>
           </CardContent>
         </Card>
       </div>
