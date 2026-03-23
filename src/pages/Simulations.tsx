@@ -590,9 +590,10 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/editor/${room.id}`)}>
                         <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
                       </Button>
-                      {room.status === "active" && (
-                        <Button size="sm" onClick={() => navigate(`/simulations/soap/control/${room.id}`)}>
-                          <Play className="h-3.5 w-3.5 mr-1" />{t("sim_control")}
+                      {(room.status === "active" || room.status === "finished") && (
+                        <Button size="sm" variant={room.status === "finished" ? "outline" : "default"} onClick={() => navigate(`/simulations/soap/control/${room.id}`)}>
+                          {room.status === "finished" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
+                          {room.status === "finished" ? "Resultados" : t("sim_control")}
                         </Button>
                       )}
                       <Button variant="outline" size="sm" onClick={() => duplicateSoapRoom.mutate(room.id)} title="Duplicar">
