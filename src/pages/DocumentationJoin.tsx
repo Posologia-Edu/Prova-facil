@@ -15,6 +15,7 @@ type MedFormContent = { columns: MedColumn[]; rows_score: number };
 type Phase = "login" | "active" | "done";
 
 export default function DocumentationJoin() {
+  const [countdown, setCountdown] = useState(15);
   const [pin, setPin] = useState(() => sessionStorage.getItem("doc_pin") || "");
   const [email, setEmail] = useState(() => sessionStorage.getItem("doc_email") || "");
   const [phase, setPhase] = useState<Phase>("login");
