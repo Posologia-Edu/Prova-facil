@@ -310,6 +310,7 @@ export default function SoapControl() {
           <TabsTrigger value="responses">Respostas SOAP</TabsTrigger>
           <TabsTrigger value="evaluations">Avaliações entre Pares</TabsTrigger>
           <TabsTrigger value="admin">Notas do Admin</TabsTrigger>
+          <TabsTrigger value="final"><Trophy className="h-4 w-4 mr-1" />Notas Finais</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pairs" className="space-y-4">
