@@ -82,7 +82,7 @@ export default function MedicineAggregator() {
     return map;
   }, [rooms]);
 
-  const moduleIcons: Record<string, any> = { anamnese_medica: Heart, exame_fisico: ClipboardList, raciocinio_clinico: Activity, plano_terapeutico: ArrowRightLeft };
+  const moduleIcons: Record<string, any> = { anamnese_medica: ClipboardList, exame_fisico: Stethoscope, raciocinio_clinico: Activity, plano_terapeutico: ArrowRightLeft };
 
   return (
     <div className="space-y-6">
