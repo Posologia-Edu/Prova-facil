@@ -275,7 +275,8 @@ export default function SimulationAggregator() {
         const roomParticipants = participants.filter(p => p.room_id === roomId);
         const students = roomParticipants.map(p => {
           const resp = responses.find(r => r.room_id === p.room_id && r.pair_index === p.pair_index);
-          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: Number(resp?.admin_score ?? resp?.ai_score) || null };
+          const rawScore = resp ? (resp.admin_score ?? resp.ai_score) : null;
+          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: rawScore != null ? Number(rawScore) : null };
         });
         return { roomId, students };
       });
@@ -299,8 +300,14 @@ export default function SimulationAggregator() {
         const roomParticipants = participants.filter(p => p.room_id === roomId);
         const students = roomParticipants.map(p => {
           const resps = responses.filter(r => r.room_id === p.room_id && r.pair_index === p.pair_index);
-          const totalScore = resps.reduce((sum, r) => sum + (Number(r.admin_score ?? r.ai_score) || 0), 0);
-          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: totalScore || null };
+          if (resps.length === 0) {
+            return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: null };
+          }
+          const totalScore = resps.reduce((sum, r) => {
+            const s = r.admin_score ?? r.ai_score;
+            return sum + (s != null ? Number(s) : 0);
+          }, 0);
+          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: totalScore };
         });
         return { roomId, students };
       });
