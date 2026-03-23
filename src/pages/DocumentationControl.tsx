@@ -269,6 +269,29 @@ export default function DocumentationControl() {
               );
             })}
           </div>
+
+          {room?.status === "active" && responses.length > 0 && (
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium text-sm">Encerrar atividade</p>
+                <p className="text-xs text-muted-foreground">Todas as duplas finalizaram? Conclua a sala.</p>
+              </div>
+              <Button
+                variant="default"
+                onClick={async () => {
+                  await supabase.from("documentation_rooms").update({ status: "completed" }).eq("id", roomId!);
+                  queryClient.invalidateQueries({ queryKey: ["documentation-room", roomId] });
+                  toast({ title: "Sala concluída!" });
+                }}
+              >
+                <Lock className="h-4 w-4 mr-1" />Concluir Sala
+              </Button>
+            </div>
+          )}
+
+          {room?.status === "completed" && (
+            <Badge variant="outline" className="text-sm"><CheckCircle className="h-4 w-4 mr-1" />Sala concluída</Badge>
+          )}
         </TabsContent>
 
         <TabsContent value="responses" className="space-y-4">
