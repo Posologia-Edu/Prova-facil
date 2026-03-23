@@ -117,6 +117,12 @@ export default function SimulationJoin() {
       return;
     }
 
+    // Check if room is active (not draft)
+    if (roomData.status === "draft") {
+      toast({ title: t("student_error"), description: "Esta sala de simulação ainda não foi ativada pelo professor.", variant: "destructive" });
+      return;
+    }
+
     const { data: participantsData, error: participantsErr } = await supabase
       .from("simulation_participants")
       .select("*")
