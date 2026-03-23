@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, ChevronDown, ChevronRight, Lock } from "lucide-react";
 
 type FormField = {
   id: string;
@@ -242,6 +243,31 @@ export default function ReconciliationControl() {
 
         {/* Participants */}
         <TabsContent value="participants" className="space-y-4">
+          {room?.status === "active" && Object.keys(pairs).length > 0 && responses.length > 0 && (
+            <div className="flex justify-end">
+              <Button
+                variant="default"
+                onClick={async () => {
+                  const { error } = await supabase
+                    .from("reconciliation_rooms")
+                    .update({ status: "completed" })
+                    .eq("id", roomId!);
+                  if (error) {
+                    toast({ title: "Erro ao concluir sala", variant: "destructive" });
+                    return;
+                  }
+                  toast({ title: "Sala concluída com sucesso!" });
+                  queryClient.invalidateQueries({ queryKey: ["reconciliation-room", roomId] });
+                }}
+              >
+                <Lock className="h-4 w-4 mr-1" />
+                Concluir Sala
+              </Button>
+            </div>
+          )}
+          {room?.status === "completed" && (
+            <Badge variant="secondary" className="text-sm">Sala concluída</Badge>
+          )}
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {Object.entries(pairs).map(([idx, pair]) => {
               const pairIdx = Number(idx);
@@ -299,14 +325,21 @@ export default function ReconciliationControl() {
                       <div>
                         <h4 className="font-medium text-sm mb-3 flex items-center gap-1"><CheckCircle className="h-4 w-4" />Espelho de Respostas{caseData ? ` — ${caseData.title}` : ""}</h4>
                         {respAnswerKeyFields.length > 0 ? (
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             {respAnswerKeyFields.map(field => (
-                              <div key={field.id} className="space-y-1">
-                                <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
-                                <p className="text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800">
-                                  {field.options?.join(", ") || "Ver espelho"}
-                                </p>
-                              </div>
+                              <Collapsible key={field.id}>
+                                <CollapsibleTrigger className="w-full text-left">
+                                  <div className="flex items-center justify-between p-2 rounded border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950 hover:bg-green-100 dark:hover:bg-green-900 transition-colors">
+                                    <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
+                                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform [[data-state=open]>&]:rotate-180" />
+                                  </div>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  <div className="p-3 bg-green-50/50 dark:bg-green-950/50 border border-t-0 border-green-200 dark:border-green-800 rounded-b text-sm whitespace-pre-wrap">
+                                    {field.options?.join(", ") || "—"}
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
                             ))}
                           </div>
                         ) : (
