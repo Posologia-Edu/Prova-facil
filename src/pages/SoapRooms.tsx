@@ -184,12 +184,17 @@ export default function SoapRooms() {
                     <SelectValue placeholder="Vincular a uma sala de anamnese" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Nenhuma</SelectItem>
+                    <SelectItem value="none">Nenhuma (modo independente)</SelectItem>
                     {anamnesisRooms?.map((r) => (
                       <SelectItem key={r.id} value={r.id}>{r.title} (PIN: {r.access_code})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {(!anamnesisRoomId || anamnesisRoomId === "none") && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    ⚠️ Modo independente: use quando a anamnese foi realizada offline. Os participantes deverão ser adicionados manualmente.
+                  </p>
+                )}
               </div>
               <Button onClick={() => createRoom.mutate()} disabled={!title || createRoom.isPending} className="w-full">
                 Criar
