@@ -300,14 +300,21 @@ export default function ReconciliationControl() {
                       <div>
                         <h4 className="font-medium text-sm mb-3 flex items-center gap-1"><CheckCircle className="h-4 w-4" />Espelho de Respostas{caseData ? ` — ${caseData.title}` : ""}</h4>
                         {respAnswerKeyFields.length > 0 ? (
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             {respAnswerKeyFields.map(field => (
-                              <div key={field.id} className="space-y-1">
-                                <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
-                                <p className="text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800">
-                                  {field.options?.join(", ") || "Ver espelho"}
-                                </p>
-                              </div>
+                              <Collapsible key={field.id}>
+                                <CollapsibleTrigger className="w-full text-left">
+                                  <div className="flex items-center justify-between p-2 rounded border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950 hover:bg-green-100 dark:hover:bg-green-900 transition-colors">
+                                    <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
+                                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform [[data-state=open]>&]:rotate-180" />
+                                  </div>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  <div className="p-3 bg-green-50/50 dark:bg-green-950/50 border border-t-0 border-green-200 dark:border-green-800 rounded-b text-sm whitespace-pre-wrap">
+                                    {field.options?.join(", ") || "—"}
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
                             ))}
                           </div>
                         ) : (
