@@ -432,6 +432,24 @@ const App = () => (
             <Route path="/dentistry/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><DentistryEditor /></AppLayout></ProtectedRoute>} />
             <Route path="/dentistry/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><DentistryControl /></AppLayout></ProtectedRoute>} />
             <Route path="/dentistry/join" element={<DentistryJoin />} />
+            {/* Medicine routes */}
+            <Route path="/medicine" element={<ProtectedRoute><AppLayout><MedicineSimulations /></AppLayout></ProtectedRoute>} />
+            <Route path="/medicine/aggregator" element={<ProtectedRoute><AppLayout><MedicineAggregator /></AppLayout></ProtectedRoute>} />
+            <Route path="/medicine/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><MedicineEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/medicine/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><MedicineControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/medicine/join" element={<MedicineJoin />} />
+            {/* Physiotherapy routes */}
+            <Route path="/physiotherapy" element={<ProtectedRoute><AppLayout><PhysiotherapySimulations /></AppLayout></ProtectedRoute>} />
+            <Route path="/physiotherapy/aggregator" element={<ProtectedRoute><AppLayout><PhysiotherapyAggregator /></AppLayout></ProtectedRoute>} />
+            <Route path="/physiotherapy/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><PhysiotherapyEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/physiotherapy/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><PhysiotherapyControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/physiotherapy/join" element={<PhysiotherapyJoin />} />
+            {/* Biomedicine routes */}
+            <Route path="/biomedicine" element={<ProtectedRoute><AppLayout><BiomedicineSimulations /></AppLayout></ProtectedRoute>} />
+            <Route path="/biomedicine/aggregator" element={<ProtectedRoute><AppLayout><BiomedicineAggregator /></AppLayout></ProtectedRoute>} />
+            <Route path="/biomedicine/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><BiomedicineEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/biomedicine/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><BiomedicineControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/biomedicine/join" element={<BiomedicineJoin />} />
             {/* Virtual Patients */}
             <Route
               path="/virtual-patients"
