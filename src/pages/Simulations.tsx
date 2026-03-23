@@ -669,6 +669,15 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/reconciliation/editor/${room.id}`)}>
                         <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
                       </Button>
+                      {room.status === "draft" && (
+                        <Button size="sm" onClick={async () => {
+                          await supabase.from("reconciliation_rooms").update({ status: "active" }).eq("id", room.id);
+                          queryClient.invalidateQueries({ queryKey: ["reconciliation-rooms-list"] });
+                          toast({ title: "Sala ativada!" });
+                        }}>
+                          <Play className="h-3.5 w-3.5 mr-1" />Ativar Sala
+                        </Button>
+                      )}
                       {(room.status === "active" || room.status === "completed") && (
                         <Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/simulations/reconciliation/control/${room.id}`)}>
                           {room.status === "completed" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
