@@ -456,29 +456,46 @@ export default function Simulations() {
         <SystemPromptViewer toolKey="simulations" />
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="modules">
-            <HeartPulse className="h-4 w-4 mr-1" />Módulos
-          </TabsTrigger>
-          <TabsTrigger value="anamnesis">
-            <Stethoscope className="h-4 w-4 mr-1" />Salas de Anamnese
-          </TabsTrigger>
-          <TabsTrigger value="soap">
-            <ClipboardList className="h-4 w-4 mr-1" />Salas de SOAP
-          </TabsTrigger>
-          <TabsTrigger value="reconciliation">
-            <Handshake className="h-4 w-4 mr-1" />Salas de Reconciliação
-          </TabsTrigger>
-          <TabsTrigger value="documentation">
-            <FileText className="h-4 w-4 mr-1" />Salas de Documentação
-          </TabsTrigger>
-        </TabsList>
+      {activeTab === "areas" && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {areas.map((area) => (
+            <Card
+              key={area.id}
+              className="group cursor-pointer hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-primary/20"
+              onClick={() => {
+                if (area.route) {
+                  navigate(area.route);
+                } else if (area.tab) {
+                  setActiveTab(area.tab);
+                }
+              }}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-4">
+                  <div className={`h-12 w-12 rounded-xl ${area.bgColor} flex items-center justify-center shrink-0`}>
+                    <area.icon className={`h-6 w-6 ${area.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg flex items-center justify-between">
+                      {area.title}
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </CardTitle>
+                    <CardDescription className="mt-1">{area.description}</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      )}
 
-        {/* Modules overview */}
-        <TabsContent value="modules" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {modules.map((mod) => (
+      {activeTab === "pharmacy" && (
+        <>
+          <Button variant="ghost" size="sm" onClick={() => setActiveTab("areas")} className="mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />Voltar para Áreas
+          </Button>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+            {pharmacyModules.map((mod) => (
               <Card
                 key={mod.id}
                 className="group cursor-pointer hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-primary/20"
@@ -515,10 +532,25 @@ export default function Simulations() {
                 </CardContent>
               </Card>
             ))}
-
-
           </div>
-        </TabsContent>
+        </>
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className={activeTab === "areas" || activeTab === "pharmacy" ? "hidden" : ""}>
+        <TabsList className="flex-wrap">
+          <TabsTrigger value="anamnesis">
+            <Stethoscope className="h-4 w-4 mr-1" />Salas de Anamnese
+          </TabsTrigger>
+          <TabsTrigger value="soap">
+            <ClipboardList className="h-4 w-4 mr-1" />Salas de SOAP
+          </TabsTrigger>
+          <TabsTrigger value="reconciliation">
+            <Handshake className="h-4 w-4 mr-1" />Salas de Reconciliação
+          </TabsTrigger>
+          <TabsTrigger value="documentation">
+            <FileText className="h-4 w-4 mr-1" />Salas de Documentação
+          </TabsTrigger>
+        </TabsList>
 
         {/* Anamnesis rooms */}
         <TabsContent value="anamnesis" className="space-y-4">
