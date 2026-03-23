@@ -54,7 +54,7 @@ export default function SimulationAggregator() {
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [];
-      const { data } = await supabase.from("simulation_rooms").select("id, title, status").eq("user_id", session.user.id).is("deleted_at", null).order("created_at", { ascending: false });
+      const { data } = await supabase.from("simulation_rooms").select("id, title, status").eq("user_id", session.user.id).order("created_at", { ascending: false });
       return (data || []) as RoomInfo[];
     },
   });
@@ -64,7 +64,7 @@ export default function SimulationAggregator() {
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [];
-      const { data } = await supabase.from("soap_rooms").select("id, title, status").eq("user_id", session.user.id).is("deleted_at", null).order("created_at", { ascending: false });
+      const { data } = await supabase.from("soap_rooms").select("id, title, status").eq("user_id", session.user.id).order("created_at", { ascending: false });
       return (data || []) as RoomInfo[];
     },
   });
@@ -185,23 +185,73 @@ export default function SimulationAggregator() {
     enabled: anamnesisRooms.length > 0,
   });
 
-  // SOAP scores grouped by room
+  // SOAP scores grouped by room - compute final score as avg(peerScore, adminScore)
   const { data: soapScores = [] } = useQuery({
     queryKey: ["agg-soap-scores", soapRooms.map(r => r.id)],
     queryFn: async () => {
       const roomIds = soapRooms.map(r => r.id);
       if (!roomIds.length) return [];
 
-      const { data: participants } = await supabase.from("soap_participants").select("id, student_email, student_name, room_id").in("room_id", roomIds);
-      const { data: responses } = await supabase.from("soap_responses").select("participant_id, admin_score, room_id").in("room_id", roomIds);
+      const { data: participants } = await supabase.from("soap_participants").select("id, student_email, student_name, room_id, participant_role").in("room_id", roomIds);
+      const { data: responses } = await supabase.from("soap_responses").select("id, participant_id, target_participant_id, admin_score, answers_json, room_id, form_id").in("room_id", roomIds);
+      const { data: forms } = await supabase.from("soap_forms").select("id, form_type, content_json, room_id").in("room_id", roomIds);
 
-      if (!participants || !responses) return [];
+      if (!participants || !responses || !forms) return [];
 
       return roomIds.map(roomId => {
         const roomParticipants = participants.filter(p => p.room_id === roomId);
-        const students = roomParticipants.map(p => {
-          const score = responses.filter(r => r.participant_id === p.id).reduce((sum, r) => sum + (Number(r.admin_score) || 0), 0) || null;
-          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score };
+        const roomResponses = responses.filter(r => r.room_id === roomId);
+        const soapResponses = roomResponses.filter(r => !r.target_participant_id);
+        const peerResponses = roomResponses.filter(r => r.target_participant_id);
+
+        // Get eval form fields for peer scoring
+        const evalForm = forms.find(f => f.room_id === roomId && f.form_type === "peer_eval");
+        const evalFields: any[] = evalForm && Array.isArray(evalForm.content_json) ? (evalForm.content_json as any[]) : [];
+
+        const allStudents = roomParticipants.filter(p => p.participant_role !== "teacher");
+
+        const students = allStudents.map(student => {
+          // Peer score: find peer evaluation targeting this student
+          const peerEval = peerResponses.find(r => r.target_participant_id === student.id);
+          let peerScore: number | null = null;
+
+          if (peerEval && evalFields.length > 0) {
+            let totalScore = 0;
+            let totalMax = 0;
+            for (const field of evalFields) {
+              if (!field.max_score) continue;
+              totalMax += field.max_score;
+              const answer = (peerEval.answers_json as Record<string, any>)?.[field.id];
+              // Compute field score based on type
+              if (field.type === "radio" || field.type === "dropdown") {
+                const options = field.options || [];
+                const correctIdx = options.findIndex((o: any) => o === field.correct_answer);
+                const answerIdx = typeof answer === "number" ? answer : options.indexOf(answer);
+                if (correctIdx >= 0 && answerIdx === correctIdx) totalScore += field.max_score;
+              } else if (field.type === "scale" || field.type === "rating") {
+                const max = field.scale_max || field.max || 5;
+                const val = Number(answer) || 0;
+                totalScore += (val / max) * field.max_score;
+              } else if (field.type === "checkbox") {
+                // Simple: give full score if answered
+                if (answer) totalScore += field.max_score;
+              } else {
+                // Text fields with score - give full if answered
+                if (answer && String(answer).trim()) totalScore += field.max_score;
+              }
+            }
+            peerScore = totalMax > 0 ? (totalScore / totalMax) * 10 : 0;
+          }
+
+          // Admin score from SOAP response
+          const soapResp = soapResponses.find(r => r.participant_id === student.id);
+          const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
+
+          // Final: average of available scores
+          const scores = [peerScore, adminSc].filter((s): s is number => s != null);
+          const finalScore = scores.length > 0 ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100 : null;
+
+          return { email: student.student_email?.toLowerCase() || "", name: student.student_name, score: finalScore };
         });
         return { roomId, students };
       });
