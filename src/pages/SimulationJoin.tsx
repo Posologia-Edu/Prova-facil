@@ -882,11 +882,14 @@ export default function SimulationJoin() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {anamnesisForm ? (
-                    <div className="border rounded-lg p-3 space-y-2">
-                      <p className="text-sm font-medium">{anamnesisForm.title || t("sim_form_anamnesis")}</p>
-                      {Array.isArray(anamnesisForm.content_json) && (anamnesisForm.content_json as FormField[]).map((field) => (
-                        <p key={field.id} className="text-sm text-muted-foreground">• {field.label}</p>
-                      ))}
+                    <div className="border rounded-lg p-4 space-y-2">
+                      <p className="text-sm font-semibold">{anamnesisForm.title || t("sim_form_anamnesis")}</p>
+                      <FormRenderer
+                        fields={(anamnesisForm.content_json as FormField[])}
+                        answers={{}}
+                        onChange={() => {}}
+                        readOnly
+                      />
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t("sim_no_script")}</p>
