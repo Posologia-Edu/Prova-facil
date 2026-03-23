@@ -1,100 +1,98 @@
 
 
-# Plano: Júri Simulado Clínico
+# Fase 1: Enfermagem Clínica — Plano de Implementação
 
-## Resumo
+## Visão Geral
 
-Novo módulo de avaliação "Júri Simulado" onde o professor cria processos clínicos (com geração por IA), distribui alunos em 5 grupos, e o sistema rotaciona automaticamente os papéis (Acusação, Defesa, Júri) entre os processos. Inclui painel do juiz com controle de tempo/fala, personagens-testemunha gerados por IA, formulários isolados por grupo e portal do aluno.
+Criar uma nova área **"Enfermagem Clínica"** na Simulação Realística com 4 módulos: **Acolhimento**, **SAE (Sistematização da Assistência)**, **Evolução** e **Passagem de Plantão**, além de um **Agregador de Notas** próprio.
 
----
-
-## Banco de Dados
-
-### Tabelas
-
-- **`mock_trials`** — id, user_id, title, description, status (draft/active/finished), judge_name, deleted_at, created_at
-- **`mock_trial_cases`** — id, mock_trial_id, position, case_number (ex: "001/2025"), title, process_content (texto completo do processo em rich text/markdown), learning_objectives, characters_json (personagens gerados: acusação e defesa com nome, profissão, instruções), created_at
-- **`mock_trial_groups`** — id, mock_trial_id, group_number (1-5), name (ex: "Grupo 1"), created_at
-- **`mock_trial_students`** — id, group_id, student_name, student_email, created_at
-- **`mock_trial_assignments`** — id, case_id, group_id, role (prosecution/defense/jury), created_at — gerado automaticamente, define qual grupo faz qual papel em cada processo
-- **`mock_trial_sessions`** — id, case_id, status (pending/announcement/prosecution/defense/jury_questions/deliberation/verdict/finished), current_phase_started_at, judge_notes, created_at
-- **`mock_trial_forms`** — id, mock_trial_id, target_role (prosecution/defense/jury), title, fields_json, created_at
-- **`mock_trial_responses`** — id, form_id, session_id, group_id, student_email, student_name, response_json, created_at
-
-### RLS
-- Owner (user_id) para mock_trials; anon insert/select para responses e sessions (acesso via link)
+**Abordagem híbrida**: tabelas genéricas compartilhadas (`nursing_*`) + páginas dedicadas por módulo.
 
 ---
 
-## Páginas
+## Arquitetura do Banco de Dados
 
-### Professor
+Criar 5 tabelas genéricas com um campo `module_type` para diferenciar os 4 módulos:
 
-1. **`MockTrials.tsx`** — Dashboard de listagem (padrão SctExams/OsceExams)
+```text
+nursing_rooms          (module_type: acolhimento | sae | evolucao | passagem_plantao)
+nursing_participants   (room_id → nursing_rooms)
+nursing_forms          (room_id → nursing_rooms, form_type flexível)
+nursing_clinical_cases (room_id → nursing_rooms)
+nursing_responses      (room_id → nursing_rooms, form_id, clinical_case_id)
+```
 
-2. **`MockTrialEditor.tsx`** — Editor principal com abas:
-   - **Processos**: Lista de casos clínicos. Cada caso tem: número, título, conteúdo do processo (editor rich text). Botão "Gerar com IA" abre modal pedindo objetivos de aprendizagem + upload de PDF opcional → Edge Function gera o processo completo (denúncia, depoimentos, prontuário, laudos, anexos) + 2 personagens-testemunha (acusação e defesa) com instruções
-   - **Grupos**: Adicionar alunos (nome/email) com padrão SOAP de importação. Separar manualmente em 5 grupos via drag-and-drop ou select
-   - **Distribuição**: Tabela automática mostrando qual grupo faz qual papel em cada processo (rotação automática garantindo que cada grupo assuma pelo menos 2 papéis diferentes). Botão "Gerar Distribuição" calcula automaticamente. Professor pode ajustar manualmente
-   - **Formulários**: Criar formulários separados para Acusação, Defesa e Jurados (usando FormBuilder existente)
-   - **Painel do Juiz**: Configurar nome do juiz
-   - **Resultados**: Ver respostas dos formulários agrupadas por processo, grupo e papel
+Estrutura idêntica às tabelas de documentação/reconciliação, com adição de `module_type text NOT NULL` em `nursing_rooms`. RLS seguindo o mesmo padrão existente (admin, owner, anon select/insert/update).
 
-### Juiz
+---
 
-3. **`MockTrialJudge.tsx`** — Painel do juiz (acesso via link):
-   - Seleciona o processo/caso atual
-   - Exibe a sequência de fases com timer automático:
-     1. Anúncio do Caso (2 min)
-     2. Acusação (5 min)
-     3. Defesa (5 min)
-     4. Perguntas do Júri (5 min)
-     5. Deliberação (3-5 min)
-   - Botões "Próxima Fase" e "Pausar"
-   - Timer visual grande com alerta sonoro ao faltar 1 minuto
-   - Status em tempo real visível para todos os alunos
+## Páginas e Rotas
 
-### Aluno
+### Dashboard Principal
+- **`NursingSimulations.tsx`** — Hub centralizado (mesma estrutura de `Simulations.tsx`) com cards dos 4 módulos + agregador, e abas para listar salas de cada módulo.
 
-4. **`MockTrialStudent.tsx`** — Portal do aluno (acesso via email):
-   - Exibe o processo completo do caso atual
-   - Mostra o papel do seu grupo (Acusação/Defesa/Jurado)
-   - Se for testemunha: exibe ficha do personagem com instruções
-   - Formulário específico do seu papel (isolado — não vê formulários de outros grupos)
-   - Timer sincronizado com o painel do juiz
-   - Veredito e resultado ao final
+### Por Módulo (4x, cada um com suas páginas)
+- **`NursingEditor.tsx`** — Editor genérico que adapta labels/formulários conforme `module_type`
+- **`NursingControl.tsx`** — Painel de controle genérico (espelhos, notas, concluir sala)
+- **`NursingJoin.tsx`** — Portal do aluno genérico (redirect 15s após envio)
+- **`NursingRooms.tsx`** — Listagem de salas por módulo (reutilizável via prop/param)
+
+### Agregador
+- **`NursingAggregator.tsx`** — Notas consolidadas dos 4 módulos
+
+### Rotas no App.tsx
+```text
+/nursing                              → NursingSimulations (hub)
+/nursing/:moduleType                  → NursingRooms (listagem filtrada)
+/nursing/:moduleType/editor/:roomId   → NursingEditor
+/nursing/:moduleType/control/:roomId  → NursingControl
+/nursing/aggregator                   → NursingAggregator
+/nursing/join                         → NursingJoin (público, sem auth)
+```
+
+---
+
+## Navegação
+
+Adicionar no **AppSidebar.tsx** um item "Enfermagem Clínica" com ícone `Heart` (ou similar), apontando para `/nursing`.
 
 ---
 
 ## Edge Function
 
-- **`generate-mock-trial`** — Recebe objetivos de aprendizagem + PDF opcional. Gera:
-  - Processo completo no formato jurídico (denúncia, relato dos fatos, fundamentação, depoimentos, prontuário, laudos, anexos)
-  - 2 personagens-testemunha (1 acusação, 1 defesa) com profissão relacionada ao caso e instruções de comportamento
+- **`grade-nursing`** — Correção por IA, seguindo o padrão de `grade-documentation` e `grade-reconciliation`, com adaptação de prompt por `module_type`.
 
 ---
 
-## Algoritmo de Distribuição
+## Módulos e seus Formulários Padrão
 
-Dado N processos e 5 grupos, cada processo precisa de 3 papéis (Acusação, Defesa, Júri). Para 4 processos:
-- 3 grupos ativos por processo, 2 descansam
-- Rotação garante que cada grupo assuma papéis variados
-- Segue o padrão da tabela do Arquivo 5
+| Módulo | Formulários | Descrição |
+|--------|------------|-----------|
+| **Acolhimento** | Ficha de Acolhimento | Coleta de dados do paciente, queixa principal, sinais vitais, classificação de risco |
+| **SAE** | Histórico, Diagnóstico, Planejamento, Implementação, Avaliação | 5 etapas do processo de enfermagem |
+| **Evolução** | Evolução de Enfermagem | Registro cronológico da evolução do paciente (SOAP adaptado para enfermagem) |
+| **Passagem de Plantão** | Ficha SBAR | Situação, Background, Avaliação, Recomendação |
 
 ---
 
-## Integração
+## Etapas de Implementação
 
-- **Sidebar**: Novo item "Júri Simulado" com ícone `Gavel`
-- **Rotas**: `/mock-trials`, `/mock-trials/:id/edit`, `/mock-trial/judge/:id`, `/mock-trial/student/:trialId`
-- **Realtime**: Tabela `mock_trial_sessions` com realtime para sincronizar timer do juiz com alunos
+1. **Migração SQL** — Criar as 5 tabelas `nursing_*` com RLS
+2. **Hub + Listagem** — `NursingSimulations.tsx` (dashboard com cards e abas)
+3. **Editor genérico** — `NursingEditor.tsx` (participantes, formulários, casos clínicos, espelhos)
+4. **Controle genérico** — `NursingControl.tsx` (respostas, espelhos collapsible, notas, concluir)
+5. **Portal do aluno** — `NursingJoin.tsx` (acesso por PIN, formulário, redirect 15s)
+6. **Edge Function** — `grade-nursing` para correção automatizada
+7. **Agregador** — `NursingAggregator.tsx` com notas dos 4 módulos
+8. **Rotas + Sidebar** — Integrar tudo no `App.tsx` e `AppSidebar.tsx`
+9. **Duplicação** — Lógica de duplicação completa nas listagens
 
 ---
 
 ## Detalhes Técnicos
 
-- Formulários usam o FormBuilder/FormRenderer existente
-- Geração IA usa a shared `ai-caller.ts` existente com Lovable AI
-- Distribuição automática implementada como função utilitária em `src/lib/mock-trial-distribution.ts`
-- Timer do juiz usa realtime (update na coluna `current_phase_started_at` + `status`)
+- O campo `module_type` permite queries filtradas (ex: `.eq("module_type", "sae")`) sem criar tabelas separadas
+- Cada página genérica recebe o `moduleType` via `useParams()` e adapta labels, ícones e prompts de IA
+- O padrão de `case_answers` (espelhos por caso) será replicado do módulo de Documentação
+- Formulários pré-configurados por módulo serão criados automaticamente ao criar uma sala (template por `module_type`)
 
