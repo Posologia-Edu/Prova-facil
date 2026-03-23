@@ -140,6 +140,17 @@ export default function ReconciliationJoin() {
 
   const fields: FormField[] = form ? (Array.isArray(form.content_json) ? form.content_json : []) : [];
 
+  // Auto-redirect after submission
+  useEffect(() => {
+    if (phase !== "done") return;
+    if (countdown <= 0) {
+      window.location.href = "/";
+      return;
+    }
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [phase, countdown]);
+
   // Form rendering delegated to FormRenderer
 
   if (phase === "login") {
