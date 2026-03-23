@@ -503,29 +503,47 @@ export default function SimulationAggregator() {
                       {group.students.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Nenhum participante nesta sala.</p>
                       ) : (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Aluno</TableHead>
-                              <TableHead className="text-center w-32">Nota</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {group.students.sort((a, b) => a.name.localeCompare(b.name)).map((s, i) => (
-                              <TableRow key={`${s.email}-${i}`}>
-                                <TableCell>
-                                  <div>
-                                    <p className="font-medium text-sm">{s.name}</p>
-                                    <p className="text-xs text-muted-foreground">{s.email}</p>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-center font-semibold">
-                                  {s.score != null ? s.score : "—"}
-                                </TableCell>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Aluno</TableHead>
+                                <TableHead className="text-center">Anamnese</TableHead>
+                                <TableHead className="text-center">SOAP</TableHead>
+                                <TableHead className="text-center">Reconciliação</TableHead>
+                                <TableHead className="text-center">Documentação</TableHead>
+                                <TableHead className="text-center font-bold">Média</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {group.students.sort((a, b) => a.name.localeCompare(b.name)).map((s, i) => {
+                                const global = s.email ? globalScoreMap.get(s.email) : null;
+                                const anamnesis = global?.anamnesis ?? null;
+                                const soap = global?.soap ?? null;
+                                const reconciliation = global?.reconciliation ?? null;
+                                const documentation = global?.documentation ?? null;
+                                const scores = [anamnesis, soap, reconciliation, documentation].filter(v => v != null) as number[];
+                                const average = scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100 : null;
+
+                                return (
+                                  <TableRow key={`${s.email}-${i}`}>
+                                    <TableCell>
+                                      <div>
+                                        <p className="font-medium text-sm">{s.name}</p>
+                                        <p className="text-xs text-muted-foreground">{s.email}</p>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">{anamnesis != null ? anamnesis : "—"}</TableCell>
+                                    <TableCell className="text-center">{soap != null ? soap : "—"}</TableCell>
+                                    <TableCell className="text-center">{reconciliation != null ? reconciliation : "—"}</TableCell>
+                                    <TableCell className="text-center">{documentation != null ? documentation : "—"}</TableCell>
+                                    <TableCell className="text-center font-bold">{average != null ? average : "—"}</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
                       )}
                     </CardContent>
                   </Card>
