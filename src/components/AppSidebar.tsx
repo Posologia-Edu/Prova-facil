@@ -80,6 +80,7 @@ export function AppSidebar() {
     { title: t("sidebar_my_exams"), url: "/exams", icon: BookOpen },
     { title: "OSCE", url: "/osce", icon: Stethoscope },
     { title: t("sim_nav"), url: "/simulations", icon: HeartPulse },
+    { title: "Enfermagem Clínica", url: "/nursing", icon: Heart },
     { title: "Pacientes Virtuais", url: "/virtual-patients", icon: UserRound },
     { title: "SCT", url: "/sct", icon: BrainCircuit },
     { title: "KFE", url: "/kfe", icon: Target },

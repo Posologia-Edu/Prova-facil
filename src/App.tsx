@@ -388,6 +388,13 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Nursing routes */}
+            <Route path="/nursing" element={<ProtectedRoute><AppLayout><NursingSimulations /></AppLayout></ProtectedRoute>} />
+            <Route path="/nursing/aggregator" element={<ProtectedRoute><AppLayout><NursingAggregator /></AppLayout></ProtectedRoute>} />
+            <Route path="/nursing/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><NursingEditor /></AppLayout></ProtectedRoute>} />
+            <Route path="/nursing/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><NursingControl /></AppLayout></ProtectedRoute>} />
+            {/* Public Nursing route */}
+            <Route path="/nursing/join" element={<NursingJoin />} />
             {/* Virtual Patients */}
             <Route
               path="/virtual-patients"
