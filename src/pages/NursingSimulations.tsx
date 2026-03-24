@@ -24,6 +24,7 @@ export default function NursingSimulations() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [createModuleType, setCreateModuleType] = useState<NursingModuleType>("acolhimento");
+  const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
 
   const moduleTypes: NursingModuleType[] = ["acolhimento", "sae", "evolucao", "passagem_plantao"];
 
