@@ -95,7 +95,7 @@ export default function GenericSplitRoomDialog({ roomId, open, onOpenChange, onC
       if (!session) throw new Error("Not authenticated");
 
       // Load clinical cases
-      const { data: cases } = await supabase.from(casesTable).select("*").eq("room_id", roomId);
+      const { data: cases } = await supabase.from(casesTable).select("*").eq("room_id", roomId) as { data: any[] | null };
 
       for (const sr of subRooms) {
         // Build insert object dynamically
