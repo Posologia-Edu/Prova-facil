@@ -16,6 +16,7 @@ import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gave
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { generateDistribution } from "@/lib/mock-trial-distribution";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
