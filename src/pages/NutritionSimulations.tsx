@@ -154,6 +154,9 @@ export default function NutritionSimulations() {
                       <Play className="h-3.5 w-3.5 mr-1" />{room.status === "completed" ? "Resultados" : "Controle"}
                     </Button>
                   )}
+                  {room.status === "draft" && studentCount > 0 && (
+                    <Button variant="outline" size="sm" onClick={() => setSplitRoomId(room.id)}><Scissors className="h-3.5 w-3.5 mr-1" />Dividir</Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={() => duplicateRoom.mutate(room.id)} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
