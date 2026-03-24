@@ -74,6 +74,9 @@ export default function DocumentationEditor() {
   // Per-case answer keys for referral: { [caseId]: FormField[] }
   const [answerKeyByCaseId, setAnswerKeyByCaseId] = useState<Record<string, FormField[]>>({});
   const [activeAnswerKeyCaseId, setActiveAnswerKeyCaseId] = useState<string>("");
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState<any>(null);
   const lastSavedSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(false);
 
