@@ -186,6 +186,7 @@ export default function NursingEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey={mt === "acolhimento" ? "acolhimento" : mt === "sae" ? "sae" : mt === "evolucao" ? "evolucao_enfermagem" : "passagem_plantao"} />
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/nursing")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar

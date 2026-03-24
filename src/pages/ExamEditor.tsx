@@ -672,6 +672,7 @@ export default function ExamEditorPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-4">
+      <ModuleHelpGuide moduleKey="exams" />
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

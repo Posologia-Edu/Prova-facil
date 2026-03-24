@@ -314,6 +314,7 @@ export default function SoapEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="soap" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/simulations/soap")}>
           <ArrowLeft className="h-5 w-5" />

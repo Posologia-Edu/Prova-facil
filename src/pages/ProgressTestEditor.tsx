@@ -126,6 +126,7 @@ export default function ProgressTestEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="progress_test" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/progress-test")}>
           <ArrowLeft className="h-4 w-4" />

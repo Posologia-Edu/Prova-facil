@@ -77,6 +77,7 @@ export default function OsceEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="osce" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/osce")}>
           <ArrowLeft className="h-5 w-5" />

@@ -415,6 +415,7 @@ export default function ReconciliationEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="reconciliacao" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/simulations/reconciliation")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar

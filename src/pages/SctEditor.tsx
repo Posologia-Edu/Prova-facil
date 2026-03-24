@@ -128,6 +128,7 @@ export default function SctEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="sct" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/sct")}>
           <ArrowLeft className="h-4 w-4" />
