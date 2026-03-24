@@ -888,6 +888,11 @@ export default function Simulations() {
                           {room.status === "completed" ? "Resultados" : t("sim_control")}
                         </Button>
                       )}
+                      {room.status === "draft" && (
+                        <Button variant="outline" size="sm" onClick={() => setSplitDocumentationRoomId(room.id)}>
+                          <Scissors className="h-3.5 w-3.5 mr-1" />Dividir
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" onClick={() => duplicateDocumentationRoom.mutate(room.id)} title="Duplicar">
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
