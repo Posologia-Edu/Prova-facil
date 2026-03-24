@@ -228,6 +228,10 @@ export default function NutritionSimulations() {
           </TabsContent>
         ))}
       </Tabs>
+
+      {splitRoomId && (
+        <GenericSplitRoomDialog roomId={splitRoomId} open={!!splitRoomId} onOpenChange={(o) => { if (!o) setSplitRoomId(null); }} onComplete={() => { setSplitRoomId(null); queryClient.invalidateQueries({ queryKey: ["nutrition-rooms-all"] }); queryClient.invalidateQueries({ queryKey: ["nutrition-participant-counts"] }); }} tablePrefix="nutrition" />
+      )}
     </div>
   );
 }

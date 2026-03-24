@@ -155,6 +155,9 @@ export default function DentistrySimulations() {
           </TabsContent>
         ))}
       </Tabs>
+      {splitRoomId && (
+        <GenericSplitRoomDialog roomId={splitRoomId} open={!!splitRoomId} onOpenChange={(o) => { if (!o) setSplitRoomId(null); }} onComplete={() => { setSplitRoomId(null); queryClient.invalidateQueries({ queryKey: ["dentistry-rooms-all"] }); queryClient.invalidateQueries({ queryKey: ["dentistry-participant-counts"] }); }} tablePrefix="dentistry" />
+      )}
     </div>
   );
 }
