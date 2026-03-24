@@ -1,0 +1,135 @@
+import type { FormField } from "@/components/forms/types";
+
+const uid = (prefix: string, i: number) => `${prefix}-${i}`;
+
+export const physiotherapyTemplates: { area: string; module_type: string; form_type: string; title: string; description: string; content_json: FormField[] }[] = [
+  // ── Avaliação Funcional ──
+  {
+    area: "physiotherapy", module_type: "avaliacao_funcional", form_type: "standard",
+    title: "Ficha de Avaliação Funcional",
+    description: "Avaliação fisioterapêutica completa",
+    content_json: [
+      { id: uid("af",0), label: "Anamnese Funcional", type: "section_header" },
+      { id: uid("af",1), label: "Queixa funcional principal", type: "textarea", required: true, max_score: 1 },
+      { id: uid("af",2), label: "Histórico da condição (início, evolução, tratamentos)", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("af",3), label: "Nível funcional prévio e atual", type: "textarea", max_score: 1 },
+      { id: uid("af",4), label: "Inspeção e Palpação", type: "section_header" },
+      { id: uid("af",5), label: "Inspeção (postura, trofismo, deformidades)", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("af",6), label: "Palpação (dor, edema, temperatura, pontos-gatilho)", type: "textarea", required: true, max_score: 1 },
+      { id: uid("af",7), label: "Testes Específicos", type: "section_header" },
+      { id: uid("af",8), label: "Testes especiais realizados e resultados", type: "textarea", max_score: 1.5 },
+      { id: uid("af",9), label: "ADM (articulações avaliadas e valores)", type: "textarea", required: true, max_score: 1 },
+      { id: uid("af",10), label: "Força muscular (grupos avaliados, escala 0-5)", type: "textarea", required: true, max_score: 1 },
+      { id: uid("af",11), label: "Escalas Funcionais", type: "section_header" },
+      { id: uid("af",12), label: "Escalas aplicadas e pontuações", type: "textarea", max_score: 1 },
+    ],
+  },
+  {
+    area: "physiotherapy", module_type: "avaliacao_funcional", form_type: "answer_key",
+    title: "Espelho — Avaliação Funcional",
+    description: "Gabarito de avaliação fisioterapêutica",
+    content_json: [
+      { id: uid("afe",0), label: "Anamnese", type: "section_header" },
+      { id: uid("afe",1), label: "Queixa funcional", type: "textarea", max_score: 1, correct_answer: "Descrever limitação funcional nas palavras do paciente." },
+      { id: uid("afe",2), label: "Histórico", type: "textarea", max_score: 1.5, correct_answer: "Mecanismo de lesão, tempo de evolução, tratamentos prévios e resposta." },
+      { id: uid("afe",4), label: "Inspeção e Palpação", type: "section_header" },
+      { id: uid("afe",5), label: "Inspeção", type: "textarea", max_score: 1.5, correct_answer: "Postura em planos frontal, sagital e transversal. Trofismo muscular." },
+      { id: uid("afe",6), label: "Palpação", type: "textarea", max_score: 1, correct_answer: "Identificar pontos dolorosos, edema, crepitação." },
+      { id: uid("afe",9), label: "ADM", type: "textarea", max_score: 1, correct_answer: "Goniometria com valores de referência para cada articulação." },
+      { id: uid("afe",10), label: "Força muscular", type: "textarea", max_score: 1, correct_answer: "Escala de Kendall (0-5) ou dinamometria para grupos relevantes." },
+    ],
+  },
+  // ── Diagnóstico CIF ──
+  {
+    area: "physiotherapy", module_type: "diagnostico_cif", form_type: "standard",
+    title: "Diagnóstico Cinético-Funcional — CIF",
+    description: "Classificação Internacional de Funcionalidade",
+    content_json: [
+      { id: uid("cif",0), label: "Função e Estrutura do Corpo", type: "section_header" },
+      { id: uid("cif",1), label: "Deficiências de função do corpo", type: "textarea", required: true, max_score: 2 },
+      { id: uid("cif",2), label: "Deficiências de estrutura do corpo", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("cif",3), label: "Atividade e Participação", type: "section_header" },
+      { id: uid("cif",4), label: "Limitações de atividade", type: "textarea", required: true, max_score: 2 },
+      { id: uid("cif",5), label: "Restrições de participação", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("cif",6), label: "Fatores Contextuais", type: "section_header" },
+      { id: uid("cif",7), label: "Fatores ambientais (facilitadores e barreiras)", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("cif",8), label: "Fatores pessoais", type: "textarea", max_score: 1 },
+      { id: uid("cif",9), label: "Diagnóstico cinético-funcional resumido", type: "textarea", required: true, max_score: 1.5 },
+    ],
+  },
+  {
+    area: "physiotherapy", module_type: "diagnostico_cif", form_type: "answer_key",
+    title: "Espelho — CIF",
+    description: "Gabarito CIF",
+    content_json: [
+      { id: uid("cife",0), label: "Função e Estrutura", type: "section_header" },
+      { id: uid("cife",1), label: "Deficiências de função", type: "textarea", max_score: 2, correct_answer: "Usar códigos CIF: b (funções). Ex: b710.3 — deficiência grave de mobilidade articular." },
+      { id: uid("cife",2), label: "Deficiências de estrutura", type: "textarea", max_score: 1.5, correct_answer: "Códigos CIF: s (estruturas). Ex: s750 — estrutura do membro inferior." },
+      { id: uid("cife",3), label: "Atividade e Participação", type: "section_header" },
+      { id: uid("cife",4), label: "Limitações de atividade", type: "textarea", max_score: 2, correct_answer: "Códigos d (atividades). Ex: d450.3 — dificuldade grave em andar." },
+      { id: uid("cife",5), label: "Restrições de participação", type: "textarea", max_score: 1.5, correct_answer: "Ex: d850 — trabalho remunerado, d920 — recreação e lazer." },
+      { id: uid("cife",6), label: "Fatores Contextuais", type: "section_header" },
+      { id: uid("cife",7), label: "Fatores ambientais", type: "textarea", max_score: 1.5, correct_answer: "Códigos e. Facilitadores (+) e barreiras (ponto)." },
+      { id: uid("cife",9), label: "Diagnóstico resumido", type: "textarea", max_score: 1.5, correct_answer: "Síntese integrando deficiência-atividade-participação-contexto." },
+    ],
+  },
+  // ── Plano Fisioterapêutico ──
+  {
+    area: "physiotherapy", module_type: "plano_fisioterapeutico", form_type: "standard",
+    title: "Plano Fisioterapêutico",
+    description: "Objetivos SMART e condutas",
+    content_json: [
+      { id: uid("pf",0), label: "Objetivos", type: "section_header" },
+      { id: uid("pf",1), label: "Objetivos de curto prazo (SMART)", type: "textarea", required: true, max_score: 2 },
+      { id: uid("pf",2), label: "Objetivos de longo prazo", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("pf",3), label: "Condutas", type: "section_header" },
+      { id: uid("pf",4), label: "Recursos terapêuticos e técnicas", type: "textarea", required: true, max_score: 2.5 },
+      { id: uid("pf",5), label: "Frequência e duração do tratamento", type: "text", required: true, max_score: 1 },
+      { id: uid("pf",6), label: "Progressão planejada", type: "textarea", max_score: 1 },
+      { id: uid("pf",7), label: "Critérios de alta fisioterapêutica", type: "textarea", required: true, max_score: 1.5 },
+    ],
+  },
+  {
+    area: "physiotherapy", module_type: "plano_fisioterapeutico", form_type: "answer_key",
+    title: "Espelho — Plano Fisioterapêutico",
+    description: "Gabarito de plano fisioterapêutico",
+    content_json: [
+      { id: uid("pfe",0), label: "Objetivos", type: "section_header" },
+      { id: uid("pfe",1), label: "Curto prazo", type: "textarea", max_score: 2, correct_answer: "Específico, Mensurável, Atingível, Relevante, Temporal. Ex: Aumentar ADM de flexão de joelho de 90° para 120° em 4 semanas." },
+      { id: uid("pfe",2), label: "Longo prazo", type: "textarea", max_score: 1.5, correct_answer: "Meta funcional: retorno às AVDs ou atividade esportiva." },
+      { id: uid("pfe",3), label: "Condutas", type: "section_header" },
+      { id: uid("pfe",4), label: "Recursos", type: "textarea", max_score: 2.5, correct_answer: "Cinesioterapia, eletroterapia, termoterapia com parâmetros específicos e justificativa baseada em evidências." },
+      { id: uid("pfe",7), label: "Critérios de alta", type: "textarea", max_score: 1.5, correct_answer: "Objetivos mensuráveis atingidos, independência funcional, orientação domiciliar." },
+    ],
+  },
+  // ── Evolução Fisioterapêutica ──
+  {
+    area: "physiotherapy", module_type: "evolucao_fisioterapeutica", form_type: "standard",
+    title: "Evolução Fisioterapêutica",
+    description: "Registro por sessão de atendimento",
+    content_json: [
+      { id: uid("ef",0), label: "Estado do Paciente", type: "section_header" },
+      { id: uid("ef",1), label: "Relato subjetivo e estado clínico", type: "textarea", required: true, max_score: 2 },
+      { id: uid("ef",2), label: "Condutas Realizadas", type: "section_header" },
+      { id: uid("ef",3), label: "Procedimentos e técnicas aplicadas", type: "textarea", required: true, max_score: 3 },
+      { id: uid("ef",4), label: "Parâmetros utilizados", type: "textarea", max_score: 1.5 },
+      { id: uid("ef",5), label: "Resposta ao Tratamento", type: "section_header" },
+      { id: uid("ef",6), label: "Resposta imediata e evolução", type: "textarea", required: true, max_score: 2 },
+      { id: uid("ef",7), label: "Ajustes propostos para próxima sessão", type: "textarea", max_score: 1.5 },
+    ],
+  },
+  {
+    area: "physiotherapy", module_type: "evolucao_fisioterapeutica", form_type: "answer_key",
+    title: "Espelho — Evolução Fisioterapêutica",
+    description: "Gabarito de evolução fisioterapêutica",
+    content_json: [
+      { id: uid("efe",0), label: "Estado do Paciente", type: "section_header" },
+      { id: uid("efe",1), label: "Relato e estado clínico", type: "textarea", max_score: 2, correct_answer: "Queixas do dia, nível de dor, funcionalidade percebida." },
+      { id: uid("efe",2), label: "Condutas", type: "section_header" },
+      { id: uid("efe",3), label: "Procedimentos", type: "textarea", max_score: 3, correct_answer: "Descrever cada conduta com parâmetros (séries, repetições, intensidade, tempo)." },
+      { id: uid("efe",5), label: "Resposta", type: "section_header" },
+      { id: uid("efe",6), label: "Resposta ao tratamento", type: "textarea", max_score: 2, correct_answer: "Melhora/piora objetiva, comparação com sessão anterior." },
+      { id: uid("efe",7), label: "Ajustes", type: "textarea", max_score: 1.5, correct_answer: "Progressão ou regressão de exercícios conforme resposta." },
+    ],
+  },
+];

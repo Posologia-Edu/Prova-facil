@@ -1,0 +1,136 @@
+import type { FormField } from "@/components/forms/types";
+
+const uid = (prefix: string, i: number) => `${prefix}-${i}`;
+
+export const medicineTemplates: { area: string; module_type: string; form_type: string; title: string; description: string; content_json: FormField[] }[] = [
+  // ── Anamnese Médica ──
+  {
+    area: "medicine", module_type: "anamnese_medica", form_type: "standard",
+    title: "Ficha de Anamnese Médica",
+    description: "Anamnese completa com ISDA",
+    content_json: [
+      { id: uid("am",0), label: "Identificação", type: "section_header" },
+      { id: uid("am",1), label: "Nome, idade, sexo, profissão, naturalidade", type: "textarea", required: true },
+      { id: uid("am",2), label: "Queixa Principal (QP)", type: "textarea", required: true, max_score: 1 },
+      { id: uid("am",3), label: "História da Doença Atual (HDA)", type: "section_header" },
+      { id: uid("am",4), label: "Descrição cronológica detalhada", type: "textarea", required: true, max_score: 2.5 },
+      { id: uid("am",5), label: "ISDA — Interrogatório Sobre os Diversos Aparelhos", type: "section_header" },
+      { id: uid("am",6), label: "Sintomas gerais, cardiovascular, respiratório, GI, GU, neurológico", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("am",7), label: "Antecedentes", type: "section_header" },
+      { id: uid("am",8), label: "Antecedentes pessoais (patológicos e fisiológicos)", type: "textarea", required: true, max_score: 1 },
+      { id: uid("am",9), label: "Antecedentes familiares", type: "textarea", max_score: 0.5 },
+      { id: uid("am",10), label: "Medicamentos em uso", type: "textarea", required: true, max_score: 1 },
+      { id: uid("am",11), label: "Hábitos (tabagismo, etilismo, drogas, atividade física)", type: "textarea", max_score: 0.5 },
+      { id: uid("am",12), label: "Condições socioeconômicas", type: "textarea", max_score: 0.5 },
+    ],
+  },
+  {
+    area: "medicine", module_type: "anamnese_medica", form_type: "answer_key",
+    title: "Espelho — Anamnese Médica",
+    description: "Gabarito de anamnese médica",
+    content_json: [
+      { id: uid("ame",2), label: "QP", type: "textarea", max_score: 1, correct_answer: "Queixa nas palavras do paciente, breve e objetiva." },
+      { id: uid("ame",3), label: "HDA", type: "section_header" },
+      { id: uid("ame",4), label: "Descrição cronológica", type: "textarea", max_score: 2.5, correct_answer: "Início, duração, intensidade, localização, irradiação, fatores de melhora/piora, sintomas associados. Ordem cronológica." },
+      { id: uid("ame",5), label: "ISDA", type: "section_header" },
+      { id: uid("ame",6), label: "ISDA", type: "textarea", max_score: 1.5, correct_answer: "Revisar sistematicamente todos os aparelhos, registrar positivos e negativos pertinentes." },
+      { id: uid("ame",7), label: "Antecedentes", type: "section_header" },
+      { id: uid("ame",8), label: "Antecedentes pessoais", type: "textarea", max_score: 1, correct_answer: "Doenças crônicas, cirurgias, internações, transfusões, gestações." },
+      { id: uid("ame",10), label: "Medicamentos", type: "textarea", max_score: 1, correct_answer: "Lista completa com nome, dose, posologia e tempo de uso." },
+    ],
+  },
+  // ── Exame Físico ──
+  {
+    area: "medicine", module_type: "exame_fisico", form_type: "standard",
+    title: "Ficha de Exame Físico",
+    description: "Exame físico geral e especial",
+    content_json: [
+      { id: uid("ef",0), label: "Ectoscopia", type: "section_header" },
+      { id: uid("ef",1), label: "Estado geral, nível de consciência, atitude, biótipo, fácies", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("ef",2), label: "Sinais Vitais", type: "section_header" },
+      { id: uid("ef",3), label: "PA, FC, FR, T, SpO₂", type: "textarea", required: true, max_score: 1 },
+      { id: uid("ef",4), label: "Exame por Aparelhos", type: "section_header" },
+      { id: uid("ef",5), label: "Aparelho cardiovascular (inspeção, palpação, ausculta)", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("ef",6), label: "Aparelho respiratório (inspeção, palpação, percussão, ausculta)", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("ef",7), label: "Abdome (inspeção, ausculta, percussão, palpação)", type: "textarea", required: true, max_score: 1.5 },
+      { id: uid("ef",8), label: "Exame neurológico (consciência, pares cranianos, motricidade, sensibilidade, reflexos)", type: "textarea", max_score: 1.5 },
+      { id: uid("ef",9), label: "Outros achados relevantes", type: "textarea", max_score: 0.5 },
+    ],
+  },
+  {
+    area: "medicine", module_type: "exame_fisico", form_type: "answer_key",
+    title: "Espelho — Exame Físico",
+    description: "Gabarito de exame físico",
+    content_json: [
+      { id: uid("efe",0), label: "Ectoscopia", type: "section_header" },
+      { id: uid("efe",1), label: "Ectoscopia", type: "textarea", max_score: 1.5, correct_answer: "BEG/REG/MEG, LOTE, corado, hidratado, anictérico, acianótico, afebril." },
+      { id: uid("efe",2), label: "Sinais Vitais", type: "section_header" },
+      { id: uid("efe",3), label: "Sinais vitais", type: "textarea", max_score: 1, correct_answer: "Aferir corretamente com técnica e valores de referência." },
+      { id: uid("efe",4), label: "Aparelhos", type: "section_header" },
+      { id: uid("efe",5), label: "Cardiovascular", type: "textarea", max_score: 1.5, correct_answer: "Ictus, ritmo, bulhas, sopros, pulsos periféricos." },
+      { id: uid("efe",6), label: "Respiratório", type: "textarea", max_score: 1.5, correct_answer: "Expansibilidade, FTV, som claro pulmonar, MV presente s/ RA." },
+      { id: uid("efe",7), label: "Abdome", type: "textarea", max_score: 1.5, correct_answer: "Plano, RHA+, timpânico, indolor à palpação, sem visceromegalias." },
+      { id: uid("efe",8), label: "Neurológico", type: "textarea", max_score: 1.5, correct_answer: "Glasgow, pares cranianos, força muscular, sensibilidade, reflexos." },
+    ],
+  },
+  // ── Raciocínio Clínico ──
+  {
+    area: "medicine", module_type: "raciocinio_clinico", form_type: "standard",
+    title: "Ficha de Raciocínio Clínico",
+    description: "Diagnóstico diferencial e complementares",
+    content_json: [
+      { id: uid("rc",0), label: "Hipóteses Diagnósticas", type: "section_header" },
+      { id: uid("rc",1), label: "Hipótese diagnóstica principal", type: "textarea", required: true, max_score: 2 },
+      { id: uid("rc",2), label: "Diagnósticos diferenciais", type: "textarea", required: true, max_score: 2 },
+      { id: uid("rc",3), label: "Justificativa clínica para cada hipótese", type: "textarea", required: true, max_score: 2 },
+      { id: uid("rc",4), label: "Exames Complementares", type: "section_header" },
+      { id: uid("rc",5), label: "Exames solicitados e justificativa", type: "textarea", required: true, max_score: 2 },
+      { id: uid("rc",6), label: "Resultados esperados (se disponíveis)", type: "textarea", max_score: 1 },
+      { id: uid("rc",7), label: "Diagnóstico final", type: "textarea", max_score: 1 },
+    ],
+  },
+  {
+    area: "medicine", module_type: "raciocinio_clinico", form_type: "answer_key",
+    title: "Espelho — Raciocínio Clínico",
+    description: "Gabarito de raciocínio clínico",
+    content_json: [
+      { id: uid("rce",0), label: "Hipóteses", type: "section_header" },
+      { id: uid("rce",1), label: "Hipótese principal", type: "textarea", max_score: 2, correct_answer: "Diagnóstico mais provável com base nos dados clínicos coletados." },
+      { id: uid("rce",2), label: "Diferenciais", type: "textarea", max_score: 2, correct_answer: "Listar pelo menos 3 diferenciais plausíveis." },
+      { id: uid("rce",3), label: "Justificativa", type: "textarea", max_score: 2, correct_answer: "Correlacionar achados da anamnese e exame físico com cada hipótese." },
+      { id: uid("rce",4), label: "Complementares", type: "section_header" },
+      { id: uid("rce",5), label: "Exames", type: "textarea", max_score: 2, correct_answer: "Exames pertinentes com justificativa clínica para cada solicitação." },
+    ],
+  },
+  // ── Plano Terapêutico ──
+  {
+    area: "medicine", module_type: "plano_terapeutico", form_type: "standard",
+    title: "Plano Terapêutico",
+    description: "Conduta farmacológica e não farmacológica",
+    content_json: [
+      { id: uid("pt",0), label: "Conduta Farmacológica", type: "section_header" },
+      { id: uid("pt",1), label: "Prescrição medicamentosa (medicamento, dose, via, posologia)", type: "textarea", required: true, max_score: 3 },
+      { id: uid("pt",2), label: "Conduta Não Farmacológica", type: "section_header" },
+      { id: uid("pt",3), label: "Orientações e medidas não medicamentosas", type: "textarea", required: true, max_score: 2 },
+      { id: uid("pt",4), label: "Encaminhamentos", type: "section_header" },
+      { id: uid("pt",5), label: "Encaminhamentos para outras especialidades", type: "textarea", max_score: 1.5 },
+      { id: uid("pt",6), label: "Seguimento", type: "section_header" },
+      { id: uid("pt",7), label: "Plano de seguimento (retorno, exames de controle)", type: "textarea", required: true, max_score: 1.5 },
+    ],
+  },
+  {
+    area: "medicine", module_type: "plano_terapeutico", form_type: "answer_key",
+    title: "Espelho — Plano Terapêutico",
+    description: "Gabarito de plano terapêutico",
+    content_json: [
+      { id: uid("pte",0), label: "Farmacológico", type: "section_header" },
+      { id: uid("pte",1), label: "Prescrição", type: "textarea", max_score: 3, correct_answer: "Prescrição completa: nome genérico, concentração, forma farmacêutica, dose, via, frequência, duração." },
+      { id: uid("pte",2), label: "Não Farmacológico", type: "section_header" },
+      { id: uid("pte",3), label: "Orientações", type: "textarea", max_score: 2, correct_answer: "MEV: dieta, atividade física, cessação tabagismo, educação sobre a doença." },
+      { id: uid("pte",4), label: "Encaminhamentos", type: "section_header" },
+      { id: uid("pte",5), label: "Encaminhamentos", type: "textarea", max_score: 1.5, correct_answer: "Justificar especialidade e motivo do encaminhamento." },
+      { id: uid("pte",6), label: "Seguimento", type: "section_header" },
+      { id: uid("pte",7), label: "Seguimento", type: "textarea", max_score: 1.5, correct_answer: "Retorno em prazo adequado, exames de controle pertinentes, metas terapêuticas." },
+    ],
+  },
+];
