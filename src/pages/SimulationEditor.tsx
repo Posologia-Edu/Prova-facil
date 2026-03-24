@@ -168,6 +168,9 @@ export default function SimulationEditor() {
   const [clinicalCases, setClinicalCases] = useState<{ id: string; title: string; script: string }[]>([]);
   const lastSavedFormSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(true);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState<any>(null);
 
   useEffect(() => {
     if (activeForm) {
