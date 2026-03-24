@@ -109,6 +109,9 @@ export default function ReconciliationEditor() {
   const [activeAnswerKeyCaseId, setActiveAnswerKeyCaseId] = useState<string>("");
   const lastSavedSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState<any>(null);
 
   const getDefaultFormTitle = (type: "reconciliation" | "answer_key") => {
     return type === "answer_key" ? "Espelho de Respostas" : "Ficha de Reconciliação";
