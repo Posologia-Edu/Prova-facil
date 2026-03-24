@@ -24,6 +24,7 @@ export default function NutritionSimulations() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [createModuleType, setCreateModuleType] = useState<NutritionModuleType>("anamnese_nutricional");
+  const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
 
   const moduleTypes: NutritionModuleType[] = ["anamnese_nutricional", "avaliacao_antropometrica", "plano_alimentar", "orientacao_nutricional"];
 
