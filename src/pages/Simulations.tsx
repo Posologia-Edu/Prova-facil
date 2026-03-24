@@ -920,6 +920,18 @@ export default function Simulations() {
           }}
         />
       )}
+
+      {splitSoapRoomId && (
+        <GenericSplitRoomDialog roomId={splitSoapRoomId} open={!!splitSoapRoomId} onOpenChange={(o) => { if (!o) setSplitSoapRoomId(null); }} onComplete={() => { setSplitSoapRoomId(null); queryClient.invalidateQueries({ queryKey: ["soap-rooms-list"] }); }} tablePrefix="soap" />
+      )}
+
+      {splitReconciliationRoomId && (
+        <GenericSplitRoomDialog roomId={splitReconciliationRoomId} open={!!splitReconciliationRoomId} onOpenChange={(o) => { if (!o) setSplitReconciliationRoomId(null); }} onComplete={() => { setSplitReconciliationRoomId(null); queryClient.invalidateQueries({ queryKey: ["reconciliation-rooms-list"] }); }} tablePrefix="reconciliation" />
+      )}
+
+      {splitDocumentationRoomId && (
+        <GenericSplitRoomDialog roomId={splitDocumentationRoomId} open={!!splitDocumentationRoomId} onOpenChange={(o) => { if (!o) setSplitDocumentationRoomId(null); }} onComplete={() => { setSplitDocumentationRoomId(null); queryClient.invalidateQueries({ queryKey: ["documentation-rooms-list"] }); }} tablePrefix="documentation" />
+      )}
     </div>
   );
 }
