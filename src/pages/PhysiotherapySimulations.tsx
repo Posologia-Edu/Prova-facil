@@ -24,6 +24,7 @@ export default function PhysiotherapySimulations() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [createModuleType, setCreateModuleType] = useState<PhysiotherapyModuleType>("avaliacao_funcional");
+  const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
 
   const moduleTypes: PhysiotherapyModuleType[] = ["avaliacao_funcional", "cinetico_funcional", "plano_fisioterapeutico", "evolucao_fisio"];
 
