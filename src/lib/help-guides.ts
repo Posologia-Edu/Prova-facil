@@ -590,8 +590,8 @@ export const helpGuides: Record<string, ModuleGuide> = {
     ]
   },
 
-  exame_clinico_odonto: {
-    moduleKey: "exame_clinico_odonto",
+  exame_clinico: {
+    moduleKey: "exame_clinico",
     title: "Como usar o módulo de Exame Clínico",
     steps: [
       {
