@@ -1232,6 +1232,48 @@ export type Database = {
           },
         ]
       }
+      form_templates: {
+        Row: {
+          area: string
+          content_json: Json
+          created_at: string
+          description: string | null
+          form_type: string
+          id: string
+          is_native: boolean
+          module_type: string
+          owner_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          content_json?: Json
+          created_at?: string
+          description?: string | null
+          form_type?: string
+          id?: string
+          is_native?: boolean
+          module_type: string
+          owner_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          content_json?: Json
+          created_at?: string
+          description?: string | null
+          form_type?: string
+          id?: string
+          is_native?: boolean
+          module_type?: string
+          owner_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kfe_answers: {
         Row: {
           answer_json: Json
