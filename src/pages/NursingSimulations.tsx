@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Heart } from "lucide-react";
+import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Heart, Scissors } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { nursingModules, moduleLabel, type NursingModuleType } from "@/lib/nursing-modules";
 import SystemPromptViewer from "@/components/SystemPromptViewer";
+import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
 
 export default function NursingSimulations() {
   const navigate = useNavigate();
