@@ -16,6 +16,7 @@ import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gave
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { generateDistribution } from "@/lib/mock-trial-distribution";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
@@ -327,6 +328,7 @@ export default function MockTrialEditor() {
 
   return (
     <div className="p-6 space-y-6">
+      <ModuleHelpGuide moduleKey="mock_trial" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => navigate("/mock-trials")}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar

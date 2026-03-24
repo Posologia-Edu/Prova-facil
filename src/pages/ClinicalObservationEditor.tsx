@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2, Save, Copy, ClipboardCheck, BarChart3, Settings } from "lucide-react";
 import { toast } from "sonner";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 interface Domain {
   id: string;
@@ -98,6 +99,7 @@ export default function ClinicalObservationEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="clinical_observation" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/clinical-observations")}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">

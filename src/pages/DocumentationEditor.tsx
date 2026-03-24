@@ -16,6 +16,7 @@ import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 type MedColumn = { id: string; label: string };
 type MedFormContent = { columns: MedColumn[]; rows_score: number; answer_rows?: Record<string, string>[] };
@@ -476,6 +477,7 @@ export default function DocumentationEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="documentacao" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/simulations/documentation")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar

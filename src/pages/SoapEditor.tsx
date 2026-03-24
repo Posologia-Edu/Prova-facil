@@ -17,6 +17,7 @@ import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 // FormField type imported from @/components/forms/types
 
@@ -313,6 +314,7 @@ export default function SoapEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="soap" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/simulations/soap")}>
           <ArrowLeft className="h-5 w-5" />

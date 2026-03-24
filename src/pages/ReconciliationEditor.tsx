@@ -16,6 +16,7 @@ import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSq
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 // FormField type imported from @/components/forms/types
 
@@ -414,6 +415,7 @@ export default function ReconciliationEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="reconciliacao" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/simulations/reconciliation")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar

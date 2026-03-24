@@ -18,6 +18,7 @@ import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 
 type Participant = {
@@ -495,6 +496,7 @@ export default function SimulationEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="anamnese" />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate("/simulations")}>

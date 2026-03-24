@@ -15,6 +15,7 @@ import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { moduleLabel, type MedicineModuleType } from "@/lib/medicine-modules";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 export default function MedicineEditor() {
   const { roomId, moduleType } = useParams<{ roomId: string; moduleType: string }>();
@@ -185,6 +186,7 @@ export default function MedicineEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey={mt} />
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/medicine")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar

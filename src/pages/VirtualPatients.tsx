@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Flame, Zap, User, Play, RotateCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 interface PatientInfo {
   id: string;
@@ -121,6 +122,7 @@ export default function VirtualPatients() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="virtual_patients" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Pacientes Virtuais</h1>

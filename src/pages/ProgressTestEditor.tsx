@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, Plus, Trash2, Share2, Copy, BookOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 export default function ProgressTestEditor() {
   const { id } = useParams<{ id: string }>();
@@ -125,6 +126,7 @@ export default function ProgressTestEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="progress_test" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/progress-test")}>
           <ArrowLeft className="h-4 w-4" />

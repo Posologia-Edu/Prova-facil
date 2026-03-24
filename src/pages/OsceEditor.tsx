@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { OsceStationEditor } from "@/components/osce/OsceStationEditor";
 import { OsceAIGenerator } from "@/components/osce/OsceAIGenerator";
 import { OsceCircuitSetupDialog } from "@/components/osce/OsceCircuitSetupDialog";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 export default function OsceEditor() {
   const { id } = useParams<{ id: string }>();
@@ -76,6 +77,7 @@ export default function OsceEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey="osce" />
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/osce")}>
           <ArrowLeft className="h-5 w-5" />

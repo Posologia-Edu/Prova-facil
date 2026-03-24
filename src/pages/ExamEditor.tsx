@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   TrendingUp,
 } from "lucide-react";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -671,6 +672,7 @@ export default function ExamEditorPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-4">
+      <ModuleHelpGuide moduleKey="exams" />
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
