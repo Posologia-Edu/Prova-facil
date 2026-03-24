@@ -15,6 +15,7 @@ import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { nutritionModuleLabel, type NutritionModuleType } from "@/lib/nutrition-modules";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 export default function NutritionEditor() {
   const { roomId, moduleType } = useParams<{ roomId: string; moduleType: string }>();
