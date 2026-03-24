@@ -210,10 +210,11 @@ export default function NutritionEditor() {
         </TabsContent>
 
         <TabsContent value="forms" className="space-y-4">
+          <Button variant="outline" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
           {forms.map((form: any) => (
             <Card key={form.id} className={form.form_type === "answer_key" ? "ml-4 border-l-4 border-l-primary/30" : ""}>
               <CardHeader className="pb-2"><div className="flex items-center justify-between"><div><CardTitle className="text-base">{form.title}</CardTitle><Badge variant="outline" className="mt-1">{formTypeLabel[form.form_type] || form.form_type}</Badge></div>
-                <div className="flex gap-1"><Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button><Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div>
+                <div className="flex gap-1"><Button variant="ghost" size="sm" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button><Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div>
               </div></CardHeader>
             </Card>
           ))}
