@@ -10,10 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, RotateCcw } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, RotateCcw, Star, BookmarkPlus } from "lucide-react";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { moduleLabel, type PhysiotherapyModuleType } from "@/lib/physiotherapy-modules";
+import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
 
 export default function PhysiotherapyEditor() {
   const { roomId, moduleType } = useParams<{ roomId: string; moduleType: string }>();
@@ -74,6 +75,9 @@ export default function PhysiotherapyEditor() {
   const [newEmail, setNewEmail] = useState("");
   const [newCaseTitle, setNewCaseTitle] = useState("");
   const [newCaseContent, setNewCaseContent] = useState("");
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState<any>(null);
 
   const students = participants.filter(p => p.participant_role === "student");
   const pairs = students.reduce((acc: Record<number, any[]>, p) => {
@@ -287,6 +291,7 @@ export default function PhysiotherapyEditor() {
         </TabsContent>
 
         <TabsContent value="forms" className="space-y-4">
+          <Button variant="outline" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
           {forms.map((form: any) => (
             <Card key={form.id} className={form.form_type === "answer_key" ? "ml-4 border-l-4 border-l-primary/30" : ""}>
               <CardHeader className="pb-2">
@@ -296,6 +301,7 @@ export default function PhysiotherapyEditor() {
                     <Badge variant="outline" className="mt-1">{formTypeLabel[form.form_type] || form.form_type}</Badge>
                   </div>
                   <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
                     <Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button>
                     <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
