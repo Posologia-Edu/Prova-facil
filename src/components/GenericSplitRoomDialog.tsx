@@ -110,11 +110,11 @@ export default function GenericSplitRoomDialog({ roomId, open, onOpenChange, onC
         // Copy duration if exists
         if (room.duration_minutes !== undefined) roomInsert.duration_minutes = room.duration_minutes;
 
-        const { data: newRoom, error: roomErr } = await supabase
+        const { data: newRoom, error: roomErr } = await (supabase
           .from(roomsTable)
           .insert(roomInsert)
           .select()
-          .single();
+          .single() as any);
         if (roomErr || !newRoom) throw roomErr;
 
         // Copy forms
