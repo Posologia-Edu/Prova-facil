@@ -497,7 +497,8 @@ export default function SoapEditor() {
 
         {/* Forms Tab */}
         <TabsContent value="forms" className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
             <Dialog open={importFormDialogOpen} onOpenChange={setImportFormDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline"><Copy className="h-4 w-4 mr-2" />Importar Formulários de Outra Sala</Button>
