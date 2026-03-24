@@ -24,6 +24,7 @@ export default function BiomedicineSimulations() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [createModuleType, setCreateModuleType] = useState<BiomedicineModuleType>("analise_laboratorial");
+  const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
 
   const moduleTypes: BiomedicineModuleType[] = ["analise_laboratorial", "controle_qualidade", "interpretacao_resultados", "laudo_tecnico"];
 
