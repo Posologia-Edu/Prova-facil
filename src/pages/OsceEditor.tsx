@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { OsceStationEditor } from "@/components/osce/OsceStationEditor";
 import { OsceAIGenerator } from "@/components/osce/OsceAIGenerator";
 import { OsceCircuitSetupDialog } from "@/components/osce/OsceCircuitSetupDialog";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 export default function OsceEditor() {
   const { id } = useParams<{ id: string }>();
