@@ -575,7 +575,7 @@ export default function SoapEditor() {
         </TabsContent>
       </Tabs>
 
-      <SplitSoapRoomDialog
+      <GenericSplitRoomDialog
         roomId={roomId!}
         open={splitDialogOpen}
         onOpenChange={setSplitDialogOpen}
@@ -583,6 +583,7 @@ export default function SoapEditor() {
           setSplitDialogOpen(false);
           navigate("/simulations/soap");
         }}
+        tablePrefix="soap"
       />
     </div>
   );
