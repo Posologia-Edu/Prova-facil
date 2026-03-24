@@ -31,6 +31,8 @@ export type FormField = {
   scale_max_label?: string;
   /** Correct answer for scoring — index for radio/dropdown, indices for checkbox, text for text/textarea, number for scale/rating */
   correct_answer?: string | number | number[];
+  /** Per-option scores for radio/dropdown/checkbox. Maps option index → score value. Allows partial scoring. */
+  option_scores?: Record<string, number>;
   /** Feedback shown when answer is correct */
   feedback_correct?: string;
   /** Feedback shown when answer is incorrect */
@@ -44,27 +46,45 @@ export type FormField = {
 export function computeFieldScore(field: FormField, answerValue: any): number {
   if (!field.max_score || answerValue == null) return 0;
 
-  // Handle radio/dropdown: compare selected option to correct_answer (option index)
+  // Handle radio/dropdown: use per-option scores if available, else binary correct/incorrect
   if (field.type === "radio" || field.type === "dropdown") {
-    if (field.correct_answer != null && field.options) {
-      const correctIdx = Number(field.correct_answer);
+    if (field.options) {
       const selectedIdx = field.options.indexOf(String(answerValue));
-      return selectedIdx === correctIdx ? field.max_score : 0;
+      // Per-option scores take priority
+      if (field.option_scores && selectedIdx >= 0) {
+        const optScore = field.option_scores[String(selectedIdx)];
+        if (optScore != null) return Math.min(optScore, field.max_score);
+      }
+      // Fallback to binary correct_answer
+      if (field.correct_answer != null) {
+        const correctIdx = Number(field.correct_answer);
+        return selectedIdx === correctIdx ? field.max_score : 0;
+      }
     }
-    // Fallback: try numeric value
     const numVal = Number(answerValue) || 0;
     return Math.min(numVal, field.max_score);
   }
 
-  // Handle checkbox: compare selected indices to correct_answer (array of indices)
+  // Handle checkbox: use per-option scores if available (sum selected), else binary
   if (field.type === "checkbox") {
-    if (field.correct_answer != null && Array.isArray(field.correct_answer) && field.options) {
-      const correctIndices = new Set((field.correct_answer as number[]).map(Number));
+    if (field.options) {
       const selectedValues = Array.isArray(answerValue) ? answerValue : [answerValue];
-      const selectedIndices = new Set(selectedValues.map((v: any) => field.options!.indexOf(String(v))).filter((i: number) => i >= 0));
-      // All correct selected and no extras
-      const isCorrect = correctIndices.size === selectedIndices.size && [...correctIndices].every(i => selectedIndices.has(i));
-      return isCorrect ? field.max_score : 0;
+      const selectedIndices = selectedValues.map((v: any) => field.options!.indexOf(String(v))).filter((i: number) => i >= 0);
+      // Per-option scores: sum the scores of selected options
+      if (field.option_scores && Object.keys(field.option_scores).length > 0) {
+        const total = selectedIndices.reduce((sum: number, idx: number) => {
+          const optScore = field.option_scores![String(idx)];
+          return sum + (optScore != null ? optScore : 0);
+        }, 0);
+        return Math.min(total, field.max_score);
+      }
+      // Fallback to binary
+      if (field.correct_answer != null && Array.isArray(field.correct_answer)) {
+        const correctSet = new Set((field.correct_answer as number[]).map(Number));
+        const selectedSet = new Set(selectedIndices);
+        const isCorrect = correctSet.size === selectedSet.size && [...correctSet].every(i => selectedSet.has(i));
+        return isCorrect ? field.max_score : 0;
+      }
     }
     const numVal = Number(answerValue) || 0;
     return Math.min(numVal, field.max_score);
