@@ -140,6 +140,9 @@ export default function Simulations() {
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(10);
   const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
+  const [splitSoapRoomId, setSplitSoapRoomId] = useState<string | null>(null);
+  const [splitReconciliationRoomId, setSplitReconciliationRoomId] = useState<string | null>(null);
+  const [splitDocumentationRoomId, setSplitDocumentationRoomId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("areas");
 
   const { data: rooms, isLoading } = useQuery({
