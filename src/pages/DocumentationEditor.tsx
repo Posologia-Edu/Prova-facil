@@ -657,6 +657,9 @@ export default function DocumentationEditor() {
 
         {/* Referral form tab */}
         <TabsContent value="referral" className="space-y-4">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
+          </div>
           {/* Existing referral forms */}
           {[...forms.filter((f: any) => f.form_type === "referral" || f.form_type === "referral_answer_key")].sort((a, b) => {
             const order: Record<string, number> = { referral: 0, referral_answer_key: 1 };
