@@ -15,6 +15,7 @@ import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { moduleLabel, type PhysiotherapyModuleType } from "@/lib/physiotherapy-modules";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 export default function PhysiotherapyEditor() {
   const { roomId, moduleType } = useParams<{ roomId: string; moduleType: string }>();
