@@ -169,6 +169,9 @@ export default function BiomedicineSimulations() {
           </TabsContent>
         ))}
       </Tabs>
+      {splitRoomId && (
+        <GenericSplitRoomDialog roomId={splitRoomId} open={!!splitRoomId} onOpenChange={(o) => { if (!o) setSplitRoomId(null); }} onComplete={() => { setSplitRoomId(null); queryClient.invalidateQueries({ queryKey: ["biomedicine-rooms-all"] }); queryClient.invalidateQueries({ queryKey: ["biomedicine-participant-counts"] }); }} tablePrefix="biomedicine" />
+      )}
     </div>
   );
 }

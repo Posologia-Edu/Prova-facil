@@ -169,6 +169,9 @@ export default function PhysiotherapySimulations() {
           </TabsContent>
         ))}
       </Tabs>
+      {splitRoomId && (
+        <GenericSplitRoomDialog roomId={splitRoomId} open={!!splitRoomId} onOpenChange={(o) => { if (!o) setSplitRoomId(null); }} onComplete={() => { setSplitRoomId(null); queryClient.invalidateQueries({ queryKey: ["physiotherapy-rooms-all"] }); queryClient.invalidateQueries({ queryKey: ["physiotherapy-participant-counts"] }); }} tablePrefix="physiotherapy" />
+      )}
     </div>
   );
 }
