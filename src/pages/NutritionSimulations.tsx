@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Apple } from "lucide-react";
+import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Apple, Scissors } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { nutritionModules, nutritionModuleLabel, type NutritionModuleType } from "@/lib/nutrition-modules";
 import SystemPromptViewer from "@/components/SystemPromptViewer";
+import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
 
 export default function NutritionSimulations() {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export default function NutritionSimulations() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [createModuleType, setCreateModuleType] = useState<NutritionModuleType>("anamnese_nutricional");
+  const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
 
   const moduleTypes: NutritionModuleType[] = ["anamnese_nutricional", "avaliacao_antropometrica", "plano_alimentar", "orientacao_nutricional"];
 
@@ -152,6 +154,9 @@ export default function NutritionSimulations() {
                       <Play className="h-3.5 w-3.5 mr-1" />{room.status === "completed" ? "Resultados" : "Controle"}
                     </Button>
                   )}
+                  {room.status === "draft" && studentCount > 0 && (
+                    <Button variant="outline" size="sm" onClick={() => setSplitRoomId(room.id)}><Scissors className="h-3.5 w-3.5 mr-1" />Dividir</Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={() => duplicateRoom.mutate(room.id)} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
@@ -223,6 +228,10 @@ export default function NutritionSimulations() {
           </TabsContent>
         ))}
       </Tabs>
+
+      {splitRoomId && (
+        <GenericSplitRoomDialog roomId={splitRoomId} open={!!splitRoomId} onOpenChange={(o) => { if (!o) setSplitRoomId(null); }} onComplete={() => { setSplitRoomId(null); queryClient.invalidateQueries({ queryKey: ["nutrition-rooms-all"] }); queryClient.invalidateQueries({ queryKey: ["nutrition-participant-counts"] }); }} tablePrefix="nutrition" />
+      )}
     </div>
   );
 }

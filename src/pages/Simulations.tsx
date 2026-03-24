@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy, Heart, Activity, Dumbbell, Microscope, ArrowLeft } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import SplitRoomDialog from "@/components/SplitRoomDialog";
+import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
 
 const pharmacyModules = [
   {
@@ -139,6 +140,9 @@ export default function Simulations() {
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(10);
   const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
+  const [splitSoapRoomId, setSplitSoapRoomId] = useState<string | null>(null);
+  const [splitReconciliationRoomId, setSplitReconciliationRoomId] = useState<string | null>(null);
+  const [splitDocumentationRoomId, setSplitDocumentationRoomId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("areas");
 
   const { data: rooms, isLoading } = useQuery({
@@ -735,6 +739,11 @@ export default function Simulations() {
                           {room.status === "completed" ? "Resultados" : t("sim_control")}
                         </Button>
                       )}
+                      {room.status === "draft" && (
+                        <Button variant="outline" size="sm" onClick={() => setSplitSoapRoomId(room.id)}>
+                          <Scissors className="h-3.5 w-3.5 mr-1" />Dividir
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" onClick={() => duplicateSoapRoom.mutate(room.id)} title="Duplicar">
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
@@ -803,6 +812,11 @@ export default function Simulations() {
                         <Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/simulations/reconciliation/control/${room.id}`)}>
                           {room.status === "completed" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
                           {room.status === "completed" ? "Resultados" : t("sim_control")}
+                        </Button>
+                      )}
+                      {room.status === "draft" && (
+                        <Button variant="outline" size="sm" onClick={() => setSplitReconciliationRoomId(room.id)}>
+                          <Scissors className="h-3.5 w-3.5 mr-1" />Dividir
                         </Button>
                       )}
                       <Button variant="outline" size="sm" onClick={() => duplicateReconciliationRoom.mutate(room.id)} title="Duplicar">
@@ -874,6 +888,11 @@ export default function Simulations() {
                           {room.status === "completed" ? "Resultados" : t("sim_control")}
                         </Button>
                       )}
+                      {room.status === "draft" && (
+                        <Button variant="outline" size="sm" onClick={() => setSplitDocumentationRoomId(room.id)}>
+                          <Scissors className="h-3.5 w-3.5 mr-1" />Dividir
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" onClick={() => duplicateDocumentationRoom.mutate(room.id)} title="Duplicar">
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
@@ -900,6 +919,18 @@ export default function Simulations() {
             queryClient.invalidateQueries({ queryKey: ["simulation-participant-counts"] });
           }}
         />
+      )}
+
+      {splitSoapRoomId && (
+        <GenericSplitRoomDialog roomId={splitSoapRoomId} open={!!splitSoapRoomId} onOpenChange={(o) => { if (!o) setSplitSoapRoomId(null); }} onComplete={() => { setSplitSoapRoomId(null); queryClient.invalidateQueries({ queryKey: ["soap-rooms-list"] }); }} tablePrefix="soap" />
+      )}
+
+      {splitReconciliationRoomId && (
+        <GenericSplitRoomDialog roomId={splitReconciliationRoomId} open={!!splitReconciliationRoomId} onOpenChange={(o) => { if (!o) setSplitReconciliationRoomId(null); }} onComplete={() => { setSplitReconciliationRoomId(null); queryClient.invalidateQueries({ queryKey: ["reconciliation-rooms-list"] }); }} tablePrefix="reconciliation" />
+      )}
+
+      {splitDocumentationRoomId && (
+        <GenericSplitRoomDialog roomId={splitDocumentationRoomId} open={!!splitDocumentationRoomId} onOpenChange={(o) => { if (!o) setSplitDocumentationRoomId(null); }} onComplete={() => { setSplitDocumentationRoomId(null); queryClient.invalidateQueries({ queryKey: ["documentation-rooms-list"] }); }} tablePrefix="documentation" />
       )}
     </div>
   );

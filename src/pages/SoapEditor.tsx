@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy, GraduationCap, Shuffle, RotateCcw } from "lucide-react";
-import SplitSoapRoomDialog from "@/components/SplitSoapRoomDialog";
+import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 
@@ -575,7 +575,7 @@ export default function SoapEditor() {
         </TabsContent>
       </Tabs>
 
-      <SplitSoapRoomDialog
+      <GenericSplitRoomDialog
         roomId={roomId!}
         open={splitDialogOpen}
         onOpenChange={setSplitDialogOpen}
@@ -583,6 +583,7 @@ export default function SoapEditor() {
           setSplitDialogOpen(false);
           navigate("/simulations/soap");
         }}
+        tablePrefix="soap"
       />
     </div>
   );
