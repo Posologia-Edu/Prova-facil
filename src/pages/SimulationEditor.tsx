@@ -12,11 +12,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download, AlertTriangle, CheckCircle, Pencil, Check, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download, AlertTriangle, CheckCircle, Pencil, Check, X, Star, BookmarkPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { Checkbox } from "@/components/ui/checkbox";
+import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
 
 
 type Participant = {
@@ -167,6 +168,9 @@ export default function SimulationEditor() {
   const [clinicalCases, setClinicalCases] = useState<{ id: string; title: string; script: string }[]>([]);
   const lastSavedFormSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(true);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState<any>(null);
 
   useEffect(() => {
     if (activeForm) {
@@ -667,6 +671,12 @@ export default function SimulationEditor() {
 
         {/* Forms Tab */}
         <TabsContent value="forms" className="space-y-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-1" />Usar Template</Button>
+            {activeForm && (
+              <Button variant="outline" size="sm" onClick={() => { setSaveTemplateForm({ title: formTitle, form_type: activeFormType, content_json: activeFormType === "patient_script" ? clinicalCases : formFields }); setSaveTemplateDialogOpen(true); }}><BookmarkPlus className="h-4 w-4 mr-1" />Salvar como Template</Button>
+            )}
+          </div>
           <div className="flex gap-2 flex-wrap">
             {formTypes.map((ft) => (
               <Button
@@ -818,6 +828,8 @@ export default function SimulationEditor() {
           )}
         </TabsContent>
       </Tabs>
+      <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="anamnese" onApply={(title, ft, fields) => { setFormTitle(title); setFormFields(fields); }} />
+      {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="anamnese" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
     </div>
   );
 }

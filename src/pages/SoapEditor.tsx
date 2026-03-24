@@ -12,10 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy, GraduationCap, Shuffle, RotateCcw } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy, GraduationCap, Shuffle, RotateCcw, Star, BookmarkPlus } from "lucide-react";
 import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
+import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
 
 // FormField type imported from @/components/forms/types
 
@@ -215,6 +216,9 @@ export default function SoapEditor() {
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
   const lastSavedSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState<any>(null);
 
   // Field management delegated to FormBuilder
 
@@ -493,7 +497,8 @@ export default function SoapEditor() {
 
         {/* Forms Tab */}
         <TabsContent value="forms" className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
             <Dialog open={importFormDialogOpen} onOpenChange={setImportFormDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline"><Copy className="h-4 w-4 mr-2" />Importar Formulários de Outra Sala</Button>
@@ -562,6 +567,7 @@ export default function SoapEditor() {
                   <CardTitle className="text-base">{form.title}</CardTitle>
                   <div className="flex gap-2 items-center">
                     <Badge variant="outline">{form.form_type === "soap" ? "SOAP" : "Avaliação entre Pares"}</Badge>
+                    <Button variant="ghost" size="icon" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => editForm(form)}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteForm(form.id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
@@ -585,6 +591,8 @@ export default function SoapEditor() {
         }}
         tablePrefix="soap"
       />
+      <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="soap" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft); setFormFields(fields); }} />
+      {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="soap" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
     </div>
   );
 }

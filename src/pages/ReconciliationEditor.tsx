@@ -12,9 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw, Download } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw, Download, Star, BookmarkPlus } from "lucide-react";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
+import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
 
 // FormField type imported from @/components/forms/types
 
@@ -108,6 +109,9 @@ export default function ReconciliationEditor() {
   const [activeAnswerKeyCaseId, setActiveAnswerKeyCaseId] = useState<string>("");
   const lastSavedSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState<any>(null);
 
   const getDefaultFormTitle = (type: "reconciliation" | "answer_key") => {
     return type === "answer_key" ? "Espelho de Respostas" : "Ficha de Reconciliação";
@@ -599,6 +603,9 @@ export default function ReconciliationEditor() {
 
         {/* Forms Tab */}
         <TabsContent value="forms" className="space-y-4">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
+          </div>
           {/* Import from other rooms */}
           {otherRooms && otherRooms.length > 0 && (
             <Card>
@@ -635,6 +642,7 @@ export default function ReconciliationEditor() {
                     </Badge>
                   </div>
                   <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
                     <Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button>
                     <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
@@ -794,6 +802,8 @@ export default function ReconciliationEditor() {
           </Card>
         </TabsContent>
       </Tabs>
+      <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="reconciliacao" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft as any); setFormFields(fields); setAnswerKeyByCaseId({}); }} />
+      {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="reconciliacao" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
     </div>
   );
 }
