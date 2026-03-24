@@ -45,9 +45,9 @@ export default function GenericSplitRoomDialog({ roomId, open, onOpenChange, onC
     if (!open || !roomId) return;
     const load = async () => {
       const [{ data: roomData }, { data: parts }, { data: formsData }] = await Promise.all([
-        supabase.from(roomsTable).select("*").eq("id", roomId).single(),
-        supabase.from(participantsTable).select("*").eq("room_id", roomId),
-        supabase.from(formsTable).select("*").eq("room_id", roomId),
+        supabase.from(roomsTable).select("*").eq("id", roomId).single() as any,
+        supabase.from(participantsTable).select("*").eq("room_id", roomId) as any,
+        supabase.from(formsTable).select("*").eq("room_id", roomId) as any,
       ]);
       setRoom(roomData);
       setParticipants(parts || []);
