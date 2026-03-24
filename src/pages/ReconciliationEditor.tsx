@@ -16,6 +16,7 @@ import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSq
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 // FormField type imported from @/components/forms/types
 
