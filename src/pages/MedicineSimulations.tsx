@@ -24,6 +24,7 @@ export default function MedicineSimulations() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [createModuleType, setCreateModuleType] = useState<MedicineModuleType>("anamnese_medica");
+  const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
 
   const moduleTypes: MedicineModuleType[] = ["anamnese_medica", "exame_fisico", "raciocinio_clinico", "plano_terapeutico"];
 
