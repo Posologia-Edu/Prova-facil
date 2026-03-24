@@ -10,10 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, RotateCcw } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, RotateCcw, Star, BookmarkPlus } from "lucide-react";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { moduleLabel, type MedicineModuleType } from "@/lib/medicine-modules";
+import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
 
 export default function MedicineEditor() {
   const { roomId, moduleType } = useParams<{ roomId: string; moduleType: string }>();
