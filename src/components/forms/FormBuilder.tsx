@@ -474,31 +474,39 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
                   </div>
                 )}
 
-                {/* Checkbox: select multiple correct options */}
+                {/* Checkbox: per-option scores */}
                 {field.type === "checkbox" && (
-                  <div className="space-y-1.5">
-                    <p className="text-xs text-muted-foreground">Selecione as alternativas corretas:</p>
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Pontuação por alternativa (soma das selecionadas):</p>
                     {(field.options || []).map((opt, optIdx) => {
-                      const correctIndices = Array.isArray(field.correct_answer) ? field.correct_answer : [];
-                      const isChecked = correctIndices.includes(optIdx);
+                      const optionScores = field.option_scores || {};
+                      const currentScore = optionScores[String(optIdx)];
                       return (
                         <div key={optIdx} className="flex items-center gap-2">
-                          <Checkbox
-                            id={`ans-${field.id}-${optIdx}`}
-                            checked={isChecked}
-                            onCheckedChange={(checked) => {
-                              const updated = checked
-                                ? [...correctIndices, optIdx]
-                                : correctIndices.filter((i: number) => i !== optIdx);
-                              updateField(globalIdx, { correct_answer: updated.length > 0 ? updated : undefined });
+                          <span className="text-sm flex-1">{opt || `Opção ${optIdx + 1}`}</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min={0}
+                            max={field.max_score || 0}
+                            placeholder="0"
+                            value={currentScore != null ? currentScore : ""}
+                            onChange={(e) => {
+                              const val = e.target.value ? Math.min(Number(e.target.value), field.max_score || 0) : undefined;
+                              const updated = { ...optionScores };
+                              if (val != null) updated[String(optIdx)] = val;
+                              else delete updated[String(optIdx)];
+                              updateField(globalIdx, { option_scores: Object.keys(updated).length > 0 ? updated : undefined });
                             }}
+                            className="w-20 h-7 text-xs"
                           />
-                          <Label htmlFor={`ans-${field.id}-${optIdx}`} className="text-sm cursor-pointer">
-                            {opt || `Opção ${optIdx + 1}`}
-                          </Label>
+                          <span className="text-xs text-muted-foreground">pts</span>
                         </div>
                       );
                     })}
+                    {Object.values(field.option_scores || {}).reduce((a, b) => a + b, 0) > (field.max_score || 0) && (
+                      <p className="text-xs text-destructive">⚠ Soma das pontuações não pode ultrapassar {field.max_score} pts</p>
+                    )}
                   </div>
                 )}
 
