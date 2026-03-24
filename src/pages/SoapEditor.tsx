@@ -591,6 +591,8 @@ export default function SoapEditor() {
         }}
         tablePrefix="soap"
       />
+      <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="soap" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft); setFormFields(fields); }} />
+      {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="soap" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
     </div>
   );
 }

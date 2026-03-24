@@ -828,6 +828,8 @@ export default function SimulationEditor() {
           )}
         </TabsContent>
       </Tabs>
+      <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="anamnese" onApply={(title, ft, fields) => { setFormTitle(title); setFormFields(fields); }} />
+      {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="anamnese" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
     </div>
   );
 }

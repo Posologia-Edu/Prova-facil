@@ -802,6 +802,8 @@ export default function ReconciliationEditor() {
           </Card>
         </TabsContent>
       </Tabs>
+      <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="reconciliacao" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft as any); setFormFields(fields); setAnswerKeyByCaseId({}); }} />
+      {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="reconciliacao" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
     </div>
   );
 }

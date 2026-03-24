@@ -1016,6 +1016,8 @@ export default function DocumentationEditor() {
           )}
         </TabsContent>
       </Tabs>
+      <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="documentacao" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft); setFormFields(fields); setAnswerKeyByCaseId({}); }} />
+      {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="documentacao" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
     </div>
   );
 }
