@@ -122,6 +122,7 @@ export default function MedicineSimulations() {
                   <Button variant="outline" size="sm" onClick={() => navigate(`/medicine/${moduleType}/editor/${room.id}`)}><Settings className="h-3.5 w-3.5 mr-1" />Editar</Button>
                   {room.status === "draft" && (<Button size="sm" onClick={async () => { await supabase.from("medicine_rooms").update({ status: "active" }).eq("id", room.id); queryClient.invalidateQueries({ queryKey: ["medicine-rooms-all"] }); toast({ title: "Sala ativada!" }); }}><Play className="h-3.5 w-3.5 mr-1" />Ativar</Button>)}
                   {(room.status === "active" || room.status === "completed") && (<Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/medicine/${moduleType}/control/${room.id}`)}><Play className="h-3.5 w-3.5 mr-1" />{room.status === "completed" ? "Resultados" : "Controle"}</Button>)}
+                  {room.status === "draft" && studentCount > 0 && (<Button variant="outline" size="sm" onClick={() => setSplitRoomId(room.id)}><Scissors className="h-3.5 w-3.5 mr-1" />Dividir</Button>)}
                   <Button variant="outline" size="sm" onClick={() => duplicateRoom.mutate(room.id)} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
