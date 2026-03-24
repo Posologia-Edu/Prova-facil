@@ -75,6 +75,9 @@ export default function PhysiotherapyEditor() {
   const [newEmail, setNewEmail] = useState("");
   const [newCaseTitle, setNewCaseTitle] = useState("");
   const [newCaseContent, setNewCaseContent] = useState("");
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState<any>(null);
 
   const students = participants.filter(p => p.participant_role === "student");
   const pairs = students.reduce((acc: Record<number, any[]>, p) => {
