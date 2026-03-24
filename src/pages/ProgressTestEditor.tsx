@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, Plus, Trash2, Share2, Copy, BookOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 export default function ProgressTestEditor() {
   const { id } = useParams<{ id: string }>();
