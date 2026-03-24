@@ -773,8 +773,8 @@ export const helpGuides: Record<string, ModuleGuide> = {
     ]
   },
 
-  diagnostico_cinetico: {
-    moduleKey: "diagnostico_cinetico",
+  cinetico_funcional: {
+    moduleKey: "cinetico_funcional",
     title: "Como usar o módulo de Diagnóstico Cinético-Funcional",
     steps: [
       {

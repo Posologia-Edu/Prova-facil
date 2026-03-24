@@ -186,6 +186,7 @@ export default function PhysiotherapyEditor() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelpGuide moduleKey={mt === "cinetico_funcional" ? "cinetico_funcional" : mt === "plano_fisioterapeutico" ? "plano_fisioterapeutico" : mt === "evolucao_fisio" ? "evolucao_fisio" : "avaliacao_funcional"} />
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/physiotherapy")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar
