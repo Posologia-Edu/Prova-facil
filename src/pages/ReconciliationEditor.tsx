@@ -603,6 +603,9 @@ export default function ReconciliationEditor() {
 
         {/* Forms Tab */}
         <TabsContent value="forms" className="space-y-4">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
+          </div>
           {/* Import from other rooms */}
           {otherRooms && otherRooms.length > 0 && (
             <Card>
