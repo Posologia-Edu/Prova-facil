@@ -186,7 +186,7 @@ export default function MedicineEditor() {
 
   return (
     <div className="space-y-6">
-      <ModuleHelpGuide moduleKey={mt === "exame_fisico" ? "exame_fisico" : mt === "raciocinio_clinico" ? "raciocinio_clinico" : mt === "plano_terapeutico" ? "plano_terapeutico" : "anamnese_medica"} />
+      <ModuleHelpGuide moduleKey={mt} />
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/medicine")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Voltar
