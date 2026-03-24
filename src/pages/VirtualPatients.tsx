@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Flame, Zap, User, Play, RotateCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 interface PatientInfo {
   id: string;
