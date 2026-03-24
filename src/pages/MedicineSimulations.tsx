@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Stethoscope } from "lucide-react";
+import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Stethoscope, Scissors } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { medicineModules, moduleLabel, type MedicineModuleType } from "@/lib/medicine-modules";
 import SystemPromptViewer from "@/components/SystemPromptViewer";
+import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
 
 export default function MedicineSimulations() {
   const navigate = useNavigate();
