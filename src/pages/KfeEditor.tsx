@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ArrowLeft, Plus, Trash2, Save, Copy, Target, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 interface KfCase {
   id: string;
