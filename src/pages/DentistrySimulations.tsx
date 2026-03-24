@@ -24,6 +24,7 @@ export default function DentistrySimulations() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [createModuleType, setCreateModuleType] = useState<DentistryModuleType>("anamnese_odontologica");
+  const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
 
   const moduleTypes: DentistryModuleType[] = ["anamnese_odontologica", "exame_clinico", "plano_tratamento", "orientacao_higiene"];
 
