@@ -378,6 +378,32 @@ export default function NursingEditor() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <FormTemplateDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        area="nursing"
+        moduleType={mt}
+        onApply={(title, ft, fields) => {
+          setEditingFormId(null);
+          setFormTitle(title);
+          setFormType(ft);
+          setFormFields(fields);
+          setAnswerKeyByCaseId({});
+        }}
+      />
+
+      {saveTemplateForm && (
+        <SaveAsTemplateDialog
+          open={saveTemplateDialogOpen}
+          onOpenChange={setSaveTemplateDialogOpen}
+          area="nursing"
+          moduleType={mt}
+          formTitle={saveTemplateForm.title}
+          formType={saveTemplateForm.form_type}
+          contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []}
+        />
+      )}
     </div>
   );
 }
