@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Dumbbell } from "lucide-react";
+import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Dumbbell, Scissors } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { physiotherapyModules, moduleLabel, type PhysiotherapyModuleType } from "@/lib/physiotherapy-modules";
 import SystemPromptViewer from "@/components/SystemPromptViewer";
+import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
 
 export default function PhysiotherapySimulations() {
   const navigate = useNavigate();
