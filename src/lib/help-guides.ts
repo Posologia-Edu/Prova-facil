@@ -612,8 +612,8 @@ export const helpGuides: Record<string, ModuleGuide> = {
     ]
   },
 
-  plano_tratamento_odonto: {
-    moduleKey: "plano_tratamento_odonto",
+  plano_tratamento: {
+    moduleKey: "plano_tratamento",
     title: "Como usar o módulo de Plano de Tratamento",
     steps: [
       {

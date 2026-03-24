@@ -110,7 +110,7 @@ export default function DentistryEditor() {
 
   return (
     <div className="space-y-6">
-      <ModuleHelpGuide moduleKey={mt === "exame_clinico" ? "exame_clinico_odonto" : mt === "plano_tratamento" ? "plano_tratamento_odonto" : mt === "orientacao_higiene" ? "orientacao_higiene" : "anamnese_odontologica"} />
+      <ModuleHelpGuide moduleKey={mt} />
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/dentistry")}><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Button>
         <div>
