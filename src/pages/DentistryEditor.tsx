@@ -167,6 +167,8 @@ export default function DentistryEditor() {
           <Card><CardHeader><CardTitle className="text-base">Novo Caso Clínico</CardTitle></CardHeader><CardContent className="space-y-3"><Input placeholder="Título do caso" value={newCaseTitle} onChange={e => setNewCaseTitle(e.target.value)} /><Textarea placeholder="Conteúdo do caso clínico..." value={newCaseContent} onChange={e => setNewCaseContent(e.target.value)} rows={4} /><Button onClick={addCase} disabled={!newCaseTitle.trim()}><Plus className="h-4 w-4 mr-1" />Adicionar</Button></CardContent></Card>
         </TabsContent>
       </Tabs>
+      <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="dentistry" moduleType={mt} onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft); setFormFields(fields); setAnswerKeyByCaseId({}); }} />
+      {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="dentistry" moduleType={mt} formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
     </div>
   );
 }
