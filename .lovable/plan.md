@@ -1,98 +1,137 @@
 
 
-# Fase 1: Enfermagem Clínica — Plano de Implementação
+# Sistema de Templates de Formulários — Plano de Implementação
 
 ## Visão Geral
 
-Criar uma nova área **"Enfermagem Clínica"** na Simulação Realística com 4 módulos: **Acolhimento**, **SAE (Sistematização da Assistência)**, **Evolução** e **Passagem de Plantão**, além de um **Agregador de Notas** próprio.
-
-**Abordagem híbrida**: tabelas genéricas compartilhadas (`nursing_*`) + páginas dedicadas por módulo.
+Criar um sistema completo de templates reutilizáveis para formulários e espelhos de respostas, com dois tipos:
+- **Templates nativos**: pré-configurados com campos baseados em boas práticas de cada área/módulo
+- **Templates próprios**: formulários existentes que o professor transforma em template para reutilizar
 
 ---
 
-## Arquitetura do Banco de Dados
+## 1. Banco de Dados
 
-Criar 5 tabelas genéricas com um campo `module_type` para diferenciar os 4 módulos:
+Nova tabela `form_templates`:
 
 ```text
-nursing_rooms          (module_type: acolhimento | sae | evolucao | passagem_plantao)
-nursing_participants   (room_id → nursing_rooms)
-nursing_forms          (room_id → nursing_rooms, form_type flexível)
-nursing_clinical_cases (room_id → nursing_rooms)
-nursing_responses      (room_id → nursing_rooms, form_id, clinical_case_id)
+form_templates
+├── id (uuid PK)
+├── owner_id (uuid, ref profiles.user_id)
+├── area (text) — "nursing", "nutrition", "dentistry", "medicine", "physiotherapy", "biomedicine", "pharmacy"
+├── module_type (text) — "acolhimento", "sae", etc.
+├── form_type (text) — "standard" ou "answer_key"
+├── title (text)
+├── description (text nullable)
+├── content_json (jsonb) — FormField[] completo
+├── is_native (boolean default false) — diferencia nativos de próprios
+├── created_at (timestamptz)
+├── updated_at (timestamptz)
 ```
 
-Estrutura idêntica às tabelas de documentação/reconciliação, com adição de `module_type text NOT NULL` em `nursing_rooms`. RLS seguindo o mesmo padrão existente (admin, owner, anon select/insert/update).
+RLS: owner pode CRUD nos próprios; todos autenticados podem SELECT nativos (`is_native = true`).
 
 ---
 
-## Páginas e Rotas
+## 2. Templates Nativos — Conteúdo por Área
 
-### Dashboard Principal
-- **`NursingSimulations.tsx`** — Hub centralizado (mesma estrutura de `Simulations.tsx`) com cards dos 4 módulos + agregador, e abas para listar salas de cada módulo.
+Cada módulo terá 2 templates nativos (formulário + espelho). Conteúdo baseado em protocolos validados:
 
-### Por Módulo (4x, cada um com suas páginas)
-- **`NursingEditor.tsx`** — Editor genérico que adapta labels/formulários conforme `module_type`
-- **`NursingControl.tsx`** — Painel de controle genérico (espelhos, notas, concluir sala)
-- **`NursingJoin.tsx`** — Portal do aluno genérico (redirect 15s após envio)
-- **`NursingRooms.tsx`** — Listagem de salas por módulo (reutilizável via prop/param)
+### Farmácia Clínica
+| Módulo | Formulário | Campos-chave |
+|--------|-----------|-------------|
+| Anamnese | Ficha de Anamnese Farmacêutica | Identificação, queixa principal, HMA, medicamentos em uso, alergias, hábitos de vida, exame físico dirigido |
+| SOAP | Nota SOAP | Subjetivo, Objetivo, Avaliação, Plano farmacoterapêutico |
+| Reconciliação | Ficha de Reconciliação | Medicamentos prescritos vs. em uso, discrepâncias, intervenções propostas |
+| Documentação | Quadro Resumo | Ficha de encaminhamento, quadro resumo de medicamentos |
 
-### Agregador
-- **`NursingAggregator.tsx`** — Notas consolidadas dos 4 módulos
+### Enfermagem Clínica
+| Módulo | Formulário | Campos-chave |
+|--------|-----------|-------------|
+| Acolhimento | Ficha de Acolhimento | Dados do paciente, queixa principal, sinais vitais (PA, FC, FR, T, SpO2), escala de dor, classificação Manchester |
+| SAE | Histórico de Enfermagem | Anamnese, exame físico cefalocaudal, diagnósticos NANDA, resultados NOC, intervenções NIC |
+| Evolução | Evolução de Enfermagem | Registro SOAP adaptado: subjetivo, objetivo, avaliação com diagnósticos, plano de cuidados |
+| Passagem de Plantão | Ficha SBAR | Situação, Background, Avaliação, Recomendação |
 
-### Rotas no App.tsx
-```text
-/nursing                              → NursingSimulations (hub)
-/nursing/:moduleType                  → NursingRooms (listagem filtrada)
-/nursing/:moduleType/editor/:roomId   → NursingEditor
-/nursing/:moduleType/control/:roomId  → NursingControl
-/nursing/aggregator                   → NursingAggregator
-/nursing/join                         → NursingJoin (público, sem auth)
-```
+### Nutrição Clínica
+| Módulo | Formulário | Campos-chave |
+|--------|-----------|-------------|
+| Anamnese Nutricional | Ficha de Anamnese | Dados pessoais, história alimentar, recordatório 24h, frequência alimentar, sintomas GI |
+| Avaliação Antropométrica | Ficha Antropométrica | Peso, altura, IMC, circunferências, dobras cutâneas, classificação nutricional |
+| Plano Alimentar | Plano Alimentar | Cálculo VET, distribuição de macronutrientes, refeições, orientações específicas |
+| Orientação Nutricional | Ficha de Orientação | Metas nutricionais, orientações por patologia, materiais educativos |
+
+### Odontologia Clínica
+| Módulo | Formulário | Campos-chave |
+|--------|-----------|-------------|
+| Anamnese Odontológica | Ficha de Anamnese | Queixa principal, história da doença, antecedentes, medicamentos, alergias, hábitos |
+| Exame Clínico | Ficha de Exame | Exame extraoral, intraoral, odontograma, PSR, índice de placa |
+| Plano de Tratamento | Plano de Tratamento | Diagnósticos, priorização, procedimentos por sessão, prognóstico |
+| Orientação de Higiene | Ficha de Orientação | Técnica de escovação, fio dental, enxaguatório, orientações por condição |
+
+### Medicina
+| Módulo | Formulário | Campos-chave |
+|--------|-----------|-------------|
+| Anamnese Médica | Ficha de Anamnese | QP, HDA, ISDA, antecedentes pessoais/familiares, medicamentos, hábitos |
+| Exame Físico | Ficha de Exame | Ectoscopia, sinais vitais, exame por aparelhos (cardiovascular, pulmonar, abdominal, neurológico) |
+| Raciocínio Clínico | Ficha de Raciocínio | Hipóteses diagnósticas, diagnóstico diferencial, exames complementares, justificativa |
+| Plano Terapêutico | Plano Terapêutico | Conduta farmacológica, não farmacológica, encaminhamentos, seguimento |
+
+### Fisioterapia
+| Módulo | Formulário | Campos-chave |
+|--------|-----------|-------------|
+| Avaliação Funcional | Ficha de Avaliação | Anamnese funcional, inspeção, palpação, testes especiais, ADM, força muscular, escalas funcionais |
+| Diagnóstico Cinético-Funcional | Ficha de Diagnóstico | CIF: função/estrutura do corpo, atividade/participação, fatores ambientais/pessoais |
+| Plano Fisioterapêutico | Plano de Tratamento | Objetivos SMART, recursos terapêuticos, frequência, progressão, critérios de alta |
+| Evolução | Evolução Fisioterapêutica | Registro por sessão: estado do paciente, condutas realizadas, resposta ao tratamento |
+
+### Biomedicina
+| Módulo | Formulário | Campos-chave |
+|--------|-----------|-------------|
+| Análise Laboratorial | Ficha de Análise | Tipo de amostra, método analítico, reagentes, equipamentos, procedimento, controles |
+| Controle de Qualidade | Ficha de CQ | Controle interno (Levey-Jennings), regras de Westgard, calibração, ações corretivas |
+| Interpretação de Resultados | Ficha de Interpretação | Valores obtidos, valores de referência, correlação clínica, interferentes |
+| Laudo Técnico | Modelo de Laudo | Dados do paciente, resultados, observações técnicas, responsável técnico |
+
+Cada espelho terá os mesmos campos com `correct_answer`, `option_scores` e `max_score` preenchidos conforme protocolo.
 
 ---
 
-## Navegação
+## 3. Funcionalidade "Salvar como Template"
 
-Adicionar no **AppSidebar.tsx** um item "Enfermagem Clínica" com ícone `Heart` (ou similar), apontando para `/nursing`.
-
----
-
-## Edge Function
-
-- **`grade-nursing`** — Correção por IA, seguindo o padrão de `grade-documentation` e `grade-reconciliation`, com adaptação de prompt por `module_type`.
+No editor de formulários (aba Formulários), ao lado de cada formulário existente, adicionar botão **"Salvar como Template"** (ícone de bookmark/star). Ao clicar:
+- Salva o `content_json` do formulário na tabela `form_templates` com `is_native = false`
+- O professor pode editar título e descrição do template
 
 ---
 
-## Módulos e seus Formulários Padrão
+## 4. UI — Seletor de Templates
 
-| Módulo | Formulários | Descrição |
-|--------|------------|-----------|
-| **Acolhimento** | Ficha de Acolhimento | Coleta de dados do paciente, queixa principal, sinais vitais, classificação de risco |
-| **SAE** | Histórico, Diagnóstico, Planejamento, Implementação, Avaliação | 5 etapas do processo de enfermagem |
-| **Evolução** | Evolução de Enfermagem | Registro cronológico da evolução do paciente (SOAP adaptado para enfermagem) |
-| **Passagem de Plantão** | Ficha SBAR | Situação, Background, Avaliação, Recomendação |
-
----
-
-## Etapas de Implementação
-
-1. **Migração SQL** — Criar as 5 tabelas `nursing_*` com RLS
-2. **Hub + Listagem** — `NursingSimulations.tsx` (dashboard com cards e abas)
-3. **Editor genérico** — `NursingEditor.tsx` (participantes, formulários, casos clínicos, espelhos)
-4. **Controle genérico** — `NursingControl.tsx` (respostas, espelhos collapsible, notas, concluir)
-5. **Portal do aluno** — `NursingJoin.tsx` (acesso por PIN, formulário, redirect 15s)
-6. **Edge Function** — `grade-nursing` para correção automatizada
-7. **Agregador** — `NursingAggregator.tsx` com notas dos 4 módulos
-8. **Rotas + Sidebar** — Integrar tudo no `App.tsx` e `AppSidebar.tsx`
-9. **Duplicação** — Lógica de duplicação completa nas listagens
+No editor de cada área, na aba Formulários, adicionar botão **"Usar Template"** que abre um Dialog com:
+- **Seção "Templates Nativos"**: cards com templates pré-construídos do módulo atual
+- **Seção "Meus Templates"**: templates próprios do professor para aquele módulo
+- Preview do template (quantidade de campos, pontuação total)
+- Botão "Aplicar" que cria o formulário na sala com o conteúdo do template
 
 ---
 
-## Detalhes Técnicos
+## 5. Arquivos a Criar/Editar
 
-- O campo `module_type` permite queries filtradas (ex: `.eq("module_type", "sae")`) sem criar tabelas separadas
-- Cada página genérica recebe o `moduleType` via `useParams()` e adapta labels, ícones e prompts de IA
-- O padrão de `case_answers` (espelhos por caso) será replicado do módulo de Documentação
-- Formulários pré-configurados por módulo serão criados automaticamente ao criar uma sala (template por `module_type`)
+### Criar
+- `src/lib/form-templates/` — pasta com templates nativos organizados por área (7 arquivos: `pharmacy.ts`, `nursing.ts`, `nutrition.ts`, `dentistry.ts`, `medicine.ts`, `physiotherapy.ts`, `biomedicine.ts`)
+- `src/components/forms/FormTemplateDialog.tsx` — Dialog de seleção de templates
+- Migração SQL para tabela `form_templates`
+
+### Editar
+- Todos os editores (7 arquivos: `SimulationEditor.tsx`, `SoapEditor.tsx`, `ReconciliationEditor.tsx`, `DocumentationEditor.tsx`, `NursingEditor.tsx`, `NutritionEditor.tsx`, `DentistryEditor.tsx`, `MedicineEditor.tsx`, `PhysiotherapyEditor.tsx`, `BiomedicineEditor.tsx`) — adicionar botões "Usar Template" e "Salvar como Template"
+
+---
+
+## 6. Etapas de Implementação
+
+1. **Migração** — Criar tabela `form_templates` com RLS
+2. **Templates nativos** — Definir `FormField[]` completos para cada módulo (28 formulários + 28 espelhos)
+3. **FormTemplateDialog** — Componente genérico que recebe `area`, `moduleType`, `formType` e `formTable`
+4. **Integrar nos editores** — Botões "Usar Template" e "Salvar como Template"
+5. **Seed nativo** — Inserir templates nativos no banco via migração ou carregar em runtime dos arquivos TypeScript
 
