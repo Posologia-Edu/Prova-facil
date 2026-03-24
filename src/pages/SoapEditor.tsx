@@ -216,6 +216,9 @@ export default function SoapEditor() {
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
   const lastSavedSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState<any>(null);
 
   // Field management delegated to FormBuilder
 
