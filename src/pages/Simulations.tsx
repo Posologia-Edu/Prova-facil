@@ -454,8 +454,12 @@ export default function Simulations() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("sim_title")}</h1>
-          <p className="text-muted-foreground">{t("sim_subtitle")}</p>
+          <h1 className="text-2xl font-bold text-foreground">
+            {activeTab === "areas" ? t("sim_title") : "Farmácia Clínica"}
+          </h1>
+          <p className="text-muted-foreground">
+            {activeTab === "areas" ? t("sim_subtitle") : "Simulação realística com módulos de anamnese, SOAP, reconciliação e documentação clínica."}
+          </p>
         </div>
         <SystemPromptViewer toolKey="simulations" />
       </div>
