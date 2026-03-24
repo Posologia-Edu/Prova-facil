@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2, Save, Copy, Scale, BarChart3, GripVertical } from "lucide-react";
 import { toast } from "sonner";
+import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 interface SjtScenario {
   id: string;
