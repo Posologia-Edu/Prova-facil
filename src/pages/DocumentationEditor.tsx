@@ -811,7 +811,7 @@ export default function DocumentationEditor() {
                       <Badge variant="outline" className="mt-1">{formTypeLabel[form.form_type]}</Badge>
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => { setSaveMedTemplateForm(form); setSaveMedTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="sm" onClick={() => editMedForm(form)}>Editar</Button>
                       <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
