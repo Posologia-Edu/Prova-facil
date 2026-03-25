@@ -118,6 +118,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
 import { CookieBanner } from "@/components/CookieBanner";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
+import UpdatePipeline from "./pages/UpdatePipeline";
 
 const queryClient = new QueryClient();
 

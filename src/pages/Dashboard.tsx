@@ -17,6 +17,7 @@ import { Link } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { OnboardingWizard } from "@/components/OnboardingWizard";
+import { RoadmapProactiveDialog } from "@/components/RoadmapProactiveDialog";
 
 interface RecentExam {
   id: string;
