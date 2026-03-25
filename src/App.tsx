@@ -263,6 +263,14 @@ const App = () => (
               }
             />
             <Route
+              path="/updates"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><UpdatePipeline /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/osce"
               element={
                 <ProtectedRoute>
