@@ -24,6 +24,7 @@ import {
   Scale,
   TrendingUp,
   Gavel,
+  Rocket,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
@@ -95,6 +96,7 @@ export function AppSidebar() {
     { title: t("nav_analytics"), url: "/analytics", icon: BarChart3 },
     { title: "Análises VP", url: "/virtual-patients/analytics", icon: BarChart3 },
     { title: "Marketplace", url: "/marketplace", icon: Store },
+    { title: "Atualizações", url: "/updates", icon: Rocket },
   ];
 
   const handleLogout = async () => {

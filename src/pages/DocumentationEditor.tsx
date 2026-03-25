@@ -16,6 +16,7 @@ import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
+import MedTemplateDialog, { SaveMedTemplateDialog } from "@/components/forms/MedTemplateDialog";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 type MedColumn = { id: string; label: string };
@@ -96,6 +97,9 @@ export default function DocumentationEditor() {
   const [newEmail, setNewEmail] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedImportRoom, setSelectedImportRoom] = useState("");
+  const [medTemplateDialogOpen, setMedTemplateDialogOpen] = useState(false);
+  const [saveMedTemplateDialogOpen, setSaveMedTemplateDialogOpen] = useState(false);
+  const [saveMedTemplateForm, setSaveMedTemplateForm] = useState<any>(null);
 
   const addParticipant = async () => {
     if (!newName.trim()) return;
@@ -788,6 +792,7 @@ export default function DocumentationEditor() {
 
         {/* Medication summary tab */}
         <TabsContent value="medication" className="space-y-4">
+          <Button variant="outline" onClick={() => setMedTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
           {/* Existing medication forms */}
           {[...forms.filter((f: any) => f.form_type === "medication_summary" || f.form_type === "medication_answer_key")].sort((a, b) => {
             const order: Record<string, number> = { medication_summary: 0, medication_answer_key: 1 };
@@ -806,6 +811,7 @@ export default function DocumentationEditor() {
                       <Badge variant="outline" className="mt-1">{formTypeLabel[form.form_type]}</Badge>
                     </div>
                     <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => { setSaveMedTemplateForm(form); setSaveMedTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="sm" onClick={() => editMedForm(form)}>Editar</Button>
                       <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
@@ -1020,6 +1026,8 @@ export default function DocumentationEditor() {
       </Tabs>
       <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="documentacao" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft); setFormFields(fields); setAnswerKeyByCaseId({}); }} />
       {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="documentacao" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
+      <MedTemplateDialog open={medTemplateDialogOpen} onOpenChange={setMedTemplateDialogOpen} onApply={(title, ft, content) => { setEditingMedFormId(null); setMedTitle(title); setMedType(ft); setMedColumns(content.columns || []); setMedRowsScore(content.rows_score || 1); setMedAnswerRows(content.answer_rows || []); }} />
+      {saveMedTemplateForm && <SaveMedTemplateDialog open={saveMedTemplateDialogOpen} onOpenChange={setSaveMedTemplateDialogOpen} formTitle={saveMedTemplateForm.title} formType={saveMedTemplateForm.form_type} contentJson={saveMedTemplateForm.content_json} />}
     </div>
   );
 }

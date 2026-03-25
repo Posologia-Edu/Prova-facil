@@ -17,6 +17,7 @@ import { Link } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { OnboardingWizard } from "@/components/OnboardingWizard";
+import { RoadmapProactiveDialog } from "@/components/RoadmapProactiveDialog";
 
 interface RecentExam {
   id: string;
@@ -139,6 +140,7 @@ export default function DashboardPage() {
       </div>
 
       {isNewUser && <OnboardingWizard />}
+      <RoadmapProactiveDialog />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
