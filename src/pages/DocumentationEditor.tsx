@@ -16,6 +16,7 @@ import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
+import MedTemplateDialog, { SaveMedTemplateDialog } from "@/components/forms/MedTemplateDialog";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
 type MedColumn = { id: string; label: string };
