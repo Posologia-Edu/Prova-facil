@@ -97,6 +97,9 @@ export default function DocumentationEditor() {
   const [newEmail, setNewEmail] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedImportRoom, setSelectedImportRoom] = useState("");
+  const [medTemplateDialogOpen, setMedTemplateDialogOpen] = useState(false);
+  const [saveMedTemplateDialogOpen, setSaveMedTemplateDialogOpen] = useState(false);
+  const [saveMedTemplateForm, setSaveMedTemplateForm] = useState<any>(null);
 
   const addParticipant = async () => {
     if (!newName.trim()) return;
