@@ -45,7 +45,7 @@ export default function UpdatePipeline() {
         .select("*")
         .order("completed_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
-      return (data || []) as SystemUpdate[];
+      return (data || []) as unknown as SystemUpdate[];
     },
   });
 
