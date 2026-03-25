@@ -792,6 +792,7 @@ export default function DocumentationEditor() {
 
         {/* Medication summary tab */}
         <TabsContent value="medication" className="space-y-4">
+          <Button variant="outline" onClick={() => setMedTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
           {/* Existing medication forms */}
           {[...forms.filter((f: any) => f.form_type === "medication_summary" || f.form_type === "medication_answer_key")].sort((a, b) => {
             const order: Record<string, number> = { medication_summary: 0, medication_answer_key: 1 };
