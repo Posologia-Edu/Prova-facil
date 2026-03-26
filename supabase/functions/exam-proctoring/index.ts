@@ -62,57 +62,70 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    // ─── LOG EVENT ───
     if (action === "log-event") {
       const { sessionId, eventType, eventData } = body;
       if (!sessionId || !eventType) return json({ error: "Missing sessionId or eventType" }, 400);
 
-      // Insert audit log
+      const { data: session } = await supabase
+        .from("exam_sessions")
+        .select("id, status, violation_count")
+        .eq("id", sessionId)
+        .maybeSingle();
+
+      if (!session) return json({ error: "Sessão não encontrada." }, 404);
+
+      if (session.status === "blocked" && eventType !== "session_unblocked") {
+        return json({ success: true, ignored: true });
+      }
+
       await supabase.from("exam_audit_logs").insert({
         session_id: sessionId,
         event_type: eventType,
         event_data: eventData || {},
       });
 
-      // Increment violation count for violation-type events
       const violationEvents = ["focus_lost", "fullscreen_exit", "copy_attempt", "paste_attempt", "cut_attempt", "contextmenu_attempt", "keyboard_shortcut_blocked", "printscreen_attempt"];
       if (violationEvents.includes(eventType)) {
-        const { data: session } = await supabase
-          .from("exam_sessions")
-          .select("violation_count")
-          .eq("id", sessionId)
-          .maybeSingle();
-
         await supabase
           .from("exam_sessions")
-          .update({ violation_count: (session?.violation_count || 0) + 1 })
-          .eq("id", sessionId);
+          .update({ violation_count: (session.violation_count || 0) + 1 })
+          .eq("id", sessionId)
+          .eq("status", "in_progress");
       }
 
-      // Save fingerprint on session_started
       if (eventType === "session_started" && eventData?.fingerprint) {
         await supabase
           .from("exam_sessions")
           .update({ device_fingerprint: eventData.fingerprint })
-          .eq("id", sessionId);
+          .eq("id", sessionId)
+          .neq("status", "blocked");
       }
 
       if (eventType === "session_blocked") {
         await supabase
           .from("exam_sessions")
           .update({ status: "blocked" })
-          .eq("id", sessionId);
+          .eq("id", sessionId)
+          .neq("status", "submitted")
+          .neq("status", "graded");
       }
 
       return json({ success: true });
     }
 
-    // ─── CAPTURE PHOTO ───
     if (action === "capture-photo") {
       const { sessionId, photoBase64 } = body;
       if (!sessionId || !photoBase64) return json({ error: "Missing data" }, 400);
 
-      // Convert base64 to binary
+      const { data: session } = await supabase
+        .from("exam_sessions")
+        .select("id, status")
+        .eq("id", sessionId)
+        .maybeSingle();
+
+      if (!session) return json({ error: "Sessão não encontrada." }, 404);
+      if (session.status === "blocked") return json({ success: true, ignored: true });
+
       const base64Data = photoBase64.replace(/^data:image\/\w+;base64,/, "");
       const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
@@ -131,7 +144,6 @@ Deno.serve(async (req) => {
         return json({ error: "Failed to upload photo" }, 500);
       }
 
-      // Update session with first photo URL
       const { data: sess } = await supabase
         .from("exam_sessions")
         .select("photo_url")
@@ -145,7 +157,6 @@ Deno.serve(async (req) => {
           .eq("id", sessionId);
       }
 
-      // Log the capture
       await supabase.from("exam_audit_logs").insert({
         session_id: sessionId,
         event_type: "photo_captured",
@@ -155,7 +166,6 @@ Deno.serve(async (req) => {
       return json({ success: true, path: filePath });
     }
 
-    // ─── GET VIOLATIONS ───
     if (action === "get-violations") {
       const { publicationId } = body;
       if (!publicationId) return json({ error: "Missing publicationId" }, 400);
@@ -163,18 +173,16 @@ Deno.serve(async (req) => {
       const auth = await assertPublicationOwner(req, supabase, publicationId);
       if (auth.errorResponse) return auth.errorResponse;
 
-      // Get all sessions for this publication
       const { data: sessions } = await supabase
         .from("exam_sessions")
         .select("id, student_name, student_email, status, violation_count, device_fingerprint, photo_url")
         .eq("publication_id", publicationId)
         .order("violation_count", { ascending: false });
 
-      if (!sessions) return json({ sessions: [], logs: [] });
+      if (!sessions) return json({ sessions: [], logs: [], photoPaths: {} });
 
       const sessionIds = sessions.map(s => s.id);
 
-      // Get all audit logs
       let logs: any[] = [];
       for (let i = 0; i < sessionIds.length; i += 50) {
         const batch = sessionIds.slice(i, i + 50);
@@ -187,7 +195,6 @@ Deno.serve(async (req) => {
         if (data) logs.push(...data);
       }
 
-      // Get photo URLs for sessions with photos
       const photoPaths: Record<string, string[]> = {};
       for (const sess of sessions) {
         if (sess.photo_url || sess.violation_count > 0) {
@@ -222,7 +229,7 @@ Deno.serve(async (req) => {
 
       await supabase
         .from("exam_sessions")
-        .update({ status: "in_progress", finished_at: null })
+        .update({ status: "in_progress", finished_at: null, violation_count: 0 })
         .eq("id", sessionId);
 
       await supabase.from("exam_audit_logs").insert({

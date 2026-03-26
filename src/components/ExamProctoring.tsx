@@ -63,6 +63,8 @@ export default function ExamProctoring({
   }, [sessionId]);
 
   const incrementViolation = useCallback((type: string) => {
+    if (blocked) return;
+
     setViolationCount(prev => {
       const next = prev + 1;
       if (config.maxViolations && next >= config.maxViolations) {
@@ -73,8 +75,9 @@ export default function ExamProctoring({
       }
       return next;
     });
+
     logEvent(type);
-  }, [config.maxViolations, logEvent, onBlocked]);
+  }, [blocked, config.maxViolations, logEvent, onBlocked]);
 
   // Capture photo from webcam
   const capturePhoto = useCallback(async () => {
@@ -167,22 +170,21 @@ export default function ExamProctoring({
 
   // Fullscreen enforcement
   useEffect(() => {
-    if (!consentGiven || !config.fullscreen) return;
+    if (!consentGiven || blocked || !config.fullscreen) return;
     const handler = () => {
       if (!document.fullscreenElement) {
         incrementViolation("fullscreen_exit");
         toast.warning(`Violação registrada: saída de tela cheia (${violationCount + 1}/${config.maxViolations || "∞"})`);
-        // Try to re-enter
         document.documentElement.requestFullscreen().catch(() => {});
       }
     };
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
-  }, [consentGiven, config.fullscreen, incrementViolation, violationCount, config.maxViolations]);
+  }, [blocked, consentGiven, config.fullscreen, incrementViolation, violationCount, config.maxViolations]);
 
   // Tab switch detection
   useEffect(() => {
-    if (!consentGiven) return;
+    if (!consentGiven || blocked) return;
     const handleVisibility = () => {
       if (document.hidden) {
         incrementViolation("focus_lost");
@@ -198,19 +200,19 @@ export default function ExamProctoring({
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [consentGiven, incrementViolation, violationCount, config.maxViolations]);
+  }, [blocked, consentGiven, incrementViolation, violationCount, config.maxViolations]);
 
   // Copy/paste blocker
   useEffect(() => {
-    if (!consentGiven || !config.blockCopyPaste) return;
+    if (!consentGiven || blocked || !config.blockCopyPaste) return;
     const block = (e: Event) => {
       e.preventDefault();
       incrementViolation(`${e.type}_attempt`);
     };
     const blockKeyboard = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
-        const blocked = ["c", "v", "x", "a", "p", "s"];
-        if (blocked.includes(e.key.toLowerCase())) {
+        const blockedKeys = ["c", "v", "x", "a", "p", "s"];
+        if (blockedKeys.includes(e.key.toLowerCase())) {
           e.preventDefault();
           incrementViolation("keyboard_shortcut_blocked");
         }
@@ -232,7 +234,7 @@ export default function ExamProctoring({
       document.removeEventListener("contextmenu", block);
       document.removeEventListener("keydown", blockKeyboard);
     };
-  }, [consentGiven, config.blockCopyPaste, incrementViolation]);
+  }, [blocked, consentGiven, config.blockCopyPaste, incrementViolation]);
 
   // Cleanup
   useEffect(() => {
