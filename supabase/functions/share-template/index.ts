@@ -67,8 +67,20 @@ Deno.serve(async (req) => {
     }
 
     // Find target user by email
-    const { data: { users: allUsers } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-    const targetUser = allUsers?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+    let targetUser: any = null;
+    let page = 1;
+    while (!targetUser) {
+      const { data: listData, error: listErr } = await adminClient.auth.admin.listUsers({ page, perPage: 500 });
+      if (listErr) {
+        console.error("[SHARE-TEMPLATE] listUsers error:", listErr);
+        throw new Error("Erro ao buscar usuários");
+      }
+      const users = listData?.users || [];
+      if (users.length === 0) break;
+      targetUser = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+      page++;
+      if (page > 20) break; // safety limit
+    }
 
     if (!targetUser) {
       return new Response(JSON.stringify({ error: "Nenhum professor encontrado com este e-mail" }), {
