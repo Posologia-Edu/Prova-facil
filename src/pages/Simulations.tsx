@@ -12,10 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy, Heart, Activity, Dumbbell, Microscope, ArrowLeft } from "lucide-react";
+import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy, Heart, Activity, Dumbbell, Microscope, ArrowLeft, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import SplitRoomDialog from "@/components/SplitRoomDialog";
 import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
+import ShareRoomDialog from "@/components/ShareRoomDialog";
+import EditableRoomTitle from "@/components/EditableRoomTitle";
 
 const pharmacyModules = [
   {
@@ -144,6 +146,9 @@ export default function Simulations() {
   const [splitReconciliationRoomId, setSplitReconciliationRoomId] = useState<string | null>(null);
   const [splitDocumentationRoomId, setSplitDocumentationRoomId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("areas");
+  const [shareRoomId, setShareRoomId] = useState<string | null>(null);
+  const [shareRoomTitle, setShareRoomTitle] = useState("");
+  const [shareModuleType, setShareModuleType] = useState("");
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["simulation-rooms"],
