@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.cdnfonts.com/css/opendyslexic');
 
 @tailwind base;
 @tailwind components;
@@ -96,6 +97,37 @@
 }
 
 @layer utilities {
+  /* Accessibility classes */
+  .a11y-high-contrast {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 80%;
+    --border: 0 0% 40%;
+    --primary: 50 100% 50%;
+    --primary-foreground: 0 0% 0%;
+  }
+
+  .a11y-dyslexia {
+    font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif !important;
+  }
+  .a11y-dyslexia * {
+    font-family: inherit !important;
+  }
+
+  .a11y-spacing {
+    line-height: 2 !important;
+    letter-spacing: 0.05em !important;
+    word-spacing: 0.12em !important;
+  }
+  .a11y-spacing * {
+    line-height: inherit !important;
+    letter-spacing: inherit !important;
+    word-spacing: inherit !important;
+  }
+
   .font-exam {
     font-family: 'Lora', 'Georgia', serif;
   }

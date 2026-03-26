@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Clock, ChevronLeft, ChevronRight, Send, Loader2, AlertTriangle, FileText, Save } from "lucide-react";
+import AccessibilityPanel, { useA11ySettings, getA11yClasses, getA11yStyle, ReadingMask } from "@/components/AccessibilityPanel";
 import { toast } from "sonner";
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
@@ -42,6 +43,7 @@ export default function StudentExam() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const autoSubmittedRef = useRef(false);
+  const [a11y, setA11y] = useA11ySettings();
   const lastSavedRef = useRef<string>("");
 
   const studentEmail = sessionStorage.getItem("student_email");
@@ -219,6 +221,43 @@ export default function StudentExam() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  const currentQ = questions[currentIdx];
+
+  // Keyboard shortcuts for accessibility
+  useEffect(() => {
+    if (loading) return;
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setCurrentIdx(prev => Math.max(0, prev - 1));
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1));
+      } else if (e.key === "r" || e.key === "R") {
+        if (!("speechSynthesis" in window) || !currentQ) return;
+        window.speechSynthesis.cancel();
+        let text = getStatement(currentQ.content_json || {});
+        const alts = getAlternatives(currentQ.content_json || {});
+        if (alts.length) text += ". Alternativas: " + alts.map(a => `${a.letter}: ${a.text}`).join(". ");
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "pt-BR";
+        u.rate = 0.9;
+        window.speechSynthesis.speak(u);
+      } else if (/^[1-5]$/.test(e.key) && currentQ) {
+        const alts = getAlternatives(currentQ.content_json || {});
+        const idx = parseInt(e.key) - 1;
+        if (idx < alts.length) {
+          setAnswer(currentQ.id, alts[idx].letter, { selected: alts[idx].letter });
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [loading, questions.length, currentQ]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -230,7 +269,6 @@ export default function StudentExam() {
     );
   }
 
-  const currentQ = questions[currentIdx];
   const content = currentQ?.content_json || {};
   const statement = getStatement(content);
   const alternatives = getAlternatives(content);
@@ -242,7 +280,7 @@ export default function StudentExam() {
   const progressPercent = (answeredCount / questions.length) * 100;
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
+    <div className={`min-h-screen bg-muted/30 flex flex-col ${getA11yClasses(a11y)}`} style={getA11yStyle(a11y)}>
       {/* Top bar */}
       <header className="bg-card border-b shadow-sm sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -261,11 +299,15 @@ export default function StudentExam() {
 
             <div className="flex items-center gap-3">
               {timeLeft !== null && (
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-sm font-bold ${
-                  isTimeLow 
-                    ? "bg-destructive/10 text-destructive animate-pulse border border-destructive/20" 
-                    : "bg-muted text-foreground"
-                }`}>
+                <div
+                  role="timer"
+                  aria-live="polite"
+                  aria-label={`Tempo restante: ${formatTime(timeLeft)}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-sm font-bold ${
+                    isTimeLow 
+                      ? "bg-destructive/10 text-destructive animate-pulse border border-destructive/20" 
+                      : "bg-muted text-foreground"
+                  }`}>
                   {isTimeLow && <AlertTriangle className="h-4 w-4" />}
                   <Clock className="h-4 w-4" />
                   {formatTime(timeLeft)}
@@ -521,6 +563,15 @@ export default function StudentExam() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Accessibility */}
+      <AccessibilityPanel
+        settings={a11y}
+        onChange={setA11y}
+        currentQuestionText={statement}
+        currentAlternatives={alternatives}
+      />
+      {a11y.readingMask && <ReadingMask />}
     </div>
   );
 }
