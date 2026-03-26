@@ -303,10 +303,13 @@ export default function MedicineEditor() {
                     <CardTitle className="text-base">{form.title}</CardTitle>
                     <Badge variant="outline" className="mt-1">{formTypeLabel[form.form_type] || form.form_type}</Badge>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                   <div className="flex gap-1">
+                     {form.form_type !== "answer_key" && Array.isArray(form.content_json) && (
+                       <Button variant="ghost" size="sm" onClick={() => exportFormToPDF({ title: form.title, fields: form.content_json, formType: formTypeLabel[form.form_type] || form.form_type })} title="Baixar PDF"><FileDown className="h-3.5 w-3.5" /></Button>
+                     )}
+                     <Button variant="ghost" size="sm" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
+                     <Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button>
+                     <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
               </CardHeader>
