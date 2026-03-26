@@ -559,6 +559,15 @@ export default function StudentExam() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Accessibility */}
+      <AccessibilityPanel
+        settings={a11y}
+        onChange={setA11y}
+        currentQuestionText={statement}
+        currentAlternatives={alternatives}
+      />
+      {a11y.readingMask && <ReadingMask />}
     </div>
   );
 }
