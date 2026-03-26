@@ -170,6 +170,41 @@ export default function ExamMonitoring() {
     toast.info(`Nota sugerida: ${score}/${Number(reviewAnswer?.max_points)} aplicada.`);
   };
 
+  const loadSecurityData = async () => {
+    if (!publicationId) return;
+    setLoadingSecurity(true);
+    try {
+      const res = await fetch(PROCTORING_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "get-violations", publicationId }),
+      });
+      const data = await res.json();
+      setSecurityData(data);
+    } catch {
+      toast.error("Erro ao carregar dados de segurança.");
+    }
+    setLoadingSecurity(false);
+  };
+
+  const getEventLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      focus_lost: "Perda de foco / troca de aba",
+      fullscreen_exit: "Saída de tela cheia",
+      copy_attempt: "Tentativa de copiar",
+      paste_attempt: "Tentativa de colar",
+      cut_attempt: "Tentativa de recortar",
+      contextmenu_attempt: "Menu de contexto",
+      keyboard_shortcut_blocked: "Atalho bloqueado",
+      printscreen_attempt: "PrintScreen",
+      photo_captured: "Foto capturada",
+      session_started: "Sessão iniciada",
+      session_blocked: "Sessão bloqueada",
+      webcam_denied: "Webcam negada",
+    };
+    return labels[type] || type;
+  };
+
   if (loading || subLoading) {
     return (
       <div className="flex items-center justify-center py-20">
