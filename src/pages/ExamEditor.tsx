@@ -714,7 +714,7 @@ export default function ExamEditorPage() {
             </Badge>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {Object.entries(statusLabel).map(([key, val]) => (
+            {Object.entries(examStatusConfig).map(([key, val]) => (
               <DropdownMenuItem
                 key={key}
                 onClick={() => handleStatusChange(key)}

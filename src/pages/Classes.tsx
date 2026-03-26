@@ -731,7 +731,6 @@ export default function ClassesPage() {
                             </Badge>
                           );
                         })()}
-                        </Badge>
                       </div>
                       <div className="mt-3 flex items-center justify-between gap-3">
                         {exam.publication?.access_code ? (
