@@ -299,6 +299,12 @@ export default function StudentExam() {
   const progressPercent = (answeredCount / questions.length) * 100;
 
   return (
+    <ExamProctoring
+      config={proctoringConfig}
+      sessionId={sessionId || ""}
+      studentName={sessionStorage.getItem("student_name") || ""}
+      studentEmail={studentEmail || ""}
+    >
     <div className={`min-h-screen bg-muted/30 flex flex-col ${getA11yClasses(a11y)}`} style={getA11yStyle(a11y)}>
       {/* Top bar */}
       <header className="bg-card border-b shadow-sm sticky top-0 z-20">
@@ -603,5 +609,6 @@ export default function StudentExam() {
       />
       {a11y.readingMask && <ReadingMask />}
     </div>
+    </ExamProctoring>
   );
 }
