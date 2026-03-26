@@ -674,12 +674,15 @@ export default function SimulationEditor() {
 
         {/* Forms Tab */}
         <TabsContent value="forms" className="space-y-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-1" />Usar Template</Button>
-            {activeForm && (
-              <Button variant="outline" size="sm" onClick={() => { setSaveTemplateForm({ title: formTitle, form_type: activeFormType, content_json: activeFormType === "patient_script" ? clinicalCases : formFields }); setSaveTemplateDialogOpen(true); }}><BookmarkPlus className="h-4 w-4 mr-1" />Salvar como Template</Button>
-            )}
-          </div>
+           <div className="flex items-center gap-2 flex-wrap">
+             <Button variant="outline" size="sm" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-1" />Usar Template</Button>
+             {activeForm && (
+               <Button variant="outline" size="sm" onClick={() => { setSaveTemplateForm({ title: formTitle, form_type: activeFormType, content_json: activeFormType === "patient_script" ? clinicalCases : formFields }); setSaveTemplateDialogOpen(true); }}><BookmarkPlus className="h-4 w-4 mr-1" />Salvar como Template</Button>
+             )}
+             {activeForm && activeFormType !== "patient_script" && formFields.length > 0 && (
+               <Button variant="outline" size="sm" onClick={() => exportFormToPDF({ title: formTitle || formTypes.find(f => f.value === activeFormType)?.label || "Formulário", fields: formFields, formType: formTypes.find(f => f.value === activeFormType)?.label, showScores: isEvalForm })}><FileDown className="h-4 w-4 mr-1" />Baixar PDF</Button>
+             )}
+           </div>
           <div className="flex gap-2 flex-wrap">
             {formTypes.map((ft) => (
               <Button
