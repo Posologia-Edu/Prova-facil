@@ -299,11 +299,15 @@ export default function StudentExam() {
 
             <div className="flex items-center gap-3">
               {timeLeft !== null && (
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-sm font-bold ${
-                  isTimeLow 
-                    ? "bg-destructive/10 text-destructive animate-pulse border border-destructive/20" 
-                    : "bg-muted text-foreground"
-                }`}>
+                <div
+                  role="timer"
+                  aria-live="polite"
+                  aria-label={`Tempo restante: ${formatTime(timeLeft)}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-sm font-bold ${
+                    isTimeLow 
+                      ? "bg-destructive/10 text-destructive animate-pulse border border-destructive/20" 
+                      : "bg-muted text-foreground"
+                  }`}>
                   {isTimeLow && <AlertTriangle className="h-4 w-4" />}
                   <Clock className="h-4 w-4" />
                   {formatTime(timeLeft)}
