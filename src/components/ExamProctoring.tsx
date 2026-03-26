@@ -46,6 +46,9 @@ export default function ExamProctoring({
 
   const hasAnyFeature = config.fullscreen || config.blockCopyPaste || config.requirePhoto || config.watermark;
 
+  // Diagnostic log for debugging proctoring config
+  console.log("[ExamProctoring] Config received:", JSON.stringify(config));
+  console.log("[ExamProctoring] hasAnyFeature:", hasAnyFeature, "sessionId:", sessionId);
   const logEvent = useCallback(async (eventType: string, eventData: Record<string, unknown> = {}) => {
     try {
       await fetch(FUNCTION_URL, {

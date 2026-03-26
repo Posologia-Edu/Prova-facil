@@ -7,6 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { computeExamStatus, type ExamEffectiveStatus } from "@/lib/exam-status";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -55,17 +56,12 @@ export default function ExamCalendarPage() {
   });
 
   // Compute effective status for an event
-  const getEffectiveStatus = (e: ExamEvent): string => {
-    const now = new Date();
-    // If publication is active and we're within the time window → in_progress
-    if (e.isActive && e.startAt && e.endAt) {
-      if (now >= e.startAt && now <= e.endAt) return "in_progress";
-      if (now > e.endAt) return "grading";
-    }
-    if (e.isActive && e.startAt && !e.endAt && now >= e.startAt) return "in_progress";
-    if (!e.isActive && e.endAt && now > e.endAt && e.examStatus !== "completed") return "grading";
-    // Use the stored status from DB
-    return e.examStatus;
+  const getEffectiveStatus = (e: ExamEvent): ExamEffectiveStatus => {
+    return computeExamStatus(e.examStatus, {
+      is_active: e.isActive,
+      start_at: e.startAt?.toISOString() || null,
+      end_at: e.endAt?.toISOString() || null,
+    });
   };
 
   const statusConfig: Record<string, { label: string; variant: "secondary" | "default" | "warning" | "success" }> = {

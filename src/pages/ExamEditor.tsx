@@ -69,6 +69,7 @@ import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQues
 import AITutorChat from "@/components/AITutorChat";
 import { useLanguage } from "@/i18n/LanguageContext";
 import type { Json } from "@/integrations/supabase/types";
+import { computeExamStatus, examStatusConfig } from "@/lib/exam-status";
 
 // Types
 interface BankQuestion {
@@ -662,34 +663,18 @@ export default function ExamEditorPage() {
     toast.success("Prova duplicada com sucesso!");
   };
 
-  const statusLabel: Record<string, { label: string; className: string }> = {
-    draft: { label: "EM ELABORAÇÃO", className: "bg-muted text-muted-foreground" },
-    in_progress: { label: "EM APLICAÇÃO", className: "bg-warning text-warning-foreground" },
-    grading: { label: "EM CORREÇÃO", className: "bg-primary text-primary-foreground" },
-    completed: { label: "CONCLUÍDA", className: "bg-success text-success-foreground" },
-  };
-
-  // Auto-compute effective status
-  const computeEffectiveStatus = (): string => {
-    const now = new Date();
-    if (publication?.is_active) {
-      return "in_progress";
-    }
-    // If publication ended, check if we should be in grading
-    if (publication && !publication.is_active && examStatus === "draft") {
-      return "grading";
-    }
-    return examStatus;
-  };
-
-  const effectiveStatus = computeEffectiveStatus();
-  const currentStatus = statusLabel[effectiveStatus] || statusLabel.draft;
+  // Auto-compute effective status using shared utility
+  const effectiveStatus = computeExamStatus(
+    examStatus,
+    publication ? { is_active: publication.is_active } : null,
+  );
+  const currentStatus = examStatusConfig[effectiveStatus] || examStatusConfig.draft;
 
   const handleStatusChange = async (newStatus: string) => {
     if (!examId) return;
     await supabase.from("exams").update({ status: newStatus }).eq("id", examId);
     setExamStatus(newStatus);
-    toast.success(`Status alterado para "${statusLabel[newStatus]?.label || newStatus}".`);
+    toast.success(`Status alterado para "${examStatusConfig[newStatus as keyof typeof examStatusConfig]?.label || newStatus}".`);
   };
 
   // Grading: filter sessions
@@ -729,7 +714,7 @@ export default function ExamEditorPage() {
             </Badge>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {Object.entries(statusLabel).map(([key, val]) => (
+            {Object.entries(examStatusConfig).map(([key, val]) => (
               <DropdownMenuItem
                 key={key}
                 onClick={() => handleStatusChange(key)}
@@ -910,14 +895,25 @@ export default function ExamEditorPage() {
 
           {/* Proctoring / Security section */}
           <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-base flex items-center gap-2">
-                <Shield className="h-4 w-4 text-primary" />
-                Segurança & Proctoring
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Configure medidas de segurança para aplicação em concursos e avaliações de alto impacto.
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-base flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  Segurança & Proctoring
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Configure medidas de segurança para aplicação em concursos e avaliações de alto impacto.
+                </p>
+              </div>
+              {(proctoringFullscreen || proctoringBlockCopy || proctoringPhoto || proctoringWatermark || proctoringShuffleQ || proctoringShuffleAlt || proctoringPeriodicPhotos) ? (
+                <Badge className="bg-success text-success-foreground text-[10px] font-bold px-2 py-1">
+                  SEGURANÇA ATIVA
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] font-bold px-2 py-1 text-muted-foreground">
+                  DESATIVADO
+                </Badge>
+              )}
             </div>
 
             <Card>
@@ -1095,6 +1091,28 @@ export default function ExamEditorPage() {
                   <p className="text-sm text-muted-foreground">Selecione uma turma nas configurações para ver os alunos.</p>
                 )}
               </div>
+
+              {/* Proctoring summary */}
+              {(proctoringFullscreen || proctoringBlockCopy || proctoringPhoto || proctoringPeriodicPhotos || proctoringWatermark || proctoringShuffleQ || proctoringShuffleAlt) && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold">Segurança ativa nesta prova:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {proctoringFullscreen && <Badge variant="outline" className="text-[10px]">Tela Cheia</Badge>}
+                      {proctoringBlockCopy && <Badge variant="outline" className="text-[10px]">Bloq. Copiar/Colar</Badge>}
+                      {proctoringShuffleQ && <Badge variant="outline" className="text-[10px]">Embaralhar Questões</Badge>}
+                      {proctoringShuffleAlt && <Badge variant="outline" className="text-[10px]">Embaralhar Alternativas</Badge>}
+                      {proctoringPhoto && <Badge variant="outline" className="text-[10px]">Foto Identificação</Badge>}
+                      {proctoringPeriodicPhotos && <Badge variant="outline" className="text-[10px]">Selfies a cada {proctoringPhotoInterval}min</Badge>}
+                      {proctoringWatermark && <Badge variant="outline" className="text-[10px]">Marca d'Água</Badge>}
+                      <Badge variant="outline" className="text-[10px]">Máx. {proctoringMaxViolations} violações</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <Separator />
 

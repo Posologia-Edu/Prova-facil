@@ -48,6 +48,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { computeExamStatus, examStatusConfig, type ExamEffectiveStatus } from "@/lib/exam-status";
 
 interface ClassItem {
   id: string;
@@ -721,9 +722,15 @@ export default function ClassesPage() {
                             </p>
                           </div>
                         </div>
-                        <Badge variant={exam.publication?.is_active ? "default" : "secondary"} className="text-[10px]">
-                          {exam.publication?.is_active ? "Publicado" : "Sem publicação"}
-                        </Badge>
+                        {(() => {
+                          const effective = computeExamStatus(exam.status, exam.publication ? { is_active: exam.publication.is_active } : null);
+                          const cfg = examStatusConfig[effective];
+                          return (
+                            <Badge className={`text-[10px] ${cfg.className}`}>
+                              {cfg.label}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <div className="mt-3 flex items-center justify-between gap-3">
                         {exam.publication?.access_code ? (

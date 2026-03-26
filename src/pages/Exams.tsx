@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { computeExamStatus, examStatusConfig } from "@/lib/exam-status";
 
 interface Exam {
   id: string;
@@ -59,13 +60,6 @@ interface Exam {
   isImported?: boolean;
   marketplaceId?: string;
 }
-
-const statusConfig: Record<string, { label: string; className: string }> = {
-  draft: { label: "EM ELABORAÇÃO", className: "bg-muted text-muted-foreground" },
-  in_progress: { label: "EM APLICAÇÃO", className: "bg-warning text-warning-foreground" },
-  grading: { label: "EM CORREÇÃO", className: "bg-primary text-primary-foreground" },
-  completed: { label: "CONCLUÍDA", className: "bg-success text-success-foreground" },
-};
 
 export default function ExamsPage() {
   const navigate = useNavigate();
@@ -152,11 +146,7 @@ export default function ExamsPage() {
 
     const computeEffective = (dbStatus: string, examId: string): string => {
       const pub = pubStatusMap[examId];
-      if (!pub) return dbStatus;
-      const now = new Date();
-      if (pub.is_active) return "in_progress";
-      if (pub.end_at && now > new Date(pub.end_at) && dbStatus !== "completed") return "grading";
-      return dbStatus;
+      return computeExamStatus(dbStatus, pub || null);
     };
 
     setExams(
@@ -362,7 +352,7 @@ export default function ExamsPage() {
           {/* Exam Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filtered.map((exam) => {
-              const status = statusConfig[exam.effectiveStatus] || statusConfig.draft;
+              const status = examStatusConfig[exam.effectiveStatus as keyof typeof examStatusConfig] || examStatusConfig.draft;
               return (
                 <Card
                   key={exam.id}
