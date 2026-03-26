@@ -157,10 +157,16 @@ export default function UpdatePipeline() {
           </p>
         </div>
         {isAdmin && (
-          <Button onClick={() => setAddDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Nova Entrada
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={generateRoadmapSuggestions} disabled={generating}>
+              {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
+              {generating ? "Gerando..." : "Gerar Roadmap IA"}
+            </Button>
+            <Button onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Nova Entrada
+            </Button>
+          </div>
         )}
       </div>
 
