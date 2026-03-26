@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Camera, Shield, AlertTriangle } from "lucide-react";
