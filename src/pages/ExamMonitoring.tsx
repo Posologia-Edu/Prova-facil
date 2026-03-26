@@ -19,10 +19,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Users, Clock, CheckCircle2, Loader2, Bot, Eye, MessageSquare } from "lucide-react";
+import { ArrowLeft, Users, Clock, CheckCircle2, Loader2, Bot, Eye, MessageSquare, Shield, AlertTriangle, Camera } from "lucide-react";
 import { toast } from "sonner";
 import AITutorChat from "@/components/AITutorChat";
 import type { Json } from "@/integrations/supabase/types";
+
+const PROCTORING_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/exam-proctoring`;
 
 interface SessionRow {
   id: string;
@@ -67,6 +69,16 @@ export default function ExamMonitoring() {
   const [reviewAnswer, setReviewAnswer] = useState<AnswerRow | null>(null);
   const [teacherScore, setTeacherScore] = useState("");
   const [teacherFeedback, setTeacherFeedback] = useState("");
+
+  // Security tab state
+  const [securityData, setSecurityData] = useState<{
+    sessions: Array<{ id: string; student_name: string; student_email: string; violation_count: number; device_fingerprint: any; photo_url: string | null }>;
+    logs: Array<{ id: string; session_id: string; event_type: string; event_data: any; created_at: string }>;
+    photoPaths: Record<string, string[]>;
+  } | null>(null);
+  const [loadingSecurity, setLoadingSecurity] = useState(false);
+  const [selectedSecuritySession, setSelectedSecuritySession] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("monitoring");
 
   const loadSessions = async () => {
     if (!publicationId) return;
