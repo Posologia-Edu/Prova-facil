@@ -895,14 +895,25 @@ export default function ExamEditorPage() {
 
           {/* Proctoring / Security section */}
           <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-base flex items-center gap-2">
-                <Shield className="h-4 w-4 text-primary" />
-                Segurança & Proctoring
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Configure medidas de segurança para aplicação em concursos e avaliações de alto impacto.
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-base flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  Segurança & Proctoring
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Configure medidas de segurança para aplicação em concursos e avaliações de alto impacto.
+                </p>
+              </div>
+              {(proctoringFullscreen || proctoringBlockCopy || proctoringPhoto || proctoringWatermark || proctoringShuffleQ || proctoringShuffleAlt || proctoringPeriodicPhotos) ? (
+                <Badge className="bg-success text-success-foreground text-[10px] font-bold px-2 py-1">
+                  SEGURANÇA ATIVA
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] font-bold px-2 py-1 text-muted-foreground">
+                  DESATIVADO
+                </Badge>
+              )}
             </div>
 
             <Card>
