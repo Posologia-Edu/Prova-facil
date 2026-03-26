@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/use-admin";
@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
-  CheckCircle2, Lightbulb, Plus, Trash2, Rocket, Calendar, ArrowUpCircle, Clock, Sparkles,
+  CheckCircle2, Lightbulb, Plus, Trash2, Rocket, Calendar, ArrowUpCircle, Clock, Sparkles, Wand2, Loader2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -36,6 +36,32 @@ export default function UpdatePipeline() {
   const [newType, setNewType] = useState<"completed" | "planned">("planned");
   const [newPriority, setNewPriority] = useState("medium");
   const [newCategory, setNewCategory] = useState("feature");
+  const [generating, setGenerating] = useState(false);
+
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+  const generateRoadmapSuggestions = useCallback(async () => {
+    setGenerating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada");
+      
+      const res = await supabase.functions.invoke("generate-roadmap", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      
+      if (res.error) throw res.error;
+      
+      localStorage.setItem("roadmap_last_generated", String(Date.now()));
+      queryClient.invalidateQueries({ queryKey: ["system-updates"] });
+      toast({ title: "🚀 Roadmap atualizado!", description: "8 novas funcionalidades foram adicionadas ao roadmap." });
+    } catch (err: any) {
+      console.error("Generate roadmap error:", err);
+      toast({ title: "Erro ao gerar roadmap", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  }, [queryClient]);
 
   const { data: updates = [], isLoading } = useQuery({
     queryKey: ["system-updates"],
@@ -56,6 +82,16 @@ export default function UpdatePipeline() {
     const pOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
     return (pOrder[a.priority] ?? 1) - (pOrder[b.priority] ?? 1);
   });
+
+  // Auto-trigger every 30 days
+  useEffect(() => {
+    if (!isAdmin || isLoading) return;
+    const lastGenerated = localStorage.getItem("roadmap_last_generated");
+    if (lastGenerated && Date.now() - Number(lastGenerated) < THIRTY_DAYS_MS) return;
+    if (planned.length <= 2) {
+      generateRoadmapSuggestions();
+    }
+  }, [isAdmin, isLoading, planned.length, generateRoadmapSuggestions]);
 
   const priorityBadge: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
     high: { label: "Alta", variant: "destructive" },
@@ -121,10 +157,16 @@ export default function UpdatePipeline() {
           </p>
         </div>
         {isAdmin && (
-          <Button onClick={() => setAddDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Nova Entrada
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={generateRoadmapSuggestions} disabled={generating}>
+              {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
+              {generating ? "Gerando..." : "Gerar Roadmap IA"}
+            </Button>
+            <Button onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Nova Entrada
+            </Button>
+          </div>
         )}
       </div>
 
