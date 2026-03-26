@@ -23,7 +23,7 @@ export default function CompetencyAnalysis() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [compRes, classRes, qcRes, answersRes] = await Promise.all([
+    const [compRes, classRes, qcRes] = await Promise.all([
       supabase.from("competency_definitions").select("*").eq("user_id", user.id),
       supabase.from("classes").select("id, name").eq("user_id", user.id).is("deleted_at", null),
       supabase.from("question_competencies").select("question_id, competency_id"),
