@@ -63,6 +63,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import RichTextRenderer from "@/components/RichTextRenderer";
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
 import AITutorChat from "@/components/AITutorChat";
 import { useLanguage } from "@/i18n/LanguageContext";
