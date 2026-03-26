@@ -82,7 +82,26 @@ export default function ExamMonitoring() {
   const [activeTab, setActiveTab] = useState("monitoring");
   const [unlockingSessionId, setUnlockingSessionId] = useState<string | null>(null);
 
-  const getFunctionHeaders = async () => {
+  // Generate signed URLs when a security session is selected
+  useEffect(() => {
+    if (!selectedSecuritySession || !securityData?.photoPaths[selectedSecuritySession]?.length) return;
+    const paths = securityData.photoPaths[selectedSecuritySession];
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.storage
+        .from("exam-proctoring")
+        .createSignedUrls(paths, 3600);
+      if (!cancelled && data) {
+        setSignedPhotoUrls(prev => ({
+          ...prev,
+          [selectedSecuritySession]: data.map(d => d.signedUrl).filter(Boolean),
+        }));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedSecuritySession, securityData]);
+
+
     const { data } = await supabase.auth.getSession();
 
     return {
