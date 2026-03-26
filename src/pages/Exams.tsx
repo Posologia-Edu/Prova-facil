@@ -17,6 +17,7 @@ import {
   Loader2,
   Store,
   StoreIcon,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -57,6 +58,7 @@ interface Exam {
   questionCount: number;
   participantCount: number;
   createdAt: string;
+  publicationId?: string;
   isImported?: boolean;
   marketplaceId?: string;
 }
@@ -125,11 +127,11 @@ export default function ExamsPage() {
     });
 
     // Build publication status map per exam
-    const pubStatusMap: Record<string, { is_active: boolean; end_at: string | null }> = {};
+    const pubStatusMap: Record<string, { id: string; is_active: boolean; end_at: string | null }> = {};
     (pubs || []).forEach((p) => {
       // Keep the most relevant publication (active takes priority)
       if (!pubStatusMap[p.exam_id] || p.is_active) {
-        pubStatusMap[p.exam_id] = { is_active: p.is_active, end_at: p.end_at };
+        pubStatusMap[p.exam_id] = { id: p.id, is_active: p.is_active, end_at: p.end_at };
       }
     });
 
@@ -158,6 +160,7 @@ export default function ExamsPage() {
         questionCount: countMap[e.id] || 0,
         participantCount: participantMap[e.id] || 0,
         createdAt: e.created_at,
+        publicationId: pubStatusMap[e.id]?.id,
         isImported: e.title.endsWith("(Marketplace)"),
         marketplaceId: marketplaceMap[e.id] || undefined,
       }))
@@ -428,15 +431,33 @@ export default function ExamsPage() {
                     <Badge className={`text-[10px] px-2 py-0.5 font-bold uppercase ${status.className}`}>
                       {status.label}
                     </Badge>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="font-semibold text-foreground">{exam.questionCount}</span>{" "}
-                      Questões
-                      <span className="font-semibold text-foreground">{exam.participantCount}</span>{" "}
-                      Participantes
-                      <div className="flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground/50" />
-                        <BarChart3 className="h-3.5 w-3.5 text-muted-foreground/50" />
-                      </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>
+                        <span className="font-semibold text-foreground">{exam.questionCount}</span> Questões
+                      </span>
+                      <span>
+                        <span className="font-semibold text-foreground">{exam.participantCount}</span> Participantes
+                      </span>
+                      {exam.publicationId && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/monitoring/${exam.publicationId}`);
+                          }}
+                        >
+                          <Shield className="h-3.5 w-3.5" />
+                          Monitoramento
+                        </Button>
+                      )}
+                      {!exam.publicationId && (
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5 text-muted-foreground/50" />
+                          <BarChart3 className="h-3.5 w-3.5 text-muted-foreground/50" />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Card>
