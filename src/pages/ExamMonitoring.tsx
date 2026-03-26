@@ -72,7 +72,7 @@ export default function ExamMonitoring() {
 
   // Security tab state
   const [securityData, setSecurityData] = useState<{
-    sessions: Array<{ id: string; student_name: string; student_email: string; violation_count: number; device_fingerprint: any; photo_url: string | null }>;
+    sessions: Array<{ id: string; student_name: string; student_email: string; status: string; violation_count: number; device_fingerprint: any; photo_url: string | null }>;
     logs: Array<{ id: string; session_id: string; event_type: string; event_data: any; created_at: string }>;
     photoPaths: Record<string, string[]>;
   } | null>(null);
