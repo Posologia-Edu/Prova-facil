@@ -12,8 +12,9 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getNativeTemplates, type NativeTemplate } from "@/lib/form-templates";
-import { BookmarkPlus, FileText, Star, Trash2 } from "lucide-react";
+import { BookmarkPlus, FileText, Share2, Star, Trash2, Users } from "lucide-react";
 import type { FormField } from "./types";
+import ShareTemplateDialog from "./ShareTemplateDialog";
 
 type FormTemplateDialogProps = {
   open: boolean;
@@ -26,6 +27,8 @@ type FormTemplateDialogProps = {
 export default function FormTemplateDialog({ open, onOpenChange, area, moduleType, onApply }: FormTemplateDialogProps) {
   const queryClient = useQueryClient();
   const nativeTemplates = getNativeTemplates(area, moduleType);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareTarget, setShareTarget] = useState<{ id: string; title: string } | null>(null);
 
   const { data: userTemplates = [] } = useQuery({
     queryKey: ["form-templates-user", area, moduleType],
@@ -42,6 +45,44 @@ export default function FormTemplateDialog({ open, onOpenChange, area, moduleTyp
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
+    },
+    enabled: open,
+  });
+
+  const { data: sharedTemplates = [] } = useQuery({
+    queryKey: ["form-templates-shared", area, moduleType],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      // Get shares for current user
+      const { data: shares, error: sharesErr } = await supabase
+        .from("form_template_shares" as any)
+        .select("template_id, shared_by")
+        .eq("shared_with", user.id);
+      if (sharesErr || !shares?.length) return [];
+
+      const templateIds = shares.map((s: any) => s.template_id);
+      const { data: templates, error: tplErr } = await supabase
+        .from("form_templates" as any)
+        .select("*")
+        .in("id", templateIds)
+        .eq("area", area)
+        .eq("module_type", moduleType);
+      if (tplErr) throw tplErr;
+
+      // Get owner names
+      const ownerIds = [...new Set((templates || []).map((t: any) => t.owner_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", ownerIds);
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.full_name]));
+
+      return (templates || []).map((t: any) => ({
+        ...t,
+        owner_name: profileMap.get(t.owner_id) || "Professor",
+      }));
     },
     enabled: open,
   });
@@ -72,96 +113,154 @@ export default function FormTemplateDialog({ open, onOpenChange, area, moduleTyp
 
   const formTypeLabel: Record<string, string> = { standard: "Formulário", answer_key: "Espelho" };
 
+  const openShareDialog = (id: string, title: string) => {
+    setShareTarget({ id, title });
+    setShareDialogOpen(true);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Usar Template
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Usar Template
+            </DialogTitle>
+          </DialogHeader>
 
-        <Tabs defaultValue="native">
-          <TabsList className="w-full">
-            <TabsTrigger value="native" className="flex-1">
-              <Star className="h-4 w-4 mr-1" />
-              Templates Nativos ({nativeTemplates.length})
-            </TabsTrigger>
-            <TabsTrigger value="custom" className="flex-1">
-              <BookmarkPlus className="h-4 w-4 mr-1" />
-              Meus Templates ({userTemplates.length})
-            </TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="native">
+            <TabsList className="w-full">
+              <TabsTrigger value="native" className="flex-1">
+                <Star className="h-4 w-4 mr-1" />
+                Nativos ({nativeTemplates.length})
+              </TabsTrigger>
+              <TabsTrigger value="custom" className="flex-1">
+                <BookmarkPlus className="h-4 w-4 mr-1" />
+                Meus ({userTemplates.length})
+              </TabsTrigger>
+              <TabsTrigger value="shared" className="flex-1">
+                <Users className="h-4 w-4 mr-1" />
+                Compartilhados ({sharedTemplates.length})
+              </TabsTrigger>
+            </TabsList>
 
-          <ScrollArea className="h-[55vh] mt-3">
-            <TabsContent value="native" className="space-y-3 mt-0">
-              {nativeTemplates.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-8">Nenhum template nativo para este módulo.</p>
-              )}
-              {nativeTemplates.map((t, i) => (
-                <Card key={i} className={`cursor-pointer hover:border-primary/50 transition-colors ${t.form_type === "answer_key" ? "border-l-4 border-l-primary/30" : ""}`}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-sm">{t.title}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">{t.description}</p>
-                      </div>
-                      <Button size="sm" onClick={() => applyTemplate(t)}>Aplicar</Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="text-xs">{formTypeLabel[t.form_type] || t.form_type}</Badge>
-                      <Badge variant="secondary" className="text-xs">{countFields(t.content_json)} campos</Badge>
-                      {totalScore(t.content_json) > 0 && (
-                        <Badge variant="secondary" className="text-xs">{totalScore(t.content_json)} pts</Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
-
-            <TabsContent value="custom" className="space-y-3 mt-0">
-              {userTemplates.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground">Nenhum template próprio ainda.</p>
-                  <p className="text-xs text-muted-foreground mt-1">Salve formulários existentes como template usando o botão ⭐ no editor.</p>
-                </div>
-              )}
-              {userTemplates.map((t: any) => (
-                <Card key={t.id} className={`cursor-pointer hover:border-primary/50 transition-colors ${t.form_type === "answer_key" ? "border-l-4 border-l-primary/30" : ""}`}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-sm">{t.title}</CardTitle>
-                        {t.description && <p className="text-xs text-muted-foreground mt-1">{t.description}</p>}
-                      </div>
-                      <div className="flex gap-1">
+            <ScrollArea className="h-[55vh] mt-3">
+              <TabsContent value="native" className="space-y-3 mt-0">
+                {nativeTemplates.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum template nativo para este módulo.</p>
+                )}
+                {nativeTemplates.map((t, i) => (
+                  <Card key={i} className={`cursor-pointer hover:border-primary/50 transition-colors ${t.form_type === "answer_key" ? "border-l-4 border-l-primary/30" : ""}`}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-sm">{t.title}</CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">{t.description}</p>
+                        </div>
                         <Button size="sm" onClick={() => applyTemplate(t)}>Aplicar</Button>
-                        <Button size="sm" variant="ghost" onClick={() => deleteUserTemplate(t.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="text-xs">{formTypeLabel[t.form_type] || t.form_type}</Badge>
-                      <Badge variant="secondary" className="text-xs">{countFields(t.content_json)} campos</Badge>
-                      {totalScore(t.content_json) > 0 && (
-                        <Badge variant="secondary" className="text-xs">{totalScore(t.content_json)} pts</Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
-          </ScrollArea>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className="text-xs">{formTypeLabel[t.form_type] || t.form_type}</Badge>
+                        <Badge variant="secondary" className="text-xs">{countFields(t.content_json)} campos</Badge>
+                        {totalScore(t.content_json) > 0 && (
+                          <Badge variant="secondary" className="text-xs">{totalScore(t.content_json)} pts</Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
+
+              <TabsContent value="custom" className="space-y-3 mt-0">
+                {userTemplates.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">Nenhum template próprio ainda.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Salve formulários existentes como template usando o botão ⭐ no editor.</p>
+                  </div>
+                )}
+                {userTemplates.map((t: any) => (
+                  <Card key={t.id} className={`cursor-pointer hover:border-primary/50 transition-colors ${t.form_type === "answer_key" ? "border-l-4 border-l-primary/30" : ""}`}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-sm">{t.title}</CardTitle>
+                          {t.description && <p className="text-xs text-muted-foreground mt-1">{t.description}</p>}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button size="sm" onClick={() => applyTemplate(t)}>Aplicar</Button>
+                          <Button size="sm" variant="ghost" onClick={() => openShareDialog(t.id, t.title)} title="Compartilhar">
+                            <Share2 className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => deleteUserTemplate(t.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className="text-xs">{formTypeLabel[t.form_type] || t.form_type}</Badge>
+                        <Badge variant="secondary" className="text-xs">{countFields(t.content_json)} campos</Badge>
+                        {totalScore(t.content_json) > 0 && (
+                          <Badge variant="secondary" className="text-xs">{totalScore(t.content_json)} pts</Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
+
+              <TabsContent value="shared" className="space-y-3 mt-0">
+                {sharedTemplates.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">Nenhum template compartilhado com você.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Outros professores podem compartilhar templates com você por e-mail.</p>
+                  </div>
+                )}
+                {sharedTemplates.map((t: any) => (
+                  <Card key={t.id} className={`cursor-pointer hover:border-primary/50 transition-colors ${t.form_type === "answer_key" ? "border-l-4 border-l-primary/30" : ""}`}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-sm">{t.title}</CardTitle>
+                          {t.description && <p className="text-xs text-muted-foreground mt-1">{t.description}</p>}
+                        </div>
+                        <Button size="sm" onClick={() => applyTemplate(t)}>Aplicar</Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className="text-xs">{formTypeLabel[t.form_type] || t.form_type}</Badge>
+                        <Badge variant="secondary" className="text-xs">{countFields(t.content_json)} campos</Badge>
+                        {totalScore(t.content_json) > 0 && (
+                          <Badge variant="secondary" className="text-xs">{totalScore(t.content_json)} pts</Badge>
+                        )}
+                        <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
+                          <Users className="h-3 w-3 mr-1" />
+                          {t.owner_name}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
+            </ScrollArea>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {shareTarget && (
+        <ShareTemplateDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          templateId={shareTarget.id}
+          templateTitle={shareTarget.title}
+        />
+      )}
+    </>
   );
 }
 
