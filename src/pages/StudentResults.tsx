@@ -108,9 +108,64 @@ export default function StudentResults() {
             </span>
           )}
         </div>
+        <div className="flex gap-2 mt-3">
+          <Button size="sm" variant="outline" onClick={() => navigate("/student/gamification")}>
+            <Trophy className="h-4 w-4 mr-1" /> Gamificação
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate("/student/portfolio")}>
+            <BookOpen className="h-4 w-4 mr-1" /> Portfólio
+          </Button>
+          <Button size="sm" variant="outline" disabled={loadingFeedback} onClick={async () => {
+            setLoadingFeedback(true);
+            try {
+              const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-student-feedback`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+                body: JSON.stringify({ studentEmail, feedbackType: "exam" }),
+              });
+              const data = await res.json();
+              if (res.status === 429) { toast.error("Limite de uso atingido. Tente novamente mais tarde."); }
+              else if (res.status === 402) { toast.error("Créditos esgotados."); }
+              else if (data.feedback) { setAiFeedback(data.feedback); toast.success("Feedback gerado!"); }
+              else { toast.error("Erro ao gerar feedback"); }
+            } catch { toast.error("Erro de conexão"); }
+            setLoadingFeedback(false);
+          }}>
+            {loadingFeedback ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
+            Feedback IA
+          </Button>
+        </div>
       </header>
 
       <main className="max-w-3xl mx-auto p-6 space-y-6">
+        {/* AI Feedback Card */}
+        {aiFeedback && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4" /> Feedback Personalizado da IA</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p>{aiFeedback.summary}</p>
+              {aiFeedback.strengths?.length > 0 && (
+                <div>
+                  <p className="font-medium text-xs text-muted-foreground mb-1">Pontos Fortes:</p>
+                  <ul className="list-disc list-inside space-y-1">{aiFeedback.strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
+                </div>
+              )}
+              {aiFeedback.weaknesses?.length > 0 && (
+                <div>
+                  <p className="font-medium text-xs text-muted-foreground mb-1">Áreas de Melhoria:</p>
+                  <ul className="list-disc list-inside space-y-1">{aiFeedback.weaknesses.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
+                </div>
+              )}
+              {aiFeedback.recommendations?.length > 0 && (
+                <div>
+                  <p className="font-medium text-xs text-muted-foreground mb-1">Recomendações:</p>
+                  <ul className="list-disc list-inside space-y-1">{aiFeedback.recommendations.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardContent className="py-6 text-center">
             <p className="text-4xl font-bold">{totalEarned.toFixed(1)}<span className="text-muted-foreground text-xl">/{totalMax.toFixed(1)}</span></p>
