@@ -1232,6 +1232,38 @@ export type Database = {
           },
         ]
       }
+      form_template_shares: {
+        Row: {
+          created_at: string
+          id: string
+          shared_by: string
+          shared_with: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          shared_by: string
+          shared_with: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          shared_by?: string
+          shared_with?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_template_shares_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "form_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_templates: {
         Row: {
           area: string
