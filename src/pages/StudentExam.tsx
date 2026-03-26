@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Clock, ChevronLeft, ChevronRight, Send, Loader2, AlertTriangle, FileText, Save } from "lucide-react";
 import AccessibilityPanel, { useA11ySettings, getA11yClasses, getA11yStyle, ReadingMask } from "@/components/AccessibilityPanel";
 import { toast } from "sonner";
+import RichTextRenderer from "@/components/RichTextRenderer";
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
 
@@ -357,9 +358,20 @@ export default function StudentExam() {
                 </div>
 
                 <div className="px-6 py-5">
-                  <p className="leading-relaxed text-foreground whitespace-pre-wrap" style={{ fontSize: 'inherit' }}>
-                    {statement}
-                  </p>
+                  <div className="leading-relaxed text-foreground" style={{ fontSize: 'inherit' }}>
+                    <RichTextRenderer text={statement} />
+                  </div>
+                  {/* Show attached images */}
+                  {(() => {
+                    const imgs = (content.images as string[]) || [];
+                    return imgs.length > 0 ? (
+                      <div className="mt-4 flex gap-3 flex-wrap">
+                        {imgs.map((url, i) => (
+                          <img key={i} src={url} alt={`Imagem ${i + 1}`} className="max-h-60 w-auto rounded-lg border object-contain" />
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
 
                 <Separator />
@@ -386,7 +398,7 @@ export default function StudentExam() {
                             <RadioGroupItem value={alt.letter} id={`alt-${currentQ.id}-${i}`} className="mt-0.5 shrink-0" />
                             <span className="leading-relaxed" style={{ fontSize: 'inherit' }}>
                               <span className="font-bold text-primary mr-1.5">{alt.letter.toUpperCase()})</span>
-                              {alt.text}
+                              <RichTextRenderer text={alt.text} />
                             </span>
                           </label>
                         );

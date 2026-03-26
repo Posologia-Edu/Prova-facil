@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import SystemPromptViewer from "@/components/SystemPromptViewer";
 import {
   Library,
@@ -63,6 +63,9 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import RichTextRenderer from "@/components/RichTextRenderer";
+import QuestionImageUploader from "@/components/QuestionImageUploader";
+import { ImagePlus, Code, Sigma } from "lucide-react";
 
 interface QuestionOption {
   text: string;
@@ -82,6 +85,7 @@ interface Question {
   matchingPairs?: { left: string; right: string }[];
   expectedAnswer?: string;
   embedUrl?: string;
+  images?: string[];
 }
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -131,7 +135,9 @@ function QuestionDetailContent({ question }: { question: Question }) {
       {/* Question text */}
       <div>
         <Label className="text-xs text-muted-foreground uppercase tracking-wider">Enunciado</Label>
-        <p className="mt-1.5 text-sm leading-relaxed font-medium">{question.title}</p>
+        <div className="mt-1.5 text-sm leading-relaxed font-medium">
+          <RichTextRenderer text={question.title} />
+        </div>
       </div>
 
       {/* Embed URL */}
@@ -162,7 +168,18 @@ function QuestionDetailContent({ question }: { question: Question }) {
         );
       })()}
 
-      {/* Options for multiple choice / true-false */}
+      {/* Attached images */}
+      {question.images && question.images.length > 0 && (
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Imagens Anexadas</Label>
+          <div className="mt-2 flex gap-3 flex-wrap">
+            {question.images.map((url, i) => (
+              <img key={i} src={url} alt={`Imagem ${i + 1}`} className="h-32 w-auto rounded-lg border object-contain max-w-[280px]" />
+            ))}
+          </div>
+        </div>
+      )}
+
       {question.options && question.options.length > 0 && (
         <div>
           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Alternativas</Label>
@@ -179,7 +196,7 @@ function QuestionDetailContent({ question }: { question: Question }) {
                 <span className={`font-semibold shrink-0 ${opt.isCorrect ? "text-success" : "text-muted-foreground"}`}>
                   {letterLabels[i]})
                 </span>
-                <span className="flex-1">{opt.text}</span>
+                <span className="flex-1"><RichTextRenderer text={opt.text} /></span>
                 {opt.isCorrect && (
                   <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
                 )}
@@ -216,7 +233,7 @@ function QuestionDetailContent({ question }: { question: Question }) {
         <div>
           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Resposta Esperada</Label>
           <div className="mt-1.5 p-3 rounded-lg border bg-muted/30 text-sm leading-relaxed">
-            {question.expectedAnswer}
+            <RichTextRenderer text={question.expectedAnswer} />
           </div>
         </div>
       )}
@@ -226,7 +243,7 @@ function QuestionDetailContent({ question }: { question: Question }) {
         <div>
           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Explicação / Justificativa</Label>
           <div className="mt-1.5 p-3 rounded-lg border border-primary/20 bg-primary/5 text-sm leading-relaxed">
-            {question.explanation}
+            <RichTextRenderer text={question.explanation} />
           </div>
         </div>
       )}
@@ -261,6 +278,19 @@ export default function QuestionsPage() {
   const [newTags, setNewTags] = useState("");
   const [newEmbed, setNewEmbed] = useState("");
   const [saving, setSaving] = useState(false);
+  const [newImages, setNewImages] = useState<string[]>([]);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const insertAtCursor = (template: string) => {
+    const ta = textareaRef.current;
+    if (!ta) { setNewText(prev => prev + template); return; }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const before = newText.slice(0, start);
+    const after = newText.slice(end);
+    setNewText(before + template + after);
+    setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = start + template.length / 2; }, 50);
+  };
 
   const resetForm = () => {
     setNewType("multiple_choice");
@@ -269,6 +299,7 @@ export default function QuestionsPage() {
     setNewBloom("understanding");
     setNewTags("");
     setNewEmbed("");
+    setNewImages([]);
   };
 
   const handleCreateQuestion = async () => {
@@ -280,7 +311,7 @@ export default function QuestionsPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setSaving(false); return; }
 
-    const contentJson: any = { question_text: newText.trim() };
+    const contentJson: any = { question_text: newText.trim(), images: newImages.length > 0 ? newImages : undefined };
     if (newType === "multiple_choice") {
       contentJson.options = { a: "", b: "", c: "", d: "" };
       contentJson.correct_answer = "a";
@@ -349,6 +380,7 @@ export default function QuestionsPage() {
           matchingPairs,
           expectedAnswer: cj?.expected_answer,
           embedUrl: q.embed_url || undefined,
+          images: cj?.images || undefined,
         };
       })
     );
@@ -445,7 +477,16 @@ export default function QuestionsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Texto da Questão</Label>
-                    <Textarea placeholder="Digite a questão..." rows={3} value={newText} onChange={(e) => setNewText(e.target.value)} />
+                    <div className="flex items-center gap-1 mb-1">
+                      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => insertAtCursor("$$  $$")} title="Inserir expressão matemática">
+                        <Sigma className="h-3.5 w-3.5" /> LaTeX
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => insertAtCursor("```\n\n```")} title="Inserir bloco de código">
+                        <Code className="h-3.5 w-3.5" /> Código
+                      </Button>
+                    </div>
+                    <Textarea ref={textareaRef} placeholder="Digite a questão... Use $...$ para LaTeX inline, $$...$$ para LaTeX em bloco, ```lang...``` para código" rows={4} value={newText} onChange={(e) => setNewText(e.target.value)} />
+                    <QuestionImageUploader images={newImages} onChange={setNewImages} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
