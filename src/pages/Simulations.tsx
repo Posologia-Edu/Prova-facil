@@ -619,7 +619,7 @@ export default function Simulations() {
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <CardTitle className="text-lg">{room.title}</CardTitle>
+                          <EditableRoomTitle roomId={room.id} title={room.title} tableName="simulation_rooms" invalidateKeys={["simulation-rooms"]} />
                           {room.description && <CardDescription>{room.description}</CardDescription>}
                         </div>
                         <Badge className={statusColor[room.status] || ""}>
@@ -659,6 +659,9 @@ export default function Simulations() {
                         )}
                         <Button variant="outline" size="sm" onClick={() => duplicateAnamnesisRoom.mutate(room.id)} title="Duplicar">
                           <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("simulation"); }} title="Enviar para professor">
+                          <Share2 className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir">
                           <Trash2 className="h-3.5 w-3.5" />
