@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (targetUser.id === user.id) {
+    if (targetUser.id === userId) {
       return new Response(JSON.stringify({ error: "Você não pode compartilhar consigo mesmo" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
