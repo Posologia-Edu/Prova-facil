@@ -1,90 +1,86 @@
 
 
-## Plano: Compartilhar salas entre professores + Editar título inline
+## Plano: Acessibilidade nas Provas Online
 
 ### Resumo
-Dois recursos para todas as salas de simulação realística (Farmácia: Anamnese/SOAP/Reconciliação/Documentação + Enfermagem, Nutrição, Odontologia, Medicina, Fisioterapia, Biomedicina):
+Adicionar um painel de acessibilidade flutuante no `StudentExam.tsx` que permite ao aluno personalizar sua experiência de prova, garantindo inclusão para pessoas com deficiência visual, motora, cognitiva e dislexia.
 
-1. **Enviar cópia de sala para outro professor** via e-mail -- cria um deep clone (formulários, participantes, casos clínicos) na conta do professor destinatário, em status "draft"
-2. **Editar título da sala inline** -- clique no título do card para editar diretamente
+---
+
+### Funcionalidades
+
+#### 1. Painel de Acessibilidade (botão flutuante com ícone ♿)
+Barra lateral ou popover com controles:
+
+| Recurso | Descrição |
+|---|---|
+| **Aumentar/diminuir fonte** | Slider de 14px a 28px aplicado ao conteúdo da prova |
+| **Alto contraste** | Modo escuro forçado com bordas mais visíveis e contraste WCAG AAA |
+| **Fonte para dislexia** | Troca para OpenDyslexic (Google Fonts) |
+| **Espaçamento ampliado** | Aumenta `line-height` e `letter-spacing` para facilitar leitura |
+| **Leitor de tela (TTS)** | Botão "Ler questão" que usa `SpeechSynthesis API` nativa do navegador |
+| **Máscara de leitura** | Régua horizontal semi-transparente que segue o mouse, isolando a linha de leitura |
+| **Navegação por teclado** | Atalhos: setas ←→ para navegar questões, 1-5 para alternativas, Enter para confirmar |
+| **Tempo extra** | Indicador visual quando o professor configurou tempo extra (campo futuro) |
+
+#### 2. Persistência de preferências
+- Salvar preferências no `sessionStorage` para manter durante a prova
+- Opcional: salvar no `localStorage` para provas futuras do mesmo navegador
 
 ---
 
 ### Arquitetura
 
 ```text
-Professor A clica "Enviar para Professor"
-         │
-         ▼
-  ShareRoomDialog (email input)
-         │
-         ▼
-  Edge Function: share-room
-    1. Valida JWT do remetente
-    2. Busca destinatário por e-mail (paginação Auth Admin)
-    3. Verifica role teacher/admin
-    4. Clona sala + formulários + participantes + casos clínicos
-       com user_id = destinatário, status = "draft"
-    5. Retorna sucesso
+StudentExam.tsx
+  └── AccessibilityPanel.tsx (novo componente)
+        ├── FontSizeControl (slider)
+        ├── HighContrastToggle
+        ├── DyslexiaFontToggle
+        ├── SpacingToggle
+        ├── TextToSpeechButton
+        ├── ReadingMaskToggle
+        └── KeyboardShortcutsInfo
 ```
-
----
 
 ### Etapas de implementação
 
-#### 1. Edge Function `share-room`
-- Recebe: `{ roomId, email, moduleType }` onde moduleType identifica a tabela (`simulation`, `soap`, `reconciliation`, `documentation`, `nursing`, `medicine`, `dentistry`, `nutrition`, `physiotherapy`, `biomedicine`)
-- Reutiliza o padrão já validado do `share-template` (auth via JWT claims, busca paginada de usuários, validação de role)
-- Para cada moduleType, clona:
-  - Tabela principal: `{prefix}_rooms` (com `user_id` do destinatário, título original, status `draft`)
-  - `{prefix}_forms` (formulários)
-  - `{prefix}_participants` (alunos)
-  - `{prefix}_clinical_cases` (quando existir)
-- Remove vínculos de sala anterior (ex: `anamnesis_room_id`, `soap_room_id`) pois o destinatário não terá essas salas
+#### 1. Componente `AccessibilityPanel`
+- Botão flutuante fixo (canto inferior esquerdo) com ícone de acessibilidade
+- Abre popover/sheet com todos os controles
+- Estado gerenciado via `useState` + `sessionStorage`
+- Emite classes CSS ou variáveis CSS para o container pai
 
-#### 2. Componente `ShareRoomDialog`
-- Similar ao `ShareTemplateDialog`, mas para salas
-- Props: `roomId`, `moduleType`, `roomTitle`
-- Input de e-mail, botão enviar, feedback de sucesso/erro
-- Chama a edge function via `fetch` com headers explícitos (padrão já validado)
+#### 2. Integrar no `StudentExam.tsx`
+- Envolver o conteúdo da prova em um `div` que recebe as classes de acessibilidade
+- Aplicar estilos condicionais: `font-size`, `font-family`, `line-height`, `letter-spacing`, filtros de contraste
+- Adicionar `aria-label`, `role`, e `tabIndex` nos elementos interativos existentes
+- Implementar `onKeyDown` para atalhos de teclado
 
-#### 3. Edição inline de título
-- Em cada card de sala, o título passa a ser clicável
-- Ao clicar, exibe um `Input` inline com botões de confirmar/cancelar
-- Faz `update` direto na tabela `{prefix}_rooms` via Supabase client
+#### 3. CSS para acessibilidade
+- Classe `.a11y-high-contrast`: bordas mais fortes, fundo escuro, texto branco
+- Classe `.a11y-dyslexia`: `font-family: 'OpenDyslexic'`
+- Classe `.a11y-spacing`: `line-height: 2; letter-spacing: 0.05em; word-spacing: 0.1em`
+- Classe `.a11y-reading-mask`: overlay com janela transparente que segue cursor
 
-#### 4. Integração nos 11 arquivos de listagem de salas
-Adicionar botão "Enviar" (ícone `Share2`) e título editável nos cards de:
-- `Simulations.tsx` (4 seções: anamnese, soap, reconciliação, documentação)
-- `SoapRooms.tsx`
-- `ReconciliationRooms.tsx`
-- `DocumentationRooms.tsx`
-- `NursingSimulations.tsx`
-- `MedicineSimulations.tsx`
-- `DentistrySimulations.tsx`
-- `NutritionSimulations.tsx`
-- `PhysiotherapySimulations.tsx`
-- `BiomedicineSimulations.tsx`
+#### 4. Melhorias semânticas no HTML existente
+- Adicionar `aria-live="polite"` no timer
+- Adicionar `aria-current="step"` na questão atual
+- Melhorar labels dos botões de navegação do grid lateral
+- Garantir foco visível (`focus-visible`) em todos os elementos interativos
 
 ---
 
 ### Detalhes Técnicos
 
-**Mapeamento de moduleType para tabelas:**
-| moduleType | rooms | forms | participants | clinical_cases |
-|---|---|---|---|---|
-| simulation | simulation_rooms | simulation_forms | simulation_participants | -- |
-| soap | soap_rooms | soap_forms | soap_participants | -- |
-| reconciliation | reconciliation_rooms | reconciliation_forms | reconciliation_participants | reconciliation_clinical_cases |
-| documentation | documentation_rooms | documentation_forms | documentation_participants | documentation_clinical_cases |
-| nursing | nursing_rooms | nursing_forms | nursing_participants | nursing_clinical_cases |
-| medicine | medicine_rooms | medicine_forms | medicine_participants | medicine_clinical_cases |
-| dentistry | dentistry_rooms | dentistry_forms | dentistry_participants | dentistry_clinical_cases |
-| nutrition | nutrition_rooms | nutrition_forms | nutrition_participants | nutrition_clinical_cases |
-| physiotherapy | physiotherapy_rooms | physiotherapy_forms | physiotherapy_participants | physiotherapy_clinical_cases |
-| biomedicine | biomedicine_rooms | biomedicine_forms | biomedicine_participants | biomedicine_clinical_cases |
+**Leitura por voz (TTS)**: Usa `window.speechSynthesis` nativo, sem dependências externas. Botão "Ler questão" lê o enunciado + alternativas. Funciona em Chrome, Edge, Firefox e Safari.
 
-**RLS**: A edge function usa `service_role`, então não precisa de alterações de RLS. A sala clonada pertence ao destinatário (`user_id`), logo as policies existentes de "owner can CRUD" já cobrem.
+**Máscara de leitura**: `div` com `position: fixed`, `pointer-events: none`, backdrop escurecido exceto uma faixa horizontal de ~60px que acompanha `mousemove`.
 
-**Campos extras por módulo**: Campos como `module_type` (nursing, medicine, etc.), `duration_minutes` (simulation) são copiados da sala original. Vínculos cruzados (`anamnesis_room_id`, `soap_room_id`, `reconciliation_room_id`) são definidos como `null` na cópia.
+**Fonte OpenDyslexic**: Importada via `@import url()` do Google Fonts ou CDN, carregada sob demanda apenas quando ativada.
+
+**Sem alteração no backend**: Todas as funcionalidades são client-side. Nenhuma migração de banco necessária.
+
+**Arquivos a criar**: `src/components/AccessibilityPanel.tsx`
+**Arquivos a editar**: `src/pages/StudentExam.tsx`, `src/index.css`
 
