@@ -50,24 +50,43 @@ export default function ShareTemplateDialog({ open, onOpenChange, templateId, te
   });
 
   const handleShare = async () => {
-    if (!email.trim()) return;
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) return;
     setSharing(true);
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) throw new Error("Não autenticado");
 
-      const { data: result, error } = await supabase.functions.invoke("share-template", {
-        body: { templateId, email: email.trim() },
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error("Sua sessão expirou. Faça login novamente.");
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/share-template`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ templateId, email: trimmedEmail }),
       });
 
-      if (error) throw error;
-      if (result?.error) throw new Error(result.error);
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.error || `Falha ao compartilhar (${response.status})`);
+      }
 
       queryClient.invalidateQueries({ queryKey: ["template-shares", templateId] });
-      toast({ title: "Template compartilhado!", description: `Compartilhado com ${email}` });
+      toast({ title: "Template compartilhado!", description: `Compartilhado com ${trimmedEmail}` });
       setEmail("");
     } catch (err: any) {
-      toast({ title: "Erro ao compartilhar", description: err.message, variant: "destructive" });
+      toast({
+        title: "Erro ao compartilhar",
+        description: err?.message || "Não foi possível compartilhar este template.",
+        variant: "destructive",
+      });
     } finally {
       setSharing(false);
     }
