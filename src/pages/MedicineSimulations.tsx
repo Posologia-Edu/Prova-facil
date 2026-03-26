@@ -10,11 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Stethoscope, Scissors } from "lucide-react";
+import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Stethoscope, Scissors, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { medicineModules, moduleLabel, type MedicineModuleType } from "@/lib/medicine-modules";
 import SystemPromptViewer from "@/components/SystemPromptViewer";
 import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
+import ShareRoomDialog from "@/components/ShareRoomDialog";
+import EditableRoomTitle from "@/components/EditableRoomTitle";
 
 export default function MedicineSimulations() {
   const navigate = useNavigate();
@@ -25,6 +27,8 @@ export default function MedicineSimulations() {
   const [description, setDescription] = useState("");
   const [createModuleType, setCreateModuleType] = useState<MedicineModuleType>("anamnese_medica");
   const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
+  const [shareRoomId, setShareRoomId] = useState<string | null>(null);
+  const [shareRoomTitle, setShareRoomTitle] = useState("");
 
   const moduleTypes: MedicineModuleType[] = ["anamnese_medica", "exame_fisico", "raciocinio_clinico", "plano_terapeutico"];
 
@@ -111,7 +115,7 @@ export default function MedicineSimulations() {
             <Card key={room.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-1"><CardTitle className="text-lg">{room.title}</CardTitle>{room.description && <CardDescription>{room.description}</CardDescription>}</div>
+                  <div className="space-y-1"><EditableRoomTitle roomId={room.id} title={room.title} tableName="medicine_rooms" invalidateKeys={["medicine-rooms-all"]} />{room.description && <CardDescription>{room.description}</CardDescription>}</div>
                   <Badge className={statusColor[room.status] || ""}>{room.status === "draft" ? "Rascunho" : room.status === "active" ? "Ativa" : "Concluída"}</Badge>
                 </div>
               </CardHeader>
@@ -124,6 +128,7 @@ export default function MedicineSimulations() {
                   {(room.status === "active" || room.status === "completed") && (<Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/medicine/${moduleType}/control/${room.id}`)}><Play className="h-3.5 w-3.5 mr-1" />{room.status === "completed" ? "Resultados" : "Controle"}</Button>)}
                   {room.status === "draft" && studentCount > 0 && (<Button variant="outline" size="sm" onClick={() => setSplitRoomId(room.id)}><Scissors className="h-3.5 w-3.5 mr-1" />Dividir</Button>)}
                   <Button variant="outline" size="sm" onClick={() => duplicateRoom.mutate(room.id)} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
+                  <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); }} title="Enviar para professor"><Share2 className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               </CardContent>
@@ -176,6 +181,9 @@ export default function MedicineSimulations() {
       </Tabs>
       {splitRoomId && (
         <GenericSplitRoomDialog roomId={splitRoomId} open={!!splitRoomId} onOpenChange={(o) => { if (!o) setSplitRoomId(null); }} onComplete={() => { setSplitRoomId(null); queryClient.invalidateQueries({ queryKey: ["medicine-rooms-all"] }); queryClient.invalidateQueries({ queryKey: ["medicine-participant-counts"] }); }} tablePrefix="medicine" />
+      )}
+      {shareRoomId && (
+        <ShareRoomDialog open={!!shareRoomId} onOpenChange={(o) => { if (!o) setShareRoomId(null); }} roomId={shareRoomId} roomTitle={shareRoomTitle} moduleType="medicine" />
       )}
     </div>
   );

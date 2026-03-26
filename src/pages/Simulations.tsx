@@ -12,10 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy, Heart, Activity, Dumbbell, Microscope, ArrowLeft } from "lucide-react";
+import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy, Heart, Activity, Dumbbell, Microscope, ArrowLeft, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import SplitRoomDialog from "@/components/SplitRoomDialog";
 import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
+import ShareRoomDialog from "@/components/ShareRoomDialog";
+import EditableRoomTitle from "@/components/EditableRoomTitle";
 
 const pharmacyModules = [
   {
@@ -144,6 +146,9 @@ export default function Simulations() {
   const [splitReconciliationRoomId, setSplitReconciliationRoomId] = useState<string | null>(null);
   const [splitDocumentationRoomId, setSplitDocumentationRoomId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("areas");
+  const [shareRoomId, setShareRoomId] = useState<string | null>(null);
+  const [shareRoomTitle, setShareRoomTitle] = useState("");
+  const [shareModuleType, setShareModuleType] = useState("");
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["simulation-rooms"],
@@ -614,7 +619,7 @@ export default function Simulations() {
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <CardTitle className="text-lg">{room.title}</CardTitle>
+                          <EditableRoomTitle roomId={room.id} title={room.title} tableName="simulation_rooms" invalidateKeys={["simulation-rooms"]} />
                           {room.description && <CardDescription>{room.description}</CardDescription>}
                         </div>
                         <Badge className={statusColor[room.status] || ""}>
@@ -654,6 +659,9 @@ export default function Simulations() {
                         )}
                         <Button variant="outline" size="sm" onClick={() => duplicateAnamnesisRoom.mutate(room.id)} title="Duplicar">
                           <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("simulation"); }} title="Enviar para professor">
+                          <Share2 className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir">
                           <Trash2 className="h-3.5 w-3.5" />
@@ -699,7 +707,7 @@ export default function Simulations() {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <CardTitle className="text-lg">{room.title}</CardTitle>
+                        <EditableRoomTitle roomId={room.id} title={room.title} tableName="soap_rooms" invalidateKeys={["soap-rooms-list"]} />
                         {room.description && <CardDescription>{room.description}</CardDescription>}
                       </div>
                       <Badge className={statusColor[room.status] || ""}>
@@ -751,6 +759,9 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => duplicateSoapRoom.mutate(room.id)} title="Duplicar">
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
+                      <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("soap"); }} title="Enviar para professor">
+                        <Share2 className="h-3.5 w-3.5" />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => deleteSoapRoom.mutate(room.id)} title="Excluir">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -787,7 +798,7 @@ export default function Simulations() {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <CardTitle className="text-lg">{room.title}</CardTitle>
+                        <EditableRoomTitle roomId={room.id} title={room.title} tableName="reconciliation_rooms" invalidateKeys={["reconciliation-rooms-list"]} />
                         {room.description && <CardDescription>{room.description}</CardDescription>}
                       </div>
                       <Badge className={statusColor[room.status] || ""}>
@@ -826,6 +837,9 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => duplicateReconciliationRoom.mutate(room.id)} title="Duplicar">
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
+                      <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("reconciliation"); }} title="Enviar para professor">
+                        <Share2 className="h-3.5 w-3.5" />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => deleteReconciliationRoom.mutate(room.id)} title="Excluir">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -861,7 +875,7 @@ export default function Simulations() {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <CardTitle className="text-lg">{room.title}</CardTitle>
+                        <EditableRoomTitle roomId={room.id} title={room.title} tableName="documentation_rooms" invalidateKeys={["documentation-rooms-list"]} />
                         {room.description && <CardDescription>{room.description}</CardDescription>}
                       </div>
                       <Badge className={statusColor[room.status] || ""}>
@@ -900,6 +914,9 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => duplicateDocumentationRoom.mutate(room.id)} title="Duplicar">
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
+                      <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("documentation"); }} title="Enviar para professor">
+                        <Share2 className="h-3.5 w-3.5" />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => deleteDocumentationRoom.mutate(room.id)} title="Excluir">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -935,6 +952,10 @@ export default function Simulations() {
 
       {splitDocumentationRoomId && (
         <GenericSplitRoomDialog roomId={splitDocumentationRoomId} open={!!splitDocumentationRoomId} onOpenChange={(o) => { if (!o) setSplitDocumentationRoomId(null); }} onComplete={() => { setSplitDocumentationRoomId(null); queryClient.invalidateQueries({ queryKey: ["documentation-rooms-list"] }); }} tablePrefix="documentation" />
+      )}
+
+      {shareRoomId && (
+        <ShareRoomDialog open={!!shareRoomId} onOpenChange={(o) => { if (!o) setShareRoomId(null); }} roomId={shareRoomId} roomTitle={shareRoomTitle} moduleType={shareModuleType} />
       )}
     </div>
   );
