@@ -275,7 +275,6 @@ export default function SoapRooms() {
           })}
         </div>
       )}
-    </div>
 
       {shareRoomId && (
         <ShareRoomDialog
