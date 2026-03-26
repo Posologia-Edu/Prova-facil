@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Camera, Shield, AlertTriangle } from "lucide-react";
@@ -248,6 +249,34 @@ export default function ExamProctoring({
     };
   }, []);
 
+  // Realtime: listen for teacher unlock
+  useEffect(() => {
+    if (!blocked) return;
+    const channel = supabase
+      .channel(`session-unlock-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "exam_sessions",
+          filter: `id=eq.${sessionId}`,
+        },
+        (payload: any) => {
+          if (payload.new?.status === "in_progress") {
+            setBlocked(false);
+            setViolationCount(0);
+            toast.success("Sua prova foi desbloqueada pelo professor.");
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [blocked, sessionId]);
+
   // If no proctoring features, just render children
   if (!hasAnyFeature) return <>{children}</>;
 
@@ -328,6 +357,9 @@ export default function ExamProctoring({
           <p className="text-sm text-muted-foreground">
             Sua prova foi bloqueada por excesso de violações de segurança ({violationCount} violações registradas).
             Entre em contato com seu professor.
+          </p>
+          <p className="text-xs text-muted-foreground animate-pulse">
+            Aguardando desbloqueio pelo professor...
           </p>
         </div>
       </div>
