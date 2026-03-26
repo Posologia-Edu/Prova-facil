@@ -1040,6 +1040,38 @@ export type Database = {
           },
         ]
       }
+      exam_audit_logs: {
+        Row: {
+          created_at: string
+          event_data: Json | null
+          event_type: string
+          id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_audit_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_publications: {
         Row: {
           access_code: string
@@ -1135,42 +1167,54 @@ export type Database = {
       exam_sessions: {
         Row: {
           created_at: string
+          device_fingerprint: Json | null
           finished_at: string | null
           id: string
           max_score: number | null
+          photo_url: string | null
           publication_id: string
           started_at: string
           status: string
           student_email: string | null
           student_id: string | null
           student_name: string | null
+          submission_hash: string | null
           total_score: number | null
+          violation_count: number | null
         }
         Insert: {
           created_at?: string
+          device_fingerprint?: Json | null
           finished_at?: string | null
           id?: string
           max_score?: number | null
+          photo_url?: string | null
           publication_id: string
           started_at?: string
           status?: string
           student_email?: string | null
           student_id?: string | null
           student_name?: string | null
+          submission_hash?: string | null
           total_score?: number | null
+          violation_count?: number | null
         }
         Update: {
           created_at?: string
+          device_fingerprint?: Json | null
           finished_at?: string | null
           id?: string
           max_score?: number | null
+          photo_url?: string | null
           publication_id?: string
           started_at?: string
           status?: string
           student_email?: string | null
           student_id?: string | null
           student_name?: string | null
+          submission_hash?: string | null
           total_score?: number | null
+          violation_count?: number | null
         }
         Relationships: [
           {
@@ -1191,6 +1235,7 @@ export type Database = {
           header_config_json: Json
           id: string
           layout_config_json: Json
+          proctoring_config: Json | null
           status: string
           title: string
           updated_at: string
@@ -1204,6 +1249,7 @@ export type Database = {
           header_config_json?: Json
           id?: string
           layout_config_json?: Json
+          proctoring_config?: Json | null
           status?: string
           title?: string
           updated_at?: string
@@ -1217,6 +1263,7 @@ export type Database = {
           header_config_json?: Json
           id?: string
           layout_config_json?: Json
+          proctoring_config?: Json | null
           status?: string
           title?: string
           updated_at?: string
