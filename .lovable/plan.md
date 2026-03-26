@@ -1,86 +1,101 @@
 
 
-## Plano: Acessibilidade nas Provas Online
+## Plano: Mídia Rica nas Questões (Imagens, Gráficos, LaTeX e Código)
 
 ### Resumo
-Adicionar um painel de acessibilidade flutuante no `StudentExam.tsx` que permite ao aluno personalizar sua experiência de prova, garantindo inclusão para pessoas com deficiência visual, motora, cognitiva e dislexia.
+Expandir o sistema de questões para suportar conteúdo rico no enunciado e nas alternativas: **imagens/gráficos** (upload ou URL), **expressões matemáticas** (LaTeX via KaTeX), e **blocos de código** (syntax highlighting via highlight.js). Isso se aplica ao Banco de Questões, ao Editor de Provas e ao Portal do Aluno.
 
 ---
 
 ### Funcionalidades
 
-#### 1. Painel de Acessibilidade (botão flutuante com ícone ♿)
-Barra lateral ou popover com controles:
-
-| Recurso | Descrição |
-|---|---|
-| **Aumentar/diminuir fonte** | Slider de 14px a 28px aplicado ao conteúdo da prova |
-| **Alto contraste** | Modo escuro forçado com bordas mais visíveis e contraste WCAG AAA |
-| **Fonte para dislexia** | Troca para OpenDyslexic (Google Fonts) |
-| **Espaçamento ampliado** | Aumenta `line-height` e `letter-spacing` para facilitar leitura |
-| **Leitor de tela (TTS)** | Botão "Ler questão" que usa `SpeechSynthesis API` nativa do navegador |
-| **Máscara de leitura** | Régua horizontal semi-transparente que segue o mouse, isolando a linha de leitura |
-| **Navegação por teclado** | Atalhos: setas ←→ para navegar questões, 1-5 para alternativas, Enter para confirmar |
-| **Tempo extra** | Indicador visual quando o professor configurou tempo extra (campo futuro) |
-
-#### 2. Persistência de preferências
-- Salvar preferências no `sessionStorage` para manter durante a prova
-- Opcional: salvar no `localStorage` para provas futuras do mesmo navegador
+| Recurso | Onde aparece | Como funciona |
+|---|---|---|
+| **Imagens** | Enunciado e alternativas | Upload para Storage ou URL externa. Exibido inline |
+| **Expressões matemáticas** | Enunciado e alternativas | Sintaxe `$...$` (inline) e `$$...$$` (bloco) renderizada via KaTeX |
+| **Blocos de código** | Enunciado | Sintaxe ` ```lang ... ``` ` renderizada com highlight.js |
+| **Gráficos** | Enunciado | Via upload de imagem ou embed URL (já existente) |
 
 ---
 
 ### Arquitetura
 
 ```text
-StudentExam.tsx
-  └── AccessibilityPanel.tsx (novo componente)
-        ├── FontSizeControl (slider)
-        ├── HighContrastToggle
-        ├── DyslexiaFontToggle
-        ├── SpacingToggle
-        ├── TextToSpeechButton
-        ├── ReadingMaskToggle
-        └── KeyboardShortcutsInfo
+Texto do enunciado/alternativa
+        │
+        ▼
+  RichTextRenderer (novo componente)
+    ├── Detecta $...$ e $$...$$ → renderiza com KaTeX
+    ├── Detecta ```...``` → renderiza com highlight.js
+    └── Texto normal → renderiza como texto
+        │
+  ImageAttachments (novo componente)
+    └── Lista de imagens anexadas ao enunciado
 ```
+
+---
 
 ### Etapas de implementação
 
-#### 1. Componente `AccessibilityPanel`
-- Botão flutuante fixo (canto inferior esquerdo) com ícone de acessibilidade
-- Abre popover/sheet com todos os controles
-- Estado gerenciado via `useState` + `sessionStorage`
-- Emite classes CSS ou variáveis CSS para o container pai
+#### 1. Storage bucket para imagens de questões
+- Criar bucket `question-images` (público) via migração SQL
+- RLS: usuários autenticados podem fazer upload; leitura pública
 
-#### 2. Integrar no `StudentExam.tsx`
-- Envolver o conteúdo da prova em um `div` que recebe as classes de acessibilidade
-- Aplicar estilos condicionais: `font-size`, `font-family`, `line-height`, `letter-spacing`, filtros de contraste
-- Adicionar `aria-label`, `role`, e `tabIndex` nos elementos interativos existentes
-- Implementar `onKeyDown` para atalhos de teclado
+#### 2. Instalar dependências
+- `katex` — renderização de LaTeX (leve, client-side)
+- `highlight.js` — syntax highlighting para código
 
-#### 3. CSS para acessibilidade
-- Classe `.a11y-high-contrast`: bordas mais fortes, fundo escuro, texto branco
-- Classe `.a11y-dyslexia`: `font-family: 'OpenDyslexic'`
-- Classe `.a11y-spacing`: `line-height: 2; letter-spacing: 0.05em; word-spacing: 0.1em`
-- Classe `.a11y-reading-mask`: overlay com janela transparente que segue cursor
+#### 3. Componente `RichTextRenderer`
+- Recebe string de texto e renderiza:
+  - `$$...$$` → `katex.renderToString()` em bloco
+  - `$...$` → `katex.renderToString()` inline
+  - ` ```lang\n...\n``` ` → `<pre><code>` com highlight.js
+  - Texto restante → `<span>` normal
+- Usado em: enunciado da questão, texto das alternativas, explicação
 
-#### 4. Melhorias semânticas no HTML existente
-- Adicionar `aria-live="polite"` no timer
-- Adicionar `aria-current="step"` na questão atual
-- Melhorar labels dos botões de navegação do grid lateral
-- Garantir foco visível (`focus-visible`) em todos os elementos interativos
+#### 4. Componente `ImageUploader`
+- Botão de upload no formulário de criação/edição de questão
+- Faz upload para `question-images/{userId}/{uuid}.ext`
+- Retorna URL pública que é salva no `content_json.images[]`
+- Preview das imagens anexadas com botão de remover
+
+#### 5. Atualizar criação de questões (`Questions.tsx`)
+- Adicionar toolbar acima do `Textarea` do enunciado com botões:
+  - 📷 Inserir imagem (abre uploader)
+  - **∑** Inserir expressão matemática (insere template `$$  $$`)
+  - `</>` Inserir bloco de código (insere template ` ```\n\n``` `)
+- Adicionar campo de imagens nas alternativas (botão de imagem por alternativa)
+- Salvar imagens em `content_json.images` e `content_json.alternatives[].image`
+
+#### 6. Atualizar exibição de questões
+- **`Questions.tsx`** (detalhes): usar `RichTextRenderer` no enunciado, alternativas e explicação
+- **`ExamEditor.tsx`** (preview): usar `RichTextRenderer`
+- **`StudentExam.tsx`** (portal do aluno): usar `RichTextRenderer` no enunciado e alternativas, exibir imagens anexadas
+
+#### 7. Atualizar exportação PDF (`ExamPDFExporter.tsx`)
+- Para LaTeX: converter para imagem via canvas do KaTeX ou texto fallback
+- Para código: renderizar como texto monospace
+- Para imagens: incluir como imagem no jsPDF
 
 ---
 
 ### Detalhes Técnicos
 
-**Leitura por voz (TTS)**: Usa `window.speechSynthesis` nativo, sem dependências externas. Botão "Ler questão" lê o enunciado + alternativas. Funciona em Chrome, Edge, Firefox e Safari.
+**Estrutura `content_json` atualizada:**
+```json
+{
+  "question_text": "Calcule a integral $\\int_0^1 x^2 dx$ e analise o gráfico:",
+  "images": ["https://.../question-images/abc.png"],
+  "alternatives": [
+    { "letter": "A", "text": "$\\frac{1}{3}$", "image": null },
+    { "letter": "B", "text": "$\\frac{1}{2}$", "image": "https://.../alt-b.png" }
+  ],
+  "correct_answer": "A",
+  "explanation": "Pela regra da potência: ```\n∫x²dx = x³/3\n```"
+}
+```
 
-**Máscara de leitura**: `div` com `position: fixed`, `pointer-events: none`, backdrop escurecido exceto uma faixa horizontal de ~60px que acompanha `mousemove`.
-
-**Fonte OpenDyslexic**: Importada via `@import url()` do Google Fonts ou CDN, carregada sob demanda apenas quando ativada.
-
-**Sem alteração no backend**: Todas as funcionalidades são client-side. Nenhuma migração de banco necessária.
-
-**Arquivos a criar**: `src/components/AccessibilityPanel.tsx`
-**Arquivos a editar**: `src/pages/StudentExam.tsx`, `src/index.css`
+**Arquivos a criar:** `src/components/RichTextRenderer.tsx`, `src/components/QuestionImageUploader.tsx`
+**Arquivos a editar:** `Questions.tsx`, `ExamEditor.tsx`, `StudentExam.tsx`, `ExamPDFExporter.tsx`, `index.css`
+**Migração SQL:** Criar bucket `question-images`
 
