@@ -63,17 +63,6 @@ export default function UpdatePipeline() {
     }
   }, [queryClient]);
 
-  // Auto-trigger every 30 days
-  useEffect(() => {
-    if (!isAdmin) return;
-    const lastGenerated = localStorage.getItem("roadmap_last_generated");
-    if (lastGenerated && Date.now() - Number(lastGenerated) < THIRTY_DAYS_MS) return;
-    // Only auto-trigger if there are few planned items
-    if (planned.length <= 2) {
-      generateRoadmapSuggestions();
-    }
-  }, [isAdmin, planned.length, generateRoadmapSuggestions]);
-
   const { data: updates = [], isLoading } = useQuery({
     queryKey: ["system-updates"],
     queryFn: async () => {
@@ -93,6 +82,16 @@ export default function UpdatePipeline() {
     const pOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
     return (pOrder[a.priority] ?? 1) - (pOrder[b.priority] ?? 1);
   });
+
+  // Auto-trigger every 30 days
+  useEffect(() => {
+    if (!isAdmin || isLoading) return;
+    const lastGenerated = localStorage.getItem("roadmap_last_generated");
+    if (lastGenerated && Date.now() - Number(lastGenerated) < THIRTY_DAYS_MS) return;
+    if (planned.length <= 2) {
+      generateRoadmapSuggestions();
+    }
+  }, [isAdmin, isLoading, planned.length, generateRoadmapSuggestions]);
 
   const priorityBadge: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
     high: { label: "Alta", variant: "destructive" },
