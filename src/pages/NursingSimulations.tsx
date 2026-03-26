@@ -10,11 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Heart, Scissors } from "lucide-react";
+import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Heart, Scissors, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { nursingModules, moduleLabel, type NursingModuleType } from "@/lib/nursing-modules";
 import SystemPromptViewer from "@/components/SystemPromptViewer";
 import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
+import ShareRoomDialog from "@/components/ShareRoomDialog";
+import EditableRoomTitle from "@/components/EditableRoomTitle";
 
 export default function NursingSimulations() {
   const navigate = useNavigate();
@@ -25,6 +27,8 @@ export default function NursingSimulations() {
   const [description, setDescription] = useState("");
   const [createModuleType, setCreateModuleType] = useState<NursingModuleType>("acolhimento");
   const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
+  const [shareRoomId, setShareRoomId] = useState<string | null>(null);
+  const [shareRoomTitle, setShareRoomTitle] = useState("");
 
   const moduleTypes: NursingModuleType[] = ["acolhimento", "sae", "evolucao", "passagem_plantao"];
 
@@ -158,7 +162,7 @@ export default function NursingSimulations() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    <CardTitle className="text-lg">{room.title}</CardTitle>
+                    <EditableRoomTitle roomId={room.id} title={room.title} tableName="nursing_rooms" invalidateKeys={["nursing-rooms-all"]} />
                     {room.description && <CardDescription>{room.description}</CardDescription>}
                   </div>
                   <Badge className={statusColor[room.status] || ""}>{room.status === "draft" ? "Rascunho" : room.status === "active" ? "Ativa" : "Concluída"}</Badge>
@@ -194,6 +198,7 @@ export default function NursingSimulations() {
                     <Button variant="outline" size="sm" onClick={() => setSplitRoomId(room.id)}><Scissors className="h-3.5 w-3.5 mr-1" />Dividir</Button>
                   )}
                   <Button variant="outline" size="sm" onClick={() => duplicateRoom.mutate(room.id)} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
+                  <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); }} title="Enviar para professor"><Share2 className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               </CardContent>
@@ -288,6 +293,10 @@ export default function NursingSimulations() {
           onComplete={() => { setSplitRoomId(null); queryClient.invalidateQueries({ queryKey: ["nursing-rooms-all"] }); queryClient.invalidateQueries({ queryKey: ["nursing-participant-counts"] }); }}
           tablePrefix="nursing"
         />
+      )}
+
+      {shareRoomId && (
+        <ShareRoomDialog open={!!shareRoomId} onOpenChange={(o) => { if (!o) setShareRoomId(null); }} roomId={shareRoomId} roomTitle={shareRoomTitle} moduleType="nursing" />
       )}
     </div>
   );
