@@ -78,8 +78,28 @@ export default function ExamMonitoring() {
   } | null>(null);
   const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [selectedSecuritySession, setSelectedSecuritySession] = useState<string | null>(null);
+  const [signedPhotoUrls, setSignedPhotoUrls] = useState<Record<string, string[]>>({});
   const [activeTab, setActiveTab] = useState("monitoring");
   const [unlockingSessionId, setUnlockingSessionId] = useState<string | null>(null);
+
+  // Generate signed URLs when a security session is selected
+  useEffect(() => {
+    if (!selectedSecuritySession || !securityData?.photoPaths[selectedSecuritySession]?.length) return;
+    const paths = securityData.photoPaths[selectedSecuritySession];
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.storage
+        .from("exam-proctoring")
+        .createSignedUrls(paths, 3600);
+      if (!cancelled && data) {
+        setSignedPhotoUrls(prev => ({
+          ...prev,
+          [selectedSecuritySession]: data.map(d => d.signedUrl).filter(Boolean),
+        }));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedSecuritySession, securityData]);
 
   const getFunctionHeaders = async () => {
     const { data } = await supabase.auth.getSession();
@@ -500,23 +520,20 @@ export default function ExamMonitoring() {
                   ) : (
                     <div className="space-y-4">
                       {/* Photos */}
-                      {securityData.photoPaths[selectedSecuritySession] && securityData.photoPaths[selectedSecuritySession].length > 0 && (
+                      {signedPhotoUrls[selectedSecuritySession] && signedPhotoUrls[selectedSecuritySession].length > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
                             <Camera className="h-3 w-3" /> Fotos capturadas
                           </p>
                           <div className="flex gap-2 overflow-x-auto pb-2">
-                            {securityData.photoPaths[selectedSecuritySession].map((path, i) => {
-                              const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/authenticated/exam-proctoring/${path}`;
-                              return (
-                                <img
-                                  key={i}
-                                  src={url}
-                                  alt={`Captura ${i + 1}`}
-                                  className="h-20 w-auto rounded border object-cover shrink-0"
-                                />
-                              );
-                            })}
+                            {signedPhotoUrls[selectedSecuritySession].map((url, i) => (
+                              <img
+                                key={i}
+                                src={url}
+                                alt={`Captura ${i + 1}`}
+                                className="h-20 w-auto rounded border object-cover shrink-0"
+                              />
+                            ))}
                           </div>
                         </div>
                       )}
