@@ -243,8 +243,43 @@ export default function StudentExam() {
   const isTimeLow = timeLeft !== null && timeLeft < 300;
   const progressPercent = (answeredCount / questions.length) * 100;
 
+  // Keyboard shortcuts for accessibility
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setCurrentIdx(prev => Math.max(0, prev - 1));
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1));
+      } else if (e.key === "r" || e.key === "R") {
+        // TTS shortcut
+        if (!("speechSynthesis" in window) || !currentQ) return;
+        window.speechSynthesis.cancel();
+        let text = getStatement(currentQ.content_json || {});
+        const alts = getAlternatives(currentQ.content_json || {});
+        if (alts.length) text += ". Alternativas: " + alts.map(a => `${a.letter}: ${a.text}`).join(". ");
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "pt-BR";
+        u.rate = 0.9;
+        window.speechSynthesis.speak(u);
+      } else if (/^[1-5]$/.test(e.key) && currentQ) {
+        const alts = getAlternatives(currentQ.content_json || {});
+        const idx = parseInt(e.key) - 1;
+        if (idx < alts.length) {
+          setAnswer(currentQ.id, alts[idx].letter, { selected: alts[idx].letter });
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [questions.length, currentQ]);
+
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
+    <div className={`min-h-screen bg-muted/30 flex flex-col ${getA11yClasses(a11y)}`} style={getA11yStyle(a11y)}>
       {/* Top bar */}
       <header className="bg-card border-b shadow-sm sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
