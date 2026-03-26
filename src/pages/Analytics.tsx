@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { AdvancedPDFReport } from "@/components/AdvancedPDFReport";
 
 interface ExamOption { id: string; title: string; class_id: string | null; }
 interface ClassOption { id: string; name: string; }
