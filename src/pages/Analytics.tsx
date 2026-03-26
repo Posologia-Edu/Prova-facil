@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { AdvancedPDFReport } from "@/components/AdvancedPDFReport";
 
 interface ExamOption { id: string; title: string; class_id: string | null; }
 interface ClassOption { id: string; name: string; }
@@ -211,6 +212,22 @@ export default function AnalyticsPage() {
           <p className="text-muted-foreground text-sm mt-1">{t("analytics_subtitle")}</p>
         </div>
         <div className="flex gap-3">
+          <AdvancedPDFReport
+            variant="sm"
+            data={{
+              title: "Relatório Geral de Desempenho",
+              subtitle: selectedExam !== "all" ? exams.find(e => e.id === selectedExam)?.title : "Todas as provas",
+              stats: [
+                { label: "Aprovação", value: `${passRate.toFixed(0)}%` },
+              ],
+              students: finishedSessions.map(s => ({
+                name: s.student_id || "—",
+                score: s.total_score || 0,
+                maxScore: s.max_score || 0,
+              })),
+              chartElementId: "analytics-chart-area",
+            }}
+          />
           <Select value={selectedClass} onValueChange={setSelectedClass}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder={t("analytics_all_classes")} />

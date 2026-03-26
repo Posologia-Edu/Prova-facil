@@ -119,6 +119,10 @@ import CookiePolicy from "./pages/CookiePolicy";
 import { CookieBanner } from "@/components/CookieBanner";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import UpdatePipeline from "./pages/UpdatePipeline";
+import StudentGamification from "./pages/StudentGamification";
+import StudentPortfolio from "./pages/StudentPortfolio";
+import CompetencyAnalysis from "./pages/CompetencyAnalysis";
+import LmsIntegration from "./pages/LmsIntegration";
 
 const queryClient = new QueryClient();
 
@@ -140,6 +144,8 @@ const App = () => (
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/exam/:sessionId" element={<StudentExam />} />
             <Route path="/student/results/:sessionId" element={<StudentResults />} />
+            <Route path="/student/gamification" element={<StudentGamification />} />
+            <Route path="/student/portfolio" element={<StudentPortfolio />} />
 
             {/* Teacher routes */}
             <Route
@@ -556,6 +562,30 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><Contact /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/competency-analysis"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><CompetencyAnalysis /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lms-integration"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><LmsIntegration /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portfolio/:studentEmail"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><StudentPortfolio /></AppLayout>
                 </ProtectedRoute>
               }
             />
