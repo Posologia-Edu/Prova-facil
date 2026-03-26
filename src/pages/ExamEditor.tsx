@@ -771,7 +771,7 @@ export default function ExamEditorPage() {
                       </DropdownMenu>
                     </div>
                   </div>
-                  <p className="text-sm mt-2 leading-relaxed">{q.title}</p>
+                  <div className="text-sm mt-2 leading-relaxed"><RichTextRenderer text={q.title} /></div>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t">
                     <span className="text-xs text-muted-foreground">Elaborada por mim</span>
                     <div className="flex items-center gap-2">
