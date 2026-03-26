@@ -27,7 +27,6 @@ export default function CompetencyAnalysis() {
       supabase.from("competency_definitions").select("*").eq("user_id", user.id),
       supabase.from("classes").select("id, name").eq("user_id", user.id).is("deleted_at", null),
       supabase.from("question_competencies").select("question_id, competency_id"),
-      supabase.rpc("get_all_exam_answers_for_user", { p_user_id: user.id }).catch(() => ({ data: [] })),
     ]);
 
     setCompetencies((compRes.data || []) as CompDef[]);
@@ -35,29 +34,44 @@ export default function CompetencyAnalysis() {
 
     // Map question → competencies
     const qcMap: Record<string, string[]> = {};
-    (qcRes.data || []).forEach((r: any) => {
+    ((qcRes.data || []) as any[]).forEach((r: any) => {
       if (!qcMap[r.question_id]) qcMap[r.question_id] = [];
       qcMap[r.question_id].push(r.competency_id);
     });
 
-    // Build student competency scores from exam answers
+    // Build student competency scores from exam_sessions + exam_questions
     const scores: Record<string, Record<string, { total: number; count: number }>> = {};
-    // We'll use exam_sessions + session_answers approach via direct query
-    const sessionsRes = await supabase.from("exam_sessions").select("id, student_email, publication_id");
-    const sessions = sessionsRes.data || [];
-    
-    for (const sess of sessions.slice(0, 200)) {
-      if (!sess.student_email) continue;
-      const saRes = await supabase.from("session_answers").select("question_id, points_earned, max_points").eq("session_id", sess.id);
-      const answers = saRes.data || [];
-      
-      for (const ans of answers) {
-        const compIds = qcMap[ans.question_id] || [];
-        for (const cid of compIds) {
-          if (!scores[sess.student_email]) scores[sess.student_email] = {};
-          if (!scores[sess.student_email][cid]) scores[sess.student_email][cid] = { total: 0, count: 0 };
-          scores[sess.student_email][cid].total += Number(ans.points_earned) || 0;
-          scores[sess.student_email][cid].count += Number(ans.max_points) || 1;
+
+    // Get publications owned by this user
+    const { data: pubs } = await supabase.from("exam_publications").select("id, exam_id").eq("user_id", user.id);
+    const pubIds = (pubs || []).map(p => p.id);
+    const examMap: Record<string, string> = {};
+    (pubs || []).forEach(p => { examMap[p.id] = p.exam_id; });
+
+    if (pubIds.length > 0) {
+      const { data: sessData } = await supabase.from("exam_sessions").select("id, student_email, publication_id, total_score, max_score").in("publication_id", pubIds).eq("status", "graded").limit(500);
+      const sessions = sessData || [];
+
+      for (const sess of sessions) {
+        if (!sess.student_email) continue;
+        const examId = examMap[sess.publication_id];
+        if (!examId) continue;
+
+        // Get exam questions for this exam
+        const { data: eqData } = await supabase.from("exam_questions").select("question_id, points").eq("exam_id", examId);
+        const eqs = eqData || [];
+
+        for (const eq of eqs) {
+          const compIds = qcMap[eq.question_id] || [];
+          for (const cid of compIds) {
+            if (!scores[sess.student_email]) scores[sess.student_email] = {};
+            if (!scores[sess.student_email][cid]) scores[sess.student_email][cid] = { total: 0, count: 0 };
+            // Approximate: distribute score proportionally
+            const weight = Number(eq.points) || 1;
+            const ratio = sess.max_score && sess.max_score > 0 ? (sess.total_score || 0) / sess.max_score : 0;
+            scores[sess.student_email][cid].total += ratio * weight;
+            scores[sess.student_email][cid].count += weight;
+          }
         }
       }
     }
