@@ -904,6 +904,94 @@ export default function ExamEditorPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <Separator />
+
+          {/* Proctoring / Security section */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-base flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                Segurança & Proctoring
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Configure medidas de segurança para aplicação em concursos e avaliações de alto impacto.
+              </p>
+            </div>
+
+            <Card>
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Modo Tela Cheia Obrigatório</Label>
+                    <p className="text-xs text-muted-foreground">Sair da tela cheia registra violação</p>
+                  </div>
+                  <Switch checked={proctoringFullscreen} onCheckedChange={setProctoringFullscreen} />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Bloquear Copiar/Colar</Label>
+                    <p className="text-xs text-muted-foreground">Desativa copy, paste, atalhos e menu de contexto</p>
+                  </div>
+                  <Switch checked={proctoringBlockCopy} onCheckedChange={setProctoringBlockCopy} />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Embaralhar Questões</Label>
+                    <p className="text-xs text-muted-foreground">Ordem aleatória por aluno (determinística)</p>
+                  </div>
+                  <Switch checked={proctoringShuffleQ} onCheckedChange={setProctoringShuffleQ} />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Embaralhar Alternativas</Label>
+                    <p className="text-xs text-muted-foreground">Alternativas de múltipla escolha em ordem aleatória</p>
+                  </div>
+                  <Switch checked={proctoringShuffleAlt} onCheckedChange={setProctoringShuffleAlt} />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Foto de Identificação</Label>
+                    <p className="text-xs text-muted-foreground">Captura webcam ao iniciar a prova</p>
+                  </div>
+                  <Switch checked={proctoringPhoto} onCheckedChange={setProctoringPhoto} />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Selfies Periódicas</Label>
+                    <p className="text-xs text-muted-foreground">Fotos automáticas durante a prova</p>
+                  </div>
+                  <Switch checked={proctoringPeriodicPhotos} onCheckedChange={setProctoringPeriodicPhotos} />
+                </div>
+                {proctoringPeriodicPhotos && (
+                  <div className="pl-6 space-y-1">
+                    <Label className="text-xs">Intervalo (minutos):</Label>
+                    <Input type="number" min={1} max={30} value={proctoringPhotoInterval} onChange={(e) => setProctoringPhotoInterval(e.target.value)} className="w-24 h-8 text-xs" />
+                  </div>
+                )}
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Marca d'Água</Label>
+                    <p className="text-xs text-muted-foreground">Nome e email sobrepostos na tela</p>
+                  </div>
+                  <Switch checked={proctoringWatermark} onCheckedChange={setProctoringWatermark} />
+                </div>
+                <Separator />
+                <div className="space-y-1">
+                  <Label className="font-medium">Limite de Violações</Label>
+                  <p className="text-xs text-muted-foreground">Prova bloqueada ao atingir o limite (0 = sem limite)</p>
+                  <Input type="number" min={0} max={50} value={proctoringMaxViolations} onChange={(e) => setProctoringMaxViolations(e.target.value)} className="w-24 h-8 text-xs" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="flex items-center justify-end gap-3 pt-4">
             <Button variant="ghost" onClick={() => navigate("/exams")}>VOLTAR</Button>
             <Button onClick={handleSave}>SALVAR</Button>
