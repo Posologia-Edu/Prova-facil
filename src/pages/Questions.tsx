@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import SystemPromptViewer from "@/components/SystemPromptViewer";
 import {
   Library,
