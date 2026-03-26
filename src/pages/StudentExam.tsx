@@ -12,6 +12,7 @@ import { Clock, ChevronLeft, ChevronRight, Send, Loader2, AlertTriangle, FileTex
 import AccessibilityPanel, { useA11ySettings, getA11yClasses, getA11yStyle, ReadingMask } from "@/components/AccessibilityPanel";
 import { toast } from "sonner";
 import RichTextRenderer from "@/components/RichTextRenderer";
+import ExamProctoring, { type ProctoringConfig } from "@/components/ExamProctoring";
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
 
@@ -41,6 +42,8 @@ export default function StudentExam() {
   const [examTitle, setExamTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [proctoringConfig, setProctoringConfig] = useState<ProctoringConfig>({});
+  const [submissionHash, setSubmissionHash] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const autoSubmittedRef = useRef(false);
@@ -87,6 +90,18 @@ export default function StudentExam() {
       }
 
       toast.success(auto ? "Tempo esgotado! Prova enviada automaticamente." : "Prova enviada com sucesso!");
+      
+      // Generate submission hash (digital receipt)
+      try {
+        const hashPayload = JSON.stringify({ sessionId, answers, ts: new Date().toISOString() });
+        const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(hashPayload));
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+        setSubmissionHash(hashHex);
+      } catch {
+        // fallback
+      }
+
       navigate(`/student/results/${sessionId}`);
     } catch {
       toast.error("Erro ao enviar prova. Tente novamente.");
@@ -122,6 +137,9 @@ export default function StudentExam() {
         setExamTitle(data.examTitle);
         setTimeLeft(data.timeLeft);
         setQuestions(data.questions);
+        if (data.proctoringConfig) {
+          setProctoringConfig(data.proctoringConfig);
+        }
 
         if (data.timeLeft <= 0) {
           submitExam(true);
@@ -281,6 +299,12 @@ export default function StudentExam() {
   const progressPercent = (answeredCount / questions.length) * 100;
 
   return (
+    <ExamProctoring
+      config={proctoringConfig}
+      sessionId={sessionId || ""}
+      studentName={sessionStorage.getItem("student_name") || ""}
+      studentEmail={studentEmail || ""}
+    >
     <div className={`min-h-screen bg-muted/30 flex flex-col ${getA11yClasses(a11y)}`} style={getA11yStyle(a11y)}>
       {/* Top bar */}
       <header className="bg-card border-b shadow-sm sticky top-0 z-20">
@@ -585,5 +609,6 @@ export default function StudentExam() {
       />
       {a11y.readingMask && <ReadingMask />}
     </div>
+    </ExamProctoring>
   );
 }
