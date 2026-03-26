@@ -96,6 +96,37 @@
 }
 
 @layer utilities {
+  /* Accessibility classes */
+  .a11y-high-contrast {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 80%;
+    --border: 0 0% 40%;
+    --primary: 50 100% 50%;
+    --primary-foreground: 0 0% 0%;
+  }
+
+  .a11y-dyslexia {
+    font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif !important;
+  }
+  .a11y-dyslexia * {
+    font-family: inherit !important;
+  }
+
+  .a11y-spacing {
+    line-height: 2 !important;
+    letter-spacing: 0.05em !important;
+    word-spacing: 0.12em !important;
+  }
+  .a11y-spacing * {
+    line-height: inherit !important;
+    letter-spacing: inherit !important;
+    word-spacing: inherit !important;
+  }
+
   .font-exam {
     font-family: 'Lora', 'Georgia', serif;
   }
