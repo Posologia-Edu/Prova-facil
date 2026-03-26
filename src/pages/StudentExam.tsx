@@ -90,6 +90,18 @@ export default function StudentExam() {
       }
 
       toast.success(auto ? "Tempo esgotado! Prova enviada automaticamente." : "Prova enviada com sucesso!");
+      
+      // Generate submission hash (digital receipt)
+      try {
+        const hashPayload = JSON.stringify({ sessionId, answers, ts: new Date().toISOString() });
+        const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(hashPayload));
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+        setSubmissionHash(hashHex);
+      } catch {
+        // fallback
+      }
+
       navigate(`/student/results/${sessionId}`);
     } catch {
       toast.error("Erro ao enviar prova. Tente novamente.");
@@ -125,6 +137,9 @@ export default function StudentExam() {
         setExamTitle(data.examTitle);
         setTimeLeft(data.timeLeft);
         setQuestions(data.questions);
+        if (data.proctoringConfig) {
+          setProctoringConfig(data.proctoringConfig);
+        }
 
         if (data.timeLeft <= 0) {
           submitExam(true);
