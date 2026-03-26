@@ -297,7 +297,7 @@ export default function QuestionsPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setSaving(false); return; }
 
-    const contentJson: any = { question_text: newText.trim() };
+    const contentJson: any = { question_text: newText.trim(), images: newImages.length > 0 ? newImages : undefined };
     if (newType === "multiple_choice") {
       contentJson.options = { a: "", b: "", c: "", d: "" };
       contentJson.correct_answer = "a";
