@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievement_definitions: {
+        Row: {
+          category: string
+          created_at: string
+          criteria_json: Json
+          description: string
+          icon: string
+          id: string
+          key: string
+          points_reward: number
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          criteria_json?: Json
+          description: string
+          icon?: string
+          id?: string
+          key: string
+          points_reward?: number
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          criteria_json?: Json
+          description?: string
+          icon?: string
+          id?: string
+          key?: string
+          points_reward?: number
+          title?: string
+        }
+        Relationships: []
+      }
       admin_invitations: {
         Row: {
           completed_at: string | null
@@ -577,6 +613,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      competency_definitions: {
+        Row: {
+          area: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          area: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       dentistry_clinical_cases: {
         Row: {
@@ -3373,6 +3436,50 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_entries: {
+        Row: {
+          created_at: string
+          entry_date: string
+          entry_type: string
+          id: string
+          max_score: number | null
+          metadata_json: Json | null
+          portfolio_id: string
+          score: number | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          entry_date?: string
+          entry_type: string
+          id?: string
+          max_score?: number | null
+          metadata_json?: Json | null
+          portfolio_id: string
+          score?: number | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          entry_date?: string
+          entry_type?: string
+          id?: string
+          max_score?: number | null
+          metadata_json?: Json | null
+          portfolio_id?: string
+          score?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_entries_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "student_portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -3626,6 +3733,39 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      question_competencies: {
+        Row: {
+          competency_id: string
+          id: string
+          question_id: string
+        }
+        Insert: {
+          competency_id: string
+          id?: string
+          question_id: string
+        }
+        Update: {
+          competency_id?: string
+          id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_competencies_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "competency_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_competencies_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "question_bank"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reconciliation_clinical_cases: {
         Row: {
@@ -4720,6 +4860,68 @@ export type Database = {
           },
         ]
       }
+      student_achievements: {
+        Row: {
+          achievement_id: string
+          id: string
+          student_email: string
+          unlocked_at: string
+        }
+        Insert: {
+          achievement_id: string
+          id?: string
+          student_email: string
+          unlocked_at?: string
+        }
+        Update: {
+          achievement_id?: string
+          id?: string
+          student_email?: string
+          unlocked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_ai_feedbacks: {
+        Row: {
+          content_json: Json
+          created_at: string
+          feedback_type: string
+          generated_by: string | null
+          id: string
+          source_ids: string[] | null
+          source_type: string | null
+          student_email: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          feedback_type?: string
+          generated_by?: string | null
+          id?: string
+          source_ids?: string[] | null
+          source_type?: string | null
+          student_email: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          feedback_type?: string
+          generated_by?: string | null
+          id?: string
+          source_ids?: string[] | null
+          source_type?: string | null
+          student_email?: string
+        }
+        Relationships: []
+      }
       student_answers: {
         Row: {
           ai_feedback: string | null
@@ -4788,6 +4990,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      student_points: {
+        Row: {
+          created_at: string
+          id: string
+          metadata_json: Json | null
+          points: number
+          source: string
+          source_id: string | null
+          student_email: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata_json?: Json | null
+          points?: number
+          source: string
+          source_id?: string | null
+          student_email: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata_json?: Json | null
+          points?: number
+          source?: string
+          source_id?: string | null
+          student_email?: string
+        }
+        Relationships: []
+      }
+      student_portfolios: {
+        Row: {
+          config_json: Json | null
+          created_at: string
+          id: string
+          student_email: string
+          student_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          config_json?: Json | null
+          created_at?: string
+          id?: string
+          student_email: string
+          student_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          config_json?: Json | null
+          created_at?: string
+          id?: string
+          student_email?: string
+          student_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       system_updates: {
         Row: {
