@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Loader2, Bot } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Loader2, Bot, Trophy, BookOpen, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
 
@@ -40,6 +41,8 @@ export default function StudentResults() {
     finished_at: string | null;
   } | null>(null);
   const [examTitle, setExamTitle] = useState("");
+  const [aiFeedback, setAiFeedback] = useState<any>(null);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
 
   const studentEmail = sessionStorage.getItem("student_email");
 
