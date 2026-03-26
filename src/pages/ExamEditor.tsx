@@ -1092,6 +1092,28 @@ export default function ExamEditorPage() {
                 )}
               </div>
 
+              {/* Proctoring summary */}
+              {(proctoringFullscreen || proctoringBlockCopy || proctoringPhoto || proctoringPeriodicPhotos || proctoringWatermark || proctoringShuffleQ || proctoringShuffleAlt) && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold">Segurança ativa nesta prova:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {proctoringFullscreen && <Badge variant="outline" className="text-[10px]">Tela Cheia</Badge>}
+                      {proctoringBlockCopy && <Badge variant="outline" className="text-[10px]">Bloq. Copiar/Colar</Badge>}
+                      {proctoringShuffleQ && <Badge variant="outline" className="text-[10px]">Embaralhar Questões</Badge>}
+                      {proctoringShuffleAlt && <Badge variant="outline" className="text-[10px]">Embaralhar Alternativas</Badge>}
+                      {proctoringPhoto && <Badge variant="outline" className="text-[10px]">Foto Identificação</Badge>}
+                      {proctoringPeriodicPhotos && <Badge variant="outline" className="text-[10px]">Selfies a cada {proctoringPhotoInterval}min</Badge>}
+                      {proctoringWatermark && <Badge variant="outline" className="text-[10px]">Marca d'Água</Badge>}
+                      <Badge variant="outline" className="text-[10px]">Máx. {proctoringMaxViolations} violações</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Separator />
 
               <div className="flex justify-end">
