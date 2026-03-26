@@ -233,7 +233,7 @@ function QuestionDetailContent({ question }: { question: Question }) {
         <div>
           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Resposta Esperada</Label>
           <div className="mt-1.5 p-3 rounded-lg border bg-muted/30 text-sm leading-relaxed">
-            {question.expectedAnswer}
+            <RichTextRenderer text={question.expectedAnswer} />
           </div>
         </div>
       )}
@@ -243,7 +243,7 @@ function QuestionDetailContent({ question }: { question: Question }) {
         <div>
           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Explicação / Justificativa</Label>
           <div className="mt-1.5 p-3 rounded-lg border border-primary/20 bg-primary/5 text-sm leading-relaxed">
-            {question.explanation}
+            <RichTextRenderer text={question.explanation} />
           </div>
         </div>
       )}
