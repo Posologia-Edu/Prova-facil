@@ -36,6 +36,43 @@ export default function UpdatePipeline() {
   const [newType, setNewType] = useState<"completed" | "planned">("planned");
   const [newPriority, setNewPriority] = useState("medium");
   const [newCategory, setNewCategory] = useState("feature");
+  const [generating, setGenerating] = useState(false);
+
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+  const generateRoadmapSuggestions = useCallback(async () => {
+    setGenerating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada");
+      
+      const res = await supabase.functions.invoke("generate-roadmap", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      
+      if (res.error) throw res.error;
+      
+      localStorage.setItem("roadmap_last_generated", String(Date.now()));
+      queryClient.invalidateQueries({ queryKey: ["system-updates"] });
+      toast({ title: "🚀 Roadmap atualizado!", description: "8 novas funcionalidades foram adicionadas ao roadmap." });
+    } catch (err: any) {
+      console.error("Generate roadmap error:", err);
+      toast({ title: "Erro ao gerar roadmap", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  }, [queryClient]);
+
+  // Auto-trigger every 30 days
+  useEffect(() => {
+    if (!isAdmin) return;
+    const lastGenerated = localStorage.getItem("roadmap_last_generated");
+    if (lastGenerated && Date.now() - Number(lastGenerated) < THIRTY_DAYS_MS) return;
+    // Only auto-trigger if there are few planned items
+    if (planned.length <= 2) {
+      generateRoadmapSuggestions();
+    }
+  }, [isAdmin, planned.length, generateRoadmapSuggestions]);
 
   const { data: updates = [], isLoading } = useQuery({
     queryKey: ["system-updates"],
