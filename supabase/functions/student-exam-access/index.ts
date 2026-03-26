@@ -171,8 +171,9 @@ Deno.serve(async (req) => {
       const limitMs = pub.time_limit_minutes * 60 * 1000;
       const remaining = Math.max(0, Math.floor((limitMs - (Date.now() - startedAt)) / 1000));
 
-      // Get exam title
-      const { data: exam } = await supabase.from("exams").select("title").eq("id", pub.exam_id).single();
+      // Get exam title and proctoring config
+      const { data: exam } = await supabase.from("exams").select("title, proctoring_config").eq("id", pub.exam_id).single();
+      const proctoringConfig = (exam as any)?.proctoring_config || {};
 
       // Get questions
       const { data: examQuestions } = await supabase
@@ -189,7 +190,7 @@ Deno.serve(async (req) => {
         .select("id, type, content_json")
         .in("id", questionIds);
 
-      const questions = examQuestions.map((eq) => {
+      let questions = examQuestions.map((eq) => {
         const bq = bankQuestions?.find((b) => b.id === eq.question_id);
         // Strip correct answer from content for security
         const content = { ...(bq?.content_json as Record<string, unknown> || {}) };
@@ -199,6 +200,7 @@ Deno.serve(async (req) => {
           content.alternatives = (content.alternatives as Array<Record<string, unknown>>).map((a) => ({
             letter: a.letter,
             text: a.text,
+            image: a.image || null,
             // Don't send correct flag
           }));
         }
@@ -212,6 +214,59 @@ Deno.serve(async (req) => {
         };
       });
 
+      // Seeded shuffling
+      if (proctoringConfig.shuffleQuestions || proctoringConfig.shuffleAlternatives) {
+        // Simple hash function for seeding
+        const hashToInt = (str: string): number => {
+          let h = 0;
+          for (let i = 0; i < str.length; i++) {
+            h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+          }
+          return Math.abs(h) || 1;
+        };
+
+        const xorshift32 = (s: number): number => {
+          s ^= s << 13;
+          s ^= s >> 17;
+          s ^= s << 5;
+          return s >>> 0;
+        };
+
+        const seededShuffle = <T>(arr: T[], seed: string): T[] => {
+          let s = hashToInt(seed);
+          const a = [...arr];
+          for (let i = a.length - 1; i > 0; i--) {
+            s = xorshift32(s);
+            const j = s % (i + 1);
+            [a[i], a[j]] = [a[j], a[i]];
+          }
+          return a;
+        };
+
+        if (proctoringConfig.shuffleQuestions) {
+          questions = seededShuffle(questions, sessionId);
+        }
+
+        if (proctoringConfig.shuffleAlternatives) {
+          questions = questions.map(q => {
+            if (q.type === "multiple_choice" && Array.isArray(q.content_json.alternatives)) {
+              const shuffledAlts = seededShuffle(
+                q.content_json.alternatives as Array<Record<string, unknown>>,
+                sessionId + q.id
+              );
+              // Re-assign letters after shuffle
+              const reLettered = shuffledAlts.map((alt, idx) => ({
+                ...alt,
+                letter: String.fromCharCode(65 + idx), // A, B, C, D...
+                originalLetter: alt.letter,
+              }));
+              return { ...q, content_json: { ...q.content_json, alternatives: reLettered } };
+            }
+            return q;
+          });
+        }
+      }
+
       // Get existing answers
       const { data: existingAnswers } = await supabase
         .from("student_answers")
@@ -223,6 +278,7 @@ Deno.serve(async (req) => {
         timeLeft: remaining,
         questions,
         existingAnswers: existingAnswers || [],
+        proctoringConfig,
       });
     }
 
