@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSubscription } from "@/hooks/use-subscription";
 import { PremiumGate } from "@/components/PremiumGate";
@@ -81,6 +81,16 @@ export default function ExamMonitoring() {
   const [signedPhotoUrls, setSignedPhotoUrls] = useState<Record<string, string[]>>({});
   const [activeTab, setActiveTab] = useState("monitoring");
   const [unlockingSessionId, setUnlockingSessionId] = useState<string | null>(null);
+  const activeTabRef = useRef(activeTab);
+  const securitySessionIdsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
+    securitySessionIdsRef.current = securityData?.sessions.map((session) => session.id) || [];
+  }, [securityData]);
 
   // Generate signed URLs when a security session is selected
   useEffect(() => {
@@ -141,18 +151,72 @@ export default function ExamMonitoring() {
     setLoading(false);
   };
 
+  const sendSessionStatusBroadcast = async (sessionId: string, status: "in_progress" | "blocked", violationCount = 0) => {
+    const channel = supabase.channel(`exam-proctoring-events-${sessionId}`);
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => {
+          reject(new Error("Realtime indisponível."));
+        }, 3000);
+
+        channel.subscribe((subscriptionStatus) => {
+          if (subscriptionStatus === "SUBSCRIBED") {
+            window.clearTimeout(timeout);
+            resolve();
+          }
+
+          if (subscriptionStatus === "CHANNEL_ERROR" || subscriptionStatus === "TIMED_OUT") {
+            window.clearTimeout(timeout);
+            reject(new Error(subscriptionStatus));
+          }
+        });
+      });
+
+      await channel.send({
+        type: "broadcast",
+        event: "session-status-changed",
+        payload: {
+          sessionId,
+          status,
+          violationCount,
+        },
+      });
+    } finally {
+      supabase.removeChannel(channel);
+    }
+  };
+
   useEffect(() => {
     loadSessions();
 
     // Realtime subscription
     const channel = supabase
-      .channel("monitoring")
+      .channel(`monitoring-${publicationId}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",
         table: "exam_sessions",
         filter: `publication_id=eq.${publicationId}`,
-      }, () => { loadSessions(); })
+      }, () => {
+        loadSessions();
+
+        if (activeTabRef.current === "security") {
+          loadSecurityData();
+        }
+      })
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "exam_audit_logs",
+      }, (payload: any) => {
+        if (activeTabRef.current !== "security") return;
+
+        const sessionId = payload.new?.session_id;
+        if (sessionId && securitySessionIdsRef.current.includes(sessionId)) {
+          loadSecurityData();
+        }
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -233,8 +297,13 @@ export default function ExamMonitoring() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao desbloquear sessão.");
 
+      await Promise.allSettled([
+        loadSecurityData(),
+        loadSessions(),
+        sendSessionStatusBroadcast(sessionId, "in_progress", 0),
+      ]);
+
       toast.success("Aluno desbloqueado com sucesso.");
-      await Promise.all([loadSecurityData(), loadSessions()]);
     } catch (error) {
       console.error(error);
       toast.error("Não foi possível desbloquear o aluno.");

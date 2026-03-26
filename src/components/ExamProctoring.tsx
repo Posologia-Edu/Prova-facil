@@ -251,11 +251,32 @@ export default function ExamProctoring({
     };
   }, []);
 
-  // Realtime: listen for teacher unlock
+  // Realtime: keep session status synced without requiring page reload
   useEffect(() => {
-    if (!blocked) return;
-    const channel = supabase
-      .channel(`session-unlock-${sessionId}`)
+    if (!sessionId) return;
+
+    const syncSessionStatus = (status?: string, nextViolationCount?: number) => {
+      if (status === "blocked") {
+        setBlocked(true);
+        if (typeof nextViolationCount === "number") {
+          setViolationCount(nextViolationCount);
+        }
+        return;
+      }
+
+      if (status === "in_progress") {
+        setBlocked((wasBlocked) => {
+          if (wasBlocked) {
+            toast.success("Sua prova foi desbloqueada pelo professor.");
+          }
+          return false;
+        });
+        setViolationCount(typeof nextViolationCount === "number" ? nextViolationCount : 0);
+      }
+    };
+
+    const databaseChannel = supabase
+      .channel(`session-status-${sessionId}`)
       .on(
         "postgres_changes",
         {
@@ -265,19 +286,24 @@ export default function ExamProctoring({
           filter: `id=eq.${sessionId}`,
         },
         (payload: any) => {
-          if (payload.new?.status === "in_progress") {
-            setBlocked(false);
-            setViolationCount(0);
-            toast.success("Sua prova foi desbloqueada pelo professor.");
-          }
+          syncSessionStatus(payload.new?.status, payload.new?.violation_count);
         }
       )
       .subscribe();
 
+    const broadcastChannel = supabase
+      .channel(`exam-proctoring-events-${sessionId}`)
+      .on("broadcast", { event: "session-status-changed" }, ({ payload }: any) => {
+        if (payload?.sessionId !== sessionId) return;
+        syncSessionStatus(payload.status, payload.violationCount);
+      })
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(databaseChannel);
+      supabase.removeChannel(broadcastChannel);
     };
-  }, [blocked, sessionId]);
+  }, [sessionId]);
 
   // If no proctoring features, just render children
   if (!hasAnyFeature) return <>{children}</>;
