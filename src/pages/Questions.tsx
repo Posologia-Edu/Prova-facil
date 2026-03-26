@@ -168,7 +168,18 @@ function QuestionDetailContent({ question }: { question: Question }) {
         );
       })()}
 
-      {/* Options for multiple choice / true-false */}
+      {/* Attached images */}
+      {question.images && question.images.length > 0 && (
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Imagens Anexadas</Label>
+          <div className="mt-2 flex gap-3 flex-wrap">
+            {question.images.map((url, i) => (
+              <img key={i} src={url} alt={`Imagem ${i + 1}`} className="h-32 w-auto rounded-lg border object-contain max-w-[280px]" />
+            ))}
+          </div>
+        </div>
+      )}
+
       {question.options && question.options.length > 0 && (
         <div>
           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Alternativas</Label>
