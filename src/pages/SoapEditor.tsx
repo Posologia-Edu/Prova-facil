@@ -568,11 +568,14 @@ export default function SoapEditor() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">{form.title}</CardTitle>
-                  <div className="flex gap-2 items-center">
-                    <Badge variant="outline">{form.form_type === "soap" ? "SOAP" : "Avaliação entre Pares"}</Badge>
-                    <Button variant="ghost" size="icon" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => editForm(form)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => deleteForm(form.id)}><Trash2 className="h-4 w-4" /></Button>
+                   <div className="flex gap-2 items-center">
+                     <Badge variant="outline">{form.form_type === "soap" ? "SOAP" : "Avaliação entre Pares"}</Badge>
+                     {Array.isArray(form.content_json) && (
+                       <Button variant="ghost" size="icon" onClick={() => exportFormToPDF({ title: form.title, fields: form.content_json, formType: form.form_type === "soap" ? "SOAP" : "Avaliação entre Pares", showScores: form.form_type === "peer_evaluation" })} title="Baixar PDF"><FileDown className="h-4 w-4" /></Button>
+                     )}
+                     <Button variant="ghost" size="icon" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-4 w-4" /></Button>
+                     <Button variant="ghost" size="icon" onClick={() => editForm(form)}><Pencil className="h-4 w-4" /></Button>
+                     <Button variant="ghost" size="icon" onClick={() => deleteForm(form.id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
               </CardHeader>
