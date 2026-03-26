@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Clock, ChevronLeft, ChevronRight, Send, Loader2, AlertTriangle, FileText, Save } from "lucide-react";
 import AccessibilityPanel, { useA11ySettings, getA11yClasses, getA11yStyle, ReadingMask } from "@/components/AccessibilityPanel";
 import { toast } from "sonner";
+import RichTextRenderer from "@/components/RichTextRenderer";
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
 
