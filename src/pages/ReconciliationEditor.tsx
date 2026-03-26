@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw, Download, Star, BookmarkPlus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw, Download, Star, BookmarkPlus, FileDown } from "lucide-react";
+import { exportFormToPDF } from "@/lib/form-pdf-export";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
@@ -643,10 +644,13 @@ export default function ReconciliationEditor() {
                       {isAnswerKey ? "Espelho de Respostas" : "Ficha de Reconciliação"}
                     </Badge>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                   <div className="flex gap-1">
+                     {!isAnswerKey && Array.isArray(form.content_json) && (
+                       <Button variant="ghost" size="sm" onClick={() => exportFormToPDF({ title: form.title, fields: form.content_json, formType: "Ficha de Reconciliação" })} title="Baixar PDF"><FileDown className="h-3.5 w-3.5" /></Button>
+                     )}
+                     <Button variant="ghost" size="sm" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
+                     <Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button>
+                     <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
               </CardHeader>
