@@ -1,158 +1,80 @@
 
 
-## Plano: Sistema de Certificação e Proctoring para Concursos
+## Plano: Corrigir Proctoring e Padronizar Status da Prova
 
-### Resumo
-Implementar um sistema rigoroso de segurança e auditoria no portal de provas online, elevando o nível de confiabilidade para aplicação em concursos públicos e avaliações de alto impacto. Todas as funcionalidades são configuráveis pelo professor na aba de Aplicação do ExamEditor.
+### Problemas Identificados
 
----
+**1. Proctoring não funciona:**
+- O componente `ExamProctoring` verifica `hasAnyFeature = config.fullscreen || config.blockCopyPaste || config.requirePhoto || config.watermark`. Se NENHUM toggle estiver ativado nas configurações, o proctoring é completamente ignorado (renderiza apenas `children`).
+- A configuração precisa ser salva explicitamente pelo professor (botão SALVAR na aba Configurações). Se o professor não salvou com os toggles ativados, a `proctoring_config` no banco fica `{}` e nada é aplicado.
+- A edge function `exam-proctoring` pode não estar deployada ou o bucket `exam-proctoring` pode não ter sido criado corretamente (precisa verificar).
+- Possível problema: o `proctoring_config` não é retornado pelo tipo TypeScript do Supabase (usa `as any` para acessar), o que pode causar falha silenciosa.
 
-### Funcionalidades
+**2. Status inconsistente em 3 lugares:**
+- **Classes.tsx** (Imagem 1): Mostra "Publicado" (baseado em `publication.is_active`)
+- **ExamEditor.tsx** (Imagem 2): Mostra "EM ELABORAÇÃO" (usa `computeEffectiveStatus()` que depende do `publication` local — pode não estar carregado)
+- **Exams.tsx** (Imagem 3): Mostra "EM APLICAÇÃO" (usa `computeEffective()` baseado nas publicações do banco)
 
-| Recurso | Descrição |
-|---|---|
-| **Modo Tela Cheia Obrigatório** | Fullscreen API forçado ao iniciar prova; sair dispara alerta e registra violação |
-| **Detecção de Troca de Aba/Janela** | `visibilitychange` + `blur` registram cada saída com timestamp |
-| **Bloqueio de Copiar/Colar** | Desativa `copy`, `paste`, `cut`, `contextmenu`, `print` e atalhos (Ctrl+C/V/P) |
-| **Log de Auditoria** | Tabela `exam_audit_logs` registra TODAS as ações: foco perdido, tela cheia saída, resposta alterada, navegação |
-| **Embaralhamento de Questões** | Ordem aleatória por aluno (seed = sessionId) |
-| **Embaralhamento de Alternativas** | Alternativas de múltipla escolha embaralhadas por aluno |
-| **Foto de Identificação** | Captura webcam obrigatória ao iniciar (salva no Storage) |
-| **Selfies Periódicas** | Fotos automáticas a cada N minutos para verificação posterior |
-| **Marca d'água** | Nome + e-mail do aluno sobrepostos semi-transparentes na tela da prova |
-| **Fingerprint de Dispositivo** | User-agent + resolução + timezone + idioma registrados na sessão |
-| **Bloqueio de Sessão Duplicada** | Impede dois acessos simultâneos ao mesmo sessionId |
-| **Comprovante Digital** | Hash SHA-256 das respostas + timestamp gera recibo verificável ao finalizar |
-| **Painel de Violações** | Professor visualiza alertas e fotos no ExamMonitoring |
+Cada página calcula o status de forma diferente e independente, resultando em 3 status distintos para a mesma prova.
 
 ---
 
-### Arquitetura
+### Solução
+
+#### Parte 1 — Padronizar Status da Prova
+
+Criar uma função utilitária única `computeExamStatus()` e usá-la em todos os lugares:
 
 ```text
-StudentExam.tsx
-  └── ExamProctoring.tsx (novo)
-        ├── FullscreenEnforcer
-        ├── TabSwitchDetector
-        ├── CopyPasteBlocker
-        ├── WebcamCapture (foto inicial + periódica)
-        ├── Watermark overlay
-        ├── AuditLogger → edge function → exam_audit_logs
-        └── DeviceFingerprint
-
-ExamEditor.tsx (aba Configurações)
-  └── Seção "Segurança & Proctoring"
-        ├── Toggle: Modo tela cheia obrigatório
-        ├── Toggle: Bloquear copiar/colar
-        ├── Toggle: Embaralhar questões
-        ├── Toggle: Embaralhar alternativas
-        ├── Toggle: Foto de identificação
-        ├── Toggle: Selfies periódicas (intervalo em min)
-        ├── Toggle: Marca d'água
-        └── Limite de violações antes de bloqueio
-
-ExamMonitoring.tsx
-  └── Aba "Segurança"
-        ├── Lista de violações por aluno
-        ├── Fotos capturadas (timeline)
-        └── Fingerprint do dispositivo
+Status flow:
+  draft → in_progress → grading → completed
+         (publicação ativa)  (publicação expirada/desativada)  (manual)
 ```
+
+**Regras do status unificado:**
+1. Se existe publicação ativa (`is_active = true`) E dentro da janela de tempo → `in_progress` ("EM APLICAÇÃO")
+2. Se publicação existe mas está desativada OU expirada → `grading` ("EM CORREÇÃO")
+3. Se não tem publicação → usar o `status` do banco (`draft`)
+4. Se status manual = `completed` → sempre `completed`
+
+**Criar `src/lib/exam-status.ts`** com a função reutilizável.
+
+**Editar:**
+- `Exams.tsx` — usar a função compartilhada
+- `ExamEditor.tsx` — usar a função compartilhada (e carregar publicação corretamente)
+- `Classes.tsx` — substituir "Publicado"/"Sem publicação" pelos mesmos labels padronizados
+- `ExamCalendar.tsx` — usar a função compartilhada
+
+#### Parte 2 — Corrigir e Garantir Funcionamento do Proctoring
+
+**2a. Verificar e corrigir carregamento da config:**
+- No `ExamEditor.tsx`, garantir que a `proctoring_config` é carregada ao abrir a prova (já está, mas depende de `(exam as any).proctoring_config`)
+- Verificar se o save realmente persiste (já está no `handleSave`)
+
+**2b. Melhorar feedback ao professor:**
+- Na aba "Configurações", adicionar indicador visual de que as configurações de segurança estão ATIVAS ou NÃO (badge ou resumo)
+- Na aba "Aplicação", ao publicar, mostrar resumo das configurações de segurança que serão aplicadas
+
+**2c. Corrigir o ExamProctoring:**
+- O componente já funciona tecnicamente, mas precisa de debug: a edge function `exam-proctoring` precisa estar deployada
+- Adicionar log/feedback no console para diagnóstico
+- Garantir que o bucket `exam-proctoring` exista com as policies corretas
+
+**2d. Deploy da edge function:**
+- Verificar se `exam-proctoring` está deployada e funcional
 
 ---
 
-### Etapas de Implementação
+### Arquivos a Criar
+- `src/lib/exam-status.ts` — função utilitária de status
 
-#### 1. Migração SQL
-- Adicionar colunas `proctoring_config jsonb DEFAULT '{}'` na tabela `exams`
-- Criar tabela `exam_audit_logs`:
-  - `id`, `session_id` (FK), `event_type` (enum: focus_lost, fullscreen_exit, copy_attempt, paste_attempt, answer_changed, photo_captured, session_started, session_submitted), `event_data jsonb`, `created_at`
-- Adicionar colunas `device_fingerprint jsonb`, `photo_url text`, `violation_count int DEFAULT 0` na tabela `exam_sessions`
-- Habilitar Realtime na `exam_audit_logs`
-- Criar bucket `exam-proctoring` (privado) para fotos
+### Arquivos a Editar
+- `src/pages/Exams.tsx` — usar status unificado
+- `src/pages/ExamEditor.tsx` — usar status unificado, melhorar feedback de proctoring
+- `src/pages/Classes.tsx` — usar labels de status padronizados
+- `src/pages/ExamCalendar.tsx` — usar status unificado
+- `src/components/ExamProctoring.tsx` — adicionar logs de diagnóstico
 
-#### 2. Componente `ExamProctoring.tsx`
-- Recebe config do professor (quais recursos ativar) e sessionId
-- **FullscreenEnforcer**: `document.documentElement.requestFullscreen()` ao montar; listener em `fullscreenchange` registra saída
-- **TabSwitchDetector**: `visibilitychange` + `window.blur` contam violações e enviam log
-- **CopyPasteBlocker**: `onCopy`, `onPaste`, `onCut`, `onContextMenu` com `preventDefault()`; `onKeyDown` bloqueia Ctrl+C/V/P/A, PrintScreen
-- **WebcamCapture**: `navigator.mediaDevices.getUserMedia({video: true})` → canvas → blob → upload Storage
-- **Watermark**: div fixo com `pointer-events: none`, texto rotacionado 45° com opacidade 0.08
-- **AuditLogger**: função que envia eventos via fetch para edge function
-- **DeviceFingerprint**: coleta `navigator.userAgent`, `screen.width/height`, `Intl.DateTimeFormat().resolvedOptions().timeZone`, `navigator.language`
-
-#### 3. Edge Function `exam-proctoring`
-- Actions: `log-event`, `capture-photo`, `get-violations`
-- `log-event`: insere em `exam_audit_logs`, incrementa `violation_count` na sessão
-- `capture-photo`: recebe base64, salva em `exam-proctoring/{sessionId}/{timestamp}.jpg`, registra log
-- `get-violations`: retorna logs + fotos para o professor (valida ownership)
-
-#### 4. Embaralhamento Determinístico
-- Na edge function `student-exam-access` (action `load`):
-  - Se `proctoring_config.shuffleQuestions`: embaralha questões com seed = sessionId
-  - Se `proctoring_config.shuffleAlternatives`: embaralha alternativas mantendo mapeamento correto
-- Algoritmo: Fisher-Yates com PRNG seeded (xorshift32 usando hash do sessionId)
-
-#### 5. Comprovante Digital
-- Ao submeter: gera hash SHA-256 de `JSON.stringify({sessionId, answers, timestamp})`
-- Exibe hash + timestamp na tela de resultados como "Comprovante de Envio"
-- Hash salvo na `exam_sessions` (coluna `submission_hash`)
-
-#### 6. Integração no ExamEditor.tsx
-- Nova seção "Segurança & Proctoring" na aba Configurações com toggles
-- Salva em `exams.proctoring_config` (jsonb)
-
-#### 7. Integração no StudentExam.tsx
-- Carrega `proctoring_config` junto com questões (via edge function)
-- Monta `<ExamProctoring>` com config recebida
-- Exibe aviso inicial: "Esta prova possui monitoramento ativo. Ao prosseguir você concorda com: captura de imagem, modo tela cheia, registro de atividades"
-
-#### 8. Painel de Violações no ExamMonitoring.tsx
-- Nova aba "Segurança" com:
-  - Tabela: aluno, nº violações, tipos de evento, timestamp
-  - Clique no aluno abre timeline com fotos e eventos
-  - Badge vermelho no aluno com violações > limite
-
----
-
-### Detalhes Técnicos
-
-**Estrutura `proctoring_config`:**
-```json
-{
-  "fullscreen": true,
-  "blockCopyPaste": true,
-  "shuffleQuestions": true,
-  "shuffleAlternatives": true,
-  "requirePhoto": true,
-  "periodicPhotos": true,
-  "photoIntervalMinutes": 5,
-  "watermark": true,
-  "maxViolations": 3
-}
-```
-
-**Embaralhamento seeded (Fisher-Yates + xorshift32):**
-```typescript
-function seededShuffle<T>(arr: T[], seed: string): T[] {
-  let s = hashToInt(seed);
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    s = xorshift32(s);
-    const j = Math.abs(s) % (i + 1);
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-```
-
-**Comprovante SHA-256:**
-```typescript
-const hash = await crypto.subtle.digest("SHA-256",
-  new TextEncoder().encode(JSON.stringify({ sessionId, answers, ts }))
-);
-```
-
-**Arquivos a criar:** `src/components/ExamProctoring.tsx`, `supabase/functions/exam-proctoring/index.ts`
-**Arquivos a editar:** `ExamEditor.tsx` (config), `StudentExam.tsx` (integração), `ExamMonitoring.tsx` (painel violações), `student-exam-access/index.ts` (embaralhamento + config)
-**Migrações:** `proctoring_config` em exams, tabela `exam_audit_logs`, colunas em `exam_sessions`, bucket `exam-proctoring`
+### Edge Functions
+- Verificar e re-deploy `exam-proctoring`
 
