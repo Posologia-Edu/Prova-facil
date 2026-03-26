@@ -10,11 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Dumbbell, Scissors } from "lucide-react";
+import { Plus, Users, Settings, Play, Trash2, ArrowRight, Copy, GraduationCap, Dumbbell, Scissors, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { physiotherapyModules, moduleLabel, type PhysiotherapyModuleType } from "@/lib/physiotherapy-modules";
 import SystemPromptViewer from "@/components/SystemPromptViewer";
 import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
+import ShareRoomDialog from "@/components/ShareRoomDialog";
+import EditableRoomTitle from "@/components/EditableRoomTitle";
 
 export default function PhysiotherapySimulations() {
   const navigate = useNavigate();
@@ -25,6 +27,8 @@ export default function PhysiotherapySimulations() {
   const [description, setDescription] = useState("");
   const [createModuleType, setCreateModuleType] = useState<PhysiotherapyModuleType>("avaliacao_funcional");
   const [splitRoomId, setSplitRoomId] = useState<string | null>(null);
+  const [shareRoomId, setShareRoomId] = useState<string | null>(null);
+  const [shareRoomTitle, setShareRoomTitle] = useState("");
 
   const moduleTypes: PhysiotherapyModuleType[] = ["avaliacao_funcional", "cinetico_funcional", "plano_fisioterapeutico", "evolucao_fisio"];
 
@@ -109,7 +113,7 @@ export default function PhysiotherapySimulations() {
           const studentCount = participantCounts[room.id] || 0;
           return (
             <Card key={room.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3"><div className="flex items-start justify-between"><div className="space-y-1"><CardTitle className="text-lg">{room.title}</CardTitle>{room.description && <CardDescription>{room.description}</CardDescription>}</div><Badge className={statusColor[room.status] || ""}>{room.status === "draft" ? "Rascunho" : room.status === "active" ? "Ativa" : "Concluída"}</Badge></div></CardHeader>
+              <CardHeader className="pb-3"><div className="flex items-start justify-between"><div className="space-y-1"><EditableRoomTitle roomId={room.id} title={room.title} tableName="physiotherapy_rooms" invalidateKeys={["physiotherapy-rooms-all"]} />{room.description && <CardDescription>{room.description}</CardDescription>}</div><Badge className={statusColor[room.status] || ""}>{room.status === "draft" ? "Rascunho" : room.status === "active" ? "Ativa" : "Concluída"}</Badge></div></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2"><span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{studentCount} alunos</span><span className="font-mono text-xs">PIN: {room.access_code}</span></div>
                 <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4"><GraduationCap className="h-3.5 w-3.5" /><span>{teacherName}</span></div>
@@ -119,6 +123,7 @@ export default function PhysiotherapySimulations() {
                   {(room.status === "active" || room.status === "completed") && (<Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/physiotherapy/${moduleType}/control/${room.id}`)}><Play className="h-3.5 w-3.5 mr-1" />{room.status === "completed" ? "Resultados" : "Controle"}</Button>)}
                   {room.status === "draft" && studentCount > 0 && (<Button variant="outline" size="sm" onClick={() => setSplitRoomId(room.id)}><Scissors className="h-3.5 w-3.5 mr-1" />Dividir</Button>)}
                   <Button variant="outline" size="sm" onClick={() => duplicateRoom.mutate(room.id)} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
+                  <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); }} title="Enviar para professor"><Share2 className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               </CardContent>
@@ -171,6 +176,9 @@ export default function PhysiotherapySimulations() {
       </Tabs>
       {splitRoomId && (
         <GenericSplitRoomDialog roomId={splitRoomId} open={!!splitRoomId} onOpenChange={(o) => { if (!o) setSplitRoomId(null); }} onComplete={() => { setSplitRoomId(null); queryClient.invalidateQueries({ queryKey: ["physiotherapy-rooms-all"] }); queryClient.invalidateQueries({ queryKey: ["physiotherapy-participant-counts"] }); }} tablePrefix="physiotherapy" />
+      )}
+      {shareRoomId && (
+        <ShareRoomDialog open={!!shareRoomId} onOpenChange={(o) => { if (!o) setShareRoomId(null); }} roomId={shareRoomId} roomTitle={shareRoomTitle} moduleType="physiotherapy" />
       )}
     </div>
   );
