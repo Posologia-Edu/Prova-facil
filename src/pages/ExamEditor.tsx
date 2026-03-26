@@ -1008,6 +1008,16 @@ export default function ExamEditorPage() {
                 <Badge variant={publication.is_active ? "default" : "secondary"}>
                   {publication.is_active ? "Ativa" : "Inativa"}
                 </Badge>
+                <div className="flex justify-center pt-2">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => navigate(`/monitoring/${publication.id}`)}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Abrir monitoramento
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (
