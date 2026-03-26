@@ -221,30 +221,11 @@ export default function StudentExam() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-3">
-          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Carregando prova...</p>
-        </div>
-      </div>
-    );
-  }
-
   const currentQ = questions[currentIdx];
-  const content = currentQ?.content_json || {};
-  const statement = getStatement(content);
-  const alternatives = getAlternatives(content);
-  const answeredCount = Object.keys(answers).filter(k => {
-    const a = answers[k];
-    return a.answer_text || (a.answer_json as Record<string, string>)?.selected;
-  }).length;
-  const isTimeLow = timeLeft !== null && timeLeft < 300;
-  const progressPercent = (answeredCount / questions.length) * 100;
 
   // Keyboard shortcuts for accessibility
   useEffect(() => {
+    if (loading) return;
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
@@ -256,7 +237,6 @@ export default function StudentExam() {
         e.preventDefault();
         setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1));
       } else if (e.key === "r" || e.key === "R") {
-        // TTS shortcut
         if (!("speechSynthesis" in window) || !currentQ) return;
         window.speechSynthesis.cancel();
         let text = getStatement(currentQ.content_json || {});
@@ -276,7 +256,28 @@ export default function StudentExam() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [questions.length, currentQ]);
+  }, [loading, questions.length, currentQ]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Carregando prova...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const content = currentQ?.content_json || {};
+  const statement = getStatement(content);
+  const alternatives = getAlternatives(content);
+  const answeredCount = Object.keys(answers).filter(k => {
+    const a = answers[k];
+    return a.answer_text || (a.answer_json as Record<string, string>)?.selected;
+  }).length;
+  const isTimeLow = timeLeft !== null && timeLeft < 300;
+  const progressPercent = (answeredCount / questions.length) * 100;
 
   return (
     <div className={`min-h-screen bg-muted/30 flex flex-col ${getA11yClasses(a11y)}`} style={getA11yStyle(a11y)}>
