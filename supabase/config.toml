@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.generate-mock-trial]
 verify_jwt = false
+
+[functions.exam-proctoring]
+verify_jwt = false

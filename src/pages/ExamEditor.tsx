@@ -163,6 +163,17 @@ export default function ExamEditorPage() {
   const [preInstructions, setPreInstructions] = useState("");
   const [showDuringInstructions, setShowDuringInstructions] = useState(false);
   const [duringInstructions, setDuringInstructions] = useState("");
+
+  // Proctoring config
+  const [proctoringFullscreen, setProctoringFullscreen] = useState(false);
+  const [proctoringBlockCopy, setProctoringBlockCopy] = useState(false);
+  const [proctoringShuffleQ, setProctoringShuffleQ] = useState(false);
+  const [proctoringShuffleAlt, setProctoringShuffleAlt] = useState(false);
+  const [proctoringPhoto, setProctoringPhoto] = useState(false);
+  const [proctoringPeriodicPhotos, setProctoringPeriodicPhotos] = useState(false);
+  const [proctoringPhotoInterval, setProctoringPhotoInterval] = useState("5");
+  const [proctoringWatermark, setProctoringWatermark] = useState(false);
+  const [proctoringMaxViolations, setProctoringMaxViolations] = useState("3");
   const [classId, setClassId] = useState<string | null>(null);
   const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
 
@@ -243,6 +254,19 @@ export default function ExamEditorPage() {
           setPreInstructions(hc.preInstructions || "");
           setShowDuringInstructions(!!hc.duringInstructions);
           setDuringInstructions(hc.duringInstructions || "");
+        }
+        // Load proctoring config
+        const pc = (exam as any).proctoring_config as any;
+        if (pc && typeof pc === "object") {
+          setProctoringFullscreen(!!pc.fullscreen);
+          setProctoringBlockCopy(!!pc.blockCopyPaste);
+          setProctoringShuffleQ(!!pc.shuffleQuestions);
+          setProctoringShuffleAlt(!!pc.shuffleAlternatives);
+          setProctoringPhoto(!!pc.requirePhoto);
+          setProctoringPeriodicPhotos(!!pc.periodicPhotos);
+          setProctoringPhotoInterval(String(pc.photoIntervalMinutes || 5));
+          setProctoringWatermark(!!pc.watermark);
+          setProctoringMaxViolations(String(pc.maxViolations || 3));
         }
       }
 
@@ -609,6 +633,17 @@ export default function ExamEditorPage() {
         professor,
         preInstructions: showPreInstructions ? preInstructions : "",
         duringInstructions: showDuringInstructions ? duringInstructions : "",
+      },
+      proctoring_config: {
+        fullscreen: proctoringFullscreen,
+        blockCopyPaste: proctoringBlockCopy,
+        shuffleQuestions: proctoringShuffleQ,
+        shuffleAlternatives: proctoringShuffleAlt,
+        requirePhoto: proctoringPhoto,
+        periodicPhotos: proctoringPeriodicPhotos,
+        photoIntervalMinutes: parseInt(proctoringPhotoInterval) || 5,
+        watermark: proctoringWatermark,
+        maxViolations: parseInt(proctoringMaxViolations) || 3,
       },
     }).eq("id", examId);
     toast.success("Prova salva com sucesso!");
