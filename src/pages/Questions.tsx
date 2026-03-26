@@ -462,7 +462,16 @@ export default function QuestionsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Texto da Questão</Label>
-                    <Textarea placeholder="Digite a questão..." rows={3} value={newText} onChange={(e) => setNewText(e.target.value)} />
+                    <div className="flex items-center gap-1 mb-1">
+                      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => insertAtCursor("$$  $$")} title="Inserir expressão matemática">
+                        <Sigma className="h-3.5 w-3.5" /> LaTeX
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => insertAtCursor("```\n\n```")} title="Inserir bloco de código">
+                        <Code className="h-3.5 w-3.5" /> Código
+                      </Button>
+                    </div>
+                    <Textarea ref={textareaRef} placeholder="Digite a questão... Use $...$ para LaTeX inline, $$...$$ para LaTeX em bloco, ```lang...``` para código" rows={4} value={newText} onChange={(e) => setNewText(e.target.value)} />
+                    <QuestionImageUploader images={newImages} onChange={setNewImages} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
