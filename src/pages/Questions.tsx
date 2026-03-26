@@ -196,7 +196,7 @@ function QuestionDetailContent({ question }: { question: Question }) {
                 <span className={`font-semibold shrink-0 ${opt.isCorrect ? "text-success" : "text-muted-foreground"}`}>
                   {letterLabels[i]})
                 </span>
-                <span className="flex-1">{opt.text}</span>
+                <span className="flex-1"><RichTextRenderer text={opt.text} /></span>
                 {opt.isCorrect && (
                   <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
                 )}
@@ -380,6 +380,7 @@ export default function QuestionsPage() {
           matchingPairs,
           expectedAnswer: cj?.expected_answer,
           embedUrl: q.embed_url || undefined,
+          images: cj?.images || undefined,
         };
       })
     );
