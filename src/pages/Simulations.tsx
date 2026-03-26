@@ -953,6 +953,10 @@ export default function Simulations() {
       {splitDocumentationRoomId && (
         <GenericSplitRoomDialog roomId={splitDocumentationRoomId} open={!!splitDocumentationRoomId} onOpenChange={(o) => { if (!o) setSplitDocumentationRoomId(null); }} onComplete={() => { setSplitDocumentationRoomId(null); queryClient.invalidateQueries({ queryKey: ["documentation-rooms-list"] }); }} tablePrefix="documentation" />
       )}
+
+      {shareRoomId && (
+        <ShareRoomDialog open={!!shareRoomId} onOpenChange={(o) => { if (!o) setShareRoomId(null); }} roomId={shareRoomId} roomTitle={shareRoomTitle} moduleType={shareModuleType} />
+      )}
     </div>
   );
 }
