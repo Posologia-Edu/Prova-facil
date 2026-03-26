@@ -69,6 +69,7 @@ import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQues
 import AITutorChat from "@/components/AITutorChat";
 import { useLanguage } from "@/i18n/LanguageContext";
 import type { Json } from "@/integrations/supabase/types";
+import { computeExamStatus, examStatusConfig } from "@/lib/exam-status";
 
 // Types
 interface BankQuestion {
@@ -662,34 +663,18 @@ export default function ExamEditorPage() {
     toast.success("Prova duplicada com sucesso!");
   };
 
-  const statusLabel: Record<string, { label: string; className: string }> = {
-    draft: { label: "EM ELABORAÇÃO", className: "bg-muted text-muted-foreground" },
-    in_progress: { label: "EM APLICAÇÃO", className: "bg-warning text-warning-foreground" },
-    grading: { label: "EM CORREÇÃO", className: "bg-primary text-primary-foreground" },
-    completed: { label: "CONCLUÍDA", className: "bg-success text-success-foreground" },
-  };
-
-  // Auto-compute effective status
-  const computeEffectiveStatus = (): string => {
-    const now = new Date();
-    if (publication?.is_active) {
-      return "in_progress";
-    }
-    // If publication ended, check if we should be in grading
-    if (publication && !publication.is_active && examStatus === "draft") {
-      return "grading";
-    }
-    return examStatus;
-  };
-
-  const effectiveStatus = computeEffectiveStatus();
-  const currentStatus = statusLabel[effectiveStatus] || statusLabel.draft;
+  // Auto-compute effective status using shared utility
+  const effectiveStatus = computeExamStatus(
+    examStatus,
+    publication ? { is_active: publication.is_active } : null,
+  );
+  const currentStatus = examStatusConfig[effectiveStatus] || examStatusConfig.draft;
 
   const handleStatusChange = async (newStatus: string) => {
     if (!examId) return;
     await supabase.from("exams").update({ status: newStatus }).eq("id", examId);
     setExamStatus(newStatus);
-    toast.success(`Status alterado para "${statusLabel[newStatus]?.label || newStatus}".`);
+    toast.success(`Status alterado para "${examStatusConfig[newStatus as keyof typeof examStatusConfig]?.label || newStatus}".`);
   };
 
   // Grading: filter sessions
