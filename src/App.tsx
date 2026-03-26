@@ -565,6 +565,30 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/competency-analysis"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><CompetencyAnalysis /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lms-integration"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><LmsIntegration /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portfolio/:studentEmail"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><StudentPortfolio /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

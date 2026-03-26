@@ -25,6 +25,8 @@ import {
   TrendingUp,
   Gavel,
   Rocket,
+  Brain,
+  Link2,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
