@@ -263,101 +263,240 @@ export default function ExamMonitoring() {
         </Card>
         <Card>
           <CardContent className="py-4 text-center">
-            <CheckCircle2 className="h-5 w-5 mx-auto text-green-600 mb-1" />
+            <CheckCircle2 className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
             <p className="text-2xl font-bold">{submitted}</p>
             <p className="text-xs text-muted-foreground">Finalizadas</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Student list */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Alunos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {sessions.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno conectado ainda.</p>
-            ) : (
-              sessions.map((s) => (
-                <div
-                  key={s.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${
-                    selectedSession === s.id ? "border-primary bg-accent/30" : ""
-                  }`}
-                  onClick={() => loadStudentAnswers(s.id)}
-                >
-                  <div>
-                    <p className="text-sm font-medium">{s.profiles?.full_name || "Aluno"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Início: {new Date(s.started_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {s.total_score != null && (
-                      <span className="text-sm font-semibold">{Number(s.total_score).toFixed(1)}/{Number(s.max_score).toFixed(1)}</span>
-                    )}
-                    <Badge variant={s.status === "in_progress" ? "default" : s.status === "graded" ? "secondary" : "outline"} className="text-xs">
-                      {s.status === "in_progress" ? "Fazendo" : s.status === "submitted" ? "Enviada" : "Corrigida"}
-                    </Badge>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+      {/* Tabs: Monitoring and Security */}
+      <Tabs value={activeTab} onValueChange={(v) => {
+        setActiveTab(v);
+        if (v === "security" && !securityData) loadSecurityData();
+      }}>
+        <TabsList>
+          <TabsTrigger value="monitoring" className="gap-1.5">
+            <Users className="h-3.5 w-3.5" />
+            Monitoramento
+          </TabsTrigger>
+          <TabsTrigger value="security" className="gap-1.5">
+            <Shield className="h-3.5 w-3.5" />
+            Segurança
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Selected student answers */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Respostas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!selectedSession ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Selecione um aluno para ver as respostas.</p>
-            ) : loadingAnswers ? (
-              <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
-            ) : selectedAnswers.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma resposta ainda.</p>
-            ) : (
-              <div className="space-y-3">
-                {selectedAnswers.map((a, i) => {
-                  const content = (a.question_bank?.content_json || {}) as Record<string, unknown>;
-                  const statement = (content.statement as string) || (content.title as string) || "Questão";
-                  const score = Number(a.teacher_score ?? a.ai_score ?? a.points_earned) || 0;
+        {/* ===== MONITORING TAB ===== */}
+        <TabsContent value="monitoring" className="mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Student list */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Alunos</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {sessions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno conectado ainda.</p>
+                ) : (
+                  sessions.map((s) => (
+                    <div
+                      key={s.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${
+                        selectedSession === s.id ? "border-primary bg-accent/30" : ""
+                      }`}
+                      onClick={() => loadStudentAnswers(s.id)}
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{s.profiles?.full_name || "Aluno"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Início: {new Date(s.started_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {s.total_score != null && (
+                          <span className="text-sm font-semibold">{Number(s.total_score).toFixed(1)}/{Number(s.max_score).toFixed(1)}</span>
+                        )}
+                        <Badge variant={s.status === "in_progress" ? "default" : s.status === "graded" ? "secondary" : "outline"} className="text-xs">
+                          {s.status === "in_progress" ? "Fazendo" : s.status === "submitted" ? "Enviada" : "Corrigida"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
 
-                  return (
-                    <div key={a.id} className="p-3 border rounded-lg space-y-2">
-                      <div className="flex justify-between items-start">
-                        <p className="text-xs font-medium">Q{i + 1}: {statement.substring(0, 80)}...</p>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-semibold">{score}/{Number(a.max_points)}</span>
-                          {a.grading_status === "pending" && a.question_bank?.type === "open_ended" && (
-                            <Badge variant="outline" className="text-xs">
-                              <Bot className="h-3 w-3 mr-1" />
-                              Aguardando IA
-                            </Badge>
+            {/* Selected student answers */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Respostas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!selectedSession ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Selecione um aluno para ver as respostas.</p>
+                ) : loadingAnswers ? (
+                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                ) : selectedAnswers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma resposta ainda.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedAnswers.map((a, i) => {
+                      const content = (a.question_bank?.content_json || {}) as Record<string, unknown>;
+                      const statement = (content.statement as string) || (content.title as string) || "Questão";
+                      const score = Number(a.teacher_score ?? a.ai_score ?? a.points_earned) || 0;
+
+                      return (
+                        <div key={a.id} className="p-3 border rounded-lg space-y-2">
+                          <div className="flex justify-between items-start">
+                            <p className="text-xs font-medium">Q{i + 1}: {statement.substring(0, 80)}...</p>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs font-semibold">{score}/{Number(a.max_points)}</span>
+                              {a.grading_status === "pending" && a.question_bank?.type === "open_ended" && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Bot className="h-3 w-3 mr-1" />
+                                  Aguardando IA
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            R: {a.answer_text || (a.answer_json as Record<string, string>)?.selected || "—"}
+                          </p>
+                          {(a.question_bank?.type === "open_ended" || a.question_bank?.type === "matching") && (
+                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => openReview(a)}>
+                              <Eye className="h-3 w-3 mr-1" />
+                              Revisar nota
+                            </Button>
                           )}
                         </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ===== SECURITY TAB ===== */}
+        <TabsContent value="security" className="mt-4">
+          {loadingSecurity ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : !securityData || securityData.sessions.length === 0 ? (
+            <div className="text-center py-16">
+              <Shield className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+              <p className="text-muted-foreground">Nenhum dado de segurança disponível.</p>
+              <p className="text-xs text-muted-foreground mt-1">Os logs aparecerão quando alunos iniciarem provas com proctoring ativo.</p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={loadSecurityData}>
+                Recarregar
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Students with violations */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Alunos — Violações
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {securityData.sessions.map(s => (
+                    <div
+                      key={s.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${
+                        selectedSecuritySession === s.id ? "border-primary bg-accent/30" : ""
+                      }`}
+                      onClick={() => setSelectedSecuritySession(s.id)}
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{s.student_name || s.student_email || "Aluno"}</p>
+                        {s.device_fingerprint && (
+                          <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">
+                            {s.device_fingerprint?.platform} · {s.device_fingerprint?.timezone}
+                          </p>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        R: {a.answer_text || (a.answer_json as Record<string, string>)?.selected || "—"}
-                      </p>
-                      {(a.question_bank?.type === "open_ended" || a.question_bank?.type === "matching") && (
-                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => openReview(a)}>
-                          <Eye className="h-3 w-3 mr-1" />
-                          Revisar nota
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {s.photo_url && <Camera className="h-3.5 w-3.5 text-muted-foreground" />}
+                        <Badge
+                          variant={s.violation_count > 5 ? "destructive" : s.violation_count > 0 ? "secondary" : "outline"}
+                          className="text-xs"
+                        >
+                          {s.violation_count} violação(ões)
+                        </Badge>
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Timeline for selected student */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Timeline de Eventos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!selectedSecuritySession ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Selecione um aluno para ver os eventos.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Photos */}
+                      {securityData.photoPaths[selectedSecuritySession] && securityData.photoPaths[selectedSecuritySession].length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                            <Camera className="h-3 w-3" /> Fotos capturadas
+                          </p>
+                          <div className="flex gap-2 overflow-x-auto pb-2">
+                            {securityData.photoPaths[selectedSecuritySession].map((path, i) => {
+                              const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/authenticated/exam-proctoring/${path}`;
+                              return (
+                                <img
+                                  key={i}
+                                  src={url}
+                                  alt={`Captura ${i + 1}`}
+                                  className="h-20 w-auto rounded border object-cover shrink-0"
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Event log */}
+                      <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
+                        {securityData.logs
+                          .filter(l => l.session_id === selectedSecuritySession)
+                          .map(log => (
+                            <div key={log.id} className="flex items-start gap-2 p-2 rounded-lg bg-muted/40 text-xs">
+                              <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${
+                                log.event_type.includes("blocked") || log.event_type.includes("exit") || log.event_type.includes("lost")
+                                  ? "bg-destructive"
+                                  : log.event_type === "photo_captured"
+                                  ? "bg-primary"
+                                  : "bg-muted-foreground"
+                              }`} />
+                              <div className="flex-1 min-w-0">
+                                <span className="font-medium">{getEventLabel(log.event_type)}</span>
+                                <p className="text-muted-foreground">
+                                  {new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        {securityData.logs.filter(l => l.session_id === selectedSecuritySession).length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-4">Nenhum evento registrado.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Review dialog */}
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
@@ -383,7 +522,6 @@ export default function ExamMonitoring() {
 
               <TabsContent value="tutor" className="mt-4">
                 <div className="space-y-3">
-                  {/* Question & answer context */}
                   <div>
                     <Label className="text-xs text-muted-foreground">Enunciado</Label>
                     <p className="text-sm bg-muted/50 rounded p-2 mt-1">
