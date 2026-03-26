@@ -98,6 +98,8 @@ export function AppSidebar() {
     { title: t("nav_analytics"), url: "/analytics", icon: BarChart3 },
     { title: "Análises VP", url: "/virtual-patients/analytics", icon: BarChart3 },
     { title: "Marketplace", url: "/marketplace", icon: Store },
+    { title: "Competências", url: "/competency-analysis", icon: Brain },
+    { title: "Integração LMS", url: "/lms-integration", icon: Link2 },
     { title: "Atualizações", url: "/updates", icon: Rocket },
   ];
 
