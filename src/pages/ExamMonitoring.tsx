@@ -101,7 +101,7 @@ export default function ExamMonitoring() {
     return () => { cancelled = true; };
   }, [selectedSecuritySession, securityData]);
 
-
+  const getFunctionHeaders = async () => {
     const { data } = await supabase.auth.getSession();
 
     return {
