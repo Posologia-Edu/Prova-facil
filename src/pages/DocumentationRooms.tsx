@@ -11,8 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Users, Settings, Play, Trash2, GraduationCap, FileText, Copy } from "lucide-react";
+import { Plus, Users, Settings, Play, Trash2, GraduationCap, FileText, Copy, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import ShareRoomDialog from "@/components/ShareRoomDialog";
+import EditableRoomTitle from "@/components/EditableRoomTitle";
 
 export default function DocumentationRooms() {
   const navigate = useNavigate();
@@ -193,6 +195,9 @@ export default function DocumentationRooms() {
     onError: () => toast({ title: "Erro", description: "Erro ao duplicar sala.", variant: "destructive" }),
   });
 
+  const [shareRoomId, setShareRoomId] = useState<string | null>(null);
+  const [shareRoomTitle, setShareRoomTitle] = useState("");
+
   const statusColor: Record<string, string> = {
     draft: "bg-muted text-muted-foreground",
     active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
@@ -272,7 +277,7 @@ export default function DocumentationRooms() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
-                      <CardTitle className="text-lg">{room.title}</CardTitle>
+                      <EditableRoomTitle roomId={room.id} title={room.title} tableName="documentation_rooms" invalidateKeys={["documentation-rooms"]} />
                       {room.description && <CardDescription>{room.description}</CardDescription>}
                     </div>
                     <Badge className={statusColor[room.status] || ""}>
@@ -301,6 +306,9 @@ export default function DocumentationRooms() {
                     <Button variant="outline" size="sm" onClick={() => duplicateRoom.mutate(room.id)} title="Duplicar">
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); }} title="Enviar para professor">
+                      <Share2 className="h-3.5 w-3.5" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -310,6 +318,10 @@ export default function DocumentationRooms() {
             );
           })}
         </div>
+      )}
+
+      {shareRoomId && (
+        <ShareRoomDialog open={!!shareRoomId} onOpenChange={(o) => { if (!o) setShareRoomId(null); }} roomId={shareRoomId} roomTitle={shareRoomTitle} moduleType="documentation" />
       )}
     </div>
   );
