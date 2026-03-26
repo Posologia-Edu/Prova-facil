@@ -357,7 +357,7 @@ export default function StudentExam() {
                 </div>
 
                 <div className="px-6 py-5">
-                  <p className="text-sm sm:text-base leading-relaxed text-foreground whitespace-pre-wrap">
+                  <p className="leading-relaxed text-foreground whitespace-pre-wrap" style={{ fontSize: 'inherit' }}>
                     {statement}
                   </p>
                 </div>
@@ -384,7 +384,7 @@ export default function StudentExam() {
                             }`}
                           >
                             <RadioGroupItem value={alt.letter} id={`alt-${currentQ.id}-${i}`} className="mt-0.5 shrink-0" />
-                            <span className="text-sm leading-relaxed">
+                            <span className="leading-relaxed" style={{ fontSize: 'inherit' }}>
                               <span className="font-bold text-primary mr-1.5">{alt.letter.toUpperCase()})</span>
                               {alt.text}
                             </span>
@@ -416,7 +416,7 @@ export default function StudentExam() {
                             }`}
                           >
                             <RadioGroupItem value={opt.value} id={`tf-${currentQ.id}-${opt.value}`} className="mt-0.5 shrink-0" />
-                            <span className="text-sm font-medium">{opt.label}</span>
+                            <span className="font-medium" style={{ fontSize: 'inherit' }}>{opt.label}</span>
                           </label>
                         );
                       })}
