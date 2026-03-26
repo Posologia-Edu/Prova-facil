@@ -12,6 +12,7 @@ import { Clock, ChevronLeft, ChevronRight, Send, Loader2, AlertTriangle, FileTex
 import AccessibilityPanel, { useA11ySettings, getA11yClasses, getA11yStyle, ReadingMask } from "@/components/AccessibilityPanel";
 import { toast } from "sonner";
 import RichTextRenderer from "@/components/RichTextRenderer";
+import ExamProctoring, { type ProctoringConfig } from "@/components/ExamProctoring";
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
 
@@ -41,6 +42,8 @@ export default function StudentExam() {
   const [examTitle, setExamTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [proctoringConfig, setProctoringConfig] = useState<ProctoringConfig>({});
+  const [submissionHash, setSubmissionHash] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const autoSubmittedRef = useRef(false);
