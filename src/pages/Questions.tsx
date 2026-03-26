@@ -85,6 +85,7 @@ interface Question {
   matchingPairs?: { left: string; right: string }[];
   expectedAnswer?: string;
   embedUrl?: string;
+  images?: string[];
 }
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -134,7 +135,9 @@ function QuestionDetailContent({ question }: { question: Question }) {
       {/* Question text */}
       <div>
         <Label className="text-xs text-muted-foreground uppercase tracking-wider">Enunciado</Label>
-        <p className="mt-1.5 text-sm leading-relaxed font-medium">{question.title}</p>
+        <div className="mt-1.5 text-sm leading-relaxed font-medium">
+          <RichTextRenderer text={question.title} />
+        </div>
       </div>
 
       {/* Embed URL */}
