@@ -644,10 +644,13 @@ export default function ReconciliationEditor() {
                       {isAnswerKey ? "Espelho de Respostas" : "Ficha de Reconciliação"}
                     </Badge>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                   <div className="flex gap-1">
+                     {!isAnswerKey && Array.isArray(form.content_json) && (
+                       <Button variant="ghost" size="sm" onClick={() => exportFormToPDF({ title: form.title, fields: form.content_json, formType: "Ficha de Reconciliação" })} title="Baixar PDF"><FileDown className="h-3.5 w-3.5" /></Button>
+                     )}
+                     <Button variant="ghost" size="sm" onClick={() => { setSaveTemplateForm(form); setSaveTemplateDialogOpen(true); }} title="Salvar como Template"><BookmarkPlus className="h-3.5 w-3.5" /></Button>
+                     <Button variant="ghost" size="sm" onClick={() => editForm(form)}>Editar</Button>
+                     <Button variant="ghost" size="sm" onClick={() => deleteForm(form.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
               </CardHeader>
