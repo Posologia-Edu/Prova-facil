@@ -264,6 +264,19 @@ export default function QuestionsPage() {
   const [newTags, setNewTags] = useState("");
   const [newEmbed, setNewEmbed] = useState("");
   const [saving, setSaving] = useState(false);
+  const [newImages, setNewImages] = useState<string[]>([]);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const insertAtCursor = (template: string) => {
+    const ta = textareaRef.current;
+    if (!ta) { setNewText(prev => prev + template); return; }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const before = newText.slice(0, start);
+    const after = newText.slice(end);
+    setNewText(before + template + after);
+    setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = start + template.length / 2; }, 50);
+  };
 
   const resetForm = () => {
     setNewType("multiple_choice");
@@ -272,6 +285,7 @@ export default function QuestionsPage() {
     setNewBloom("understanding");
     setNewTags("");
     setNewEmbed("");
+    setNewImages([]);
   };
 
   const handleCreateQuestion = async () => {
