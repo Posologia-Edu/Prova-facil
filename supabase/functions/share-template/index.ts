@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -22,14 +22,19 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    const token = authHeader.replace("Bearer ", "");
+    const authClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    const userId = claimsData?.claims?.sub;
+
+    if (claimsError || !userId) {
+      console.error("[SHARE-TEMPLATE] auth error:", claimsError);
+      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -59,7 +64,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (template.owner_id !== user.id) {
+    if (template.owner_id !== userId) {
       return new Response(JSON.stringify({ error: "Você não é dono deste template" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -116,7 +121,7 @@ Deno.serve(async (req) => {
       .from("form_template_shares")
       .upsert({
         template_id: templateId,
-        shared_by: user.id,
+        shared_by: userId,
         shared_with: targetUser.id,
       }, { onConflict: "template_id,shared_with" });
 
