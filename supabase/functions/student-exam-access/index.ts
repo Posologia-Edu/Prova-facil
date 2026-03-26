@@ -76,6 +76,16 @@ Deno.serve(async (req) => {
         if (existingSession.status === "submitted" || existingSession.status === "graded") {
           return json({ sessionId: existingSession.id, status: "finished", examTitle: exam.title });
         }
+
+        if (existingSession.status === "blocked") {
+          return json({
+            error: "Sua prova foi bloqueada por violações de segurança. Aguarde o desbloqueio do professor para continuar.",
+            status: "blocked",
+            sessionId: existingSession.id,
+            examTitle: exam.title,
+          }, 403);
+        }
+
         return json({ sessionId: existingSession.id, status: "in_progress", examTitle: exam.title });
       }
 
@@ -162,6 +172,9 @@ Deno.serve(async (req) => {
         .single();
 
       if (!sess) return json({ error: "Sessão não encontrada." }, 404);
+      if (sess.status === "blocked") {
+        return json({ error: "Sua prova está bloqueada aguardando liberação do professor.", status: "blocked" }, 423);
+      }
       if (sess.status !== "in_progress") return json({ error: "Esta prova já foi finalizada.", status: "finished" }, 400);
 
       const pub = sess.exam_publications as unknown as { exam_id: string; time_limit_minutes: number };
@@ -297,6 +310,9 @@ Deno.serve(async (req) => {
         .single();
 
       if (!sess) return json({ error: "Sessão não encontrada." }, 404);
+      if (sess.status === "blocked") {
+        return json({ error: "Sua prova está bloqueada aguardando liberação do professor.", status: "blocked" }, 423);
+      }
       if (sess.status !== "in_progress") return json({ error: "Prova já finalizada.", status: "finished" }, 400);
 
       // Upsert each answer
@@ -342,6 +358,9 @@ Deno.serve(async (req) => {
         .single();
 
       if (!sess) return json({ error: "Sessão não encontrada." }, 404);
+      if (sess.status === "blocked") {
+        return json({ error: "Sua prova está bloqueada aguardando liberação do professor.", status: "blocked" }, 423);
+      }
 
       const pub = sess.exam_publications as unknown as { exam_id: string };
 

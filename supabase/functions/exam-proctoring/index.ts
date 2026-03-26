@@ -12,6 +12,44 @@ function json(data: unknown, status = 200) {
   });
 }
 
+async function getAuthenticatedUserId(req: Request) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) return null;
+
+  const authClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+
+  const { data, error } = await authClient.auth.getUser();
+  if (error || !data.user) return null;
+  return data.user.id;
+}
+
+async function assertPublicationOwner(req: Request, supabase: ReturnType<typeof createClient>, publicationId: string) {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) {
+    return { errorResponse: json({ error: "Não autenticado." }, 401) };
+  }
+
+  const { data: publication, error } = await supabase
+    .from("exam_publications")
+    .select("id, user_id")
+    .eq("id", publicationId)
+    .maybeSingle();
+
+  if (error || !publication) {
+    return { errorResponse: json({ error: "Publicação não encontrada." }, 404) };
+  }
+
+  if (publication.user_id !== userId) {
+    return { errorResponse: json({ error: "Acesso negado." }, 403) };
+  }
+
+  return { userId };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -39,22 +77,16 @@ Deno.serve(async (req) => {
       // Increment violation count for violation-type events
       const violationEvents = ["focus_lost", "fullscreen_exit", "copy_attempt", "paste_attempt", "cut_attempt", "contextmenu_attempt", "keyboard_shortcut_blocked", "printscreen_attempt"];
       if (violationEvents.includes(eventType)) {
-        await supabase.rpc("increment_violation_count", { p_session_id: sessionId }).catch(() => {
-          // Fallback: manual increment
-          supabase
-            .from("exam_sessions")
-            .select("violation_count")
-            .eq("id", sessionId)
-            .single()
-            .then(({ data }) => {
-              if (data) {
-                supabase
-                  .from("exam_sessions")
-                  .update({ violation_count: (data.violation_count || 0) + 1 })
-                  .eq("id", sessionId);
-              }
-            });
-        });
+        const { data: session } = await supabase
+          .from("exam_sessions")
+          .select("violation_count")
+          .eq("id", sessionId)
+          .maybeSingle();
+
+        await supabase
+          .from("exam_sessions")
+          .update({ violation_count: (session?.violation_count || 0) + 1 })
+          .eq("id", sessionId);
       }
 
       // Save fingerprint on session_started
@@ -62,6 +94,13 @@ Deno.serve(async (req) => {
         await supabase
           .from("exam_sessions")
           .update({ device_fingerprint: eventData.fingerprint })
+          .eq("id", sessionId);
+      }
+
+      if (eventType === "session_blocked") {
+        await supabase
+          .from("exam_sessions")
+          .update({ status: "blocked" })
           .eq("id", sessionId);
       }
 
@@ -121,10 +160,13 @@ Deno.serve(async (req) => {
       const { publicationId } = body;
       if (!publicationId) return json({ error: "Missing publicationId" }, 400);
 
+      const auth = await assertPublicationOwner(req, supabase, publicationId);
+      if (auth.errorResponse) return auth.errorResponse;
+
       // Get all sessions for this publication
       const { data: sessions } = await supabase
         .from("exam_sessions")
-        .select("id, student_name, student_email, violation_count, device_fingerprint, photo_url")
+        .select("id, student_name, student_email, status, violation_count, device_fingerprint, photo_url")
         .eq("publication_id", publicationId)
         .order("violation_count", { ascending: false });
 
@@ -159,6 +201,37 @@ Deno.serve(async (req) => {
       }
 
       return json({ sessions, logs, photoPaths });
+    }
+
+    if (action === "unlock-session") {
+      const { sessionId } = body;
+      if (!sessionId) return json({ error: "Missing sessionId" }, 400);
+
+      const { data: session, error: sessionError } = await supabase
+        .from("exam_sessions")
+        .select("id, publication_id")
+        .eq("id", sessionId)
+        .maybeSingle();
+
+      if (sessionError || !session) {
+        return json({ error: "Sessão não encontrada." }, 404);
+      }
+
+      const auth = await assertPublicationOwner(req, supabase, session.publication_id);
+      if (auth.errorResponse) return auth.errorResponse;
+
+      await supabase
+        .from("exam_sessions")
+        .update({ status: "in_progress", finished_at: null })
+        .eq("id", sessionId);
+
+      await supabase.from("exam_audit_logs").insert({
+        session_id: sessionId,
+        event_type: "session_unblocked",
+        event_data: { teacher_user_id: auth.userId },
+      });
+
+      return json({ success: true });
     }
 
     return json({ error: "Invalid action" }, 400);

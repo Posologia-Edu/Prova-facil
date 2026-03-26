@@ -79,6 +79,16 @@ export default function ExamMonitoring() {
   const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [selectedSecuritySession, setSelectedSecuritySession] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("monitoring");
+  const [unlockingSessionId, setUnlockingSessionId] = useState<string | null>(null);
+
+  const getFunctionHeaders = async () => {
+    const { data } = await supabase.auth.getSession();
+
+    return {
+      "Content-Type": "application/json",
+      ...(data.session?.access_token ? { Authorization: `Bearer ${data.session.access_token}` } : {}),
+    };
+  };
 
   const loadSessions = async () => {
     if (!publicationId) return;
@@ -174,17 +184,43 @@ export default function ExamMonitoring() {
     if (!publicationId) return;
     setLoadingSecurity(true);
     try {
+      const headers = await getFunctionHeaders();
       const res = await fetch(PROCTORING_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ action: "get-violations", publicationId }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao carregar monitoramento.");
       setSecurityData(data);
     } catch {
       toast.error("Erro ao carregar dados de segurança.");
     }
     setLoadingSecurity(false);
+  };
+
+  const handleUnlockSession = async (sessionId: string) => {
+    setUnlockingSessionId(sessionId);
+
+    try {
+      const headers = await getFunctionHeaders();
+      const res = await fetch(PROCTORING_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action: "unlock-session", sessionId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao desbloquear sessão.");
+
+      toast.success("Aluno desbloqueado com sucesso.");
+      await Promise.all([loadSecurityData(), loadSessions()]);
+    } catch (error) {
+      console.error(error);
+      toast.error("Não foi possível desbloquear o aluno.");
+    } finally {
+      setUnlockingSessionId(null);
+    }
   };
 
   const getEventLabel = (type: string) => {
@@ -200,6 +236,7 @@ export default function ExamMonitoring() {
       photo_captured: "Foto capturada",
       session_started: "Sessão iniciada",
       session_blocked: "Sessão bloqueada",
+      session_unblocked: "Sessão desbloqueada pelo professor",
       webcam_denied: "Webcam negada",
     };
     return labels[type] || type;
@@ -316,8 +353,11 @@ export default function ExamMonitoring() {
                         {s.total_score != null && (
                           <span className="text-sm font-semibold">{Number(s.total_score).toFixed(1)}/{Number(s.max_score).toFixed(1)}</span>
                         )}
-                        <Badge variant={s.status === "in_progress" ? "default" : s.status === "graded" ? "secondary" : "outline"} className="text-xs">
-                          {s.status === "in_progress" ? "Fazendo" : s.status === "submitted" ? "Enviada" : "Corrigida"}
+                         <Badge
+                           variant={s.status === "blocked" ? "destructive" : s.status === "in_progress" ? "default" : s.status === "graded" ? "secondary" : "outline"}
+                           className="text-xs"
+                         >
+                           {s.status === "blocked" ? "Bloqueada" : s.status === "in_progress" ? "Fazendo" : s.status === "submitted" ? "Enviada" : "Corrigida"}
                         </Badge>
                       </div>
                     </div>
@@ -400,6 +440,9 @@ export default function ExamMonitoring() {
                     <AlertTriangle className="h-4 w-4" />
                     Alunos — Violações
                   </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Quando uma prova é bloqueada, o aluno só volta após desbloqueio manual do professor.
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {securityData.sessions.map(s => (
@@ -419,12 +462,26 @@ export default function ExamMonitoring() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        {s.status === "blocked" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7"
+                            disabled={unlockingSessionId === s.id}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleUnlockSession(s.id);
+                            }}
+                          >
+                            {unlockingSessionId === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Desbloquear"}
+                          </Button>
+                        )}
                         {s.photo_url && <Camera className="h-3.5 w-3.5 text-muted-foreground" />}
                         <Badge
-                          variant={s.violation_count > 5 ? "destructive" : s.violation_count > 0 ? "secondary" : "outline"}
+                          variant={s.status === "blocked" || s.violation_count > 5 ? "destructive" : s.violation_count > 0 ? "secondary" : "outline"}
                           className="text-xs"
                         >
-                          {s.violation_count} violação(ões)
+                          {s.status === "blocked" ? "Bloqueada" : `${s.violation_count} violação(ões)`}
                         </Badge>
                       </div>
                     </div>
