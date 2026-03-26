@@ -249,6 +249,34 @@ export default function ExamProctoring({
     };
   }, []);
 
+  // Realtime: listen for teacher unlock
+  useEffect(() => {
+    if (!blocked) return;
+    const channel = supabase
+      .channel(`session-unlock-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "exam_sessions",
+          filter: `id=eq.${sessionId}`,
+        },
+        (payload: any) => {
+          if (payload.new?.status === "in_progress") {
+            setBlocked(false);
+            setViolationCount(0);
+            toast.success("Sua prova foi desbloqueada pelo professor.");
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [blocked, sessionId]);
+
   // If no proctoring features, just render children
   if (!hasAnyFeature) return <>{children}</>;
 
