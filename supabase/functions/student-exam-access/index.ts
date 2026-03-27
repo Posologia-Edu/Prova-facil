@@ -184,6 +184,12 @@ Deno.serve(async (req) => {
       const limitMs = pub.time_limit_minutes * 60 * 1000;
       const remaining = Math.max(0, Math.floor((limitMs - (Date.now() - startedAt)) / 1000));
 
+      // If time expired, auto-submit server-side
+      if (remaining <= 0) {
+        await autoSubmitSession(supabase, sessionId, pub.exam_id);
+        return json({ error: "Tempo esgotado. Sua prova foi enviada automaticamente.", status: "finished" }, 400);
+      }
+
       // Get exam title and proctoring config
       const { data: exam } = await supabase.from("exams").select("title, proctoring_config").eq("id", pub.exam_id).single();
       const proctoringConfig = (exam as any)?.proctoring_config || {};
@@ -502,6 +508,39 @@ Deno.serve(async (req) => {
         },
         answers: answers || [],
       });
+    }
+
+    // ─── CLEANUP-EXPIRED: auto-submit all expired sessions for a publication ───
+    if (action === "cleanup-expired") {
+      const { publicationId } = body;
+      if (!publicationId) return json({ error: "publicationId obrigatório." }, 400);
+
+      const { data: pub } = await supabase
+        .from("exam_publications")
+        .select("id, exam_id, time_limit_minutes")
+        .eq("id", publicationId)
+        .single();
+
+      if (!pub) return json({ error: "Publicação não encontrada." }, 404);
+
+      const { data: sessions } = await supabase
+        .from("exam_sessions")
+        .select("id, started_at")
+        .eq("publication_id", publicationId)
+        .eq("status", "in_progress");
+
+      let closedCount = 0;
+      for (const sess of sessions || []) {
+        const startedAt = new Date(sess.started_at).getTime();
+        const limitMs = pub.time_limit_minutes * 60 * 1000;
+        const remaining = Math.floor((limitMs - (Date.now() - startedAt)) / 1000);
+        if (remaining <= 0) {
+          await autoSubmitSession(supabase, sess.id, pub.exam_id);
+          closedCount++;
+        }
+      }
+
+      return json({ success: true, closedCount });
     }
 
     return json({ error: "Ação inválida." }, 400);
