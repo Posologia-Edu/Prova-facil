@@ -187,6 +187,21 @@ export default function ExamMonitoring() {
     }
   };
 
+  // Auto-close expired sessions on mount
+  useEffect(() => {
+    if (!publicationId) return;
+    const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/student-exam-access`;
+    fetch(FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cleanup-expired", publicationId }),
+    }).then(r => r.json()).then(data => {
+      if (data.closedCount > 0) {
+        toast.info(`${data.closedCount} prova(s) expirada(s) foram enviadas automaticamente.`);
+      }
+    }).catch(() => {});
+  }, [publicationId]);
+
   useEffect(() => {
     loadSessions();
 
