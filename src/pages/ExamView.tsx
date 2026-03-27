@@ -206,6 +206,10 @@ export default function ExamViewPage() {
             </span>
           </div>
         </div>
+        <Button variant="outline" size="sm" onClick={() => navigate(`/exams/${examId}/edit`)}>
+          <Pencil className="h-3.5 w-3.5 mr-1.5" />
+          Editar
+        </Button>
         <Button variant="outline" size="sm" onClick={handleDuplicate}>
           <Copy className="h-3.5 w-3.5 mr-1.5" />
           Duplicar
@@ -213,6 +217,10 @@ export default function ExamViewPage() {
         <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
           <FileDown className="h-3.5 w-3.5 mr-1.5" />
           Exportar PDF
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleShareToMarketplace}>
+          <Store className="h-3.5 w-3.5 mr-1.5" />
+          Marketplace
         </Button>
         <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}>
           <Share2 className="h-3.5 w-3.5 mr-1.5" />
