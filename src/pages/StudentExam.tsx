@@ -42,6 +42,7 @@ export default function StudentExam() {
   const [examTitle, setExamTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [proctoringConfig, setProctoringConfig] = useState<ProctoringConfig>({});
   const [submissionHash, setSubmissionHash] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -176,8 +177,12 @@ export default function StudentExam() {
       setTimeLeft(prev => {
         if (prev === null) return null;
         const next = prev - 1;
+        if (next === 60) {
+          setShowTimeWarning(true);
+        }
         if (next <= 0) {
           if (timerRef.current) clearInterval(timerRef.current);
+          setShowTimeWarning(false);
           submitExam(true);
           return 0;
         }
@@ -608,6 +613,29 @@ export default function StudentExam() {
         currentAlternatives={alternatives}
       />
       {a11y.readingMask && <ReadingMask />}
+
+      {/* Time expiring warning overlay */}
+      {showTimeWarning && timeLeft !== null && timeLeft <= 60 && timeLeft > 0 && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+          <div className="bg-card border-2 border-destructive rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl animate-in fade-in zoom-in-95">
+            <AlertTriangle className="h-16 w-16 text-destructive mx-auto mb-4 animate-pulse" />
+            <h2 className="text-2xl font-bold text-foreground mb-2">Tempo quase esgotado!</h2>
+            <p className="text-muted-foreground mb-4">
+              Sua prova será enviada automaticamente em
+            </p>
+            <div className="text-5xl font-mono font-bold text-destructive mb-4">
+              {timeLeft}s
+            </div>
+            <p className="text-sm text-muted-foreground mb-6">
+              Suas respostas serão salvas e enviadas para correção.
+            </p>
+            <Button onClick={() => { setShowTimeWarning(false); submitExam(false); }} className="w-full gap-2">
+              <Send className="h-4 w-4" />
+              Entregar agora
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
     </ExamProctoring>
   );
