@@ -12,6 +12,8 @@ import {
   AlignLeft,
   ArrowLeftRight,
   Loader2,
+  Pencil,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -173,6 +175,40 @@ export default function ExamViewPage() {
       );
     }
     toast.success("Prova duplicada!");
+  };
+
+  const handleShareToMarketplace = async () => {
+    if (!examId) return;
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return;
+
+    const { data: existing } = await supabase
+      .from("marketplace_exams")
+      .select("id")
+      .eq("exam_id", examId)
+      .maybeSingle();
+
+    if (existing) {
+      toast.info("Esta prova já está no Marketplace.");
+      return;
+    }
+
+    const totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
+
+    const { error } = await supabase.from("marketplace_exams").insert({
+      exam_id: examId,
+      user_id: user.user.id,
+      title: examTitle,
+      description: "",
+      question_count: totalQuestions,
+      tags: [],
+    });
+
+    if (error) {
+      toast.error("Erro ao compartilhar no Marketplace.");
+      return;
+    }
+    toast.success("Prova compartilhada no Marketplace!");
   };
 
   const totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
