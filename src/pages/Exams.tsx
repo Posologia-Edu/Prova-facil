@@ -395,36 +395,6 @@ export default function ExamsPage() {
                       </div>
                     </div>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exams/${exam.id}/edit`); }}>
-                          <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(exam); }}>
-                          <Copy className="h-3.5 w-3.5 mr-2" /> Duplicar
-                        </DropdownMenuItem>
-                        {exam.marketplaceId ? (
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRevokeMarketplace(exam); }}>
-                            <Store className="h-3.5 w-3.5 mr-2" /> Revogar do Marketplace
-                          </DropdownMenuItem>
-                        ) : !exam.isImported ? (
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleShareToMarketplace(exam); }}>
-                            <Store className="h-3.5 w-3.5 mr-2" /> Compartilhar no Marketplace
-                          </DropdownMenuItem>
-                        ) : null}
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={(e) => { e.stopPropagation(); setDeleteId(exam.id); }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
 
                   <div className="flex items-center justify-between mt-3 pt-3 border-t">

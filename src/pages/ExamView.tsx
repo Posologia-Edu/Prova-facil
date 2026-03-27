@@ -12,6 +12,8 @@ import {
   AlignLeft,
   ArrowLeftRight,
   Loader2,
+  Pencil,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -175,6 +177,40 @@ export default function ExamViewPage() {
     toast.success("Prova duplicada!");
   };
 
+  const handleShareToMarketplace = async () => {
+    if (!examId) return;
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return;
+
+    const { data: existing } = await supabase
+      .from("marketplace_exams")
+      .select("id")
+      .eq("exam_id", examId)
+      .maybeSingle();
+
+    if (existing) {
+      toast.info("Esta prova já está no Marketplace.");
+      return;
+    }
+
+    const totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
+
+    const { error } = await supabase.from("marketplace_exams").insert({
+      exam_id: examId,
+      user_id: user.user.id,
+      title: examTitle,
+      description: "",
+      question_count: totalQuestions,
+      tags: [],
+    });
+
+    if (error) {
+      toast.error("Erro ao compartilhar no Marketplace.");
+      return;
+    }
+    toast.success("Prova compartilhada no Marketplace!");
+  };
+
   const totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
   const totalPoints = sections.reduce((s, sec) => s + sec.questions.reduce((qs, q) => qs + q.points, 0), 0);
   const status = statusConfig[examStatus] || statusConfig.draft;
@@ -206,6 +242,10 @@ export default function ExamViewPage() {
             </span>
           </div>
         </div>
+        <Button variant="outline" size="sm" onClick={() => navigate(`/exams/${examId}/edit`)}>
+          <Pencil className="h-3.5 w-3.5 mr-1.5" />
+          Editar
+        </Button>
         <Button variant="outline" size="sm" onClick={handleDuplicate}>
           <Copy className="h-3.5 w-3.5 mr-1.5" />
           Duplicar
@@ -213,6 +253,10 @@ export default function ExamViewPage() {
         <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
           <FileDown className="h-3.5 w-3.5 mr-1.5" />
           Exportar PDF
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleShareToMarketplace}>
+          <Store className="h-3.5 w-3.5 mr-1.5" />
+          Marketplace
         </Button>
         <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}>
           <Share2 className="h-3.5 w-3.5 mr-1.5" />
