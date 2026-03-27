@@ -11,6 +11,87 @@ function json(data: unknown, status = 200) {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
+async function autoSubmitSession(supabase: any, sessionId: string, examId: string) {
+  const { data: examQuestions } = await supabase
+    .from("exam_questions")
+    .select("question_id, points")
+    .eq("exam_id", examId);
+
+  const questionIds = examQuestions?.map((eq: any) => eq.question_id) || [];
+  const { data: bankQuestions } = await supabase
+    .from("question_bank")
+    .select("id, type, content_json")
+    .in("id", questionIds);
+
+  const { data: existingAnswers } = await supabase
+    .from("student_answers")
+    .select("question_id, answer_text, answer_json")
+    .eq("session_id", sessionId);
+
+  const answersMap: Record<string, any> = {};
+  for (const a of existingAnswers || []) {
+    answersMap[a.question_id] = a;
+  }
+
+  let totalScore = 0;
+  let maxScore = 0;
+
+  for (const eq of examQuestions || []) {
+    const bq = bankQuestions?.find((b: any) => b.id === eq.question_id);
+    const points = Number(eq.points) || 1;
+    maxScore += points;
+
+    const ans = answersMap[eq.question_id];
+    const answerJson = ans?.answer_json || {};
+    const content = (bq?.content_json || {}) as Record<string, unknown>;
+    const type = bq?.type || "open_ended";
+
+    let isCorrect: boolean | null = null;
+    let pointsEarned = 0;
+    let gradingStatus = "pending";
+
+    if (type === "multiple_choice" || type === "true_false") {
+      let correctAnswer: string | null = null;
+      if (Array.isArray(content.alternatives)) {
+        const correctAlt = (content.alternatives as Array<Record<string, unknown>>).find((a: any) => a.correct);
+        correctAnswer = correctAlt ? String(correctAlt.letter) : null;
+      } else if (content.correct_answer) {
+        correctAnswer = String(content.correct_answer);
+      }
+      isCorrect = correctAnswer ? String(correctAnswer) === String(answerJson?.selected) : false;
+      pointsEarned = isCorrect ? points : 0;
+      gradingStatus = "graded";
+      totalScore += pointsEarned;
+    }
+
+    if (ans) {
+      await supabase.from("student_answers").update({
+        is_correct: isCorrect,
+        points_earned: pointsEarned,
+        max_points: points,
+        grading_status: gradingStatus,
+      }).eq("session_id", sessionId).eq("question_id", eq.question_id);
+    } else {
+      await supabase.from("student_answers").insert({
+        session_id: sessionId,
+        question_id: eq.question_id,
+        answer_text: "",
+        answer_json: {},
+        is_correct: isCorrect,
+        points_earned: pointsEarned,
+        max_points: points,
+        grading_status: gradingStatus,
+      });
+    }
+  }
+
+  await supabase.from("exam_sessions").update({
+    status: "submitted",
+    finished_at: new Date().toISOString(),
+    total_score: totalScore,
+    max_score: maxScore,
+  }).eq("id", sessionId);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
