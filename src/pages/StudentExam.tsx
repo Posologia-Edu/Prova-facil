@@ -42,6 +42,7 @@ export default function StudentExam() {
   const [examTitle, setExamTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [proctoringConfig, setProctoringConfig] = useState<ProctoringConfig>({});
   const [submissionHash, setSubmissionHash] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -176,8 +177,12 @@ export default function StudentExam() {
       setTimeLeft(prev => {
         if (prev === null) return null;
         const next = prev - 1;
+        if (next === 60) {
+          setShowTimeWarning(true);
+        }
         if (next <= 0) {
           if (timerRef.current) clearInterval(timerRef.current);
+          setShowTimeWarning(false);
           submitExam(true);
           return 0;
         }
