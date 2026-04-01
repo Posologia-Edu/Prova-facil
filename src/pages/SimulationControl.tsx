@@ -361,9 +361,9 @@ export default function SimulationControl() {
                 <div className="space-y-1">
                   <p className="font-medium text-foreground">A simulação ainda não foi preparada.</p>
                   <p className="text-sm text-muted-foreground">
-                    {connectedStudentsCount > 0
-                      ? `${connectedStudentsCount}/${students.length} alunos já entraram na sala. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`
-                      : "Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade para os alunos."}
+                    {readyStudentsCount > 0
+                      ? `${readyStudentsCount}/${students.length} alunos prontos. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`
+                      : `${students.length} alunos cadastrados. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`}
                   </p>
                 </div>
                 <Button onClick={openProfessorRoom} className="gap-2 shrink-0">
