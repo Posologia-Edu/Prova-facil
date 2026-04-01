@@ -49,11 +49,13 @@ export default function SimulationControl() {
       const { data, error } = await supabase
         .from("simulation_participants")
         .select("*")
-        .eq("room_id", roomId!);
+        .eq("room_id", roomId!)
+        .order("pair_index", { ascending: true });
       if (error) throw error;
       return data;
     },
     enabled: !!roomId,
+    refetchInterval: 5000,
   });
 
   const { data: assignments = [] } = useQuery({
@@ -261,6 +263,51 @@ export default function SimulationControl() {
 
         {/* Monitoring Tab */}
         <TabsContent value="monitoring" className="space-y-4">
+          {/* Show all participants when no rounds exist yet */}
+          {rounds.length === 0 && participants.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Participantes ({participants.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Os alunos abaixo estão cadastrados nesta sala. As rodadas serão exibidas conforme os alunos acessarem a sala e forem distribuídos.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {participants.map((p: any) => (
+                    <div key={p.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                      <Badge variant="outline" className="text-xs">
+                        {p.pair_position}
+                      </Badge>
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium block truncate">{p.student_name}</span>
+                        {p.student_email && (
+                          <span className="text-xs text-muted-foreground block truncate">{p.student_email}</span>
+                        )}
+                      </div>
+                      <Badge variant={p.status === "ready" ? "default" : "secondary"} className="ml-auto text-xs shrink-0">
+                        {p.status === "ready" ? "Pronto" : "Aguardando"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {rounds.length === 0 && participants.length === 0 && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">Nenhum aluno acessou a sala ainda.</p>
+                <p className="text-sm text-muted-foreground mt-1">Compartilhe o PIN <span className="font-mono font-bold">{room?.access_code}</span> com os alunos.</p>
+              </CardContent>
+            </Card>
+          )}
+
           {rounds.map((round: any) => {
             const roundAssignments = assignments.filter((a: any) => a.round_id === round.id);
             const roundResponses = responses.filter((r: any) => r.round_id === round.id);
