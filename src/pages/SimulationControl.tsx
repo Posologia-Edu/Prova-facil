@@ -103,6 +103,9 @@ export default function SimulationControl() {
     enabled: !!roomId,
   });
 
+  const professor = participants.find((participant: any) => participant.participant_role === "professor");
+  const students = participants.filter((participant: any) => participant.participant_role === "student");
+  const connectedStudentsCount = students.filter((participant: any) => ["joined", "ready"].includes(participant.status)).length;
   const activeRound = rounds.find((r: any) => r.status === "active");
   const nextPendingRound = rounds.find((r: any) => r.status === "pending");
 
@@ -143,6 +146,17 @@ export default function SimulationControl() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [roomId, queryClient]);
+
+  const openProfessorRoom = () => {
+    if (!room?.access_code || !professor?.student_email) {
+      toast({ title: "Cadastre o e-mail do professor para abrir a sala.", variant: "destructive" });
+      return;
+    }
+
+    sessionStorage.setItem("sim_pin", room.access_code);
+    sessionStorage.setItem("sim_email", String(professor.student_email).trim().toLowerCase());
+    navigate("/simulation/join");
+  };
 
   // Professor actions
   const releaseMaterials = async () => {
@@ -340,6 +354,25 @@ export default function SimulationControl() {
 
         {/* Monitoring Tab */}
         <TabsContent value="monitoring" className="space-y-4">
+          {rounds.length === 0 && students.length > 0 && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground">A simulação ainda não foi preparada.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {connectedStudentsCount > 0
+                      ? `${connectedStudentsCount}/${students.length} alunos já entraram na sala. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`
+                      : "Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade para os alunos."}
+                  </p>
+                </div>
+                <Button onClick={openProfessorRoom} className="gap-2 shrink-0">
+                  <Play className="h-4 w-4" />
+                  Abrir sala do professor
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Professor Action Buttons */}
           {rounds.length > 0 && (
             <Card className="border-primary/30 bg-primary/5">
@@ -390,7 +423,9 @@ export default function SimulationControl() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Os alunos abaixo estão cadastrados nesta sala.{rounds.length === 0 ? " As rodadas serão exibidas conforme os alunos acessarem a sala e forem distribuídos." : ""}
+                  {students.length > 0
+                    ? `${connectedStudentsCount}/${students.length} alunos já entraram na sala.`
+                    : "Os participantes abaixo estão cadastrados nesta sala."}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {participants.map((p: any) => (
@@ -404,8 +439,11 @@ export default function SimulationControl() {
                           <span className="text-xs text-muted-foreground block truncate">{p.student_email}</span>
                         )}
                       </div>
-                      <Badge variant={p.status === "ready" ? "default" : "secondary"} className="ml-auto text-xs shrink-0">
-                        {p.status === "ready" ? "Pronto" : "Aguardando"}
+                      <Badge
+                        variant={p.status === "ready" ? "default" : p.status === "joined" ? "outline" : "secondary"}
+                        className="ml-auto text-xs shrink-0"
+                      >
+                        {p.status === "ready" ? "Pronto" : p.status === "joined" ? "Na sala" : "Aguardando"}
                       </Badge>
                     </div>
                   ))}

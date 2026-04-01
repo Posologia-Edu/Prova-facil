@@ -31,6 +31,9 @@ import {
 
 const normalizeParticipantEmail = (value: string) => value.trim().toLowerCase();
 const normalizeAccessCode = (value: string) => value.trim().toLowerCase();
+const shouldMarkParticipantAsJoined = (participantStatus: string, rounds: any[]) =>
+  participantStatus === "waiting" &&
+  !rounds.some((round: any) => round.materials_released || round.status === "active" || round.status === "completed");
 
 export default function SimulationJoin() {
   const { t } = useLanguage();
@@ -54,6 +57,35 @@ export default function SimulationJoin() {
   const [materialsReady, setMaterialsReady] = useState(false);
   const [studentsReady, setStudentsReady] = useState<string[]>([]);
   const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
+
+  const syncJoinedPresence = async (
+    participantRecord: any,
+    participantsData: any[],
+    roundsData: any[],
+  ) => {
+    if (!participantRecord || !shouldMarkParticipantAsJoined(participantRecord.status, roundsData)) {
+      return { participantRecord, participantsData };
+    }
+
+    const { error } = await supabase
+      .from("simulation_participants")
+      .update({ status: "joined" })
+      .eq("id", participantRecord.id)
+      .eq("status", "waiting");
+
+    if (error) {
+      return { participantRecord, participantsData };
+    }
+
+    const joinedParticipant = { ...participantRecord, status: "joined" };
+
+    return {
+      participantRecord: joinedParticipant,
+      participantsData: participantsData.map((currentParticipant: any) =>
+        currentParticipant.id === joinedParticipant.id ? joinedParticipant : currentParticipant
+      ),
+    };
+  };
 
   // Auto-join if redirected from StudentAuth
   useEffect(() => {
@@ -142,6 +174,15 @@ export default function SimulationJoin() {
       return;
     }
 
+    const { data: roundsData } = await supabase
+      .from("simulation_rounds")
+      .select("id, status, materials_released")
+      .eq("room_id", roomData.id);
+
+    const syncedPresence = await syncJoinedPresence(matchedParticipant, participantsData || [], roundsData || []);
+    const participantForSession = syncedPresence.participantRecord;
+    const participantsForSession = syncedPresence.participantsData;
+
     const { data: formsData } = await supabase
       .from("simulation_forms")
       .select("*")
@@ -150,10 +191,10 @@ export default function SimulationJoin() {
     setPin(normalizedPin);
     setEmail(normalizedEmail);
     setRoom(roomData);
-    setParticipant(matchedParticipant);
+    setParticipant(participantForSession);
     setForms(formsData || []);
-    setAllParticipants(participantsData || []);
-    setMaterialsReady(matchedParticipant.status === "ready");
+    setAllParticipants(participantsForSession || []);
+    setMaterialsReady(participantForSession?.status === "ready");
     setJoined(true);
   };
 
@@ -167,49 +208,28 @@ export default function SimulationJoin() {
   useEffect(() => {
     if (!joined || !room) return;
     const poll = async () => {
-      // Refresh participants list (professor needs to see new arrivals)
-      const { data: participantsData } = await supabase
-        .from("simulation_participants")
-        .select("*")
-        .eq("room_id", room.id);
-      setAllParticipants(participantsData || []);
-
-      const refreshedParticipant = (participantsData || []).find((currentParticipant: any) => {
-        if (participant?.id) return currentParticipant.id === participant.id;
-        return normalizeParticipantEmail(currentParticipant.student_email || "") === normalizeParticipantEmail(email);
-      });
-
-      if (refreshedParticipant) {
-        setParticipant((previousParticipant: any) => {
-          if (!previousParticipant) return refreshedParticipant;
-
-          const isSameParticipant =
-            previousParticipant.id === refreshedParticipant.id &&
-            previousParticipant.room_id === refreshedParticipant.room_id &&
-            previousParticipant.status === refreshedParticipant.status &&
-            previousParticipant.pair_index === refreshedParticipant.pair_index &&
-            previousParticipant.pair_position === refreshedParticipant.pair_position &&
-            previousParticipant.participant_role === refreshedParticipant.participant_role &&
-            previousParticipant.assigned_role === refreshedParticipant.assigned_role;
-
-          return isSameParticipant ? previousParticipant : refreshedParticipant;
-        });
-        setMaterialsReady(refreshedParticipant.status === "ready");
-      }
-
-      // Refresh forms (in case admin updates them)
-      const { data: formsData } = await supabase
-        .from("simulation_forms")
-        .select("*")
-        .eq("room_id", room.id);
-      if (formsData) setForms(formsData);
-
       const { data: roundsAll } = await supabase
         .from("simulation_rounds")
         .select("*")
         .eq("room_id", room.id)
         .order("round_number", { ascending: true });
       setAllRounds(roundsAll || []);
+
+      const { data: participantsDataRaw } = await supabase
+        .from("simulation_participants")
+        .select("*")
+        .eq("room_id", room.id);
+
+      const currentParticipant = (participantsDataRaw || []).find((currentParticipant: any) => {
+        if (participant?.id) return currentParticipant.id === participant.id;
+        return normalizeParticipantEmail(currentParticipant.student_email || "") === normalizeParticipantEmail(email);
+      });
+
+      const syncedPresence = await syncJoinedPresence(currentParticipant, participantsDataRaw || [], roundsAll || []);
+      const participantsData = syncedPresence.participantsData;
+      const refreshedParticipant = syncedPresence.participantRecord;
+
+      setAllParticipants(participantsData || []);
 
       // Load all assignments for all rounds
       if (roundsAll && roundsAll.length > 0) {
