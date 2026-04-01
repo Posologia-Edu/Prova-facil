@@ -208,49 +208,28 @@ export default function SimulationJoin() {
   useEffect(() => {
     if (!joined || !room) return;
     const poll = async () => {
-      // Refresh participants list (professor needs to see new arrivals)
-      const { data: participantsData } = await supabase
-        .from("simulation_participants")
-        .select("*")
-        .eq("room_id", room.id);
-      setAllParticipants(participantsData || []);
-
-      const refreshedParticipant = (participantsData || []).find((currentParticipant: any) => {
-        if (participant?.id) return currentParticipant.id === participant.id;
-        return normalizeParticipantEmail(currentParticipant.student_email || "") === normalizeParticipantEmail(email);
-      });
-
-      if (refreshedParticipant) {
-        setParticipant((previousParticipant: any) => {
-          if (!previousParticipant) return refreshedParticipant;
-
-          const isSameParticipant =
-            previousParticipant.id === refreshedParticipant.id &&
-            previousParticipant.room_id === refreshedParticipant.room_id &&
-            previousParticipant.status === refreshedParticipant.status &&
-            previousParticipant.pair_index === refreshedParticipant.pair_index &&
-            previousParticipant.pair_position === refreshedParticipant.pair_position &&
-            previousParticipant.participant_role === refreshedParticipant.participant_role &&
-            previousParticipant.assigned_role === refreshedParticipant.assigned_role;
-
-          return isSameParticipant ? previousParticipant : refreshedParticipant;
-        });
-        setMaterialsReady(refreshedParticipant.status === "ready");
-      }
-
-      // Refresh forms (in case admin updates them)
-      const { data: formsData } = await supabase
-        .from("simulation_forms")
-        .select("*")
-        .eq("room_id", room.id);
-      if (formsData) setForms(formsData);
-
       const { data: roundsAll } = await supabase
         .from("simulation_rounds")
         .select("*")
         .eq("room_id", room.id)
         .order("round_number", { ascending: true });
       setAllRounds(roundsAll || []);
+
+      const { data: participantsDataRaw } = await supabase
+        .from("simulation_participants")
+        .select("*")
+        .eq("room_id", room.id);
+
+      const currentParticipant = (participantsDataRaw || []).find((currentParticipant: any) => {
+        if (participant?.id) return currentParticipant.id === participant.id;
+        return normalizeParticipantEmail(currentParticipant.student_email || "") === normalizeParticipantEmail(email);
+      });
+
+      const syncedPresence = await syncJoinedPresence(currentParticipant, participantsDataRaw || [], roundsAll || []);
+      const participantsData = syncedPresence.participantsData;
+      const refreshedParticipant = syncedPresence.participantRecord;
+
+      setAllParticipants(participantsData || []);
 
       // Load all assignments for all rounds
       if (roundsAll && roundsAll.length > 0) {
