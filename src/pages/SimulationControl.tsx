@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap } from "lucide-react";
+import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap, Play, BookOpen, Square } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -104,6 +104,83 @@ export default function SimulationControl() {
   });
 
   const activeRound = rounds.find((r: any) => r.status === "active");
+  const nextPendingRound = rounds.find((r: any) => r.status === "pending");
+
+  // Determine if materials need releasing for the next pending round's cycle
+  const needsMaterialRelease = useMemo(() => {
+    if (!nextPendingRound || activeRound) return false;
+    const cycle = nextPendingRound.cycle;
+    const cycleRounds = rounds.filter((r: any) => r.cycle === cycle);
+    return cycleRounds.length > 0 && !cycleRounds.some((r: any) => r.materials_released);
+  }, [rounds, nextPendingRound, activeRound]);
+
+  const materialsReleasedButNotStarted = useMemo(() => {
+    if (!nextPendingRound || activeRound) return false;
+    const cycle = nextPendingRound.cycle;
+    const cycleRounds = rounds.filter((r: any) => r.cycle === cycle);
+    return cycleRounds.some((r: any) => r.materials_released) && !cycleRounds.some((r: any) => r.status === "active");
+  }, [rounds, nextPendingRound, activeRound]);
+
+  // Realtime subscription for participants
+  useEffect(() => {
+    if (!roomId) return;
+    const channel = supabase
+      .channel(`sim-participants-${roomId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "simulation_participants", filter: `room_id=eq.${roomId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["simulation-participants", roomId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "simulation_rounds", filter: `room_id=eq.${roomId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [roomId, queryClient]);
+
+  // Professor actions
+  const releaseMaterials = async () => {
+    if (!nextPendingRound || !room) return;
+    const cycle = nextPendingRound.cycle;
+    const cycleRoundIds = rounds.filter((r: any) => r.cycle === cycle).map((r: any) => r.id);
+    await Promise.all([
+      supabase.from("simulation_rounds").update({ materials_released: true }).in("id", cycleRoundIds),
+      supabase.from("simulation_participants").update({ status: "waiting" }).eq("room_id", room.id).eq("participant_role", "student"),
+      supabase.from("simulation_rooms").update({ current_cycle: cycle, current_round: 0, status: "active" }).eq("id", room.id),
+    ]);
+    queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-participants", roomId] });
+    toast({ title: "Materiais liberados para o ciclo " + cycle });
+  };
+
+  const startNextRound = async () => {
+    if (!nextPendingRound || !room) return;
+    await Promise.all([
+      supabase.from("simulation_rounds").update({ status: "active", started_at: new Date().toISOString(), released_by: "professor" }).eq("id", nextPendingRound.id),
+      supabase.from("simulation_rooms").update({ current_cycle: nextPendingRound.cycle, current_round: nextPendingRound.round_number, status: "active" }).eq("id", room.id),
+    ]);
+    queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
+    toast({ title: `Rodada ${nextPendingRound.round_number} iniciada!` });
+  };
+
+  const endActiveRound = async () => {
+    if (!activeRound || !room) return;
+    const remainingPending = rounds.filter((r: any) => r.id !== activeRound.id && r.status === "pending");
+    await Promise.all([
+      supabase.from("simulation_rounds").update({ status: "completed", finished_at: new Date().toISOString() }).eq("id", activeRound.id),
+      supabase.from("simulation_rooms").update({ current_cycle: activeRound.cycle, current_round: activeRound.round_number, status: remainingPending.length === 0 ? "completed" : "active" }).eq("id", room.id),
+    ]);
+    queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
+    toast({ title: `Rodada ${activeRound.round_number} encerrada!` });
+  };
 
   // Timer
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -263,8 +340,47 @@ export default function SimulationControl() {
 
         {/* Monitoring Tab */}
         <TabsContent value="monitoring" className="space-y-4">
-          {/* Show all participants when no rounds exist yet */}
-          {rounds.length === 0 && participants.length > 0 && (
+          {/* Professor Action Buttons */}
+          {rounds.length > 0 && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  {needsMaterialRelease && (
+                    <Button onClick={releaseMaterials} className="gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Liberar Materiais — Ciclo {nextPendingRound?.cycle}
+                    </Button>
+                  )}
+                  {materialsReleasedButNotStarted && (
+                    <Button onClick={startNextRound} className="gap-2">
+                      <Play className="h-4 w-4" />
+                      Iniciar Rodada {nextPendingRound?.round_number}
+                    </Button>
+                  )}
+                  {activeRound && (
+                    <Button variant="destructive" onClick={endActiveRound} className="gap-2">
+                      <Square className="h-4 w-4" />
+                      Encerrar Rodada {activeRound.round_number}
+                    </Button>
+                  )}
+                  {!needsMaterialRelease && !materialsReleasedButNotStarted && !activeRound && rounds.every((r: any) => r.status === "completed") && (
+                    <Badge variant="outline" className="text-sm py-1.5 px-3">
+                      <CheckCircle className="h-4 w-4 mr-1" /> Todas as rodadas concluídas
+                    </Badge>
+                  )}
+                  {!needsMaterialRelease && !materialsReleasedButNotStarted && !activeRound && nextPendingRound && (
+                    <Button onClick={releaseMaterials} className="gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Liberar Materiais — Ciclo {nextPendingRound.cycle}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show all participants */}
+          {participants.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -274,7 +390,7 @@ export default function SimulationControl() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Os alunos abaixo estão cadastrados nesta sala. As rodadas serão exibidas conforme os alunos acessarem a sala e forem distribuídos.
+                  Os alunos abaixo estão cadastrados nesta sala.{rounds.length === 0 ? " As rodadas serão exibidas conforme os alunos acessarem a sala e forem distribuídos." : ""}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {participants.map((p: any) => (
