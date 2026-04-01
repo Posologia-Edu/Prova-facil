@@ -31,6 +31,9 @@ import {
 
 const normalizeParticipantEmail = (value: string) => value.trim().toLowerCase();
 const normalizeAccessCode = (value: string) => value.trim().toLowerCase();
+const shouldMarkParticipantAsJoined = (participantStatus: string, rounds: any[]) =>
+  participantStatus === "waiting" &&
+  !rounds.some((round: any) => round.materials_released || round.status === "active" || round.status === "completed");
 
 export default function SimulationJoin() {
   const { t } = useLanguage();
@@ -54,6 +57,35 @@ export default function SimulationJoin() {
   const [materialsReady, setMaterialsReady] = useState(false);
   const [studentsReady, setStudentsReady] = useState<string[]>([]);
   const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
+
+  const syncJoinedPresence = async (
+    participantRecord: any,
+    participantsData: any[],
+    roundsData: any[],
+  ) => {
+    if (!participantRecord || !shouldMarkParticipantAsJoined(participantRecord.status, roundsData)) {
+      return { participantRecord, participantsData };
+    }
+
+    const { error } = await supabase
+      .from("simulation_participants")
+      .update({ status: "joined" })
+      .eq("id", participantRecord.id)
+      .eq("status", "waiting");
+
+    if (error) {
+      return { participantRecord, participantsData };
+    }
+
+    const joinedParticipant = { ...participantRecord, status: "joined" };
+
+    return {
+      participantRecord: joinedParticipant,
+      participantsData: participantsData.map((currentParticipant: any) =>
+        currentParticipant.id === joinedParticipant.id ? joinedParticipant : currentParticipant
+      ),
+    };
+  };
 
   // Auto-join if redirected from StudentAuth
   useEffect(() => {
