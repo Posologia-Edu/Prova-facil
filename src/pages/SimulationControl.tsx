@@ -424,9 +424,7 @@ export default function SimulationControl() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">
-                  {students.length > 0
-                    ? `${connectedStudentsCount}/${students.length} alunos já entraram na sala.`
-                    : "Os participantes abaixo estão cadastrados nesta sala."}
+                  {`${readyStudentsCount}/${students.length} alunos prontos.`}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {participants.map((p: any) => (
