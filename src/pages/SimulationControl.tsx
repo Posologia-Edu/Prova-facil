@@ -104,6 +104,83 @@ export default function SimulationControl() {
   });
 
   const activeRound = rounds.find((r: any) => r.status === "active");
+  const nextPendingRound = rounds.find((r: any) => r.status === "pending");
+
+  // Determine if materials need releasing for the next pending round's cycle
+  const needsMaterialRelease = useMemo(() => {
+    if (!nextPendingRound || activeRound) return false;
+    const cycle = nextPendingRound.cycle;
+    const cycleRounds = rounds.filter((r: any) => r.cycle === cycle);
+    return cycleRounds.length > 0 && !cycleRounds.some((r: any) => r.materials_released);
+  }, [rounds, nextPendingRound, activeRound]);
+
+  const materialsReleasedButNotStarted = useMemo(() => {
+    if (!nextPendingRound || activeRound) return false;
+    const cycle = nextPendingRound.cycle;
+    const cycleRounds = rounds.filter((r: any) => r.cycle === cycle);
+    return cycleRounds.some((r: any) => r.materials_released) && !cycleRounds.some((r: any) => r.status === "active");
+  }, [rounds, nextPendingRound, activeRound]);
+
+  // Realtime subscription for participants
+  useEffect(() => {
+    if (!roomId) return;
+    const channel = supabase
+      .channel(`sim-participants-${roomId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "simulation_participants", filter: `room_id=eq.${roomId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["simulation-participants", roomId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "simulation_rounds", filter: `room_id=eq.${roomId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [roomId, queryClient]);
+
+  // Professor actions
+  const releaseMaterials = async () => {
+    if (!nextPendingRound || !room) return;
+    const cycle = nextPendingRound.cycle;
+    const cycleRoundIds = rounds.filter((r: any) => r.cycle === cycle).map((r: any) => r.id);
+    await Promise.all([
+      supabase.from("simulation_rounds").update({ materials_released: true }).in("id", cycleRoundIds),
+      supabase.from("simulation_participants").update({ status: "waiting" }).eq("room_id", room.id).eq("participant_role", "student"),
+      supabase.from("simulation_rooms").update({ current_cycle: cycle, current_round: 0, status: "active" }).eq("id", room.id),
+    ]);
+    queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-participants", roomId] });
+    toast({ title: "Materiais liberados para o ciclo " + cycle });
+  };
+
+  const startNextRound = async () => {
+    if (!nextPendingRound || !room) return;
+    await Promise.all([
+      supabase.from("simulation_rounds").update({ status: "active", started_at: new Date().toISOString(), released_by: "professor" }).eq("id", nextPendingRound.id),
+      supabase.from("simulation_rooms").update({ current_cycle: nextPendingRound.cycle, current_round: nextPendingRound.round_number, status: "active" }).eq("id", room.id),
+    ]);
+    queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
+    toast({ title: `Rodada ${nextPendingRound.round_number} iniciada!` });
+  };
+
+  const endActiveRound = async () => {
+    if (!activeRound || !room) return;
+    const remainingPending = rounds.filter((r: any) => r.id !== activeRound.id && r.status === "pending");
+    await Promise.all([
+      supabase.from("simulation_rounds").update({ status: "completed", finished_at: new Date().toISOString() }).eq("id", activeRound.id),
+      supabase.from("simulation_rooms").update({ current_cycle: activeRound.cycle, current_round: activeRound.round_number, status: remainingPending.length === 0 ? "completed" : "active" }).eq("id", room.id),
+    ]);
+    queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
+    toast({ title: `Rodada ${activeRound.round_number} encerrada!` });
+  };
 
   // Timer
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
