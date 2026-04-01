@@ -105,9 +105,10 @@ export default function SimulationControl() {
 
   const professor = participants.find((participant: any) => participant.participant_role === "professor");
   const students = participants.filter((participant: any) => participant.participant_role === "student");
-  const connectedStudentsCount = students.filter((participant: any) => ["joined", "ready"].includes(participant.status)).length;
+  const readyStudentsCount = students.filter((participant: any) => participant.status === "ready").length;
   const activeRound = rounds.find((r: any) => r.status === "active");
   const nextPendingRound = rounds.find((r: any) => r.status === "pending");
+  const allRoundsCompleted = rounds.length > 0 && rounds.every((r: any) => r.status === "completed");
 
   // Determine if materials need releasing for the next pending round's cycle
   const needsMaterialRelease = useMemo(() => {
@@ -360,9 +361,9 @@ export default function SimulationControl() {
                 <div className="space-y-1">
                   <p className="font-medium text-foreground">A simulação ainda não foi preparada.</p>
                   <p className="text-sm text-muted-foreground">
-                    {connectedStudentsCount > 0
-                      ? `${connectedStudentsCount}/${students.length} alunos já entraram na sala. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`
-                      : "Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade para os alunos."}
+                    {readyStudentsCount > 0
+                      ? `${readyStudentsCount}/${students.length} alunos prontos. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`
+                      : `${students.length} alunos cadastrados. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`}
                   </p>
                 </div>
                 <Button onClick={openProfessorRoom} className="gap-2 shrink-0">
@@ -423,9 +424,7 @@ export default function SimulationControl() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">
-                  {students.length > 0
-                    ? `${connectedStudentsCount}/${students.length} alunos já entraram na sala.`
-                    : "Os participantes abaixo estão cadastrados nesta sala."}
+                  {`${readyStudentsCount}/${students.length} alunos prontos.`}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {participants.map((p: any) => (
@@ -458,6 +457,10 @@ export default function SimulationControl() {
                 <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground">Nenhum aluno acessou a sala ainda.</p>
                 <p className="text-sm text-muted-foreground mt-1">Compartilhe o PIN <span className="font-mono font-bold">{room?.access_code}</span> com os alunos.</p>
+                <Button onClick={openProfessorRoom} variant="outline" className="mt-4 gap-2">
+                  <Play className="h-4 w-4" />
+                  Abrir sala do professor
+                </Button>
               </CardContent>
             </Card>
           )}
