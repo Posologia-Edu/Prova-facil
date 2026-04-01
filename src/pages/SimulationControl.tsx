@@ -49,11 +49,13 @@ export default function SimulationControl() {
       const { data, error } = await supabase
         .from("simulation_participants")
         .select("*")
-        .eq("room_id", roomId!);
+        .eq("room_id", roomId!)
+        .order("pair_index", { ascending: true });
       if (error) throw error;
       return data;
     },
     enabled: !!roomId,
+    refetchInterval: 5000,
   });
 
   const { data: assignments = [] } = useQuery({
