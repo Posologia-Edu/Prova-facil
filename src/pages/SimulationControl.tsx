@@ -105,9 +105,10 @@ export default function SimulationControl() {
 
   const professor = participants.find((participant: any) => participant.participant_role === "professor");
   const students = participants.filter((participant: any) => participant.participant_role === "student");
-  const connectedStudentsCount = students.filter((participant: any) => ["joined", "ready"].includes(participant.status)).length;
+  const readyStudentsCount = students.filter((participant: any) => participant.status === "ready").length;
   const activeRound = rounds.find((r: any) => r.status === "active");
   const nextPendingRound = rounds.find((r: any) => r.status === "pending");
+  const allRoundsCompleted = rounds.length > 0 && rounds.every((r: any) => r.status === "completed");
 
   // Determine if materials need releasing for the next pending round's cycle
   const needsMaterialRelease = useMemo(() => {
