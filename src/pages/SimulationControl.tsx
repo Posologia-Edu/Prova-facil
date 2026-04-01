@@ -457,6 +457,10 @@ export default function SimulationControl() {
                 <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground">Nenhum aluno acessou a sala ainda.</p>
                 <p className="text-sm text-muted-foreground mt-1">Compartilhe o PIN <span className="font-mono font-bold">{room?.access_code}</span> com os alunos.</p>
+                <Button onClick={openProfessorRoom} variant="outline" className="mt-4 gap-2">
+                  <Play className="h-4 w-4" />
+                  Abrir sala do professor
+                </Button>
               </CardContent>
             </Card>
           )}
