@@ -103,6 +103,9 @@ export default function SimulationControl() {
     enabled: !!roomId,
   });
 
+  const professor = participants.find((participant: any) => participant.participant_role === "professor");
+  const students = participants.filter((participant: any) => participant.participant_role === "student");
+  const connectedStudentsCount = students.filter((participant: any) => ["joined", "ready"].includes(participant.status)).length;
   const activeRound = rounds.find((r: any) => r.status === "active");
   const nextPendingRound = rounds.find((r: any) => r.status === "pending");
 
@@ -143,6 +146,17 @@ export default function SimulationControl() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [roomId, queryClient]);
+
+  const openProfessorRoom = () => {
+    if (!room?.access_code || !professor?.student_email) {
+      toast({ title: "Cadastre o e-mail do professor para abrir a sala.", variant: "destructive" });
+      return;
+    }
+
+    sessionStorage.setItem("sim_pin", room.access_code);
+    sessionStorage.setItem("sim_email", String(professor.student_email).trim().toLowerCase());
+    navigate("/simulation/join");
+  };
 
   // Professor actions
   const releaseMaterials = async () => {

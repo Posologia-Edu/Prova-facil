@@ -174,6 +174,15 @@ export default function SimulationJoin() {
       return;
     }
 
+    const { data: roundsData } = await supabase
+      .from("simulation_rounds")
+      .select("id, status, materials_released")
+      .eq("room_id", roomData.id);
+
+    const syncedPresence = await syncJoinedPresence(matchedParticipant, participantsData || [], roundsData || []);
+    const participantForSession = syncedPresence.participantRecord;
+    const participantsForSession = syncedPresence.participantsData;
+
     const { data: formsData } = await supabase
       .from("simulation_forms")
       .select("*")
@@ -182,10 +191,10 @@ export default function SimulationJoin() {
     setPin(normalizedPin);
     setEmail(normalizedEmail);
     setRoom(roomData);
-    setParticipant(matchedParticipant);
+    setParticipant(participantForSession);
     setForms(formsData || []);
-    setAllParticipants(participantsData || []);
-    setMaterialsReady(matchedParticipant.status === "ready");
+    setAllParticipants(participantsForSession || []);
+    setMaterialsReady(participantForSession?.status === "ready");
     setJoined(true);
   };
 
