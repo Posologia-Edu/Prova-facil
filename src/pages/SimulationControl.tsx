@@ -340,8 +340,47 @@ export default function SimulationControl() {
 
         {/* Monitoring Tab */}
         <TabsContent value="monitoring" className="space-y-4">
-          {/* Show all participants when no rounds exist yet */}
-          {rounds.length === 0 && participants.length > 0 && (
+          {/* Professor Action Buttons */}
+          {rounds.length > 0 && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  {needsMaterialRelease && (
+                    <Button onClick={releaseMaterials} className="gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Liberar Materiais — Ciclo {nextPendingRound?.cycle}
+                    </Button>
+                  )}
+                  {materialsReleasedButNotStarted && (
+                    <Button onClick={startNextRound} className="gap-2">
+                      <Play className="h-4 w-4" />
+                      Iniciar Rodada {nextPendingRound?.round_number}
+                    </Button>
+                  )}
+                  {activeRound && (
+                    <Button variant="destructive" onClick={endActiveRound} className="gap-2">
+                      <Square className="h-4 w-4" />
+                      Encerrar Rodada {activeRound.round_number}
+                    </Button>
+                  )}
+                  {!needsMaterialRelease && !materialsReleasedButNotStarted && !activeRound && rounds.every((r: any) => r.status === "completed") && (
+                    <Badge variant="outline" className="text-sm py-1.5 px-3">
+                      <CheckCircle className="h-4 w-4 mr-1" /> Todas as rodadas concluídas
+                    </Badge>
+                  )}
+                  {!needsMaterialRelease && !materialsReleasedButNotStarted && !activeRound && nextPendingRound && (
+                    <Button onClick={releaseMaterials} className="gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Liberar Materiais — Ciclo {nextPendingRound.cycle}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show all participants */}
+          {participants.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -351,7 +390,7 @@ export default function SimulationControl() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Os alunos abaixo estão cadastrados nesta sala. As rodadas serão exibidas conforme os alunos acessarem a sala e forem distribuídos.
+                  Os alunos abaixo estão cadastrados nesta sala.{rounds.length === 0 ? " As rodadas serão exibidas conforme os alunos acessarem a sala e forem distribuídos." : ""}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {participants.map((p: any) => (
