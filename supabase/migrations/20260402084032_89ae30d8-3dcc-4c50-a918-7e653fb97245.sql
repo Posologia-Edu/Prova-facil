@@ -1,0 +1,8 @@
+ALTER TABLE public.reconciliation_participants
+DROP CONSTRAINT IF EXISTS reconciliation_participants_soap_participant_id_fkey;
+
+ALTER TABLE public.reconciliation_participants
+ADD CONSTRAINT reconciliation_participants_soap_participant_id_fkey
+FOREIGN KEY (soap_participant_id)
+REFERENCES public.soap_participants(id)
+ON DELETE SET NULL;
