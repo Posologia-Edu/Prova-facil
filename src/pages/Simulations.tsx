@@ -284,6 +284,9 @@ export default function Simulations() {
 
   const deleteSoapRoom = useMutation({
     mutationFn: async (id: string) => {
+      await supabase.from("soap_responses").delete().eq("room_id", id);
+      await supabase.from("soap_forms").delete().eq("room_id", id);
+      await supabase.from("soap_participants").delete().eq("room_id", id);
       const { error } = await supabase.from("soap_rooms").delete().eq("id", id);
       if (error) throw error;
     },
