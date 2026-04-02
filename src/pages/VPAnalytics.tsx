@@ -533,9 +533,7 @@ export default function VPAnalytics() {
                 {detailGrade.orientacoes_melhoria && (
                   <div>
                     <h4 className="text-sm font-semibold mb-2">Orientações de Melhoria</h4>
-                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg">
-                      <ReactMarkdown>{detailGrade.orientacoes_melhoria}</ReactMarkdown>
-                    </div>
+                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(detailGrade.orientacoes_melhoria) }} />
                   </div>
                 )}
 
