@@ -422,9 +422,7 @@ export default function VirtualPatientRoom() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <Card className={`max-w-[80%] p-3 ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
-              </div>
+              <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
             </Card>
           </div>
         ))}

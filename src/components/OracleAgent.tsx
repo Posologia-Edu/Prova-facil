@@ -290,9 +290,7 @@ export function OracleAgent() {
                     : "bg-muted text-foreground"
                 }`}>
                   {msg.role === "assistant" ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
+                    <div className="prose prose-sm max-w-none dark:prose-invert [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
                   ) : msg.content}
                 </div>
               </div>
