@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, User, Bot, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -162,9 +162,7 @@ export default function OsceVirtualPatient() {
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                 msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
               }`}>
-                <div className="text-sm prose prose-sm max-w-none">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
+                <div className="text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
               </div>
               {msg.role === "user" && (
                 <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center shrink-0">

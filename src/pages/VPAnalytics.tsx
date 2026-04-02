@@ -17,7 +17,7 @@ import {
 import { OsceRadarChart } from "@/components/osce/OsceRadarChart";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 
 const VP_CATALOG: Record<string, { name: string; module: string }> = {
   pain_helena: { name: "Dona Helena, 67 anos", module: "Dor" },
@@ -526,18 +526,14 @@ export default function VPAnalytics() {
                 {detailGrade.feedback_resumido && (
                   <div>
                     <h4 className="text-sm font-semibold mb-2">Feedback Resumido</h4>
-                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg">
-                      <ReactMarkdown>{detailGrade.feedback_resumido}</ReactMarkdown>
-                    </div>
+                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(detailGrade.feedback_resumido) }} />
                   </div>
                 )}
 
                 {detailGrade.orientacoes_melhoria && (
                   <div>
                     <h4 className="text-sm font-semibold mb-2">Orientações de Melhoria</h4>
-                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg">
-                      <ReactMarkdown>{detailGrade.orientacoes_melhoria}</ReactMarkdown>
-                    </div>
+                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(detailGrade.orientacoes_melhoria) }} />
                   </div>
                 )}
 
@@ -574,9 +570,7 @@ export default function VPAnalytics() {
                             </Badge>
                             <span className="text-[10px] text-muted-foreground">Encontro {msg.encounter}</span>
                           </div>
-                          <div className="prose prose-sm max-w-none dark:prose-invert">
-                            <ReactMarkdown>{msg.content}</ReactMarkdown>
-                          </div>
+                          <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
                         </div>
                       ))}
                     </div>

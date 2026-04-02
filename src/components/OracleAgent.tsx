@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Loader2, X, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import ReactMarkdown from "react-markdown";
+import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -290,9 +290,7 @@ export function OracleAgent() {
                     : "bg-muted text-foreground"
                 }`}>
                   {msg.role === "assistant" ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
+                    <div className="prose prose-sm max-w-none dark:prose-invert [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
                   ) : msg.content}
                 </div>
               </div>
