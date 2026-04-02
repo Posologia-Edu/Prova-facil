@@ -284,13 +284,16 @@ export default function Simulations() {
 
   const deleteSoapRoom = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("soap_responses").delete().eq("room_id", id);
-      await supabase.from("soap_forms").delete().eq("room_id", id);
-      await supabase.from("soap_participants").delete().eq("room_id", id);
       const { error } = await supabase.from("soap_rooms").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["soap-rooms-list"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["soap-rooms-list"] });
+      toast({ title: "Sala SOAP excluída com sucesso!" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro ao excluir sala SOAP", description: error.message, variant: "destructive" });
+    },
   });
 
   const deleteReconciliationRoom = useMutation({

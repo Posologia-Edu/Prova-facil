@@ -112,14 +112,16 @@ export default function SoapRooms() {
 
   const deleteRoom = useMutation({
     mutationFn: async (id: string) => {
-      // Delete child records first to avoid FK constraint errors
-      await supabase.from("soap_responses").delete().eq("room_id", id);
-      await supabase.from("soap_forms").delete().eq("room_id", id);
-      await supabase.from("soap_participants").delete().eq("room_id", id);
       const { error } = await supabase.from("soap_rooms").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["soap-rooms"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["soap-rooms"] });
+      toast({ title: "Sala excluída com sucesso!" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro ao excluir sala", description: error.message, variant: "destructive" });
+    },
   });
 
   const duplicateRoom = useMutation({
