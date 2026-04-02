@@ -570,9 +570,7 @@ export default function VPAnalytics() {
                             </Badge>
                             <span className="text-[10px] text-muted-foreground">Encontro {msg.encounter}</span>
                           </div>
-                          <div className="prose prose-sm max-w-none dark:prose-invert">
-                            <ReactMarkdown>{msg.content}</ReactMarkdown>
-                          </div>
+                          <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
                         </div>
                       ))}
                     </div>
