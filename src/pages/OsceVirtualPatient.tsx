@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, User, Bot, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 
 interface Message {
   role: "user" | "assistant";

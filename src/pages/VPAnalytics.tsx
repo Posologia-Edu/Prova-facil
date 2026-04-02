@@ -17,7 +17,7 @@ import {
 import { OsceRadarChart } from "@/components/osce/OsceRadarChart";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 
 const VP_CATALOG: Record<string, { name: string; module: string }> = {
   pain_helena: { name: "Dona Helena, 67 anos", module: "Dor" },

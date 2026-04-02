@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { VirtualPatientMAI } from "@/components/VirtualPatientMAI";
 
 interface Message {

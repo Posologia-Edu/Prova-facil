@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Loader2, X, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import ReactMarkdown from "react-markdown";
+import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 
 interface Message {
   role: "user" | "assistant";
