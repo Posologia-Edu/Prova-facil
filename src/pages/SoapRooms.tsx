@@ -112,8 +112,14 @@ export default function SoapRooms() {
 
   const deleteRoom = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("soap_rooms").delete().eq("id", id);
+      const { data, error } = await supabase
+        .from("soap_rooms")
+        .delete()
+        .eq("id", id)
+        .select("id");
+
       if (error) throw error;
+      if (!data?.length) throw new Error("Sala não encontrada ou sem permissão para excluir.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["soap-rooms"] });
