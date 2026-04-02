@@ -526,9 +526,7 @@ export default function VPAnalytics() {
                 {detailGrade.feedback_resumido && (
                   <div>
                     <h4 className="text-sm font-semibold mb-2">Feedback Resumido</h4>
-                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg">
-                      <ReactMarkdown>{detailGrade.feedback_resumido}</ReactMarkdown>
-                    </div>
+                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(detailGrade.feedback_resumido) }} />
                   </div>
                 )}
 
