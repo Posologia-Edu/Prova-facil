@@ -809,7 +809,13 @@ export default function ReconciliationEditor() {
         </TabsContent>
       </Tabs>
       <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="reconciliacao" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft as any); setFormFields(fields); setAnswerKeyByCaseId({}); }} />
-      {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="reconciliacao" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
+      {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="reconciliacao" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={
+        Array.isArray(saveTemplateForm.content_json)
+          ? saveTemplateForm.content_json
+          : (saveTemplateForm.content_json?.case_answers
+              ? Object.values(saveTemplateForm.content_json.case_answers).flat() as FormField[]
+              : [])
+      } />}
     </div>
   );
 }
