@@ -396,15 +396,37 @@ export default function Simulations() {
         soap_room_id: original.soap_room_id,
       }).select().single();
       if (error) throw error;
+
+      // Duplicate cases first to build old→new ID map
+      const { data: cases } = await supabase.from("reconciliation_clinical_cases").select("*").eq("room_id", roomId);
+      const caseIdMap: Record<string, string> = {};
+      if (cases?.length) {
+        const { data: newCases } = await supabase.from("reconciliation_clinical_cases")
+          .insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })))
+          .select("id");
+        if (newCases) {
+          cases.forEach((oldCase, i) => { caseIdMap[oldCase.id] = newCases[i].id; });
+        }
+      }
+
+      // Duplicate forms, remapping case IDs in answer_key content
       const { data: forms } = await supabase.from("reconciliation_forms").select("*").eq("room_id", roomId);
       if (forms?.length) {
-        await supabase.from("reconciliation_forms").insert(forms.map(f => ({ room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: f.content_json })));
+        await supabase.from("reconciliation_forms").insert(forms.map(f => {
+          let contentJson = f.content_json;
+          if (f.form_type === "answer_key" && contentJson && typeof contentJson === "object" && !Array.isArray(contentJson) && (contentJson as any).case_answers) {
+            const oldAnswers = (contentJson as any).case_answers as Record<string, any>;
+            const newAnswers: Record<string, any> = {};
+            for (const [oldId, fields] of Object.entries(oldAnswers)) {
+              const newId = caseIdMap[oldId] || oldId;
+              newAnswers[newId] = fields;
+            }
+            contentJson = { case_answers: newAnswers };
+          }
+          return { room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: contentJson };
+        }));
       }
-      const { data: cases } = await supabase.from("reconciliation_clinical_cases").select("*").eq("room_id", roomId);
-      if (cases?.length) {
-        await supabase.from("reconciliation_clinical_cases").insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })));
-      }
-      // Copy participants
+
       const { data: participants } = await supabase.from("reconciliation_participants").select("*").eq("room_id", roomId);
       if (participants?.length) {
         await supabase.from("reconciliation_participants").insert(participants.map(p => ({ room_id: newRoom.id, student_name: p.student_name, student_email: p.student_email, pair_index: p.pair_index, pair_position: p.pair_position, participant_role: p.participant_role })));
@@ -432,15 +454,37 @@ export default function Simulations() {
         reconciliation_room_id: original.reconciliation_room_id,
       }).select().single();
       if (error) throw error;
+
+      // Duplicate cases first to build old→new ID map
+      const { data: cases } = await supabase.from("documentation_clinical_cases").select("*").eq("room_id", roomId);
+      const caseIdMap: Record<string, string> = {};
+      if (cases?.length) {
+        const { data: newCases } = await supabase.from("documentation_clinical_cases")
+          .insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })))
+          .select("id");
+        if (newCases) {
+          cases.forEach((oldCase, i) => { caseIdMap[oldCase.id] = newCases[i].id; });
+        }
+      }
+
+      // Duplicate forms, remapping case IDs in answer_key content
       const { data: forms } = await supabase.from("documentation_forms").select("*").eq("room_id", roomId);
       if (forms?.length) {
-        await supabase.from("documentation_forms").insert(forms.map(f => ({ room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: f.content_json })));
+        await supabase.from("documentation_forms").insert(forms.map(f => {
+          let contentJson = f.content_json;
+          if (f.form_type === "answer_key" && contentJson && typeof contentJson === "object" && !Array.isArray(contentJson) && (contentJson as any).case_answers) {
+            const oldAnswers = (contentJson as any).case_answers as Record<string, any>;
+            const newAnswers: Record<string, any> = {};
+            for (const [oldId, fields] of Object.entries(oldAnswers)) {
+              const newId = caseIdMap[oldId] || oldId;
+              newAnswers[newId] = fields;
+            }
+            contentJson = { case_answers: newAnswers };
+          }
+          return { room_id: newRoom.id, title: f.title, form_type: f.form_type, content_json: contentJson };
+        }));
       }
-      const { data: cases } = await supabase.from("documentation_clinical_cases").select("*").eq("room_id", roomId);
-      if (cases?.length) {
-        await supabase.from("documentation_clinical_cases").insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })));
-      }
-      // Copy participants
+
       const { data: participants } = await supabase.from("documentation_participants").select("*").eq("room_id", roomId);
       if (participants?.length) {
         await supabase.from("documentation_participants").insert(participants.map(p => ({ room_id: newRoom.id, student_name: p.student_name, student_email: p.student_email, pair_index: p.pair_index, pair_position: p.pair_position, participant_role: p.participant_role })));
