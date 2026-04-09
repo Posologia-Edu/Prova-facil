@@ -422,8 +422,7 @@ export default function SoapEditor() {
               setSelectedForPairing([]);
               refetchParticipants();
               toast({ title: "Marcado como individual!" });
-
-
+            };
 
             const undoPair = async (pairIdx: number) => {
               const members = pairGroups[pairIdx] || [];
