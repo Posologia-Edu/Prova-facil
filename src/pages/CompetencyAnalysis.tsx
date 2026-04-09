@@ -4,9 +4,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Brain, TrendingUp, TrendingDown, Minus, BarChart3, LineChart as LineChartIcon, Users } from "lucide-react";
+import { Loader2, Brain, TrendingUp, TrendingDown, Minus, BarChart3, LineChart as LineChartIcon, Users, Settings } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { CompetencyManagement } from "@/components/CompetencyManagement";
 
 interface CompDef { id: string; name: string; area: string; }
 interface ClassOption { id: string; name: string; }
