@@ -920,10 +920,9 @@ export default function SimulationJoin() {
             participant?.id,
             participant?.pair_index,
           );
-          const fallbackRole = cycleAssigns.some((assignment: any) => assignment.participant_id === participant?.id && assignment.assigned_role === "patient")
-            ? "patient"
-            : "professional";
-          const myRole = getStudyRole(participant?.pair_position, materialCycle) || fallbackRole;
+          // In solo/manual mode, use the actual assigned_role from round assignments
+          const myDirectAssignment = cycleAssigns.find((assignment: any) => assignment.participant_id === participant?.id);
+          const myRole = myDirectAssignment?.assigned_role || getStudyRole(participant?.pair_position, materialCycle) || "professional";
 
           // Professionals see anamnesis form
           if (myRole === "professional") {
