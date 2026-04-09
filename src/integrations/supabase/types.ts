@@ -369,6 +369,7 @@ export type Database = {
       biomedicine_rooms: {
         Row: {
           access_code: string
+          competency_ids: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -380,6 +381,7 @@ export type Database = {
         }
         Insert: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -391,6 +393,7 @@ export type Database = {
         }
         Update: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -569,6 +572,7 @@ export type Database = {
           access_code: string
           class_id: string | null
           competency_domains_json: Json
+          competency_ids: string[] | null
           created_at: string
           deleted_at: string | null
           id: string
@@ -582,6 +586,7 @@ export type Database = {
           access_code?: string
           class_id?: string | null
           competency_domains_json?: Json
+          competency_ids?: string[] | null
           created_at?: string
           deleted_at?: string | null
           id?: string
@@ -595,6 +600,7 @@ export type Database = {
           access_code?: string
           class_id?: string | null
           competency_domains_json?: Json
+          competency_ids?: string[] | null
           created_at?: string
           deleted_at?: string | null
           id?: string
@@ -640,6 +646,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      competency_scores: {
+        Row: {
+          competency_id: string
+          created_at: string
+          evaluated_at: string
+          id: string
+          max_score: number
+          score: number
+          source_id: string | null
+          source_label: string | null
+          source_type: string
+          student_email: string
+          user_id: string
+        }
+        Insert: {
+          competency_id: string
+          created_at?: string
+          evaluated_at?: string
+          id?: string
+          max_score?: number
+          score?: number
+          source_id?: string | null
+          source_label?: string | null
+          source_type: string
+          student_email: string
+          user_id: string
+        }
+        Update: {
+          competency_id?: string
+          created_at?: string
+          evaluated_at?: string
+          id?: string
+          max_score?: number
+          score?: number
+          source_id?: string | null
+          source_label?: string | null
+          source_type?: string
+          student_email?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competency_scores_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "competency_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dentistry_clinical_cases: {
         Row: {
@@ -825,6 +881,7 @@ export type Database = {
       dentistry_rooms: {
         Row: {
           access_code: string
+          competency_ids: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -836,6 +893,7 @@ export type Database = {
         }
         Insert: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -847,6 +905,7 @@ export type Database = {
         }
         Update: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1062,6 +1121,7 @@ export type Database = {
       documentation_rooms: {
         Row: {
           access_code: string
+          competency_ids: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -1073,6 +1133,7 @@ export type Database = {
         }
         Insert: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1084,6 +1145,7 @@ export type Database = {
         }
         Update: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1941,6 +2003,7 @@ export type Database = {
       medicine_rooms: {
         Row: {
           access_code: string
+          competency_ids: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -1952,6 +2015,7 @@ export type Database = {
         }
         Insert: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1963,6 +2027,7 @@ export type Database = {
         }
         Update: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -2469,6 +2534,7 @@ export type Database = {
       nursing_rooms: {
         Row: {
           access_code: string
+          competency_ids: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -2480,6 +2546,7 @@ export type Database = {
         }
         Insert: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -2491,6 +2558,7 @@ export type Database = {
         }
         Update: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -2686,6 +2754,7 @@ export type Database = {
       nutrition_rooms: {
         Row: {
           access_code: string
+          competency_ids: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -2697,6 +2766,7 @@ export type Database = {
         }
         Insert: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -2708,6 +2778,7 @@ export type Database = {
         }
         Update: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -3163,6 +3234,7 @@ export type Database = {
       osce_stations: {
         Row: {
           case_summary: string | null
+          competency_ids: string[] | null
           created_at: string
           duration_minutes: number | null
           id: string
@@ -3179,6 +3251,7 @@ export type Database = {
         }
         Insert: {
           case_summary?: string | null
+          competency_ids?: string[] | null
           created_at?: string
           duration_minutes?: number | null
           id?: string
@@ -3195,6 +3268,7 @@ export type Database = {
         }
         Update: {
           case_summary?: string | null
+          competency_ids?: string[] | null
           created_at?: string
           duration_minutes?: number | null
           id?: string
@@ -3403,6 +3477,7 @@ export type Database = {
       physiotherapy_rooms: {
         Row: {
           access_code: string
+          competency_ids: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -3414,6 +3489,7 @@ export type Database = {
         }
         Insert: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -3425,6 +3501,7 @@ export type Database = {
         }
         Update: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -3961,6 +4038,7 @@ export type Database = {
       reconciliation_rooms: {
         Row: {
           access_code: string
+          competency_ids: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -3972,6 +4050,7 @@ export type Database = {
         }
         Insert: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -3983,6 +4062,7 @@ export type Database = {
         }
         Update: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -4354,6 +4434,7 @@ export type Database = {
       simulation_rooms: {
         Row: {
           access_code: string
+          competency_ids: string[] | null
           created_at: string
           current_cycle: number
           current_round: number
@@ -4367,6 +4448,7 @@ export type Database = {
         }
         Insert: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           current_cycle?: number
           current_round?: number
@@ -4380,6 +4462,7 @@ export type Database = {
         }
         Update: {
           access_code?: string
+          competency_ids?: string[] | null
           created_at?: string
           current_cycle?: number
           current_round?: number
@@ -4820,6 +4903,7 @@ export type Database = {
         Row: {
           access_code: string
           anamnesis_room_id: string | null
+          competency_ids: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -4831,6 +4915,7 @@ export type Database = {
         Insert: {
           access_code?: string
           anamnesis_room_id?: string | null
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -4842,6 +4927,7 @@ export type Database = {
         Update: {
           access_code?: string
           anamnesis_room_id?: string | null
+          competency_ids?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
