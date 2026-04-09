@@ -547,6 +547,10 @@ export default function SimulationJoin() {
 
   // Generate distribution preview (local only, not saved yet)
   const generateDistributionPreview = () => {
+    if (soloMode) {
+      generateSoloDistributionPreview();
+      return;
+    }
     if (formedPairs.length === 0) {
       toast({ title: t("sim_need_pairs"), variant: "destructive" });
       return;
@@ -554,6 +558,29 @@ export default function SimulationJoin() {
     const pairsList = formedPairs.map(([_, ps]) => ps);
     const numCases = clinicalCases.length;
     const rounds = generateRounds(pairsList, numCases > 0 ? numCases : undefined);
+    setLocalRounds(rounds);
+    setDistributionGenerated(true);
+  };
+
+  // Generate solo mode distribution preview
+  const generateSoloDistributionPreview = () => {
+    if (!soloProfessionalId || !soloPatientId || !soloObserverId) {
+      toast({ title: "Selecione os 3 participantes", variant: "destructive" });
+      return;
+    }
+    if (new Set([soloProfessionalId, soloPatientId, soloObserverId]).size !== 3) {
+      toast({ title: "Cada participante deve ter um papel diferente", variant: "destructive" });
+      return;
+    }
+    const rounds = [{
+      roundNumber: 1,
+      cycle: 1,
+      assignments: [
+        { participantId: soloProfessionalId, role: "professional", pairIndex: 0, caseIndex: soloCaseIndex },
+        { participantId: soloPatientId, role: "patient", pairIndex: 0, caseIndex: soloCaseIndex },
+        { participantId: soloObserverId, role: "observer", pairIndex: 1 },
+      ],
+    }];
     setLocalRounds(rounds);
     setDistributionGenerated(true);
   };
