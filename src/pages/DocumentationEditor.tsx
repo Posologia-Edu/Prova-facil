@@ -1122,6 +1122,15 @@ export default function DocumentationEditor() {
       } />}
       <MedTemplateDialog open={medTemplateDialogOpen} onOpenChange={setMedTemplateDialogOpen} onApply={(title, ft, content) => { setEditingMedFormId(null); setMedTitle(title); setMedType(ft); setMedColumns(content.columns || []); setMedRowsScore(content.rows_score || 1); setMedAnswerRows(content.answer_rows || []); }} />
       {saveMedTemplateForm && <SaveMedTemplateDialog open={saveMedTemplateDialogOpen} onOpenChange={setSaveMedTemplateDialogOpen} formTitle={saveMedTemplateForm.title} formType={saveMedTemplateForm.form_type} contentJson={saveMedTemplateForm.content_json} />}
+      {editingParticipant && (
+        <ParticipantEditDialog
+          open={!!editingParticipant}
+          onOpenChange={(o) => { if (!o) setEditingParticipant(null); }}
+          name={editingParticipant.name}
+          email={editingParticipant.email}
+          onSave={(name, email) => updateParticipant(editingParticipant.id, name, email)}
+        />
+      )}
     </div>
   );
 }
