@@ -41,7 +41,7 @@ serve(async (req) => {
       fields.forEach((field: any, idx: number) => {
         const studentAnswer = response.answers_json?.[field.id] || "(sem resposta)";
         const keyField = keyFields.find((k: any) => k.id === field.id);
-        const expectedAnswer = keyField?.options?.join(", ") || keyField?.label || "(sem espelho)";
+        const expectedAnswer = keyField?.correct_answer || keyField?.options?.join(", ") || keyField?.label || "(sem espelho)";
         comparisonPrompt += `Item ${idx + 1}: "${field.label}" (máx ${field.max_score || 0} pts)\n`;
         comparisonPrompt += `  Resposta: ${typeof studentAnswer === "object" ? JSON.stringify(studentAnswer) : studentAnswer}\n`;
         comparisonPrompt += `  Espelho: ${expectedAnswer}\n\n`;
