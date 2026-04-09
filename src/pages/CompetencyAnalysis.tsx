@@ -56,7 +56,7 @@ export default function CompetencyAnalysis() {
   const [selectedClass, setSelectedClass] = useState("all");
   const [selectedSource, setSelectedSource] = useState("all");
   const [scores, setScores] = useState<CompScore[]>([]);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("management");
 
   useEffect(() => { loadData(); }, []);
 
