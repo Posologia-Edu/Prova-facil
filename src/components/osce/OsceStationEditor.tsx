@@ -13,6 +13,7 @@ import { ChevronDown, ChevronRight, Trash2, Coffee, GripVertical } from "lucide-
 import { toast } from "sonner";
 import { OsceChecklistBuilder } from "./OsceChecklistBuilder";
 import { OsceStationMaterials } from "./OsceStationMaterials";
+import { CompetencySelector } from "@/components/CompetencySelector";
 
 interface Props {
   station: any;
@@ -150,6 +151,11 @@ export function OsceStationEditor({ station, examId, defaultDuration }: Props) {
                 />
               </div>
             )}
+
+            <CompetencySelector
+              selectedIds={station.competency_ids || []}
+              onChange={(ids) => update.mutate({ competency_ids: ids })}
+            />
 
             <div>
               <h4 className="font-semibold mb-3">Checklist do Avaliador</h4>

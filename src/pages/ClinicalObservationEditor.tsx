@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Plus, Trash2, Save, Copy, ClipboardCheck, BarChart3, Settings } from "lucide-react";
 import { toast } from "sonner";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
+import { CompetencySelector } from "@/components/CompetencySelector";
 
 interface Domain {
   id: string;
@@ -44,6 +45,7 @@ export default function ClinicalObservationEditor() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("domains");
+  const [competencyIds, setCompetencyIds] = useState<string[]>([]);
 
   useEffect(() => { if (id) fetchAll(); }, [id]);
 
@@ -54,6 +56,7 @@ export default function ClinicalObservationEditor() {
       setType(obs.type);
       setStatus(obs.status);
       setDomains((obs.competency_domains_json as unknown as Domain[]) || []);
+      setCompetencyIds((obs as any).competency_ids || []);
     }
     const { data: sess } = await supabase.from("clinical_observation_sessions").select("*").eq("observation_id", id!).order("created_at", { ascending: false });
     setSessions((sess || []) as Session[]);
@@ -61,7 +64,7 @@ export default function ClinicalObservationEditor() {
 
   const handleSave = async () => {
     setSaving(true);
-    await supabase.from("clinical_observations").update({ title, status, competency_domains_json: domains as unknown as any, updated_at: new Date().toISOString() }).eq("id", id!);
+    await supabase.from("clinical_observations").update({ title, status, competency_domains_json: domains as unknown as any, competency_ids: competencyIds, updated_at: new Date().toISOString() }).eq("id", id!);
     toast.success("Salvo!");
     setSaving(false);
   };
@@ -135,6 +138,16 @@ export default function ClinicalObservationEditor() {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Avaliadores acessam por este link para preencher a ficha de observação.</p>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <CompetencySelector
+                selectedIds={competencyIds}
+                onChange={setCompetencyIds}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Vincule competências para rastreamento no dashboard de análise.</p>
             </CardContent>
           </Card>
 
