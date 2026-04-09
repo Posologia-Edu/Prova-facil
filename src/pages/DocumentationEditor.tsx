@@ -143,6 +143,7 @@ export default function DocumentationEditor() {
     toast({ title: "Caso clínico salvo" });
   };
 
+  const addParticipant = async () => {
     if (!newName.trim()) return;
     const { error } = await supabase.from("documentation_participants").insert({
       room_id: roomId!,
