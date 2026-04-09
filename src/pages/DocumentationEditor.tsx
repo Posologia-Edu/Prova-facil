@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, Table2, Copy, RotateCcw, Download, Star, BookmarkPlus, FileDown } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, Table2, Copy, RotateCcw, Download, Star, BookmarkPlus, FileDown, Pencil } from "lucide-react";
+import ParticipantEditDialog from "@/components/ParticipantEditDialog";
 import { exportFormToPDF } from "@/lib/form-pdf-export";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
@@ -101,8 +102,47 @@ export default function DocumentationEditor() {
   const [medTemplateDialogOpen, setMedTemplateDialogOpen] = useState(false);
   const [saveMedTemplateDialogOpen, setSaveMedTemplateDialogOpen] = useState(false);
   const [saveMedTemplateForm, setSaveMedTemplateForm] = useState<any>(null);
+  const [editingParticipant, setEditingParticipant] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [editingDocCaseId, setEditingDocCaseId] = useState<string | null>(null);
+  const [docCaseTitle, setDocCaseTitle] = useState("");
+  const [docCaseContent, setDocCaseContent] = useState("");
 
-  const addParticipant = async () => {
+  const deleteParticipant = async (id: string) => {
+    await supabase.from("documentation_participants").delete().eq("id", id);
+    refetchParticipants();
+  };
+
+  const updateParticipant = async (id: string, name: string, email: string) => {
+    await supabase.from("documentation_participants").update({ student_name: name, student_email: email } as any).eq("id", id);
+    refetchParticipants();
+    toast({ title: "Aluno atualizado" });
+  };
+
+  const deleteDocCase = async (id: string) => {
+    await supabase.from("documentation_clinical_cases").delete().eq("id", id);
+    queryClient.invalidateQueries({ queryKey: ["documentation-clinical-cases", roomId] });
+    toast({ title: "Caso clínico excluído" });
+  };
+
+  const saveDocCase = async () => {
+    if (!docCaseTitle.trim()) return;
+    if (editingDocCaseId) {
+      await supabase.from("documentation_clinical_cases").update({ title: docCaseTitle, content: docCaseContent }).eq("id", editingDocCaseId);
+    } else {
+      await supabase.from("documentation_clinical_cases").insert({
+        room_id: roomId!,
+        title: docCaseTitle,
+        content: docCaseContent,
+        position: clinicalCases.length,
+      });
+    }
+    setDocCaseTitle("");
+    setDocCaseContent("");
+    setEditingDocCaseId(null);
+    queryClient.invalidateQueries({ queryKey: ["documentation-clinical-cases", roomId] });
+    toast({ title: "Caso clínico salvo" });
+  };
+
     if (!newName.trim()) return;
     const { error } = await supabase.from("documentation_participants").insert({
       room_id: roomId!,
@@ -596,9 +636,15 @@ export default function DocumentationEditor() {
                             <div className="flex items-center gap-3">
                               <Badge variant="outline">Dupla {Number(idx) + 1}</Badge>
                               {members.map(m => (
-                                <span key={m.id} className="text-sm">
+                                <span key={m.id} className="text-sm flex items-center gap-1">
                                   <span className="font-medium">{m.student_name}</span>
-                                  <span className="text-muted-foreground ml-1">({m.pair_position})</span>
+                                  <span className="text-muted-foreground">({m.pair_position})</span>
+                                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e) => { e.stopPropagation(); setEditingParticipant({ id: m.id, name: m.student_name, email: m.student_email || "" }); }}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={(e) => { e.stopPropagation(); deleteParticipant(m.id); }}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
                                 </span>
                               ))}
                             </div>
@@ -626,18 +672,27 @@ export default function DocumentationEditor() {
                         {unpaired.map(p => {
                           const isSelected = selectedForPairing.includes(p.id);
                           return (
-                            <button
-                              key={p.id}
-                              onClick={() => toggleSelect(p.id)}
-                              className={`p-3 rounded-lg border text-left text-sm transition-colors ${
-                                isSelected
-                                  ? "border-primary bg-primary/10 ring-2 ring-primary"
-                                  : "border-border hover:border-primary/50"
-                              }`}
-                            >
-                              <span className="font-medium">{p.student_name}</span>
-                              {p.student_email && <p className="text-xs text-muted-foreground">{p.student_email}</p>}
-                            </button>
+                            <div key={p.id} className="relative group">
+                              <button
+                                onClick={() => toggleSelect(p.id)}
+                                className={`w-full p-3 rounded-lg border text-left text-sm transition-colors ${
+                                  isSelected
+                                    ? "border-primary bg-primary/10 ring-2 ring-primary"
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <span className="font-medium">{p.student_name}</span>
+                                {p.student_email && <p className="text-xs text-muted-foreground">{p.student_email}</p>}
+                              </button>
+                              <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setEditingParticipant({ id: p.id, name: p.student_name, email: p.student_email || "" }); }}>
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); deleteParticipant(p.id); }}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
@@ -1014,17 +1069,46 @@ export default function DocumentationEditor() {
           </Card>
         </TabsContent>
 
-        {/* Clinical cases - readonly */}
+        {/* Clinical cases - editable */}
         <TabsContent value="cases" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">{editingDocCaseId ? "Editar Caso Clínico" : "Adicionar Caso Clínico"}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <Label>Título</Label>
+                <Input value={docCaseTitle} onChange={e => setDocCaseTitle(e.target.value)} placeholder="Título do caso clínico" />
+              </div>
+              <div>
+                <Label>Conteúdo</Label>
+                <Textarea value={docCaseContent} onChange={e => setDocCaseContent(e.target.value)} placeholder="Descrição do caso clínico..." rows={4} />
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={saveDocCase} disabled={!docCaseTitle.trim()}>Salvar</Button>
+                {editingDocCaseId && <Button variant="ghost" size="sm" onClick={() => { setEditingDocCaseId(null); setDocCaseTitle(""); setDocCaseContent(""); }}>Cancelar</Button>}
+              </div>
+            </CardContent>
+          </Card>
           {clinicalCases.length > 0 ? (
             clinicalCases.map((c, idx) => (
               <Card key={c.id}>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Caso {idx + 1}: {c.title}</CardTitle></CardHeader>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">Caso {idx + 1}: {c.title}</CardTitle>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingDocCaseId(c.id); setDocCaseTitle(c.title); setDocCaseContent(c.content || ""); }}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteDocCase(c.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
                 <CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.content}</p></CardContent>
               </Card>
             ))
           ) : (
-            <p className="text-sm text-muted-foreground">Nenhum caso clínico. Vincule a sala a uma Reconciliação para importar automaticamente.</p>
+            <p className="text-sm text-muted-foreground">Nenhum caso clínico. Adicione acima ou vincule a sala a uma Reconciliação para importar automaticamente.</p>
           )}
         </TabsContent>
       </Tabs>
@@ -1038,6 +1122,15 @@ export default function DocumentationEditor() {
       } />}
       <MedTemplateDialog open={medTemplateDialogOpen} onOpenChange={setMedTemplateDialogOpen} onApply={(title, ft, content) => { setEditingMedFormId(null); setMedTitle(title); setMedType(ft); setMedColumns(content.columns || []); setMedRowsScore(content.rows_score || 1); setMedAnswerRows(content.answer_rows || []); }} />
       {saveMedTemplateForm && <SaveMedTemplateDialog open={saveMedTemplateDialogOpen} onOpenChange={setSaveMedTemplateDialogOpen} formTitle={saveMedTemplateForm.title} formType={saveMedTemplateForm.form_type} contentJson={saveMedTemplateForm.content_json} />}
+      {editingParticipant && (
+        <ParticipantEditDialog
+          open={!!editingParticipant}
+          onOpenChange={(o) => { if (!o) setEditingParticipant(null); }}
+          name={editingParticipant.name}
+          email={editingParticipant.email}
+          onSave={(name, email) => updateParticipant(editingParticipant.id, name, email)}
+        />
+      )}
     </div>
   );
 }

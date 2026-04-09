@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Download, Pencil, Scissors, Copy, GraduationCap, Shuffle, RotateCcw, Star, BookmarkPlus, FileDown } from "lucide-react";
+import ParticipantEditDialog from "@/components/ParticipantEditDialog";
 import { exportFormToPDF } from "@/lib/form-pdf-export";
 import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
 import FormBuilder from "@/components/forms/FormBuilder";
@@ -209,6 +210,14 @@ export default function SoapEditor() {
   const removeParticipant = async (id: string) => {
     await supabase.from("soap_participants").delete().eq("id", id);
     refetchParticipants();
+  };
+
+  const [editingParticipant, setEditingParticipant] = useState<{ id: string; name: string; email: string } | null>(null);
+
+  const updateParticipant = async (id: string, name: string, email: string) => {
+    await supabase.from("soap_participants").update({ student_name: name, student_email: email } as any).eq("id", id);
+    refetchParticipants();
+    toast({ title: "Aluno atualizado" });
   };
 
   // Form management
@@ -434,9 +443,15 @@ export default function SoapEditor() {
                             <div className="flex items-center gap-3">
                               <Badge variant="outline">Dupla {idx}</Badge>
                               {members.map(m => (
-                                <span key={m.id} className="text-sm">
+                                <span key={m.id} className="text-sm flex items-center gap-1">
                                   <span className="font-medium">{m.student_name}</span>
-                                  <span className="text-muted-foreground ml-1">({m.pair_position})</span>
+                                  <span className="text-muted-foreground">({m.pair_position})</span>
+                                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e) => { e.stopPropagation(); setEditingParticipant({ id: m.id, name: m.student_name, email: m.student_email || "" }); }}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={(e) => { e.stopPropagation(); removeParticipant(m.id); }}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
                                 </span>
                               ))}
                             </div>
@@ -465,18 +480,27 @@ export default function SoapEditor() {
                         {unpaired.map(p => {
                           const isSelected = selectedForPairing.includes(p.id);
                           return (
-                            <button
-                              key={p.id}
-                              onClick={() => toggleSelect(p.id)}
-                              className={`p-3 rounded-lg border text-left text-sm transition-colors ${
-                                isSelected
-                                  ? "border-primary bg-primary/10 ring-2 ring-primary"
-                                  : "border-border hover:border-primary/50"
-                              }`}
-                            >
-                              <span className="font-medium">{p.student_name}</span>
-                              {p.student_email && <p className="text-xs text-muted-foreground">{p.student_email}</p>}
-                            </button>
+                            <div key={p.id} className="relative group">
+                              <button
+                                onClick={() => toggleSelect(p.id)}
+                                className={`w-full p-3 rounded-lg border text-left text-sm transition-colors ${
+                                  isSelected
+                                    ? "border-primary bg-primary/10 ring-2 ring-primary"
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <span className="font-medium">{p.student_name}</span>
+                                {p.student_email && <p className="text-xs text-muted-foreground">{p.student_email}</p>}
+                              </button>
+                              <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setEditingParticipant({ id: p.id, name: p.student_name, email: p.student_email || "" }); }}>
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); removeParticipant(p.id); }}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
@@ -599,6 +623,15 @@ export default function SoapEditor() {
       />
       <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="soap" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft); setFormFields(fields); }} />
       {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="soap" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
+      {editingParticipant && (
+        <ParticipantEditDialog
+          open={!!editingParticipant}
+          onOpenChange={(o) => { if (!o) setEditingParticipant(null); }}
+          name={editingParticipant.name}
+          email={editingParticipant.email}
+          onSave={(name, email) => updateParticipant(editingParticipant.id, name, email)}
+        />
+      )}
     </div>
   );
 }
