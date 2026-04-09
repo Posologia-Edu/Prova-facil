@@ -173,21 +173,26 @@ export default function CompetencyAnalysis() {
         </div>
       </div>
 
-      {competencies.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Brain className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="font-semibold text-lg mb-2">Nenhuma competência definida</h3>
-            <p className="text-muted-foreground text-sm">Crie competências na aba "Gestão" e vincule-as aos seus módulos.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="overview"><BarChart3 className="h-4 w-4 mr-1" /> Visão Geral</TabsTrigger>
-            <TabsTrigger value="timeline"><LineChartIcon className="h-4 w-4 mr-1" /> Evolução</TabsTrigger>
-            <TabsTrigger value="students"><Users className="h-4 w-4 mr-1" /> Por Aluno</TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="management"><Settings className="h-4 w-4 mr-1" /> Gestão</TabsTrigger>
+          {competencies.length > 0 && (
+            <>
+              <TabsTrigger value="overview"><BarChart3 className="h-4 w-4 mr-1" /> Visão Geral</TabsTrigger>
+              <TabsTrigger value="timeline"><LineChartIcon className="h-4 w-4 mr-1" /> Evolução</TabsTrigger>
+              <TabsTrigger value="students"><Users className="h-4 w-4 mr-1" /> Por Aluno</TabsTrigger>
+            </>
+          )}
+        </TabsList>
+
+        <TabsContent value="management">
+          <CompetencyManagement />
+        </TabsContent>
+
+      {competencies.length === 0 ? null : (
+        <>
+
+
 
           <TabsContent value="overview" className="space-y-4">
             {/* Summary cards */}
@@ -331,8 +336,9 @@ export default function CompetencyAnalysis() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+        </>
       )}
+      </Tabs>
     </div>
   );
 }
