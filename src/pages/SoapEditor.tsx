@@ -416,6 +416,18 @@ export default function SoapEditor() {
               toast({ title: "Dupla formada!" });
             };
 
+            const markAsSolo = async () => {
+              if (selectedForPairing.length !== 1) return;
+              await supabase.from("soap_participants").update({ pair_index: nextPairIdx, pair_position: "S" } as any).eq("id", selectedForPairing[0]);
+              setSelectedForPairing([]);
+              refetchParticipants();
+              toast({ title: "Marcado como individual!" });
+            };
+              setSelectedForPairing([]);
+              refetchParticipants();
+              toast({ title: "Dupla formada!" });
+            };
+
             const undoPair = async (pairIdx: number) => {
               const members = pairGroups[pairIdx] || [];
               for (const m of members) {
@@ -427,7 +439,6 @@ export default function SoapEditor() {
 
             return (
               <>
-                {/* Formed pairs */}
                 {Object.keys(pairGroups).length > 0 && (
                   <Card>
                     <CardHeader className="pb-2">
@@ -438,14 +449,16 @@ export default function SoapEditor() {
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
                       <div className="space-y-2">
-                        {Object.entries(pairGroups).map(([idx, members]) => (
+                        {Object.entries(pairGroups).map(([idx, members]) => {
+                          const isSolo = members.length === 1 && members[0].pair_position === "S";
+                          return (
                           <div key={idx} className="flex items-center justify-between py-2 px-3 rounded-lg bg-primary/5 border border-primary/10">
                             <div className="flex items-center gap-3">
-                              <Badge variant="outline">Dupla {idx}</Badge>
+                              <Badge variant="outline" className={isSolo ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900 dark:text-amber-200" : ""}>{isSolo ? "Individual" : `Dupla ${idx}`}</Badge>
                               {members.map(m => (
                                 <span key={m.id} className="text-sm flex items-center gap-1">
                                   <span className="font-medium">{m.student_name}</span>
-                                  <span className="text-muted-foreground">({m.pair_position})</span>
+                                  {!isSolo && <span className="text-muted-foreground">({m.pair_position})</span>}
                                   <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e) => { e.stopPropagation(); setEditingParticipant({ id: m.id, name: m.student_name, email: m.student_email || "" }); }}>
                                     <Pencil className="h-3 w-3" />
                                   </Button>
@@ -459,7 +472,8 @@ export default function SoapEditor() {
                               <RotateCcw className="h-4 w-4" />
                             </Button>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>
@@ -473,7 +487,7 @@ export default function SoapEditor() {
                         Alunos sem dupla
                         <Badge variant="secondary">{unpaired.length}</Badge>
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground">Selecione 2 alunos para formar uma dupla</p>
+                      <p className="text-sm text-muted-foreground">Selecione 2 alunos para formar uma dupla ou 1 para marcar como individual</p>
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
                       <div className="grid grid-cols-2 gap-2">
@@ -504,11 +518,18 @@ export default function SoapEditor() {
                           );
                         })}
                       </div>
-                      {selectedForPairing.length === 2 && (
-                        <Button onClick={formPair} className="w-full mt-3" size="sm">
-                          <Users className="h-4 w-4 mr-1" />Formar Dupla
-                        </Button>
-                      )}
+                      <div className="flex gap-2 mt-3">
+                        {selectedForPairing.length === 2 && (
+                          <Button onClick={formPair} className="flex-1" size="sm">
+                            <Users className="h-4 w-4 mr-1" />Formar Dupla
+                          </Button>
+                        )}
+                        {selectedForPairing.length === 1 && (
+                          <Button onClick={markAsSolo} variant="outline" className="flex-1" size="sm">
+                            Marcar como Individual
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 )}
