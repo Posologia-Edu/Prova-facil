@@ -1,88 +1,116 @@
 
 
-## Problema Identificado
+## Plano: Sistema Integrado de Competências em Todos os Módulos
 
-Analisei o código do `SimulationAggregator.tsx` e identifiquei a raiz dos dois problemas:
+### Problema Atual
+A análise de competências só funciona para **Provas** (via `question_competencies`). Os demais módulos (OSCE, Simulação Realística, Pacientes Virtuais, Mini-CEX/DOPS, Progress Test) não registram dados de competência, impossibilitando uma visão longitudinal do aluno.
 
-### Problema 1: Dados idênticos em todos os módulos
-Na aba "Por Sala", linhas 577-583, cada sala (independente do módulo) busca as notas do `globalScoreMap`, que consolida TODOS os módulos. Ou seja, uma sala de Anamnese mostra as mesmas colunas (Anamnese, SOAP, Reconciliação, Documentação) com os mesmos dados globais. A informação não é filtrada pelo módulo da sala.
-
-### Problema 2: Sem organização por turma/semestre
-Todas as salas de todos os períodos aparecem numa lista única, sem agrupamento.
-
----
-
-## Plano de Solução
-
-### 1. Reestruturar a aba "Por Sala" — mostrar apenas a nota do módulo
-
-Cada card de sala dentro de um módulo mostrará apenas uma coluna de nota (a do próprio módulo), em vez de repetir as 4 colunas. Por exemplo, uma sala de Anamnese mostrará apenas: **Aluno | Nota | Status**.
-
-Isso elimina a redundância e dá sentido à separação por módulo.
-
-### 2. Reestruturar a aba "Consolidado" — agrupar por turma
-
-Extrair o nome da turma do título da sala (padrão detectado: "T8 - Prof. Sergio"). O sistema irá:
-- Identificar turmas automaticamente pelo prefixo do título (ex: "T8", "T3")
-- Adicionar um **dropdown seletor de turma** no topo da aba Consolidado
-- Ao selecionar uma turma, mostrar apenas os alunos daquela turma com as 4 colunas de módulo + média
-- Incluir opção "Todas as turmas" para visão geral
-
-### 3. Adicionar filtro por semestre/período
-
-Adicionar um **seletor de semestre** (ex: "2025.1", "2025.2") baseado na data de criação das salas, permitindo ao professor isolar rapidamente os dados do período atual.
-
----
-
-## Estrutura Visual Proposta
+### Arquitetura Proposta
 
 ```text
-┌─────────────────────────────────────────────────┐
-│ Agregador de Notas                              │
-│ [Semestre: 2025.1 ▼]  [Turma: T8 ▼]            │
-│                                                 │
-│ [Por Sala]  [Consolidado]                       │
-├─────────────────────────────────────────────────┤
-│ ABA "POR SALA":                                 │
-│                                                 │
-│ 📋 Anamnese                                     │
-│ ┌─ T8 - Prof. Sergio ──── [Concluída] ─┐       │
-│ │ Aluno              │ Nota             │       │
-│ │ Ayala Rhuany        │ 6.0             │       │
-│ │ Mackson Emiliano    │ 8.0             │       │
-│ └───────────────────────────────────────┘       │
-│                                                 │
-│ 📝 SOAP                                         │
-│ ┌─ T8 - Prof. Sérgio ─── [Concluída] ──┐       │
-│ │ Aluno              │ Nota             │       │
-│ │ Ayala Rhuany        │ 9.0             │       │
-│ └───────────────────────────────────────┘       │
-├─────────────────────────────────────────────────┤
-│ ABA "CONSOLIDADO":                              │
-│ Turma: T8 - Prof. Sergio                        │
-│ ┌──────────────────────────────────────────────┐│
-│ │Aluno    │Anam│SOAP│Recon│Doc │Média         ││
-│ │Ayala    │ 6  │ 9  │ —   │ —  │ 7.5          ││
-│ │Mackson  │ 8  │ 8  │ —   │ —  │ 8.0          ││
-│ └──────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│              competency_definitions                  │
+│  (Raciocínio Clínico, Comunicação, Técnica, etc.)   │
+└──────────────────────┬──────────────────────────────┘
+                       │
+         ┌─────────────┴─────────────┐
+         │   competency_scores       │  ← NOVA TABELA CENTRAL
+         │                           │
+         │  student_email            │
+         │  competency_id            │
+         │  score (0-100)            │
+         │  max_score                │
+         │  source_type (enum)       │  exam | osce | simulation | 
+         │  source_id                │  virtual_patient | mini_cex | 
+         │  source_label             │  dops | progress_test
+         │  evaluated_at             │
+         │  user_id (professor)      │
+         └───────────────────────────┘
 ```
 
----
+### Etapa 1 — Tabela Central `competency_scores`
 
-## Detalhes Técnicos
+Criar uma tabela normalizada que armazena cada registro de competência de qualquer módulo:
 
-**Arquivo**: `src/pages/SimulationAggregator.tsx`
+- `id` (uuid, PK)
+- `user_id` (uuid, FK → auth.users) — professor dono
+- `student_email` (text) — identificador do aluno
+- `competency_id` (uuid, FK → competency_definitions)
+- `score` (numeric) — nota obtida
+- `max_score` (numeric) — nota máxima possível
+- `source_type` (text) — tipo do módulo de origem
+- `source_id` (uuid) — ID do registro de origem (session, evaluation, response)
+- `source_label` (text) — nome legível da origem (ex: "Prova: Farmacologia T8", "OSCE: Estação Anamnese")
+- `evaluated_at` (timestamptz)
+- `created_at` (timestamptz)
 
-1. **Aba "Por Sala"** (linhas 538-614): Remover as colunas globais (Anamnese/SOAP/Reconciliação/Documentação) de cada card de sala. Cada card mostrará apenas `Aluno | Nota do módulo`. Usar `s.score` diretamente em vez do `globalScoreMap`.
+RLS: professor só vê seus próprios registros.
 
-2. **Extração de turma**: Criar função `extractTurma(title: string)` que identifica o prefixo da turma (regex: `/^(T\d+|Turma\s*\d+)/i`). Salas com mesmo prefixo pertencem à mesma turma.
+### Etapa 2 — Vincular Competências nos Editores de Cada Módulo
 
-3. **Filtro de semestre**: Derivar o semestre da data de criação da sala (buscar `created_at` nas queries). Agrupar por `YYYY.S` (1 para jan-jun, 2 para jul-dez).
+Adicionar um seletor de competências (multi-select com as `competency_definitions` do professor) nos seguintes locais:
 
-4. **State**: Adicionar `selectedTurma` e `selectedSemester` como estados controlados por `Select` dropdowns.
+| Módulo | Onde vincular | Granularidade |
+|---|---|---|
+| **Provas** | Já existe (`question_competencies`) | Por questão |
+| **OSCE** | Editor de estação (`OsceStationEditor`) | Por estação |
+| **Simulação (Anamnese/SOAP/Reconciliação/Documentação)** | Editor de sala ou formulário | Por formulário/sala |
+| **Pacientes Virtuais** | Editor do paciente virtual | Por paciente |
+| **Mini-CEX / DOPS** | Editor da observação clínica | Por domínio de competência |
+| **Progress Test** | Herdado das questões do banco | Por questão |
 
-5. **Consolidado**: Filtrar o mapa de scores pela turma/semestre selecionado antes de renderizar a tabela.
+Novas colunas necessárias:
+- `osce_stations.competency_ids` (uuid[])
+- `simulation_rooms` (anamnese/soap/reconciliação/documentação): `competency_ids` (uuid[]) nas tabelas de rooms de cada área
+- `virtual_patients.competency_ids` (uuid[])
+- `clinical_observations.competency_ids` (uuid[])
 
-6. **Queries**: Adicionar `created_at` ao `.select()` das 4 queries de rooms para permitir a filtragem por semestre.
+### Etapa 3 — Registrar Scores Automaticamente Após Correção
+
+Inserir registros em `competency_scores` automaticamente quando uma avaliação é corrigida:
+
+| Módulo | Gatilho | Dados |
+|---|---|---|
+| **Provas** | Sessão marcada como `graded` | Score proporcional por questão × competências vinculadas |
+| **OSCE** | Avaliação salva (`osce_evaluations`) | Score do checklist por estação → competências da estação |
+| **Simulação** | Correção por IA (`ai_score`) ou professor (`admin_score`) | Score da resposta → competências da sala |
+| **Pacientes Virtuais** | Grade calculada (`virtual_patient_grades`) | `subscores` mapeados para competências |
+| **Mini-CEX / DOPS** | Sessão salva (`clinical_observation_sessions`) | `scores_json` por domínio → competência correspondente |
+| **Progress Test** | Sessão corrigida | Score por questão × competências herdadas |
+
+A inserção será feita no **frontend** (após confirmação de correção) ou via **Edge Function** (nas funções `grade-*` existentes), usando upsert para evitar duplicatas (unique: `source_type + source_id + competency_id + student_email`).
+
+### Etapa 4 — Dashboard de Competências Expandido
+
+Refatorar `CompetencyAnalysis.tsx` para:
+
+1. **Ler de `competency_scores`** em vez de recalcular a partir de exam_sessions
+2. **Filtros**: por turma, módulo de origem, período (semestre)
+3. **Gráfico Radar**: média por competência (como já existe)
+4. **Gráfico de Evolução Temporal**: linha do tempo mostrando a progressão de cada competência ao longo das avaliações (usando `evaluated_at`)
+5. **Tabela detalhada por aluno**: com coluna de "Fonte" mostrando badges coloridos por tipo de módulo (Prova, OSCE, Simulação, etc.)
+6. **Drill-down**: clicar em uma célula para ver de quais avaliações específicas o score veio
+
+### Etapa 5 — Interface de Gestão de Competências
+
+Criar uma seção (aba ou página) para o professor:
+- CRUD de `competency_definitions` (nome, área, descrição)
+- Visualização de quais módulos/questões estão vinculados a cada competência
+
+### Resumo de Mudanças
+
+**Banco de dados (migrations)**:
+- Criar tabela `competency_scores` com RLS
+- Adicionar coluna `competency_ids uuid[]` em: `osce_stations`, rooms de simulação (6 áreas × 4 módulos), `virtual_patients`, `clinical_observations`
+- Unique constraint em `competency_scores` para evitar duplicatas
+
+**Frontend (arquivos)**:
+- Componente reutilizável `CompetencySelector.tsx` (multi-select)
+- Integrar seletor nos editores: OSCE, Simulação, Pacientes Virtuais, Mini-CEX/DOPS
+- Função utilitária `recordCompetencyScores()` para inserir scores após correção
+- Refatorar `CompetencyAnalysis.tsx` com filtros, timeline e drill-down
+- Nova aba/seção para CRUD de competências
+
+**Edge Functions**:
+- Atualizar `grade-*` functions para inserir em `competency_scores` após correção
 
