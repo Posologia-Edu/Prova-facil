@@ -636,9 +636,15 @@ export default function DocumentationEditor() {
                             <div className="flex items-center gap-3">
                               <Badge variant="outline">Dupla {Number(idx) + 1}</Badge>
                               {members.map(m => (
-                                <span key={m.id} className="text-sm">
+                                <span key={m.id} className="text-sm flex items-center gap-1">
                                   <span className="font-medium">{m.student_name}</span>
-                                  <span className="text-muted-foreground ml-1">({m.pair_position})</span>
+                                  <span className="text-muted-foreground">({m.pair_position})</span>
+                                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e) => { e.stopPropagation(); setEditingParticipant({ id: m.id, name: m.student_name, email: m.student_email || "" }); }}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={(e) => { e.stopPropagation(); deleteParticipant(m.id); }}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
                                 </span>
                               ))}
                             </div>
@@ -666,18 +672,27 @@ export default function DocumentationEditor() {
                         {unpaired.map(p => {
                           const isSelected = selectedForPairing.includes(p.id);
                           return (
-                            <button
-                              key={p.id}
-                              onClick={() => toggleSelect(p.id)}
-                              className={`p-3 rounded-lg border text-left text-sm transition-colors ${
-                                isSelected
-                                  ? "border-primary bg-primary/10 ring-2 ring-primary"
-                                  : "border-border hover:border-primary/50"
-                              }`}
-                            >
-                              <span className="font-medium">{p.student_name}</span>
-                              {p.student_email && <p className="text-xs text-muted-foreground">{p.student_email}</p>}
-                            </button>
+                            <div key={p.id} className="relative group">
+                              <button
+                                onClick={() => toggleSelect(p.id)}
+                                className={`w-full p-3 rounded-lg border text-left text-sm transition-colors ${
+                                  isSelected
+                                    ? "border-primary bg-primary/10 ring-2 ring-primary"
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <span className="font-medium">{p.student_name}</span>
+                                {p.student_email && <p className="text-xs text-muted-foreground">{p.student_email}</p>}
+                              </button>
+                              <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setEditingParticipant({ id: p.id, name: p.student_name, email: p.student_email || "" }); }}>
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); deleteParticipant(p.id); }}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
@@ -1054,17 +1069,46 @@ export default function DocumentationEditor() {
           </Card>
         </TabsContent>
 
-        {/* Clinical cases - readonly */}
+        {/* Clinical cases - editable */}
         <TabsContent value="cases" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">{editingDocCaseId ? "Editar Caso Clínico" : "Adicionar Caso Clínico"}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <Label>Título</Label>
+                <Input value={docCaseTitle} onChange={e => setDocCaseTitle(e.target.value)} placeholder="Título do caso clínico" />
+              </div>
+              <div>
+                <Label>Conteúdo</Label>
+                <Textarea value={docCaseContent} onChange={e => setDocCaseContent(e.target.value)} placeholder="Descrição do caso clínico..." rows={4} />
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={saveDocCase} disabled={!docCaseTitle.trim()}>Salvar</Button>
+                {editingDocCaseId && <Button variant="ghost" size="sm" onClick={() => { setEditingDocCaseId(null); setDocCaseTitle(""); setDocCaseContent(""); }}>Cancelar</Button>}
+              </div>
+            </CardContent>
+          </Card>
           {clinicalCases.length > 0 ? (
             clinicalCases.map((c, idx) => (
               <Card key={c.id}>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Caso {idx + 1}: {c.title}</CardTitle></CardHeader>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">Caso {idx + 1}: {c.title}</CardTitle>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingDocCaseId(c.id); setDocCaseTitle(c.title); setDocCaseContent(c.content || ""); }}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteDocCase(c.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
                 <CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.content}</p></CardContent>
               </Card>
             ))
           ) : (
-            <p className="text-sm text-muted-foreground">Nenhum caso clínico. Vincule a sala a uma Reconciliação para importar automaticamente.</p>
+            <p className="text-sm text-muted-foreground">Nenhum caso clínico. Adicione acima ou vincule a sala a uma Reconciliação para importar automaticamente.</p>
           )}
         </TabsContent>
       </Tabs>
