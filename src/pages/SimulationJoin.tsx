@@ -920,10 +920,9 @@ export default function SimulationJoin() {
             participant?.id,
             participant?.pair_index,
           );
-          const fallbackRole = cycleAssigns.some((assignment: any) => assignment.participant_id === participant?.id && assignment.assigned_role === "patient")
-            ? "patient"
-            : "professional";
-          const myRole = getStudyRole(participant?.pair_position, materialCycle) || fallbackRole;
+          // In solo/manual mode, use the actual assigned_role from round assignments
+          const myDirectAssignment = cycleAssigns.find((assignment: any) => assignment.participant_id === participant?.id);
+          const myRole = myDirectAssignment?.assigned_role || getStudyRole(participant?.pair_position, materialCycle) || "professional";
 
           // Professionals see anamnesis form
           if (myRole === "professional") {
@@ -986,6 +985,46 @@ export default function SimulationJoin() {
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t("sim_no_cases")}</p>
+                  )}
+                  {!materialsReady ? (
+                    <Button onClick={markMaterialsReady} className="w-full">
+                      <CheckCircle className="h-4 w-4 mr-1" />{t("sim_materials_ready")}
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col items-center py-4">
+                      <CheckCircle className="h-8 w-8 text-primary mb-2" />
+                      <p className="text-sm text-muted-foreground">{t("sim_waiting_professor")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          }
+
+          // Observers see observer eval form during material study
+          if (myRole === "observer") {
+            const observerForm = forms.find((f: any) => f.form_type === "observer_eval");
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    {t("sim_release_materials")} — {roleLabels.observer}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {observerForm ? (
+                    <div className="border rounded-lg p-4 space-y-2">
+                      <p className="text-sm font-semibold">{observerForm.title || "Formulário do Observador"}</p>
+                      <FormRenderer
+                        fields={(observerForm.content_json as FormField[])}
+                        answers={{}}
+                        onChange={() => {}}
+                        readOnly
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhum formulário do observador configurado.</p>
                   )}
                   {!materialsReady ? (
                     <Button onClick={markMaterialsReady} className="w-full">
