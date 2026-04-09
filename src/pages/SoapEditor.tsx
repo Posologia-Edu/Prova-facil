@@ -422,11 +422,8 @@ export default function SoapEditor() {
               setSelectedForPairing([]);
               refetchParticipants();
               toast({ title: "Marcado como individual!" });
-            };
-              setSelectedForPairing([]);
-              refetchParticipants();
-              toast({ title: "Dupla formada!" });
-            };
+
+
 
             const undoPair = async (pairIdx: number) => {
               const members = pairGroups[pairIdx] || [];
