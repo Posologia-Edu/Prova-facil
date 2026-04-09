@@ -120,7 +120,7 @@ export default function NutritionControl() {
             {Object.entries(pairs).map(([idx, pair]) => {
               const pairIdx = Number(idx);
               const hasResponse = responses.some(r => r.pair_index === pairIdx);
-              return (<Card key={idx}><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm">Dupla {pairIdx + 1}</CardTitle><Badge variant={hasResponse ? "default" : "outline"}>{hasResponse ? "Enviou" : "Aguardando"}</Badge></div></CardHeader><CardContent>{pair.map((p: any) => <p key={p.id} className="text-sm">{p.student_name}</p>)}</CardContent></Card>);
+              const isSolo = pair.some((p: any) => p.pair_position === "S"); return (<Card key={idx}><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm">{isSolo ? "Individual" : `Dupla ${pairIdx + 1}`}</CardTitle><Badge variant={hasResponse ? "default" : "outline"}>{hasResponse ? "Enviou" : "Aguardando"}</Badge></div></CardHeader><CardContent>{pair.map((p: any) => <p key={p.id} className="text-sm">{p.student_name}</p>)}</CardContent></Card>);
             })}
           </div>
           {room?.status === "active" && responses.length > 0 && (

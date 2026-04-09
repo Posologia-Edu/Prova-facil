@@ -487,8 +487,8 @@ export default function SimulationJoin() {
     if (!pairsMap[s.pair_index]) pairsMap[s.pair_index] = [];
     pairsMap[s.pair_index].push(s);
   });
-  const formedPairs = Object.entries(pairsMap).filter(([_, ps]) => ps.length === 2);
-  const nextPairIdx = formedPairs.length > 0 ? Math.max(...formedPairs.map(([idx]) => Number(idx))) + 1 : 0;
+  const formedPairs = Object.entries(pairsMap).filter(([_, ps]) => ps.length === 2 || (ps.length === 1 && ps[0].pair_position === "S"));
+  const nextPairIdx = Object.keys(pairsMap).length > 0 ? Math.max(...Object.keys(pairsMap).map(Number)) + 1 : 0;
 
   // Get clinical cases from patient_script form
   const patientScriptForm = forms.find((f: any) => f.form_type === "patient_script");

@@ -174,7 +174,7 @@ export default function MedicineControl() {
                 <Card key={idx}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm">Dupla {pairIdx + 1}</CardTitle>
+                      <CardTitle className="text-sm">{pair.some((p: any) => p.pair_position === "S") ? "Individual" : `Dupla ${pairIdx + 1}`}</CardTitle>
                       <Badge variant={hasResponse ? "default" : "outline"}>{hasResponse ? "Enviou" : pair.every(p => p.status === "ready") ? "Pronto" : "Aguardando"}</Badge>
                     </div>
                   </CardHeader>
