@@ -244,7 +244,13 @@ export default function SoapJoin() {
     await supabase.from("soap_participants").update({ status: "submitted" }).eq("id", participant.id);
     setSubmittedSoap(true);
     toast({ title: "SOAP enviado!" });
-    await checkPartnerAndPeerStatus(room.id, participant);
+    // Solo students skip peer evaluation entirely
+    if (participant.pair_position === "S") {
+      await supabase.from("soap_participants").update({ status: "done" }).eq("id", participant.id);
+      setPhase("done");
+    } else {
+      await checkPartnerAndPeerStatus(room.id, participant);
+    }
   };
 
   const submitPeerEval = async () => {
