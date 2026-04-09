@@ -45,32 +45,52 @@ export function generateRounds(pairs: Participant[][], numCases?: number): Round
       const assignments: Assignment[] = [];
       const activePair = pairs[i];
       const activePairIndex = activePair[0]?.pair_index ?? i;
+      const isSolo = activePair.length === 1 || activePair.some(p => p.pair_position === "S");
 
-      const professional = activePair.find(
-        (p) => p.pair_position === (cycle === 1 ? "A" : "B")
-      );
-      const patient = activePair.find(
-        (p) => p.pair_position === (cycle === 1 ? "B" : "A")
-      );
+      if (isSolo) {
+        // Solo student: always professional, no patient role swap
+        const soloStudent = activePair[0];
+        const caseIndex = numCases && numCases > 0 ? caseCounter % numCases : 0;
+        caseCounter++;
 
-      const caseIndex = numCases && numCases > 0 ? caseCounter % numCases : 0;
-      caseCounter++;
+        if (soloStudent) {
+          assignments.push({
+            participantId: soloStudent.id,
+            role: "professional",
+            pairIndex: activePairIndex,
+            caseIndex,
+          });
+        }
 
-      if (professional) {
-        assignments.push({
-          participantId: professional.id,
-          role: "professional",
-          pairIndex: activePairIndex,
-        });
-      }
+        // Only generate one round for solo (cycle 2 is a repeat, skip it)
+        if (cycle === 2) continue;
+      } else {
+        const professional = activePair.find(
+          (p) => p.pair_position === (cycle === 1 ? "A" : "B")
+        );
+        const patient = activePair.find(
+          (p) => p.pair_position === (cycle === 1 ? "B" : "A")
+        );
 
-      if (patient) {
-        assignments.push({
-          participantId: patient.id,
-          role: "patient",
-          pairIndex: activePairIndex,
-          caseIndex,
-        });
+        const caseIndex = numCases && numCases > 0 ? caseCounter % numCases : 0;
+        caseCounter++;
+
+        if (professional) {
+          assignments.push({
+            participantId: professional.id,
+            role: "professional",
+            pairIndex: activePairIndex,
+          });
+        }
+
+        if (patient) {
+          assignments.push({
+            participantId: patient.id,
+            role: "patient",
+            pairIndex: activePairIndex,
+            caseIndex,
+          });
+        }
       }
 
       const observerPairListIndex = (i + 1) % numPairs;
@@ -90,12 +110,14 @@ export function generateRounds(pairs: Participant[][], numCases?: number): Round
         }
       }
 
-      rounds.push({
-        roundNumber,
-        cycle,
-        assignments,
-      });
-      roundNumber++;
+      if (assignments.length > 0) {
+        rounds.push({
+          roundNumber,
+          cycle,
+          assignments,
+        });
+        roundNumber++;
+      }
     }
   }
 

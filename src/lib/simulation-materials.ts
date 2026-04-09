@@ -49,6 +49,7 @@ export function hasCycleStarted<T extends RoundLike>(rounds: T[], cycle: number)
 }
 
 export function getStudyRole(pairPosition?: string, cycle = 1) {
+  if (pairPosition === "S") return "professional";
   if (pairPosition === "A") return cycle === 1 ? "professional" : "patient";
   if (pairPosition === "B") return cycle === 1 ? "patient" : "professional";
   return null;
