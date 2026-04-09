@@ -14,7 +14,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle, Trash2, UserRound } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { generateRounds } from "@/lib/simulation-distribution";
 import {
@@ -459,6 +461,13 @@ export default function SimulationJoin() {
   const [localRounds, setLocalRounds] = useState<any[]>([]);
   const [showPairingMode, setShowPairingMode] = useState(false);
 
+  // Solo mode state
+  const [soloMode, setSoloMode] = useState(false);
+  const [soloProfessionalId, setSoloProfessionalId] = useState("");
+  const [soloPatientId, setSoloPatientId] = useState("");
+  const [soloObserverId, setSoloObserverId] = useState("");
+  const [soloCaseIndex, setSoloCaseIndex] = useState(0);
+
   // Check if all existing rounds are still pending (never started)
   const allRoundsPending = allRounds.length > 0 && allRounds.every((r: any) => r.status === "pending");
   const hasStartedRounds = allRounds.some((r: any) => r.status === "active" || r.status === "completed");
@@ -538,6 +547,10 @@ export default function SimulationJoin() {
 
   // Generate distribution preview (local only, not saved yet)
   const generateDistributionPreview = () => {
+    if (soloMode) {
+      generateSoloDistributionPreview();
+      return;
+    }
     if (formedPairs.length === 0) {
       toast({ title: t("sim_need_pairs"), variant: "destructive" });
       return;
@@ -545,6 +558,29 @@ export default function SimulationJoin() {
     const pairsList = formedPairs.map(([_, ps]) => ps);
     const numCases = clinicalCases.length;
     const rounds = generateRounds(pairsList, numCases > 0 ? numCases : undefined);
+    setLocalRounds(rounds);
+    setDistributionGenerated(true);
+  };
+
+  // Generate solo mode distribution preview
+  const generateSoloDistributionPreview = () => {
+    if (!soloProfessionalId || !soloPatientId || !soloObserverId) {
+      toast({ title: "Selecione os 3 participantes", variant: "destructive" });
+      return;
+    }
+    if (new Set([soloProfessionalId, soloPatientId, soloObserverId]).size !== 3) {
+      toast({ title: "Cada participante deve ter um papel diferente", variant: "destructive" });
+      return;
+    }
+    const rounds = [{
+      roundNumber: 1,
+      cycle: 1,
+      assignments: [
+        { participantId: soloProfessionalId, role: "professional", pairIndex: 0, caseIndex: soloCaseIndex },
+        { participantId: soloPatientId, role: "patient", pairIndex: 0, caseIndex: soloCaseIndex },
+        { participantId: soloObserverId, role: "observer", pairIndex: 1 },
+      ],
+    }];
     setLocalRounds(rounds);
     setDistributionGenerated(true);
   };
@@ -979,73 +1015,197 @@ export default function SimulationJoin() {
           <CardContent className="space-y-4">
             {!distributionGenerated ? (
               <>
-                {/* Formed pairs */}
-                {formedPairs.length > 0 && (
-                  <div className="space-y-2">
-                    {formedPairs.map(([idx, ps]) => (
-                      <div key={idx} className="p-3 bg-muted rounded-lg">
-                        <p className="text-xs font-medium text-muted-foreground mb-1">{t("sim_pair")} {Number(idx) + 1}</p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{ps[0]?.student_name}</span>
-                          <span className="text-xs text-muted-foreground">&</span>
-                          <span className="text-sm font-medium">{ps[1]?.student_name}</span>
-                        </div>
-                      </div>
-                    ))}
-                    <Button variant="outline" size="sm" onClick={clearAllPairs}>
-                      <Trash2 className="h-3.5 w-3.5 mr-1" />{t("sim_clear_pairs")}
-                    </Button>
+                {/* Solo mode toggle */}
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <UserRound className="h-4 w-4 text-muted-foreground" />
+                    <Label htmlFor="solo-mode" className="text-sm font-medium cursor-pointer">Modo Solo (Reposição)</Label>
                   </div>
-                )}
-
-                {/* Unpaired students */}
-                {unpairedStudents.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      {t("sim_unpaired_students")} ({unpairedStudents.length}) — {t("sim_select_pair")}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {unpairedStudents.map((s: any) => {
-                        const isSelected = selectedForPairing.includes(s.id);
-                        return (
-                          <button
-                            key={s.id}
-                            onClick={() => toggleStudentForPairing(s.id)}
-                            className={`p-2 rounded-lg border text-left text-sm transition-colors ${
-                              isSelected
-                                ? "border-primary bg-primary/10 ring-2 ring-primary"
-                                : "border-border hover:border-primary/50"
-                            }`}
-                          >
-                            <span className="font-medium">{s.student_name}</span>
-                            {s.student_email && <p className="text-xs text-muted-foreground">{s.student_email}</p>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {selectedForPairing.length === 2 && (
-                      <Button onClick={formPair} className="w-full" size="sm">
-                        <Users className="h-4 w-4 mr-1" />{t("sim_form_pairs")}
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                {unpairedStudents.length === 0 && formedPairs.length === 0 && (
-                  <p className="text-sm text-muted-foreground">{t("sim_need_students")}</p>
-                )}
-
-                {/* Distribute button */}
-                <div className="border-t pt-4">
-                  <Button onClick={generateDistributionPreview} disabled={formedPairs.length === 0} className="w-full">
-                    <Play className="h-4 w-4 mr-1" />
-                    {t("sim_distribute")}
-                  </Button>
+                  <Switch
+                    id="solo-mode"
+                    checked={soloMode}
+                    onCheckedChange={(checked) => {
+                      setSoloMode(checked);
+                      setSelectedForPairing([]);
+                      setSoloProfessionalId("");
+                      setSoloPatientId("");
+                      setSoloObserverId("");
+                      setSoloCaseIndex(0);
+                    }}
+                  />
                 </div>
+
+                {soloMode ? (
+                  /* Solo mode: manual role assignment */
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Selecione manualmente quem assumirá cada papel na simulação individual.
+                    </p>
+
+                    {/* Professional select */}
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1.5 text-sm">
+                        <Stethoscope className="h-4 w-4" />Profissional (avaliado)
+                      </Label>
+                      <Select value={soloProfessionalId} onValueChange={setSoloProfessionalId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o profissional" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allParticipants.filter((p: any) => p.participant_role === "student").map((s: any) => (
+                            <SelectItem key={s.id} value={s.id} disabled={s.id === soloPatientId || s.id === soloObserverId}>
+                              {s.student_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Patient select */}
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1.5 text-sm">
+                        <Users className="h-4 w-4" />Paciente Simulado (receberá roteiro)
+                      </Label>
+                      <Select value={soloPatientId} onValueChange={setSoloPatientId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o paciente simulado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allParticipants.filter((p: any) => p.participant_role === "student").map((s: any) => (
+                            <SelectItem key={s.id} value={s.id} disabled={s.id === soloProfessionalId || s.id === soloObserverId}>
+                              {s.student_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Observer select */}
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1.5 text-sm">
+                        <Eye className="h-4 w-4" />Observador (receberá formulário)
+                      </Label>
+                      <Select value={soloObserverId} onValueChange={setSoloObserverId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o observador" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allParticipants.filter((p: any) => p.participant_role === "student").map((s: any) => (
+                            <SelectItem key={s.id} value={s.id} disabled={s.id === soloProfessionalId || s.id === soloPatientId}>
+                              {s.student_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Clinical case select (if more than 1) */}
+                    {clinicalCases.length > 1 && (
+                      <div className="space-y-1.5">
+                        <Label className="flex items-center gap-1.5 text-sm">
+                          <BookOpen className="h-4 w-4" />Caso Clínico
+                        </Label>
+                        <Select value={String(soloCaseIndex)} onValueChange={(v) => setSoloCaseIndex(Number(v))}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {clinicalCases.map((c, i) => (
+                              <SelectItem key={c.id} value={String(i)}>{c.title}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Distribute button */}
+                    <div className="border-t pt-4">
+                      <Button
+                        onClick={generateDistributionPreview}
+                        disabled={!soloProfessionalId || !soloPatientId || !soloObserverId}
+                        className="w-full"
+                      >
+                        <Play className="h-4 w-4 mr-1" />
+                        Visualizar Distribuição
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Formed pairs */}
+                    {formedPairs.length > 0 && (
+                      <div className="space-y-2">
+                        {formedPairs.map(([idx, ps]) => (
+                          <div key={idx} className="p-3 bg-muted rounded-lg">
+                            <p className="text-xs font-medium text-muted-foreground mb-1">{t("sim_pair")} {Number(idx) + 1}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{ps[0]?.student_name}</span>
+                              <span className="text-xs text-muted-foreground">&</span>
+                              <span className="text-sm font-medium">{ps[1]?.student_name}</span>
+                            </div>
+                          </div>
+                        ))}
+                        <Button variant="outline" size="sm" onClick={clearAllPairs}>
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />{t("sim_clear_pairs")}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Unpaired students */}
+                    {unpairedStudents.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          {t("sim_unpaired_students")} ({unpairedStudents.length}) — {t("sim_select_pair")}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {unpairedStudents.map((s: any) => {
+                            const isSelected = selectedForPairing.includes(s.id);
+                            return (
+                              <button
+                                key={s.id}
+                                onClick={() => toggleStudentForPairing(s.id)}
+                                className={`p-2 rounded-lg border text-left text-sm transition-colors ${
+                                  isSelected
+                                    ? "border-primary bg-primary/10 ring-2 ring-primary"
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <span className="font-medium">{s.student_name}</span>
+                                {s.student_email && <p className="text-xs text-muted-foreground">{s.student_email}</p>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {selectedForPairing.length === 2 && (
+                          <Button onClick={formPair} className="w-full" size="sm">
+                            <Users className="h-4 w-4 mr-1" />{t("sim_form_pairs")}
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {unpairedStudents.length === 0 && formedPairs.length === 0 && (
+                      <p className="text-sm text-muted-foreground">{t("sim_need_students")}</p>
+                    )}
+
+                    {/* Distribute button */}
+                    <div className="border-t pt-4">
+                      <Button onClick={generateDistributionPreview} disabled={formedPairs.length === 0} className="w-full">
+                        <Play className="h-4 w-4 mr-1" />
+                        {t("sim_distribute")}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </>
             ) : (
               <>
-                {/* Distribution preview - like the image */}
+                {/* Distribution preview */}
+                {soloMode && (
+                  <Badge variant="secondary" className="mb-2">
+                    <UserRound className="h-3 w-3 mr-1" />Modo Solo
+                  </Badge>
+                )}
                 <p className="text-xs text-muted-foreground">{t("sim_material_rule_hint")}</p>
                 <div className="space-y-3">
                   {localRounds.map((round) => (
