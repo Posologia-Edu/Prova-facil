@@ -336,7 +336,7 @@ export default function ReconciliationControl() {
                                 </CollapsibleTrigger>
                                 <CollapsibleContent>
                                   <div className="p-3 bg-green-50/50 dark:bg-green-950/50 border border-t-0 border-green-200 dark:border-green-800 rounded-b text-sm whitespace-pre-wrap">
-                                    {field.options?.join(", ") || "—"}
+                                    {(field as any).correct_answer || field.options?.join(", ") || "—"}
                                   </div>
                                 </CollapsibleContent>
                               </Collapsible>
