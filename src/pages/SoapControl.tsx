@@ -341,7 +341,7 @@ export default function SoapControl() {
           {Object.entries(pairGroups).map(([idx, members]) => (
             <Card key={idx}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Dupla {idx}</CardTitle>
+                <CardTitle className="text-base">{members.some(m => m.pair_position === "S") ? "Individual" : `Dupla ${idx}`}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-4">
