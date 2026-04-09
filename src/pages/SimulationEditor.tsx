@@ -20,6 +20,7 @@ import type { FormField } from "@/components/forms/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import FormTemplateDialog, { SaveAsTemplateDialog } from "@/components/forms/FormTemplateDialog";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
+import { CompetencySelector } from "@/components/CompetencySelector";
 
 
 type Participant = {
@@ -807,6 +808,13 @@ export default function SimulationEditor() {
                 <Label>{t("sim_duration")} ({t("sim_minutes")})</Label>
                 <Input type="number" value={roomDuration} onChange={(e) => setRoomDuration(Number(e.target.value))} min={1} />
               </div>
+              <CompetencySelector
+                selectedIds={room.competency_ids || []}
+                onChange={async (ids) => {
+                  await supabase.from("simulation_rooms").update({ competency_ids: ids }).eq("id", roomId!);
+                  queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
+                }}
+              />
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm font-medium">PIN: <span className="font-mono text-lg">{room.access_code}</span></p>
               </div>

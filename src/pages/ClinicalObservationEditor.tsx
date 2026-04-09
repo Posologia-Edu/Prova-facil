@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Plus, Trash2, Save, Copy, ClipboardCheck, BarChart3, Settings } from "lucide-react";
 import { toast } from "sonner";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
+import { CompetencySelector } from "@/components/CompetencySelector";
 
 interface Domain {
   id: string;
