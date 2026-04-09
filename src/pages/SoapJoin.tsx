@@ -60,8 +60,9 @@ export default function SoapJoin() {
     sessionStorage.setItem("soap_pin", usedPin);
     sessionStorage.setItem("soap_email", usedEmail);
 
-    // Find partner
-    if (me.pair_index >= 0) {
+    // Find partner (skip for solo students)
+    const isSolo = me.pair_position === "S";
+    if (me.pair_index >= 0 && !isSolo) {
       const { data: partners } = await supabase
         .from("soap_participants")
         .select("*")
@@ -147,8 +148,12 @@ export default function SoapJoin() {
       .is("target_participant_id", null);
     if (existingSoap?.length) {
       setSubmittedSoap(true);
-      // Check partner submission
-      await checkPartnerAndPeerStatus(foundRoom.id, me);
+      // Solo students skip peer evaluation
+      if (isSolo) {
+        setPhase("done");
+      } else {
+        await checkPartnerAndPeerStatus(foundRoom.id, me);
+      }
     } else {
       setPhase("soap");
     }
@@ -209,13 +214,18 @@ export default function SoapJoin() {
 
   useEffect(() => {
     if (submittedSoap && room && participant && phase === "login") {
-      checkPartnerAndPeerStatus(room.id, participant);
+      // Solo students skip peer evaluation
+      if (participant.pair_position === "S") {
+        setPhase("done");
+      } else {
+        checkPartnerAndPeerStatus(room.id, participant);
+      }
     }
   }, [submittedSoap]);
 
-  // Realtime polling for partner status
+  // Realtime polling for partner status (not needed for solo students)
   useEffect(() => {
-    if (phase !== "waiting_peer" || !room || !participant) return;
+    if (phase !== "waiting_peer" || !room || !participant || participant.pair_position === "S") return;
     const interval = setInterval(async () => {
       await checkPartnerAndPeerStatus(room.id, participant);
     }, 5000);
