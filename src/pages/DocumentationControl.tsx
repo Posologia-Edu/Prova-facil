@@ -20,7 +20,7 @@ type MedCaseContent = { columns: MedColumn[]; rows_score: number; answer_rows: R
 
 export function CollapsibleAnswerField({ field }: { field: any }) {
   const [isOpen, setIsOpen] = useState(false);
-  const answerText = field.options?.join(", ") || "Sem conteúdo";
+  const answerText = field.correct_answer || field.options?.join(", ") || "Sem conteúdo";
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">
       <div className="text-xs font-medium text-muted-foreground uppercase">{field.label} ({field.max_score || 0} pts)</div>
