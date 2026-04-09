@@ -1,61 +1,73 @@
 
 
-## Plano: Suporte a Alunos Individuais (Solo) na Simulação Realística
+## Plano: Modo Solo com Atribuição Manual na Anamnese
 
-### Problema
-Quando um aluno falta, seu par fica impossibilitado de participar porque o sistema exige duplas completas (pair_position A + B). Precisamos permitir que alunos façam atividades individualmente.
+### Contexto
+Na anamnese (`SimulationJoin.tsx`), o professor forma duplas e o sistema distribui automaticamente os papéis (profissional, paciente, observador) via `generateRounds`. No modo solo (reposição), o professor precisa escolher manualmente quem assume cada papel.
 
-### Mudanças Necessárias
+### Mudanças
 
-#### 1. Editores — Permitir "Solo" além de "Dupla"
+#### 1. Toggle "Modo Solo" na UI de Pareamento (`SimulationJoin.tsx`)
 
-**Arquivos**: Todos os 9 editores (`SimulationEditor`, `SoapEditor`, `ReconciliationEditor`, `DocumentationEditor`, `NursingEditor`, `MedicineEditor`, `DentistryEditor`, `NutritionEditor`, `PhysiotherapyEditor`, `BiomedicineEditor`)
+Na seção `shouldShowPairingUI` (professor formando duplas, linhas ~974-1091):
 
-- Adicionar botão **"Marcar como Individual"** na seção de alunos sem dupla, ao lado do botão "Formar Dupla"
-- Ao marcar como individual: `pair_index` recebe o próximo índice disponível, `pair_position` = `"S"` (solo)
-- O aluno individual aparece na lista de "duplas" com badge "Individual" em vez de "Dupla X"
-- Permitir desfazer (voltar para sem dupla), assim como já funciona para duplas
+- Adicionar um **Switch/Toggle** no topo: "Modo Normal" ↔ "Modo Solo"
+- Estado local `soloMode` (boolean)
 
-#### 2. Distribuição de Rodadas — Tratar Solo
+**Modo Normal** (como é hoje):
+- Professor seleciona 2 alunos → forma dupla → distribui automaticamente
 
-**Arquivo**: `src/lib/simulation-distribution.ts`
+**Modo Solo** (novo):
+- Exibir 3 selects (dropdowns) com a lista de alunos da sala:
+  - **Profissional Simulado** (será avaliado)
+  - **Paciente Simulado** (receberá o roteiro)
+  - **Observador** (receberá formulário do observador)
+- Opcional: select de **Caso Clínico** (se houver mais de 1 caso cadastrado)
+- Botão "Visualizar Distribuição" → gera preview de 1 rodada (1 ciclo) com os 3 papéis manuais
+- Botão "Confirmar" → salva no banco como hoje
 
-- `generateRounds`: pares com apenas 1 membro (solo) geram rodadas onde o aluno assume papel de "professional" e o papel de "patient" é omitido (ou virtual)
-- No Ciclo 2, o aluno solo mantém papel de "professional" (sem inversão, pois não há parceiro)
-- Observadores continuam atribuídos normalmente via rotação circular
+#### 2. Geração de Rodada Manual
 
-#### 3. Portais do Aluno (Join) — Adaptar para Solo
+Em vez de chamar `generateRounds()`, no modo solo o sistema monta diretamente o array `localRounds` com **1 única rodada** contendo as 3 assignments escolhidas pelo professor:
 
-**Arquivos**: Todos os 10 `*Join.tsx`
+```text
+localRounds = [{
+  roundNumber: 1,
+  cycle: 1,
+  assignments: [
+    { participantId: profId, role: "professional", pairIndex: 0 },
+    { participantId: patientId, role: "patient", pairIndex: 0, caseIndex },
+    { participantId: observerId, role: "observer", pairIndex: 1 },
+  ]
+}]
+```
 
-- Quando `pair_position === "S"`, não buscar parceiro
-- Exibir "Individual" em vez de "Dupla X" no cabeçalho
-- No SOAP: aluno solo pula a etapa de avaliação entre pares (peer evaluation) e vai direto para "done"
-- Caso clínico atribuído normalmente via `pair_index % cases.length`
+A gravação no banco (`generateRoundsForRoom`) já funciona com qualquer formato de `localRounds`, então **não precisa mudar**.
 
-#### 4. Painéis de Controle — Exibir Solo
+#### 3. Materiais no Modo Solo
 
-**Arquivos**: Todos os `*Control.tsx`
+A distribuição de materiais no Join page já funciona por `assignment.assigned_role`:
+- Profissional → vê formulário de anamnese
+- Paciente → vê roteiro do caso clínico (via `case_index`)
+- Observador → vê formulário do observador
+- Professor → vê formulário do professor
 
-- Exibir alunos individuais com badge diferenciado na lista de participantes
-- Na correção, respostas de alunos solo aparecem normalmente (por `pair_index`)
-- Auto-pareamento rápido: ao clicar "Parear Automaticamente", alunos que sobram (número ímpar) são automaticamente marcados como solo
+Como os assignments serão gravados normalmente, **o fluxo de materiais não precisa de alteração**.
 
-#### 5. Materiais e Papéis — Função getStudyRole
+#### 4. Editor (`SimulationEditor.tsx`)
 
-**Arquivo**: `src/lib/simulation-materials.ts`
+- Adicionar botão "Marcar como Individual" (como já existe nos outros editores) para consistência, mas o controle principal do modo solo será na sala do professor (`SimulationJoin.tsx`)
 
-- `getStudyRole`: se `pairPosition === "S"`, retornar `"professional"` em ambos os ciclos (aluno solo sempre estuda como profissional)
+### Arquivos Alterados
 
-### Resumo Técnico
-
-| Componente | Mudança |
+| Arquivo | Mudança |
 |---|---|
-| Editores (9 arquivos) | Botão "Individual" + badge "Solo" |
-| `simulation-distribution.ts` | Tratar pares de 1 membro |
-| `simulation-materials.ts` | `getStudyRole("S")` → `"professional"` |
-| Join pages (10 arquivos) | Sem parceiro + skip peer eval |
-| Control pages (10 arquivos) | Badge solo + auto-pair com sobra |
+| `SimulationJoin.tsx` | Toggle modo solo + 3 selects de papéis + geração manual de 1 rodada |
+| `SimulationEditor.tsx` | Botão "Marcar como Individual" (consistência com outros editores) |
 
-Nenhuma migração de banco de dados necessária — o valor `"S"` em `pair_position` (text) funciona nas colunas existentes sem alteração de schema.
+### O que NÃO muda
+- Fluxo de materiais (já baseado em `assigned_role`)
+- Formulários (professor_eval, observer_eval, anamnesis, patient_script)
+- Gravação de rodadas no banco (`generateRoundsForRoom`)
+- Timer, submissão, correção
 
