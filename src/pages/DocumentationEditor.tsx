@@ -102,8 +102,47 @@ export default function DocumentationEditor() {
   const [medTemplateDialogOpen, setMedTemplateDialogOpen] = useState(false);
   const [saveMedTemplateDialogOpen, setSaveMedTemplateDialogOpen] = useState(false);
   const [saveMedTemplateForm, setSaveMedTemplateForm] = useState<any>(null);
+  const [editingParticipant, setEditingParticipant] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [editingDocCaseId, setEditingDocCaseId] = useState<string | null>(null);
+  const [docCaseTitle, setDocCaseTitle] = useState("");
+  const [docCaseContent, setDocCaseContent] = useState("");
 
-  const addParticipant = async () => {
+  const deleteParticipant = async (id: string) => {
+    await supabase.from("documentation_participants").delete().eq("id", id);
+    refetchParticipants();
+  };
+
+  const updateParticipant = async (id: string, name: string, email: string) => {
+    await supabase.from("documentation_participants").update({ student_name: name, student_email: email } as any).eq("id", id);
+    refetchParticipants();
+    toast({ title: "Aluno atualizado" });
+  };
+
+  const deleteDocCase = async (id: string) => {
+    await supabase.from("documentation_clinical_cases").delete().eq("id", id);
+    queryClient.invalidateQueries({ queryKey: ["documentation-clinical-cases", roomId] });
+    toast({ title: "Caso clínico excluído" });
+  };
+
+  const saveDocCase = async () => {
+    if (!docCaseTitle.trim()) return;
+    if (editingDocCaseId) {
+      await supabase.from("documentation_clinical_cases").update({ title: docCaseTitle, content: docCaseContent }).eq("id", editingDocCaseId);
+    } else {
+      await supabase.from("documentation_clinical_cases").insert({
+        room_id: roomId!,
+        title: docCaseTitle,
+        content: docCaseContent,
+        position: clinicalCases.length,
+      });
+    }
+    setDocCaseTitle("");
+    setDocCaseContent("");
+    setEditingDocCaseId(null);
+    queryClient.invalidateQueries({ queryKey: ["documentation-clinical-cases", roomId] });
+    toast({ title: "Caso clínico salvo" });
+  };
+
     if (!newName.trim()) return;
     const { error } = await supabase.from("documentation_participants").insert({
       room_id: roomId!,
