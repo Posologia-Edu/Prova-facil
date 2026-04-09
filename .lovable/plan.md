@@ -1,116 +1,61 @@
 
 
-## Plano: Sistema Integrado de Competências em Todos os Módulos
+## Plano: Suporte a Alunos Individuais (Solo) na Simulação Realística
 
-### Problema Atual
-A análise de competências só funciona para **Provas** (via `question_competencies`). Os demais módulos (OSCE, Simulação Realística, Pacientes Virtuais, Mini-CEX/DOPS, Progress Test) não registram dados de competência, impossibilitando uma visão longitudinal do aluno.
+### Problema
+Quando um aluno falta, seu par fica impossibilitado de participar porque o sistema exige duplas completas (pair_position A + B). Precisamos permitir que alunos façam atividades individualmente.
 
-### Arquitetura Proposta
+### Mudanças Necessárias
 
-```text
-┌─────────────────────────────────────────────────────┐
-│              competency_definitions                  │
-│  (Raciocínio Clínico, Comunicação, Técnica, etc.)   │
-└──────────────────────┬──────────────────────────────┘
-                       │
-         ┌─────────────┴─────────────┐
-         │   competency_scores       │  ← NOVA TABELA CENTRAL
-         │                           │
-         │  student_email            │
-         │  competency_id            │
-         │  score (0-100)            │
-         │  max_score                │
-         │  source_type (enum)       │  exam | osce | simulation | 
-         │  source_id                │  virtual_patient | mini_cex | 
-         │  source_label             │  dops | progress_test
-         │  evaluated_at             │
-         │  user_id (professor)      │
-         └───────────────────────────┘
-```
+#### 1. Editores — Permitir "Solo" além de "Dupla"
 
-### Etapa 1 — Tabela Central `competency_scores`
+**Arquivos**: Todos os 9 editores (`SimulationEditor`, `SoapEditor`, `ReconciliationEditor`, `DocumentationEditor`, `NursingEditor`, `MedicineEditor`, `DentistryEditor`, `NutritionEditor`, `PhysiotherapyEditor`, `BiomedicineEditor`)
 
-Criar uma tabela normalizada que armazena cada registro de competência de qualquer módulo:
+- Adicionar botão **"Marcar como Individual"** na seção de alunos sem dupla, ao lado do botão "Formar Dupla"
+- Ao marcar como individual: `pair_index` recebe o próximo índice disponível, `pair_position` = `"S"` (solo)
+- O aluno individual aparece na lista de "duplas" com badge "Individual" em vez de "Dupla X"
+- Permitir desfazer (voltar para sem dupla), assim como já funciona para duplas
 
-- `id` (uuid, PK)
-- `user_id` (uuid, FK → auth.users) — professor dono
-- `student_email` (text) — identificador do aluno
-- `competency_id` (uuid, FK → competency_definitions)
-- `score` (numeric) — nota obtida
-- `max_score` (numeric) — nota máxima possível
-- `source_type` (text) — tipo do módulo de origem
-- `source_id` (uuid) — ID do registro de origem (session, evaluation, response)
-- `source_label` (text) — nome legível da origem (ex: "Prova: Farmacologia T8", "OSCE: Estação Anamnese")
-- `evaluated_at` (timestamptz)
-- `created_at` (timestamptz)
+#### 2. Distribuição de Rodadas — Tratar Solo
 
-RLS: professor só vê seus próprios registros.
+**Arquivo**: `src/lib/simulation-distribution.ts`
 
-### Etapa 2 — Vincular Competências nos Editores de Cada Módulo
+- `generateRounds`: pares com apenas 1 membro (solo) geram rodadas onde o aluno assume papel de "professional" e o papel de "patient" é omitido (ou virtual)
+- No Ciclo 2, o aluno solo mantém papel de "professional" (sem inversão, pois não há parceiro)
+- Observadores continuam atribuídos normalmente via rotação circular
 
-Adicionar um seletor de competências (multi-select com as `competency_definitions` do professor) nos seguintes locais:
+#### 3. Portais do Aluno (Join) — Adaptar para Solo
 
-| Módulo | Onde vincular | Granularidade |
-|---|---|---|
-| **Provas** | Já existe (`question_competencies`) | Por questão |
-| **OSCE** | Editor de estação (`OsceStationEditor`) | Por estação |
-| **Simulação (Anamnese/SOAP/Reconciliação/Documentação)** | Editor de sala ou formulário | Por formulário/sala |
-| **Pacientes Virtuais** | Editor do paciente virtual | Por paciente |
-| **Mini-CEX / DOPS** | Editor da observação clínica | Por domínio de competência |
-| **Progress Test** | Herdado das questões do banco | Por questão |
+**Arquivos**: Todos os 10 `*Join.tsx`
 
-Novas colunas necessárias:
-- `osce_stations.competency_ids` (uuid[])
-- `simulation_rooms` (anamnese/soap/reconciliação/documentação): `competency_ids` (uuid[]) nas tabelas de rooms de cada área
-- `virtual_patients.competency_ids` (uuid[])
-- `clinical_observations.competency_ids` (uuid[])
+- Quando `pair_position === "S"`, não buscar parceiro
+- Exibir "Individual" em vez de "Dupla X" no cabeçalho
+- No SOAP: aluno solo pula a etapa de avaliação entre pares (peer evaluation) e vai direto para "done"
+- Caso clínico atribuído normalmente via `pair_index % cases.length`
 
-### Etapa 3 — Registrar Scores Automaticamente Após Correção
+#### 4. Painéis de Controle — Exibir Solo
 
-Inserir registros em `competency_scores` automaticamente quando uma avaliação é corrigida:
+**Arquivos**: Todos os `*Control.tsx`
 
-| Módulo | Gatilho | Dados |
-|---|---|---|
-| **Provas** | Sessão marcada como `graded` | Score proporcional por questão × competências vinculadas |
-| **OSCE** | Avaliação salva (`osce_evaluations`) | Score do checklist por estação → competências da estação |
-| **Simulação** | Correção por IA (`ai_score`) ou professor (`admin_score`) | Score da resposta → competências da sala |
-| **Pacientes Virtuais** | Grade calculada (`virtual_patient_grades`) | `subscores` mapeados para competências |
-| **Mini-CEX / DOPS** | Sessão salva (`clinical_observation_sessions`) | `scores_json` por domínio → competência correspondente |
-| **Progress Test** | Sessão corrigida | Score por questão × competências herdadas |
+- Exibir alunos individuais com badge diferenciado na lista de participantes
+- Na correção, respostas de alunos solo aparecem normalmente (por `pair_index`)
+- Auto-pareamento rápido: ao clicar "Parear Automaticamente", alunos que sobram (número ímpar) são automaticamente marcados como solo
 
-A inserção será feita no **frontend** (após confirmação de correção) ou via **Edge Function** (nas funções `grade-*` existentes), usando upsert para evitar duplicatas (unique: `source_type + source_id + competency_id + student_email`).
+#### 5. Materiais e Papéis — Função getStudyRole
 
-### Etapa 4 — Dashboard de Competências Expandido
+**Arquivo**: `src/lib/simulation-materials.ts`
 
-Refatorar `CompetencyAnalysis.tsx` para:
+- `getStudyRole`: se `pairPosition === "S"`, retornar `"professional"` em ambos os ciclos (aluno solo sempre estuda como profissional)
 
-1. **Ler de `competency_scores`** em vez de recalcular a partir de exam_sessions
-2. **Filtros**: por turma, módulo de origem, período (semestre)
-3. **Gráfico Radar**: média por competência (como já existe)
-4. **Gráfico de Evolução Temporal**: linha do tempo mostrando a progressão de cada competência ao longo das avaliações (usando `evaluated_at`)
-5. **Tabela detalhada por aluno**: com coluna de "Fonte" mostrando badges coloridos por tipo de módulo (Prova, OSCE, Simulação, etc.)
-6. **Drill-down**: clicar em uma célula para ver de quais avaliações específicas o score veio
+### Resumo Técnico
 
-### Etapa 5 — Interface de Gestão de Competências
+| Componente | Mudança |
+|---|---|
+| Editores (9 arquivos) | Botão "Individual" + badge "Solo" |
+| `simulation-distribution.ts` | Tratar pares de 1 membro |
+| `simulation-materials.ts` | `getStudyRole("S")` → `"professional"` |
+| Join pages (10 arquivos) | Sem parceiro + skip peer eval |
+| Control pages (10 arquivos) | Badge solo + auto-pair com sobra |
 
-Criar uma seção (aba ou página) para o professor:
-- CRUD de `competency_definitions` (nome, área, descrição)
-- Visualização de quais módulos/questões estão vinculados a cada competência
-
-### Resumo de Mudanças
-
-**Banco de dados (migrations)**:
-- Criar tabela `competency_scores` com RLS
-- Adicionar coluna `competency_ids uuid[]` em: `osce_stations`, rooms de simulação (6 áreas × 4 módulos), `virtual_patients`, `clinical_observations`
-- Unique constraint em `competency_scores` para evitar duplicatas
-
-**Frontend (arquivos)**:
-- Componente reutilizável `CompetencySelector.tsx` (multi-select)
-- Integrar seletor nos editores: OSCE, Simulação, Pacientes Virtuais, Mini-CEX/DOPS
-- Função utilitária `recordCompetencyScores()` para inserir scores após correção
-- Refatorar `CompetencyAnalysis.tsx` com filtros, timeline e drill-down
-- Nova aba/seção para CRUD de competências
-
-**Edge Functions**:
-- Atualizar `grade-*` functions para inserir em `competency_scores` após correção
+Nenhuma migração de banco de dados necessária — o valor `"S"` em `pair_position` (text) funciona nas colunas existentes sem alteração de schema.
 
