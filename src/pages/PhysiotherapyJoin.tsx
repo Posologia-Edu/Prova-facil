@@ -38,7 +38,7 @@ export default function PhysiotherapyJoin() {
     setParticipant(me);
     await supabase.from("physiotherapy_participants").update({ status: "ready" }).eq("id", me.id);
 
-    if (me.pair_index >= 0) {
+    if (me.pair_index >= 0 && me.pair_position !== "S") {
       const { data: partners } = await supabase.from("physiotherapy_participants").select("*").eq("room_id", foundRoom.id).eq("pair_index", me.pair_index).neq("id", me.id);
       if (partners?.length) setPartner(partners[0]);
     }
@@ -115,9 +115,9 @@ export default function PhysiotherapyJoin() {
       <div className="max-w-3xl mx-auto space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">{moduleLabel[room?.module_type] || "Enfermagem"} — {room?.title}</CardTitle>
+            <CardTitle className="text-lg">{moduleLabel[room?.module_type] || "Fisioterapia"} — {room?.title}</CardTitle>
             <div className="flex gap-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />Dupla {(participant?.pair_index || 0) + 1}</span>
+              <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{participant?.pair_position === "S" ? "Individual" : `Dupla ${(participant?.pair_index || 0) + 1}`}</span>
               {partner && <span>· Parceiro(a): {partner.student_name}</span>}
             </div>
           </CardHeader>
