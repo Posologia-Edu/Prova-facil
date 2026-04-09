@@ -141,6 +141,16 @@ export default function ClinicalObservationEditor() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardContent className="pt-6">
+              <CompetencySelector
+                selectedIds={competencyIds}
+                onChange={setCompetencyIds}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Vincule competências para rastreamento no dashboard de análise.</p>
+            </CardContent>
+          </Card>
+
           <div className="space-y-3">
             {domains.map((d, i) => (
               <Card key={d.id} className="bg-muted/30">
