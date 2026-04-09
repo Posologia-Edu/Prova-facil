@@ -840,6 +840,15 @@ export default function ReconciliationEditor() {
               ? Object.values(saveTemplateForm.content_json.case_answers).flat() as FormField[]
               : [])
       } />}
+      {editingParticipant && (
+        <ParticipantEditDialog
+          open={!!editingParticipant}
+          onOpenChange={(o) => { if (!o) setEditingParticipant(null); }}
+          name={editingParticipant.name}
+          email={editingParticipant.email}
+          onSave={(name, email) => updateParticipant(editingParticipant.id, name, email)}
+        />
+      )}
     </div>
   );
 }
