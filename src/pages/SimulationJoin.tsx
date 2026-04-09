@@ -461,6 +461,13 @@ export default function SimulationJoin() {
   const [localRounds, setLocalRounds] = useState<any[]>([]);
   const [showPairingMode, setShowPairingMode] = useState(false);
 
+  // Solo mode state
+  const [soloMode, setSoloMode] = useState(false);
+  const [soloProfessionalId, setSoloProfessionalId] = useState("");
+  const [soloPatientId, setSoloPatientId] = useState("");
+  const [soloObserverId, setSoloObserverId] = useState("");
+  const [soloCaseIndex, setSoloCaseIndex] = useState(0);
+
   // Check if all existing rounds are still pending (never started)
   const allRoundsPending = allRounds.length > 0 && allRounds.every((r: any) => r.status === "pending");
   const hasStartedRounds = allRounds.some((r: any) => r.status === "active" || r.status === "completed");
