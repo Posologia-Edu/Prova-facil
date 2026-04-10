@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ShieldX, Clock, Mail } from "lucide-react";
+import { Loader2, ShieldX, Clock, Mail, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { useSubscription } from "@/hooks/use-subscription";
 
 interface Props {
   children: React.ReactNode;
@@ -13,18 +14,21 @@ interface Props {
 export function ProtectedRoute({ children, requireAdmin = false }: Props) {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
-  const [approved, setApproved] = useState(false);
+  // null = pending, true = approved, false = rejected
+  const [approvalStatus, setApprovalStatus] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isStudent, setIsStudent] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [isInvited, setIsInvited] = useState(false);
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { isPremium, isLoading: subLoading } = useSubscription();
 
   useEffect(() => {
     const checkAccess = async (userId: string, email?: string) => {
       if (email) setUserEmail(email);
 
-      // Check if user was invited by admin — invited users are always treated as teachers
+      // Check if user was invited by admin
       if (email) {
         const { data: invitation } = await supabase
           .from("admin_invitations")
@@ -33,8 +37,8 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
           .maybeSingle();
 
         if (invitation) {
-          // Invited users bypass student check — they have premium teacher access
-          setApproved(true);
+          setIsInvited(true);
+          setApprovalStatus(true);
           setLoading(false);
           return;
         }
@@ -59,8 +63,9 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
         .eq("user_id", userId)
         .maybeSingle();
 
-      const userApproved = profile?.is_approved ?? false;
-      setApproved(userApproved);
+      // null = pending, true = approved, false = rejected
+      const status = profile?.is_approved ?? null;
+      setApprovalStatus(status);
 
       const { data: role } = await supabase
         .from("user_roles")
@@ -71,7 +76,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
 
       const admin = !!role;
       setIsAdmin(admin);
-      if (admin) setApproved(true);
+      if (admin) setApprovalStatus(true);
 
       setLoading(false);
     };
@@ -101,7 +106,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  if (loading) {
+  if (loading || subLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-secondary" />
@@ -131,7 +136,38 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
     );
   }
 
-  if (!approved) {
+  // Premium subscribers, invited users, and admins bypass approval
+  const bypassApproval = isPremium || isInvited || isAdmin;
+
+  if (!bypassApproval && approvalStatus !== true) {
+    // Rejected (is_approved = false)
+    if (approvalStatus === false) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background px-4">
+          <div className="text-center max-w-md space-y-5">
+            <Ban className="h-16 w-16 mx-auto text-destructive" />
+            <h2 className="text-xl font-bold">{t("protected_rejected_title")}</h2>
+            <p className="text-muted-foreground text-sm">{t("protected_rejected_desc")}</p>
+            {userEmail && (
+              <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2 inline-block">
+                <Mail className="inline h-3 w-3 mr-1" />
+                {userEmail}
+              </p>
+            )}
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" onClick={async () => { await supabase.auth.signOut(); navigate("/"); }}>
+                {t("nav_logout")}
+              </Button>
+              <Button variant="secondary" onClick={() => navigate("/contact")}>
+                {t("protected_contact_admin")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Pending (is_approved = null)
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="text-center max-w-md space-y-5">

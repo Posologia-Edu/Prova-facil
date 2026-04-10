@@ -390,6 +390,8 @@ type TranslationKeys = {
   protected_pending_desc: string;
   protected_pending_time: string;
   protected_contact_admin: string;
+  protected_rejected_title: string;
+  protected_rejected_desc: string;
   protected_admin_title: string;
   protected_admin_desc: string;
   protected_back_dashboard: string;
@@ -892,6 +894,8 @@ const pt: TranslationKeys = {
   protected_pending_desc: "Seu cadastro está sendo analisado pelo administrador. Você receberá acesso assim que for aprovado.",
   protected_pending_time: "Geralmente a aprovação ocorre em até 24 horas úteis.",
   protected_contact_admin: "Contatar Administrador",
+  protected_rejected_title: "Acesso Negado",
+  protected_rejected_desc: "Seu acesso foi negado pelo administrador. Se acredita que isso é um erro, entre em contato com o suporte.",
   protected_admin_title: "Acesso Restrito",
   protected_admin_desc: "Esta área é exclusiva para administradores.",
   protected_back_dashboard: "Voltar ao Painel",
@@ -1391,6 +1395,8 @@ const en: TranslationKeys = {
   protected_pending_desc: "Your registration is being reviewed by the administrator. You will get access once approved.",
   protected_pending_time: "Approval usually takes up to 24 business hours.",
   protected_contact_admin: "Contact Administrator",
+  protected_rejected_title: "Access Denied",
+  protected_rejected_desc: "Your access has been denied by the administrator. If you believe this is an error, please contact support.",
   protected_admin_title: "Restricted Access",
   protected_admin_desc: "This area is for administrators only.",
   protected_back_dashboard: "Back to Dashboard",
@@ -1890,6 +1896,8 @@ const es: TranslationKeys = {
   protected_pending_desc: "Su registro está siendo analizado por el administrador. Recibirá acceso una vez aprobado.",
   protected_pending_time: "La aprobación generalmente ocurre en hasta 24 horas hábiles.",
   protected_contact_admin: "Contactar Administrador",
+  protected_rejected_title: "Acceso Denegado",
+  protected_rejected_desc: "Su acceso ha sido denegado por el administrador. Si cree que es un error, contacte con el soporte.",
   protected_admin_title: "Acceso Restringido",
   protected_admin_desc: "Esta área es exclusiva para administradores.",
   protected_back_dashboard: "Volver al Panel",
