@@ -261,13 +261,17 @@ export default function ReconciliationControl() {
               return true;
             }).map(resp => {
               const pair = pairs[resp.pair_index] || [];
-              const details = formFields
-                .filter(f => f.type !== "header" && (f.max_score || 0) > 0)
+              const answerItems = formFields
+                .filter(f => f.type !== "header" && f.type !== "section_header")
                 .map(f => ({
                   label: f.label,
                   value: String((resp.answers_json as any)?.[f.id] || "—"),
-                  score: `${f.max_score || 0} pts`,
+                  score: (f.max_score || 0) > 0 ? `${f.max_score} pts` : undefined,
                 }));
+
+              const sections = [
+                { title: "Respostas da Reconciliação", items: answerItems },
+              ];
 
               let aiFeedbackText: string | null = null;
               if (resp.ai_feedback_json) {
@@ -289,7 +293,8 @@ export default function ReconciliationControl() {
                 students: pair.map((p: any) => ({ name: p.student_name, email: p.student_email || undefined })),
                 score: Number(resp.admin_score ?? resp.ai_score ?? 0),
                 maxScore: 10,
-                details,
+                details: [],
+                sections,
                 aiScore: resp.ai_score != null ? Number(resp.ai_score) : null,
                 adminScore: resp.admin_score != null ? Number(resp.admin_score) : null,
                 aiFeedback: aiFeedbackText,

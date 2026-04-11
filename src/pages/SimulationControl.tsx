@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap, Play, BookOpen, Square } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
+import { SimulationReportGenerator, type PairReport, type ReportSection } from "@/components/SimulationReportGenerator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function SimulationControl() {
@@ -355,20 +355,37 @@ export default function SimulationControl() {
             roomTitle={room?.title || ""}
             pairs={analyticsData.studentSummaries.map((s, idx) => {
               const student = students.find(st => st.student_name === s.name);
-              const roundDetails = analyticsData.roundAnalytics
-                .filter(ra => ra.professionalName === s.name)
-                .flatMap(ra => [
-                  { label: `Rodada ${ra.round.round_number} — Nota Professor`, value: ra.profScore.toFixed(1) },
-                  { label: `Rodada ${ra.round.round_number} — Nota Observador`, value: ra.obsScore.toFixed(1) },
-                  { label: `Rodada ${ra.round.round_number} — Média`, value: ra.totalScore.toFixed(1) },
-                ]);
+              const studentRounds = analyticsData.roundAnalytics.filter(ra => ra.professionalName === s.name);
+              
+              const sections: ReportSection[] = studentRounds.map(ra => {
+                const items: { label: string; value: string; score?: string }[] = [
+                  { label: "Nota do Professor", value: ra.profScore.toFixed(1), score: `${ra.profScore.toFixed(1)}/10` },
+                  { label: "Nota do Observador", value: ra.obsScore.toFixed(1), score: `${ra.obsScore.toFixed(1)}/10` },
+                  { label: "Média da Rodada", value: ra.totalScore.toFixed(1), score: `${ra.totalScore.toFixed(1)}/10` },
+                ];
+                if (ra.profFeedback) items.push({ label: "Feedback do Professor", value: ra.profFeedback });
+                if (ra.obsFeedback) items.push({ label: "Feedback do Observador", value: ra.obsFeedback });
+                
+                // Add anamnesis answers if available
+                if (ra.anamnesisResponse?.answers_json) {
+                  Object.entries(ra.anamnesisResponse.answers_json as Record<string, any>)
+                    .filter(([k]) => k !== "_feedback")
+                    .forEach(([k, v]) => {
+                      items.push({ label: k, value: String(v || "—") });
+                    });
+                }
+                return { title: `Rodada ${ra.round.round_number} — Paciente: ${ra.patientName}`, items };
+              });
+
+              const avg = s.scores.length > 0 ? s.scores.reduce((a, b) => a + b, 0) / s.scores.length : 0;
               return {
                 pairIndex: idx,
                 students: [{ name: s.name, email: student?.student_email || undefined }],
-                score: s.scores.length > 0 ? s.scores.reduce((a, b) => a + b, 0) / s.scores.length : 0,
+                score: avg,
                 maxScore: 10,
-                details: roundDetails,
-                adminScore: s.scores.length > 0 ? s.scores.reduce((a, b) => a + b, 0) / s.scores.length : null,
+                details: [],
+                sections,
+                adminScore: avg || null,
               } as PairReport;
             })}
           />
