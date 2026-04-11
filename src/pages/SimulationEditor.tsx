@@ -89,6 +89,7 @@ export default function SimulationEditor() {
     enabled: !!roomId,
   });
 
+  const [caseBankOpen, setCaseBankOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [profName, setProfName] = useState("");
