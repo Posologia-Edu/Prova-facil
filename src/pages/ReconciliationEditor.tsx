@@ -849,6 +849,25 @@ export default function ReconciliationEditor() {
               </div>
             </CardContent>
           </Card>
+
+          <Button variant="outline" size="sm" onClick={() => setCaseBankOpen(true)}>
+            <BookOpen className="h-4 w-4 mr-1" />Banco de Casos
+          </Button>
+          <ClinicalCaseBankDialog
+            open={caseBankOpen}
+            onOpenChange={setCaseBankOpen}
+            phase="reconciliation"
+            onImport={async (title, content) => {
+              if (!roomId) return;
+              await supabase.from("reconciliation_clinical_cases").insert({
+                room_id: roomId,
+                title,
+                content,
+                position: clinicalCases.length,
+              });
+              refetchCases();
+            }}
+          />
         </TabsContent>
       </Tabs>
       <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="reconciliacao" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft as any); setFormFields(fields); setAnswerKeyByCaseId({}); }} />
