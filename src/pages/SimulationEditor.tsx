@@ -745,11 +745,19 @@ export default function SimulationEditor() {
                     <div key={c.id} className="border rounded-lg p-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <Label className="font-medium">{t("sim_case_number")} {i + 1}</Label>
-                        <Button variant="ghost" size="sm" onClick={() => setClinicalCases(clinicalCases.filter((_, idx) => idx !== i))}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      <Input
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" title="Salvar no Banco" onClick={async () => {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            if (!session || !c.title.trim()) return;
+                            await supabase.from("clinical_case_bank").insert({ user_id: session.user.id, phase: "anamnesis", title: c.title, content: c.script });
+                            toast({ title: "Caso salvo no banco!" });
+                          }}>
+                            <Save className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setClinicalCases(clinicalCases.filter((_, idx) => idx !== i))}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                         placeholder={`${t("sim_case_number")} ${i + 1}`}
                         value={c.title}
                         onChange={(e) => {
