@@ -184,16 +184,28 @@ export default function ReconciliationControl() {
         setGradingAI(false);
         return;
       }
-      const { data, error } = await supabase.functions.invoke("grade-reconciliation", {
-        body: {
-          response_id: selectedResponse.id,
-          room_id: roomId,
-          answers_json: selectedResponse.answers_json,
-          answer_key_json: caseSpecificAnswerKey,
-          form_fields: reconciliationForm?.content_json || [],
-        },
-      });
-      if (error) throw error;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/grade-reconciliation`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            response_id: selectedResponse.id,
+            room_id: roomId,
+            answers_json: selectedResponse.answers_json,
+            answer_key_json: caseSpecificAnswerKey,
+            form_fields: reconciliationForm?.content_json || [],
+          }),
+        }
+      );
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Erro ${res.status}`);
+      }
+      const data = await res.json();
       toast({ title: "Correção concluída!", description: "A IA corrigiu a ficha de reconciliação." });
       queryClient.invalidateQueries({ queryKey: ["reconciliation-responses", roomId] });
 
