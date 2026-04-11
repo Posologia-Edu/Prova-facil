@@ -249,6 +249,100 @@ export default function SoapControl() {
     queryClient.invalidateQueries({ queryKey: ["soap-responses", roomId] });
   };
 
+  const gradeWithAI = async () => {
+    if (!selectedResponse) return;
+    setGradingAI(true);
+    try {
+      // Get this student's participant info
+      const studentParticipant = participants.find(p => p.id === selectedResponse.participant_id);
+      const studentName = studentParticipant?.student_name || "";
+      const patientName = (patientNames as Record<string, string>)[selectedResponse.participant_id] || "";
+
+      // Try to fetch anamnesis data if linked
+      let anamnesisAnswers: Record<string, any> = {};
+      if (studentParticipant?.anamnesis_participant_id && room?.anamnesis_room_id) {
+        // Get the anamnesis participant
+        const { data: anamnesisParticipant } = await supabase
+          .from("simulation_participants")
+          .select("pair_index")
+          .eq("id", studentParticipant.anamnesis_participant_id)
+          .single();
+
+        if (anamnesisParticipant) {
+          // Get anamnesis form (standard type)
+          const { data: anamForms } = await supabase
+            .from("simulation_forms")
+            .select("*")
+            .eq("room_id", room.anamnesis_room_id)
+            .eq("form_type", "standard");
+
+          const anamForm = anamForms?.[0];
+          if (anamForm) {
+            // Get the anamnesis response for this pair
+            const { data: anamResponse } = await supabase
+              .from("simulation_responses")
+              .select("answers_json")
+              .eq("room_id", room.anamnesis_room_id)
+              .eq("form_id", anamForm.id)
+              .eq("pair_index", anamnesisParticipant.pair_index)
+              .limit(1)
+              .maybeSingle();
+
+            if (anamResponse?.answers_json) {
+              // Map field IDs to labels for better AI context
+              const anamFields = Array.isArray(anamForm.content_json) ? anamForm.content_json as any[] : [];
+              const answers = anamResponse.answers_json as Record<string, any>;
+              for (const [key, value] of Object.entries(answers)) {
+                if (key === "_feedback") continue;
+                const field = anamFields.find((f: any) => f.id === key);
+                const label = field?.label || key;
+                anamnesisAnswers[label] = value;
+              }
+            }
+          }
+        }
+      }
+
+      // Get SOAP form fields
+      const soapForm = forms.find((f: any) => f.form_type === "standard" || f.form_type === "soap");
+      const soapFormFields = soapForm ? (Array.isArray(soapForm.content_json) ? soapForm.content_json : []) : [];
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/grade-soap`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            response_id: selectedResponse.id,
+            soap_answers: selectedResponse.answers_json,
+            anamnesis_answers: anamnesisAnswers,
+            soap_form_fields: soapFormFields,
+            student_name: studentName,
+            patient_name: patientName,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Erro ${res.status}`);
+      }
+
+      const data = await res.json();
+      toast({ title: "Correção concluída!", description: "A IA avaliou o SOAP com base na anamnese." });
+      queryClient.invalidateQueries({ queryKey: ["soap-responses", roomId] });
+      if (data?.score != null) setAdminScore(String(data.score));
+      if (data?.feedback) setAdminFeedback(data.feedback);
+    } catch (err: any) {
+      toast({ title: "Erro na correção", description: err.message, variant: "destructive" });
+    } finally {
+      setGradingAI(false);
+    }
+  };
+
   const completeRoom = async () => {
     await supabase.from("soap_rooms").update({ status: "completed" }).eq("id", roomId!);
     queryClient.invalidateQueries({ queryKey: ["soap-room", roomId] });
