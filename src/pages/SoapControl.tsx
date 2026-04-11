@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trophy, Bot, Loader2 } from "lucide-react";
 import { computeFieldScore, FormField } from "@/components/forms/types";
-import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
+import { SimulationReportGenerator, type PairReport, type ReportSection } from "@/components/SimulationReportGenerator";
 
 export default function SoapControl() {
   const { roomId } = useParams<{ roomId: string }>();
