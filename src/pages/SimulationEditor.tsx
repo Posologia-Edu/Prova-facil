@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download, AlertTriangle, CheckCircle, Pencil, Check, X, Star, BookmarkPlus, FileDown } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download, AlertTriangle, CheckCircle, Pencil, Check, X, Star, BookmarkPlus, FileDown, BookOpen, Save } from "lucide-react";
+import ClinicalCaseBankDialog from "@/components/ClinicalCaseBankDialog";
 import { exportFormToPDF } from "@/lib/form-pdf-export";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import FormBuilder from "@/components/forms/FormBuilder";
@@ -88,6 +89,7 @@ export default function SimulationEditor() {
     enabled: !!roomId,
   });
 
+  const [caseBankOpen, setCaseBankOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [profName, setProfName] = useState("");
@@ -743,9 +745,19 @@ export default function SimulationEditor() {
                     <div key={c.id} className="border rounded-lg p-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <Label className="font-medium">{t("sim_case_number")} {i + 1}</Label>
-                        <Button variant="ghost" size="sm" onClick={() => setClinicalCases(clinicalCases.filter((_, idx) => idx !== i))}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" title="Salvar no Banco" onClick={async () => {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            if (!session || !c.title.trim()) return;
+                            await supabase.from("clinical_case_bank").insert({ user_id: session.user.id, phase: "anamnesis" as const, title: c.title, content: c.script });
+                            toast({ title: "Caso salvo no banco!" });
+                          }}>
+                            <Save className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setClinicalCases(clinicalCases.filter((_, idx) => idx !== i))}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                       <Input
                         placeholder={`${t("sim_case_number")} ${i + 1}`}
@@ -768,9 +780,20 @@ export default function SimulationEditor() {
                       />
                     </div>
                   ))}
-                  <Button variant="outline" size="sm" onClick={() => setClinicalCases([...clinicalCases, { id: crypto.randomUUID(), title: `${t("sim_case_number")} ${clinicalCases.length + 1}`, script: "" }])}>
-                    <Plus className="h-4 w-4 mr-1" />{t("sim_add_case")}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setClinicalCases([...clinicalCases, { id: crypto.randomUUID(), title: `${t("sim_case_number")} ${clinicalCases.length + 1}`, script: "" }])}>
+                      <Plus className="h-4 w-4 mr-1" />{t("sim_add_case")}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setCaseBankOpen(true)}>
+                      <BookOpen className="h-4 w-4 mr-1" />Banco de Casos
+                    </Button>
+                  </div>
+                  <ClinicalCaseBankDialog
+                    open={caseBankOpen}
+                    onOpenChange={setCaseBankOpen}
+                    phase="anamnesis"
+                    onImport={(title, content) => setClinicalCases([...clinicalCases, { id: crypto.randomUUID(), title, script: content }])}
+                  />
                 </div>
               ) : (
                 <FormBuilder

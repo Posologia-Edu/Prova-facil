@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw, Download, Star, BookmarkPlus, FileDown, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw, Download, Star, BookmarkPlus, FileDown, Pencil, Save } from "lucide-react";
+import ClinicalCaseBankDialog from "@/components/ClinicalCaseBankDialog";
 import ParticipantEditDialog from "@/components/ParticipantEditDialog";
 import { exportFormToPDF } from "@/lib/form-pdf-export";
 import FormBuilder from "@/components/forms/FormBuilder";
@@ -132,7 +133,7 @@ export default function ReconciliationEditor() {
     return Boolean(formTitle.trim());
   };
 
-  // Clinical case editor
+  const [caseBankOpen, setCaseBankOpen] = useState(false);
   const [caseTitle, setCaseTitle] = useState("");
   const [caseContent, setCaseContent] = useState("");
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
@@ -804,6 +805,14 @@ export default function ReconciliationEditor() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">{cc.title}</CardTitle>
                   <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" title="Salvar no Banco" onClick={async () => {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session) return;
+                      await supabase.from("clinical_case_bank").insert({ user_id: session.user.id, phase: "reconciliation" as const, title: cc.title, content: cc.content || "" });
+                      toast({ title: "Caso salvo no banco!" });
+                    }}>
+                      <Save className="h-3.5 w-3.5" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => { setEditingCaseId(cc.id); setCaseTitle(cc.title); setCaseContent(cc.content || ""); }}>
                       Editar
                     </Button>
@@ -840,6 +849,25 @@ export default function ReconciliationEditor() {
               </div>
             </CardContent>
           </Card>
+
+          <Button variant="outline" size="sm" onClick={() => setCaseBankOpen(true)}>
+            <BookOpen className="h-4 w-4 mr-1" />Banco de Casos
+          </Button>
+          <ClinicalCaseBankDialog
+            open={caseBankOpen}
+            onOpenChange={setCaseBankOpen}
+            phase="reconciliation"
+            onImport={async (title, content) => {
+              if (!roomId) return;
+              await supabase.from("reconciliation_clinical_cases").insert({
+                room_id: roomId,
+                title,
+                content,
+                position: clinicalCases.length,
+              });
+              refetchCases();
+            }}
+          />
         </TabsContent>
       </Tabs>
       <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="reconciliacao" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft as any); setFormFields(fields); setAnswerKeyByCaseId({}); }} />
