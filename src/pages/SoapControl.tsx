@@ -562,6 +562,9 @@ export default function SoapControl() {
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={saveAdminScore}>Salvar Nota</Button>
+                        <Button variant="outline" onClick={gradeWithAI} disabled={gradingAI}>
+                          {gradingAI ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Corrigindo...</> : <><Bot className="h-4 w-4 mr-1" />Corrigir com IA</>}
+                        </Button>
                       </div>
                     </>
                   ) : (
