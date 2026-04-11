@@ -489,7 +489,8 @@ export default function SoapControl() {
           };
         });
 
-        return reportPairs.length > 0 ? (
+        const filteredPairs = reportPairs.filter(p => p.sections && p.sections.length > 0);
+        return filteredPairs.length > 0 ? (
           <SimulationReportGenerator
             stageName="SOAP"
             stageType="soap"
