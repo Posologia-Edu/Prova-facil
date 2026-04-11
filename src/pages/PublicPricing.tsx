@@ -1,10 +1,13 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LandingFooter } from "@/components/LandingFooter";
 import { FREE_LIMITS } from "@/hooks/use-subscription";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import {
-  GraduationCap, ArrowLeft, ArrowRight, Check, X, Crown, Zap
+  GraduationCap, ArrowLeft, ArrowRight, Check, X, Crown, Zap, Loader2
 } from "lucide-react";
 
 const features = [
@@ -26,61 +29,73 @@ const renderValue = (value: string | boolean) => {
 };
 
 export default function PublicPricing() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [loadingCheckout, setLoadingCheckout] = useState(false);
+
+  const handleSubscribe = async () => {
+    setLoadingCheckout(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // User not logged in — redirect to auth with return intent
+        navigate("/auth?tab=signup&redirect=premium");
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("create-checkout");
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message || "Não foi possível iniciar o checkout.", variant: "destructive" });
+    } finally {
+      setLoadingCheckout(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b bg-card/80 backdrop-blur-lg">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <GraduationCap className="h-7 w-7 text-secondary" />
-            <span className="text-xl font-bold text-foreground">ProvaFácil</span>
+            <GraduationCap className="h-7 w-7 text-primary" />
+            <span className="text-lg font-bold text-primary">ProvaFácil</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Link to="/">
-              <Button variant="ghost" size="sm" className="gap-1.5">
+              <Button variant="ghost" size="sm" className="gap-1">
                 <ArrowLeft className="h-4 w-4" />
-                Início
+                Voltar
               </Button>
             </Link>
-            <Link to="/auth?tab=signup">
-              <Button size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                Criar Conta
-              </Button>
+            <Link to="/auth">
+              <Button variant="outline" size="sm">Entrar</Button>
             </Link>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Content */}
-      <section className="pt-28 pb-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-extrabold text-foreground md:text-5xl">
-              Planos e Preços
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Comece gratuitamente e faça upgrade quando precisar de mais recursos.
-            </p>
-          </div>
+      <section className="py-20 px-4">
+        <div className="container mx-auto max-w-4xl text-center">
+          <h1 className="text-4xl font-extrabold mb-4 tracking-tight">Planos e Preços</h1>
+          <p className="text-muted-foreground mb-12 text-lg">
+            Comece gratuitamente e faça upgrade quando precisar de mais recursos.
+          </p>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
             {/* Free */}
-            <Card className="relative pt-4">
+            <Card className="border-2">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  Gratuito
-                </CardTitle>
+                <CardTitle className="flex items-center gap-2 text-xl"><Zap className="h-5 w-5" /> Gratuito</CardTitle>
                 <CardDescription>Para experimentar o ProvaFácil</CardDescription>
-                <p className="text-3xl font-bold mt-2">
-                  R$ 0<span className="text-sm text-muted-foreground font-normal">/mês</span>
-                </p>
+                <p className="text-3xl font-bold mt-2">R$ 0<span className="text-sm text-muted-foreground font-normal">/mês</span></p>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
                   {features.map((f) => (
                     <li key={f.name} className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{f.name}</span>
+                      <span>{f.name}</span>
                       {renderValue(f.free)}
                     </li>
                   ))}
@@ -97,12 +112,9 @@ export default function PublicPricing() {
             </Card>
 
             {/* Premium */}
-            <Card className="relative pt-4 border-secondary/50 shadow-lg">
+            <Card className="border-2 border-secondary shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Crown className="h-5 w-5 text-secondary" />
-                  Premium
-                </CardTitle>
+                <CardTitle className="flex items-center gap-2 text-xl"><Crown className="h-5 w-5 text-secondary" /> Premium</CardTitle>
                 <CardDescription>Para professores que precisam de mais</CardDescription>
                 <p className="text-3xl font-bold mt-2">
                   R$ 29,90<span className="text-sm text-muted-foreground font-normal">/mês</span>
@@ -120,12 +132,18 @@ export default function PublicPricing() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Link to="/auth?tab=signup" className="w-full">
-                  <Button className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2">
+                <Button
+                  onClick={handleSubscribe}
+                  disabled={loadingCheckout}
+                  className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2"
+                >
+                  {loadingCheckout ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
                     <Crown className="h-4 w-4" />
-                    Assinar Premium
-                  </Button>
-                </Link>
+                  )}
+                  {loadingCheckout ? "Redirecionando..." : "Assinar Premium"}
+                </Button>
               </CardFooter>
             </Card>
           </div>
