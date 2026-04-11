@@ -39,131 +39,148 @@ interface SimulationReportProps {
 const stageLabels: Record<StageType, string> = {
   anamnese: "Anamnese",
   soap: "SOAP",
-  reconciliacao: "Reconciliação",
-  documentacao: "Documentação",
+  reconciliacao: "Reconciliacao",
+  documentacao: "Documentacao",
 };
 
-// Colors
-const BLUE = [37, 99, 235] as const;
-const DARK = [30, 41, 59] as const;
-const MUTED = [100, 116, 139] as const;
-const LIGHT_BG = [248, 250, 252] as const;
-const BLUE_BG = [239, 246, 255] as const;
-const GREEN_BG = [240, 253, 244] as const;
-const PURPLE_BG = [250, 245, 255] as const;
-const BORDER = [226, 232, 240] as const;
+// Clean text: remove emojis, special chars that jsPDF can't render
+function cleanText(text: string): string {
+  return text
+    // Remove emojis and special unicode
+    .replace(/[\u{1F600}-\u{1F64F}]/gu, "")
+    .replace(/[\u{1F300}-\u{1F5FF}]/gu, "")
+    .replace(/[\u{1F680}-\u{1F6FF}]/gu, "")
+    .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, "")
+    .replace(/[\u{2600}-\u{26FF}]/gu, "")
+    .replace(/[\u{2700}-\u{27BF}]/gu, "")
+    .replace(/[\u{FE00}-\u{FE0F}]/gu, "")
+    .replace(/[\u{200D}]/gu, "")
+    .replace(/[\u{20E3}]/gu, "")
+    // Replace ** markdown bold markers
+    .replace(/\*\*/g, "")
+    .trim();
+}
 
 function generatePdf(pair: PairReport, stageType: StageType, roomTitle: string, roomDate?: string): { blob: Blob; base64: string } {
   const doc = new jsPDF();
-  const pw = doc.internal.pageSize.getWidth();
-  const ph = doc.internal.pageSize.getHeight();
-  const marginL = 14;
-  const marginR = 14;
-  const contentW = pw - marginL - marginR;
+  const pw = doc.internal.pageSize.getWidth(); // 210
+  const ph = doc.internal.pageSize.getHeight(); // 297
+  const ML = 16; // margin left
+  const MR = 16; // margin right
+  const CW = pw - ML - MR; // content width
+  const LINE_H = 5; // standard line height for body text
+  const BODY_SIZE = 9;
+  const SMALL_SIZE = 8;
   let y = 0;
 
-  const addPageIfNeeded = (space: number) => {
-    if (y + space > ph - 22) {
+  const ensureSpace = (needed: number) => {
+    if (y + needed > ph - 20) {
       doc.addPage();
-      y = 18;
+      y = 22;
     }
   };
 
-  const drawLine = (yPos: number) => {
-    doc.setDrawColor(...BORDER);
-    doc.setLineWidth(0.3);
-    doc.line(marginL, yPos, pw - marginR, yPos);
-  };
-
-  const writeWrapped = (text: string, x: number, startY: number, maxW: number, fontSize: number, color: readonly [number, number, number], bold = false): number => {
+  const printWrapped = (
+    text: string,
+    x: number,
+    maxW: number,
+    fontSize: number,
+    lineH: number,
+    color: [number, number, number],
+    fontStyle: "normal" | "bold" | "italic" = "normal"
+  ): void => {
+    const cleaned = cleanText(text);
+    if (!cleaned) return;
     doc.setFontSize(fontSize);
-    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFont("helvetica", fontStyle);
     doc.setTextColor(...color);
-    const lines = doc.splitTextToSize(text, maxW);
-    const lineH = fontSize * 0.45;
+    const lines: string[] = doc.splitTextToSize(cleaned, maxW);
     for (const line of lines) {
-      addPageIfNeeded(lineH + 1);
-      doc.text(line, x, startY);
-      startY += lineH;
+      ensureSpace(lineH + 1);
+      doc.text(line, x, y);
+      y += lineH;
     }
-    return startY;
   };
 
-  // ── HEADER ──
-  doc.setFillColor(...BLUE);
-  doc.rect(0, 0, pw, 42, "F");
-  // Accent bar
-  doc.setFillColor(29, 78, 216);
-  doc.rect(0, 42, pw, 3, "F");
+  // ════════════════════════════════════════
+  // HEADER — Blue banner
+  // ════════════════════════════════════════
+  doc.setFillColor(37, 99, 235);
+  doc.rect(0, 0, pw, 40, "F");
+  doc.setFillColor(30, 64, 175); // darker accent strip
+  doc.rect(0, 40, pw, 2, "F");
 
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text(`Relatório — ${stageLabels[stageType]}`, marginL, 16);
+  doc.setFontSize(17);
+  doc.text(`Relatorio - ${stageLabels[stageType]}`, ML, 15);
 
-  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(roomTitle, marginL, 25);
+  doc.setFontSize(10);
+  doc.text(cleanText(roomTitle), ML, 24);
 
   doc.setFontSize(9);
-  doc.setTextColor(200, 220, 255);
-  doc.text(roomDate || new Date().toLocaleDateString("pt-BR"), pw - marginR, 25, { align: "right" });
-  doc.text("ProvaFácil", marginL, 34);
-  y = 54;
+  doc.setTextColor(190, 210, 255);
+  doc.text(roomDate || new Date().toLocaleDateString("pt-BR"), pw - MR, 24, { align: "right" });
+  doc.text("ProvaFacil", ML, 33);
 
-  // ── STUDENT NAME ──
+  y = 52;
+
+  // ════════════════════════════════════════
+  // STUDENT INFO
+  // ════════════════════════════════════════
   const studentLabel = pair.students.length > 1 ? "Dupla" : "Aluno(a)";
-  const nameStr = pair.students.map(s => s.name).join(" & ");
-  doc.setFontSize(13);
+  const nameStr = pair.students.map(s => cleanText(s.name)).join(" & ");
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text(`${studentLabel}: ${nameStr}`, marginL, y);
-  y += 10;
+  doc.setFontSize(12);
+  doc.setTextColor(30, 41, 59);
+  doc.text(`${studentLabel}: ${nameStr}`, ML, y);
+  y += 12;
 
-  // ── SCORE BOX ──
-  const boxH = 28;
-  doc.setFillColor(...LIGHT_BG);
-  doc.roundedRect(marginL, y, contentW, boxH, 3, 3, "F");
-  doc.setDrawColor(...BORDER);
+  // ════════════════════════════════════════
+  // SCORE CARD
+  // ════════════════════════════════════════
+  const scoreBoxH = 30;
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(ML, y, CW, scoreBoxH, 3, 3, "F");
+  doc.setDrawColor(226, 232, 240);
   doc.setLineWidth(0.4);
-  doc.roundedRect(marginL, y, contentW, boxH, 3, 3, "S");
+  doc.roundedRect(ML, y, CW, scoreBoxH, 3, 3, "S");
 
-  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text("Nota Final", marginL + 8, y + 11);
+  doc.setFontSize(11);
+  doc.setTextColor(30, 41, 59);
+  doc.text("Nota Final", ML + 10, y + 12);
 
   const pct = pair.maxScore > 0 ? (pair.score / pair.maxScore * 100) : 0;
-  // Color based on score
   if (pct >= 70) doc.setTextColor(22, 163, 74);
   else if (pct >= 50) doc.setTextColor(202, 138, 4);
   else doc.setTextColor(220, 38, 38);
 
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text(`${pair.score.toFixed(1)} / ${pair.maxScore.toFixed(1)}`, pw - marginR - 8, y + 14, { align: "right" });
+  doc.setFontSize(22);
+  doc.text(`${pair.score.toFixed(1)} / ${pair.maxScore.toFixed(1)}`, pw - MR - 10, y + 15, { align: "right" });
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(...MUTED);
-  doc.text(`(${pct.toFixed(0)}%)`, pw - marginR - 8, y + 22, { align: "right" });
+  doc.setTextColor(100, 116, 139);
+  doc.text(`(${pct.toFixed(0)}%)`, pw - MR - 10, y + 23, { align: "right" });
 
-  // Score breakdown inside box
-  const scores: string[] = [];
-  if (pair.adminScore != null) scores.push(`Professor: ${pair.adminScore.toFixed(1)}`);
-  if (pair.peerScore != null) scores.push(`Pares: ${pair.peerScore.toFixed(1)}`);
-  if (pair.aiScore != null) scores.push(`IA: ${pair.aiScore.toFixed(1)}`);
-  if (scores.length > 0) {
+  // Score breakdown
+  const scoreBreakdown: string[] = [];
+  if (pair.adminScore != null) scoreBreakdown.push(`Professor: ${pair.adminScore.toFixed(1)}`);
+  if (pair.peerScore != null) scoreBreakdown.push(`Pares: ${pair.peerScore.toFixed(1)}`);
+  if (pair.aiScore != null) scoreBreakdown.push(`IA: ${pair.aiScore.toFixed(1)}`);
+  if (scoreBreakdown.length > 0) {
     doc.setFontSize(8);
-    doc.setTextColor(...MUTED);
-    doc.text(scores.join("  •  "), marginL + 8, y + 22);
+    doc.setTextColor(100, 116, 139);
+    doc.text(scoreBreakdown.join("   |   "), ML + 10, y + 23);
   }
-  y += boxH + 10;
+  y += scoreBoxH + 12;
 
-  // ── SECTIONS (peer evaluations, student answers, etc.) ──
+  // ════════════════════════════════════════
+  // SECTIONS
+  // ════════════════════════════════════════
   const allSections: ReportSection[] = [];
-  
-  // If there are details but no sections, put details in a default section
   if (pair.details.length > 0 && (!pair.sections || pair.sections.length === 0)) {
     allSections.push({ title: "Respostas", items: pair.details });
   }
@@ -171,112 +188,210 @@ function generatePdf(pair: PairReport, stageType: StageType, roomTitle: string, 
     allSections.push(...pair.sections);
   }
 
-  const sectionColors: { bg: readonly [number, number, number]; accent: readonly [number, number, number] }[] = [
-    { bg: LIGHT_BG, accent: BLUE },
-    { bg: GREEN_BG, accent: [22, 163, 74] },
-    { bg: PURPLE_BG, accent: [126, 34, 206] },
-    { bg: BLUE_BG, accent: BLUE },
+  const accentColors: [number, number, number][] = [
+    [37, 99, 235],   // blue
+    [22, 163, 74],   // green
+    [126, 34, 206],  // purple
+    [234, 88, 12],   // orange
   ];
 
   for (let si = 0; si < allSections.length; si++) {
     const section = allSections[si];
-    const colors = sectionColors[si % sectionColors.length];
+    const accent = accentColors[si % accentColors.length];
 
-    addPageIfNeeded(20);
-    // Section header
-    doc.setFillColor(...colors.accent);
-    doc.rect(marginL, y, 3, 8, "F");
-    doc.setFontSize(11);
+    ensureSpace(22);
+
+    // Section divider line
+    if (si > 0) {
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.line(ML, y, pw - MR, y);
+      y += 8;
+    }
+
+    // Section header with accent bar
+    doc.setFillColor(...accent);
+    doc.roundedRect(ML, y, 4, 10, 1, 1, "F");
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text(section.title, marginL + 7, y + 6);
-    y += 12;
+    doc.setFontSize(11);
+    doc.setTextColor(30, 41, 59);
+    const sectionTitle = cleanText(section.title);
+    const titleLines = doc.splitTextToSize(sectionTitle, CW - 12);
+    for (const tl of titleLines) {
+      doc.text(tl, ML + 9, y + 7);
+      y += 6;
+    }
+    y += 8;
 
-    for (const item of section.items) {
-      addPageIfNeeded(16);
-      // Item background
-      doc.setFillColor(...colors.bg);
-      const valueLines = doc.splitTextToSize(item.value || "—", contentW - 16);
-      const itemH = Math.max(10, 6 + valueLines.length * 3.8);
-      doc.roundedRect(marginL + 2, y - 2, contentW - 4, itemH + 2, 1.5, 1.5, "F");
+    // Items
+    for (let ii = 0; ii < section.items.length; ii++) {
+      const item = section.items[ii];
+      const cleanedValue = cleanText(item.value || "--");
+      const cleanedLabel = cleanText(item.label);
+
+      // Measure needed height
+      doc.setFontSize(BODY_SIZE);
+      const valueLines: string[] = doc.splitTextToSize(cleanedValue, CW - 20);
+      const itemH = 8 + valueLines.length * LINE_H + 4;
+
+      ensureSpace(itemH);
+
+      // Alternating row background
+      if (ii % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(ML, y - 2, CW, itemH, "F");
+      }
+
+      // Left accent dot
+      doc.setFillColor(...accent);
+      doc.circle(ML + 4, y + 3, 1.2, "F");
 
       // Label
-      doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(...DARK);
-      const labelText = item.label;
-      doc.text(labelText, marginL + 6, y + 3);
+      doc.setFontSize(SMALL_SIZE);
+      doc.setTextColor(51, 65, 85);
+      doc.text(cleanedLabel, ML + 9, y + 4);
 
-      // Score badge
+      // Score on the right
       if (item.score) {
-        doc.setFontSize(7);
         doc.setFont("helvetica", "normal");
-        doc.setTextColor(...MUTED);
-        doc.text(item.score, pw - marginR - 6, y + 3, { align: "right" });
+        doc.setFontSize(7.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(cleanText(item.score), pw - MR - 4, y + 4, { align: "right" });
       }
 
-      // Value
-      doc.setFontSize(8);
+      // Value text
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(71, 85, 105);
-      let vy = y + 7;
-      for (const line of valueLines) {
-        addPageIfNeeded(5);
-        doc.text(line, marginL + 6, vy);
-        vy += 3.8;
+      doc.setFontSize(BODY_SIZE);
+      doc.setTextColor(51, 65, 85);
+      let vy = y + 9;
+      for (const vl of valueLines) {
+        ensureSpace(LINE_H + 1);
+        doc.text(vl, ML + 9, vy);
+        vy += LINE_H;
       }
-      y += itemH + 3;
+      y = vy + 3;
     }
     y += 4;
   }
 
-  // ── AI FEEDBACK ──
+  // ════════════════════════════════════════
+  // AI FEEDBACK
+  // ════════════════════════════════════════
   if (pair.aiFeedback) {
-    addPageIfNeeded(25);
-    drawLine(y);
-    y += 6;
-    doc.setFillColor(...BLUE_BG);
-    doc.roundedRect(marginL, y - 3, contentW, 10, 2, 2, "F");
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...BLUE);
-    doc.text("🤖  Feedback da IA", marginL + 5, y + 3);
-    y += 12;
+    ensureSpace(30);
 
-    y = writeWrapped(pair.aiFeedback, marginL + 5, y, contentW - 10, 8, DARK);
-    y += 6;
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.line(ML, y, pw - MR, y);
+    y += 8;
+
+    // Header bar
+    doc.setFillColor(239, 246, 255);
+    doc.roundedRect(ML, y, CW, 12, 2, 2, "F");
+    doc.setDrawColor(191, 219, 254);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, y, CW, 12, 2, 2, "S");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(37, 99, 235);
+    doc.text("Feedback da IA", ML + 6, y + 8);
+    y += 18;
+
+    // Feedback body — split into paragraphs for readability
+    const paragraphs = cleanText(pair.aiFeedback).split(/\n+/);
+    for (const para of paragraphs) {
+      if (!para.trim()) continue;
+
+      // Check if it's a section header (e.g. "Conduta Farmaceutica: Nota 0.8")
+      const isSubHeader = /^[A-Z][\w\s]+:/.test(para.trim()) && para.length < 120;
+
+      if (isSubHeader) {
+        ensureSpace(12);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(BODY_SIZE);
+        doc.setTextColor(30, 64, 175);
+        const headerLines = doc.splitTextToSize(para.trim(), CW - 12);
+        for (const hl of headerLines) {
+          ensureSpace(LINE_H + 1);
+          doc.text(hl, ML + 4, y);
+          y += LINE_H;
+        }
+        y += 2;
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(BODY_SIZE);
+        doc.setTextColor(51, 65, 85);
+        const bodyLines = doc.splitTextToSize(para.trim(), CW - 12);
+        for (const bl of bodyLines) {
+          ensureSpace(LINE_H + 1);
+          doc.text(bl, ML + 4, y);
+          y += LINE_H;
+        }
+        y += 4; // paragraph spacing
+      }
+    }
+    y += 4;
   }
 
-  // ── ADMIN FEEDBACK ──
+  // ════════════════════════════════════════
+  // ADMIN FEEDBACK
+  // ════════════════════════════════════════
   if (pair.adminFeedback) {
-    addPageIfNeeded(25);
-    drawLine(y);
-    y += 6;
-    doc.setFillColor(...PURPLE_BG);
-    doc.roundedRect(marginL, y - 3, contentW, 10, 2, 2, "F");
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(126, 34, 206);
-    doc.text("👨‍🏫  Feedback do Professor", marginL + 5, y + 3);
-    y += 12;
+    ensureSpace(30);
 
-    y = writeWrapped(pair.adminFeedback, marginL + 5, y, contentW - 10, 8, DARK);
-    y += 6;
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.line(ML, y, pw - MR, y);
+    y += 8;
+
+    // Header bar
+    doc.setFillColor(250, 245, 255);
+    doc.roundedRect(ML, y, CW, 12, 2, 2, "F");
+    doc.setDrawColor(221, 214, 254);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, y, CW, 12, 2, 2, "S");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(126, 34, 206);
+    doc.text("Feedback do Professor", ML + 6, y + 8);
+    y += 18;
+
+    // Feedback body
+    const paragraphs = cleanText(pair.adminFeedback).split(/\n+/);
+    for (const para of paragraphs) {
+      if (!para.trim()) continue;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(BODY_SIZE);
+      doc.setTextColor(51, 65, 85);
+      const bodyLines = doc.splitTextToSize(para.trim(), CW - 12);
+      for (const bl of bodyLines) {
+        ensureSpace(LINE_H + 1);
+        doc.text(bl, ML + 4, y);
+        y += LINE_H;
+      }
+      y += 4;
+    }
+    y += 4;
   }
 
-  // ── FOOTER ──
+  // ════════════════════════════════════════
+  // FOOTER on every page
+  // ════════════════════════════════════════
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     // Footer line
-    doc.setDrawColor(...BORDER);
+    doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.3);
-    doc.line(marginL, ph - 14, pw - marginR, ph - 14);
+    doc.line(ML, ph - 15, pw - MR, ph - 15);
+    // Footer text
     doc.setFontSize(7);
-    doc.setTextColor(...MUTED);
-    doc.text(`Página ${i} de ${totalPages}`, pw / 2, ph - 8, { align: "center" });
-    doc.text("Gerado por ProvaFácil", marginL, ph - 8);
-    doc.text(new Date().toLocaleString("pt-BR"), pw - marginR, ph - 8, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Pagina ${i} de ${totalPages}`, pw / 2, ph - 9, { align: "center" });
+    doc.text("Gerado por ProvaFacil", ML, ph - 9);
+    doc.text(new Date().toLocaleString("pt-BR"), pw - MR, ph - 9, { align: "right" });
   }
 
   const blob = doc.output("blob");
@@ -284,6 +399,9 @@ function generatePdf(pair: PairReport, stageType: StageType, roomTitle: string, 
   return { blob, base64 };
 }
 
+// ═══════════════════════════════════════════
+// COMPONENT
+// ═══════════════════════════════════════════
 export function SimulationReportGenerator({ stageName, stageType, roomTitle, roomDate, pairs }: SimulationReportProps) {
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
@@ -301,9 +419,9 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
       }
       setGeneratedPdfs(pdfs);
       setDialogOpen(true);
-      toast.success(`${pdfs.size} relatório(s) gerado(s) com sucesso!`);
+      toast.success(`${pdfs.size} relatorio(s) gerado(s) com sucesso!`);
     } catch (err) {
-      toast.error("Erro ao gerar relatórios");
+      toast.error("Erro ao gerar relatorios");
       console.error(err);
     }
     setGenerating(false);
@@ -345,7 +463,7 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
       const newSendResults = results.map((r: any) => ({ email: r.email, success: r.success }));
       setSendResults(prev => [...prev, ...newSendResults]);
       if (newSendResults.every((r: any) => r.success)) {
-        toast.success(`Relatório enviado para ${emails.join(", ")}`);
+        toast.success(`Relatorio enviado para ${emails.join(", ")}`);
       } else {
         toast.error("Alguns emails falharam.");
       }
@@ -382,21 +500,21 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
       } catch { /* continue */ }
     }
     setSending(false);
-    toast.success("Envio concluído!");
+    toast.success("Envio concluido!");
   };
 
   return (
     <>
       <Button onClick={handleGenerateAll} disabled={generating || pairs.length === 0} variant="outline" className="gap-2">
         {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-        Gerar Relatórios
+        Gerar Relatorios
       </Button>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Relatórios — {stageLabels[stageType]}</DialogTitle>
-            <DialogDescription>{roomTitle} • {pairs.length} relatório(s) gerado(s)</DialogDescription>
+            <DialogTitle>Relatorios - {stageLabels[stageType]}</DialogTitle>
+            <DialogDescription>{roomTitle} - {pairs.length} relatorio(s) gerado(s)</DialogDescription>
           </DialogHeader>
 
           <div className="flex justify-end mb-4">
@@ -418,7 +536,7 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
                       <p className="text-xs text-muted-foreground">
                         Nota: {pair.score.toFixed(1)}/{pair.maxScore.toFixed(1)}
                         {pair.students.map(s => s.email).filter(Boolean).length > 0 && (
-                          <> • {pair.students.map(s => s.email).filter(Boolean).join(", ")}</>
+                          <> - {pair.students.map(s => s.email).filter(Boolean).join(", ")}</>
                         )}
                       </p>
                     </div>
