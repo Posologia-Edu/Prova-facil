@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, Table2, ChevronDown, ChevronRight, Lock } from "lucide-react";
+import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
 
 type FormField = { id: string; label: string; type: string; options?: string[]; max_score?: number };
 type MedColumn = { id: string; label: string };
@@ -239,6 +240,64 @@ export default function DocumentationControl() {
           <p className="text-sm text-muted-foreground">PIN: {room?.access_code}</p>
         </div>
       </div>
+
+      {/* Report Generator */}
+      {pairIndicesWithResponses.length > 0 && (
+        <SimulationReportGenerator
+          stageName="Documentação"
+          stageType="documentacao"
+          roomTitle={room?.title || ""}
+          pairs={pairIndicesWithResponses.map(pairIdx => {
+            const pair = pairs[pairIdx] || [];
+            const refResp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
+            const mResp = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
+
+            const details: { label: string; value: string; score?: string }[] = [];
+            if (refResp) {
+              referralFields.forEach(f => {
+                details.push({
+                  label: `[Encaminhamento] ${f.label}`,
+                  value: String((refResp.answers_json as any)?.[f.id] || "—"),
+                  score: `${f.max_score || 0} pts`,
+                });
+              });
+            }
+
+            const totalAdmin = (Number(refResp?.admin_score) || 0) + (Number(mResp?.admin_score) || 0);
+            const totalAI = (Number(refResp?.ai_score) || 0) + (Number(mResp?.ai_score) || 0);
+            const hasAdmin = refResp?.admin_score != null || mResp?.admin_score != null;
+
+            let aiFeedbackText: string | null = null;
+            if (refResp?.ai_feedback_json || mResp?.ai_feedback_json) {
+              const parts: string[] = [];
+              if (refResp?.ai_feedback_json) {
+                if (typeof refResp.ai_feedback_json === "object" && !Array.isArray(refResp.ai_feedback_json)) {
+                  parts.push("ENCAMINHAMENTO:\n" + Object.entries(refResp.ai_feedback_json as Record<string, any>).map(([k, v]) => {
+                    const field = referralFields.find(f => f.id === k);
+                    return `${field?.label || k}: ${typeof v === "object" ? `Nota ${(v as any).score || 0} — ${(v as any).feedback || ""}` : v}`;
+                  }).join("\n"));
+                }
+              }
+              if (mResp?.ai_feedback_json) {
+                parts.push("QUADRO RESUMO:\n" + (typeof mResp.ai_feedback_json === "string" ? mResp.ai_feedback_json : (mResp.ai_feedback_json as any)?.feedback || JSON.stringify(mResp.ai_feedback_json)));
+              }
+              aiFeedbackText = parts.join("\n\n");
+            }
+
+            return {
+              pairIndex: pairIdx,
+              students: pair.map((p: any) => ({ name: p.student_name, email: p.student_email || undefined })),
+              score: hasAdmin ? totalAdmin : totalAI,
+              maxScore: 10,
+              details,
+              aiScore: totalAI || null,
+              adminScore: hasAdmin ? totalAdmin : null,
+              aiFeedback: aiFeedbackText,
+              adminFeedback: refResp?.admin_feedback || mResp?.admin_feedback || null,
+            } as PairReport;
+          })}
+        />
+      )}
 
       <Tabs defaultValue="participants">
         <TabsList>

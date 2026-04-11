@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trophy, Bot, Loader2 } from "lucide-react";
 import { computeFieldScore, FormField } from "@/components/forms/types";
+import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
 
 export default function SoapControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -398,6 +399,61 @@ export default function SoapControl() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Report Generator */}
+      {(() => {
+        const evalForm = forms.find((f: any) => f.form_type === "peer_evaluation" || f.title?.toLowerCase().includes("avaliação"));
+        const evalFields: FormField[] = evalForm ? (evalForm.content_json as FormField[]) : [];
+        const allStudents = participants.filter((p: any) => p.participant_role !== "teacher");
+
+        const reportPairs: PairReport[] = allStudents.map((student, idx) => {
+          const peerEval = peerResponses.find((r: any) => r.target_participant_id === student.id);
+          let peerScore: number | null = null;
+          if (peerEval && evalFields.length > 0) {
+            let totalScore = 0, totalMax = 0;
+            for (const field of evalFields) {
+              if (!field.max_score) continue;
+              totalMax += field.max_score;
+              totalScore += computeFieldScore(field, (peerEval.answers_json as Record<string, any>)?.[field.id]);
+            }
+            peerScore = totalMax > 0 ? (totalScore / totalMax) * 10 : 0;
+          }
+          const soapResp = soapResponses.find((r: any) => r.participant_id === student.id);
+          const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
+          const scores = [peerScore, adminSc].filter((s): s is number => s != null);
+          const finalScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+
+          const details: { label: string; value: string }[] = [];
+          if (soapResp?.answers_json) {
+            Object.entries(soapResp.answers_json as Record<string, any>)
+              .filter(([k]) => k !== "_feedback")
+              .forEach(([k, v]) => {
+                details.push({ label: resolveLabel(k), value: String(v || "—") });
+              });
+          }
+
+          return {
+            pairIndex: idx,
+            students: [{ name: student.student_name, email: student.student_email || undefined }],
+            score: finalScore,
+            maxScore: 10,
+            details,
+            aiScore: soapResp?.ai_score != null ? Number(soapResp.ai_score) : null,
+            adminScore: adminSc,
+            aiFeedback: soapResp?.ai_feedback_json ? (typeof soapResp.ai_feedback_json === "string" ? soapResp.ai_feedback_json : JSON.stringify(soapResp.ai_feedback_json)) : null,
+            adminFeedback: soapResp?.admin_feedback || null,
+          };
+        });
+
+        return reportPairs.length > 0 ? (
+          <SimulationReportGenerator
+            stageName="SOAP"
+            stageType="soap"
+            roomTitle={room?.title || ""}
+            pairs={reportPairs}
+          />
+        ) : null;
+      })()}
 
       <Tabs defaultValue="pairs">
         <TabsList>
