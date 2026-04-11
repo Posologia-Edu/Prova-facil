@@ -279,15 +279,14 @@ export default function SoapControl() {
           const anamForm = anamForms?.[0];
           if (anamForm) {
             // Get the anamnesis response for this pair
-            const anamQuery = supabase
-              .from("simulation_responses")
+            const { data: anamResponses } = await (supabase
+              .from("simulation_responses") as any)
               .select("answers_json")
-              .eq("room_id", room.anamnesis_room_id as string)
-              .eq("form_id", anamForm.id);
-            const { data: anamResponse } = await (anamQuery as any)
+              .eq("room_id", room.anamnesis_room_id)
+              .eq("form_id", anamForm.id)
               .eq("pair_index", anamnesisParticipant.pair_index)
-              .limit(1)
-              .maybeSingle();
+              .limit(1);
+            const anamResponse = anamResponses?.[0];
 
             if (anamResponse?.answers_json) {
               // Map field IDs to labels for better AI context
