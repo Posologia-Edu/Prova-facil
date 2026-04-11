@@ -495,7 +495,7 @@ export default function SoapControl() {
             stageName="SOAP"
             stageType="soap"
             roomTitle={room?.title || ""}
-            pairs={reportPairs}
+            pairs={filteredPairs}
           />
         ) : null;
       })()}
