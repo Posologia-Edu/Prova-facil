@@ -286,7 +286,7 @@ export default function SoapControl() {
               .eq("form_id", anamForm.id)
               .eq("pair_index", anamnesisParticipant.pair_index)
               .limit(1)
-              .maybeSingle();
+              .maybeSingle() as any;
 
             if (anamResponse?.answers_json) {
               // Map field IDs to labels for better AI context
