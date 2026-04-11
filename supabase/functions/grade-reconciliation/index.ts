@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAiWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,10 +19,6 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
-    // Build prompt for AI grading
     const fields = Array.isArray(form_fields) ? form_fields : [];
     const answerKeyFields = Array.isArray(answer_key_json) ? answer_key_json : [];
 
@@ -37,72 +34,62 @@ serve(async (req) => {
       comparisonPrompt += `  Espelho: ${expectedAnswer}\n\n`;
     });
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: `Você é um avaliador acadêmico de saúde. Avalie as respostas dos alunos comparando com o espelho de respostas fornecido pelo professor.
+    const { response } = await callAiWithFallback({
+      messages: [
+        {
+          role: "system",
+          content: `Você é um avaliador acadêmico de saúde. Avalie as respostas dos alunos comparando com o espelho de respostas fornecido pelo professor.
 Para cada item, forneça uma nota (de 0 até o máximo de pontos) e um feedback construtivo em português.
 Retorne o resultado usando a função fornecida.`,
-          },
-          { role: "user", content: comparisonPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "submit_grading",
-              description: "Submit the grading results for each form field",
-              parameters: {
-                type: "object",
-                properties: {
+        },
+        { role: "user", content: comparisonPrompt },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "submit_grading",
+            description: "Submit the grading results for each form field",
+            parameters: {
+              type: "object",
+              properties: {
+                items: {
+                  type: "array",
                   items: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        field_id: { type: "string", description: "The field ID" },
-                        score: { type: "number", description: "Score awarded (0 to max_score)" },
-                        feedback: { type: "string", description: "Constructive feedback in Portuguese" },
-                      },
-                      required: ["field_id", "score", "feedback"],
+                    type: "object",
+                    properties: {
+                      field_id: { type: "string", description: "The field ID" },
+                      score: { type: "number", description: "Score awarded (0 to max_score)" },
+                      feedback: { type: "string", description: "Constructive feedback in Portuguese" },
                     },
+                    required: ["field_id", "score", "feedback"],
                   },
-                  total_score: { type: "number", description: "Total score sum" },
-                  general_feedback: { type: "string", description: "Overall feedback in Portuguese" },
                 },
-                required: ["items", "total_score", "general_feedback"],
+                total_score: { type: "number", description: "Total score sum" },
+                general_feedback: { type: "string", description: "Overall feedback in Portuguese" },
               },
+              required: ["items", "total_score", "general_feedback"],
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "submit_grading" } },
-      }),
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "submit_grading" } },
     });
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      throw new Error("AI gateway error");
+      console.error("AI error:", response.status, t);
+      throw new Error("AI error");
     }
 
     const aiResult = await response.json();
@@ -113,16 +100,11 @@ Retorne o resultado usando a função fornecida.`,
       grading = JSON.parse(toolCall.function.arguments);
     }
 
-    // Build feedback JSON keyed by field_id
     const feedbackJson: Record<string, any> = {};
     (grading.items || []).forEach((item: any) => {
-      feedbackJson[item.field_id] = {
-        score: item.score,
-        feedback: item.feedback,
-      };
+      feedbackJson[item.field_id] = { score: item.score, feedback: item.feedback };
     });
 
-    // Update the response record
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -144,8 +126,7 @@ Retorne o resultado usando a função fornecida.`,
   } catch (e) {
     console.error("grade-reconciliation error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

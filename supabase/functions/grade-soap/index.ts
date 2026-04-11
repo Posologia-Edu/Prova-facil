@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAiWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,15 +14,10 @@ serve(async (req) => {
 
     if (!response_id || !soap_answers) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
-    // Build the SOAP answers display
     const fields = Array.isArray(soap_form_fields) ? soap_form_fields : [];
     let soapSection = "## Respostas do SOAP do aluno:\n\n";
     fields.forEach((field: any) => {
@@ -29,7 +25,6 @@ serve(async (req) => {
       soapSection += `**${field.label}** (${field.max_score || 0} pts):\n${typeof answer === "object" ? JSON.stringify(answer) : answer}\n\n`;
     });
 
-    // Build the anamnesis data section
     let anamnesisSection = "";
     if (anamnesis_answers && Object.keys(anamnesis_answers).length > 0) {
       anamnesisSection = "## Dados coletados na Anamnese (quando este aluno era o profissional):\n\n";
@@ -60,76 +55,59 @@ ${soapSection}
 
 Avalie a qualidade do SOAP considerando a consistência com os dados coletados na anamnese.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "submit_soap_grading",
-              description: "Submit the SOAP grading results",
-              parameters: {
-                type: "object",
-                properties: {
-                  score: { type: "number", description: "Overall score from 0 to 10" },
-                  feedback: { type: "string", description: "Structured feedback in Portuguese with sections for each criterion" },
-                  consistency_score: { type: "number", description: "Score for data consistency (0-2)" },
-                  interpretation_score: { type: "number", description: "Score for clinical interpretation (0-2)" },
-                  completeness_score: { type: "number", description: "Score for completeness (0-2)" },
-                  organization_score: { type: "number", description: "Score for organization (0-2)" },
-                  analysis_score: { type: "number", description: "Score for analysis quality (0-2)" },
-                },
-                required: ["score", "feedback"],
+    const { response } = await callAiWithFallback({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "submit_soap_grading",
+            description: "Submit the SOAP grading results",
+            parameters: {
+              type: "object",
+              properties: {
+                score: { type: "number", description: "Overall score from 0 to 10" },
+                feedback: { type: "string", description: "Structured feedback in Portuguese with sections for each criterion" },
+                consistency_score: { type: "number", description: "Score for data consistency (0-2)" },
+                interpretation_score: { type: "number", description: "Score for clinical interpretation (0-2)" },
+                completeness_score: { type: "number", description: "Score for completeness (0-2)" },
+                organization_score: { type: "number", description: "Score for organization (0-2)" },
+                analysis_score: { type: "number", description: "Score for analysis quality (0-2)" },
               },
+              required: ["score", "feedback"],
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "submit_soap_grading" } },
-      }),
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "submit_soap_grading" } },
     });
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos de IA insuficientes. Adicione créditos em Configurações > Workspace > Uso." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      throw new Error("AI gateway error");
+      console.error("AI error:", response.status, t);
+      throw new Error("AI error");
     }
 
     const aiResult = await response.json();
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-
     let grading: any = {};
-    if (toolCall?.function?.arguments) {
-      grading = JSON.parse(toolCall.function.arguments);
-    }
+    if (toolCall?.function?.arguments) grading = JSON.parse(toolCall.function.arguments);
 
-    // Update the SOAP response record
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     await supabaseAdmin.from("soap_responses").update({
       ai_score: grading.score || 0,
@@ -152,8 +130,7 @@ Avalie a qualidade do SOAP considerando a consistência com os dados coletados n
   } catch (e) {
     console.error("grade-soap error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
