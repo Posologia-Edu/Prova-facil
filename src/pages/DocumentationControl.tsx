@@ -264,14 +264,14 @@ export default function DocumentationControl() {
                 })),
               });
             }
-            if (mResp) {
+            if (mResp && medContent?.columns) {
+              const medItems = medContent.columns.map(col => ({
+                label: col.label,
+                value: String((mResp.answers_json as any)?.rows?.[0]?.[col.id] || (mResp.answers_json as any)?.[col.id] || "—"),
+              }));
               sections.push({
                 title: "Quadro Resumo de Medicamentos",
-                items: medFields.map(f => ({
-                  label: f.label,
-                  value: String((mResp.answers_json as any)?.[f.id] || "—"),
-                  score: (f.max_score || 0) > 0 ? `${f.max_score} pts` : undefined,
-                })),
+                items: medItems,
               });
             }
 
