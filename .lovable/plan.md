@@ -1,73 +1,55 @@
 
 
-## Plano: Modo Solo com Atribuição Manual na Anamnese
+## Plano: Banco de Casos Clínicos para Anamnese e Reconciliação
 
-### Contexto
-Na anamnese (`SimulationJoin.tsx`), o professor forma duplas e o sistema distribui automaticamente os papéis (profissional, paciente, observador) via `generateRounds`. No modo solo (reposição), o professor precisa escolher manualmente quem assume cada papel.
+### Resumo
+Criar um banco centralizado de casos clínicos que o professor pode acessar ao editar salas de Anamnese e Reconciliação. O banco permite salvar, reutilizar e gerar casos via IA, com importação direta para as salas.
 
-### Mudanças
+### Estrutura de Dados
 
-#### 1. Toggle "Modo Solo" na UI de Pareamento (`SimulationJoin.tsx`)
+**Nova tabela `clinical_case_bank`:**
+- `id` (uuid, PK)
+- `user_id` (uuid, ref auth.users) — proprietário
+- `phase` (text: `anamnesis` | `reconciliation`) — fase alvo
+- `title` (text) — título do caso
+- `content` (text) — corpo do caso clínico
+- `tags` (text[]) — tags para organização (ex: "cardiologia", "diabetes")
+- `created_at`, `updated_at`
+- RLS: cada professor vê apenas seus próprios casos
 
-Na seção `shouldShowPairingUI` (professor formando duplas, linhas ~974-1091):
+### Nova Edge Function `generate-clinical-case`
+- Recebe: `phase` (anamnesis/reconciliation), `theme` (temática desejada pelo professor)
+- Gera via IA um caso clínico completo no formato correto:
+  - **Anamnese**: roteiro do paciente (script) com identificação, queixa principal, HDA, medicamentos, história social
+  - **Reconciliação**: caso clínico com dados do paciente, medicamentos em uso, exames, situação clínica
+- Retorna título + conteúdo para o professor revisar antes de salvar
 
-- Adicionar um **Switch/Toggle** no topo: "Modo Normal" ↔ "Modo Solo"
-- Estado local `soloMode` (boolean)
+### Novo Componente `ClinicalCaseBankDialog`
+- Dialog acessível nos editores de Anamnese (`SimulationEditor`) e Reconciliação (`ReconciliationEditor`)
+- Duas abas: **"Meus Casos"** e **"Criar Novo"**
+- **Meus Casos**: lista filtrada por fase, com busca por título/tags. Botões para importar (adicionar à sala) ou excluir
+- **Criar Novo**: modo manual (título + conteúdo) ou modo IA (campo de temática + botão "Gerar com IA")
+- Ao importar: caso é inserido diretamente na estrutura da sala (array `clinicalCases` na Anamnese ou tabela `reconciliation_clinical_cases` na Reconciliação)
 
-**Modo Normal** (como é hoje):
-- Professor seleciona 2 alunos → forma dupla → distribui automaticamente
+### Integração nos Editores
 
-**Modo Solo** (novo):
-- Exibir 3 selects (dropdowns) com a lista de alunos da sala:
-  - **Profissional Simulado** (será avaliado)
-  - **Paciente Simulado** (receberá o roteiro)
-  - **Observador** (receberá formulário do observador)
-- Opcional: select de **Caso Clínico** (se houver mais de 1 caso cadastrado)
-- Botão "Visualizar Distribuição" → gera preview de 1 rodada (1 ciclo) com os 3 papéis manuais
-- Botão "Confirmar" → salva no banco como hoje
+1. **SimulationEditor.tsx** (Anamnese): Adicionar botão "Banco de Casos" ao lado do botão "Adicionar Caso" na aba `patient_script`. Ao importar do banco, o caso é adicionado ao array `clinicalCases` com `{ id, title, script: content }`.
 
-#### 2. Geração de Rodada Manual
+2. **ReconciliationEditor.tsx**: Adicionar botão "Banco de Casos" ao lado do botão de adicionar caso. Ao importar, insere na tabela `reconciliation_clinical_cases` com `{ room_id, title, content, position }`.
 
-Em vez de chamar `generateRounds()`, no modo solo o sistema monta diretamente o array `localRounds` com **1 única rodada** contendo as 3 assignments escolhidas pelo professor:
+3. **Salvar no Banco**: Em ambos os editores, cada caso existente ganha um ícone "Salvar no Banco" para exportar o caso da sala para o banco pessoal do professor.
 
-```text
-localRounds = [{
-  roundNumber: 1,
-  cycle: 1,
-  assignments: [
-    { participantId: profId, role: "professional", pairIndex: 0 },
-    { participantId: patientId, role: "patient", pairIndex: 0, caseIndex },
-    { participantId: observerId, role: "observer", pairIndex: 1 },
-  ]
-}]
-```
+### Detalhes Técnicos
 
-A gravação no banco (`generateRoundsForRoom`) já funciona com qualquer formato de `localRounds`, então **não precisa mudar**.
+- **Migração SQL**: Criar tabela `clinical_case_bank` com RLS (owner-based)
+- **Edge Function**: `generate-clinical-case` usando `callAiWithFallback` com prompts específicos por fase
+- **Componente**: `ClinicalCaseBankDialog.tsx` — reutilizável, recebe `phase` e callback `onImport`
+- **Config**: Adicionar função ao `config.toml` com `verify_jwt = false`
 
-#### 3. Materiais no Modo Solo
-
-A distribuição de materiais no Join page já funciona por `assignment.assigned_role`:
-- Profissional → vê formulário de anamnese
-- Paciente → vê roteiro do caso clínico (via `case_index`)
-- Observador → vê formulário do observador
-- Professor → vê formulário do professor
-
-Como os assignments serão gravados normalmente, **o fluxo de materiais não precisa de alteração**.
-
-#### 4. Editor (`SimulationEditor.tsx`)
-
-- Adicionar botão "Marcar como Individual" (como já existe nos outros editores) para consistência, mas o controle principal do modo solo será na sala do professor (`SimulationJoin.tsx`)
-
-### Arquivos Alterados
-
-| Arquivo | Mudança |
-|---|---|
-| `SimulationJoin.tsx` | Toggle modo solo + 3 selects de papéis + geração manual de 1 rodada |
-| `SimulationEditor.tsx` | Botão "Marcar como Individual" (consistência com outros editores) |
-
-### O que NÃO muda
-- Fluxo de materiais (já baseado em `assigned_role`)
-- Formulários (professor_eval, observer_eval, anamnesis, patient_script)
-- Gravação de rodadas no banco (`generateRoundsForRoom`)
-- Timer, submissão, correção
+### Fluxo do Professor
+1. Abre o editor da sala (Anamnese ou Reconciliação)
+2. Clica em "Banco de Casos"
+3. Pode: importar caso existente, criar manualmente, ou informar uma temática e a IA gera o caso
+4. Revisa e confirma → caso é adicionado à sala
+5. Opcionalmente, pode salvar qualquer caso da sala no banco para reutilização futura
 
