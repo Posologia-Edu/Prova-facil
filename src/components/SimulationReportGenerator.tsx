@@ -8,6 +8,7 @@ import jsPDF from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 
 export type StageType = "anamnese" | "soap" | "reconciliacao" | "documentacao";
+export type { PairReport };
 
 interface PairReport {
   pairIndex: number;
