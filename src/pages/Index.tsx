@@ -107,7 +107,7 @@ const Index = () => {
             {t("landing_hero_subtitle")}
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link to="/auth?tab=signup">
+            <Link to="/planos">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2 text-base px-8 py-6 shadow-lg">
                 {t("landing_start_free")}
                 <ArrowRight className="h-5 w-5" />
