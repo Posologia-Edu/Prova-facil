@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap, Play, BookOpen, Square } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function SimulationControl() {
@@ -343,9 +344,36 @@ export default function SimulationControl() {
         )}
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        {t("sim_control_admin_hint") || "A liberação das rodadas é realizada pelo professor na sala virtual."}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {t("sim_control_admin_hint") || "A liberação das rodadas é realizada pelo professor na sala virtual."}
+        </p>
+        {analyticsData.studentSummaries.length > 0 && (
+          <SimulationReportGenerator
+            stageName="Anamnese"
+            stageType="anamnese"
+            roomTitle={room?.title || ""}
+            pairs={analyticsData.studentSummaries.map((s, idx) => {
+              const student = students.find(st => st.student_name === s.name);
+              const roundDetails = analyticsData.roundAnalytics
+                .filter(ra => ra.professionalName === s.name)
+                .flatMap(ra => [
+                  { label: `Rodada ${ra.round.round_number} — Nota Professor`, value: ra.profScore.toFixed(1) },
+                  { label: `Rodada ${ra.round.round_number} — Nota Observador`, value: ra.obsScore.toFixed(1) },
+                  { label: `Rodada ${ra.round.round_number} — Média`, value: ra.totalScore.toFixed(1) },
+                ]);
+              return {
+                pairIndex: idx,
+                students: [{ name: s.name, email: student?.student_email || undefined }],
+                score: s.scores.length > 0 ? s.scores.reduce((a, b) => a + b, 0) / s.scores.length : 0,
+                maxScore: 10,
+                details: roundDetails,
+                adminScore: s.scores.length > 0 ? s.scores.reduce((a, b) => a + b, 0) / s.scores.length : null,
+              } as PairReport;
+            })}
+          />
+        )}
+      </div>
 
       <Tabs defaultValue="monitoring">
         <TabsList>

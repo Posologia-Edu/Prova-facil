@@ -1,0 +1,91 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
+      throw new Error("Missing API keys");
+    }
+
+    const { emails, pdfBase64, fileName, roomTitle, stageName, studentNames } = await req.json();
+
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      return new Response(JSON.stringify({ error: "No emails provided" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!pdfBase64) {
+      return new Response(JSON.stringify({ error: "No PDF provided" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const namesText = studentNames?.join(" e ") || "Aluno(a)";
+    const subject = `Relatório ${stageName} — ${roomTitle}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #2563eb; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">Relatório de Simulação</h1>
+          <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0;">ProvaFácil</p>
+        </div>
+        <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+          <p>Olá, <strong>${namesText}</strong>,</p>
+          <p>Segue em anexo o relatório detalhado da etapa <strong>${stageName}</strong> da sala <strong>${roomTitle}</strong>.</p>
+          <p>O relatório inclui suas notas, feedback do professor e feedback da IA (quando disponível).</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #6b7280;">Este email foi enviado automaticamente pelo ProvaFácil.</p>
+        </div>
+      </div>
+    `;
+
+    const results = [];
+    for (const email of emails) {
+      try {
+        const response = await fetch(`${GATEWAY_URL}/emails`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "X-Connection-Api-Key": RESEND_API_KEY,
+          },
+          body: JSON.stringify({
+            from: "ProvaFácil <noreply@provafacil.com.br>",
+            to: [email],
+            subject,
+            html,
+            attachments: [
+              {
+                filename: fileName || `relatorio-${stageName.toLowerCase()}.pdf`,
+                content: pdfBase64,
+              },
+            ],
+          }),
+        });
+        const data = await response.json();
+        results.push({ email, success: response.ok, data });
+      } catch (err) {
+        results.push({ email, success: false, error: String(err) });
+      }
+    }
+
+    return new Response(JSON.stringify({ results }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("send-simulation-report error:", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, ChevronDown, ChevronRight, Lock } from "lucide-react";
+import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
 
 type FormField = {
   id: string;
@@ -245,6 +246,59 @@ export default function ReconciliationControl() {
           <p className="text-sm text-muted-foreground">PIN: {room?.access_code}</p>
         </div>
       </div>
+
+      {/* Report Generator */}
+      {responses.length > 0 && (
+        <SimulationReportGenerator
+          stageName="Reconciliação"
+          stageType="reconciliacao"
+          roomTitle={room?.title || ""}
+          pairs={(() => {
+            const seen = new Set<number>();
+            return responses.filter(r => {
+              if (seen.has(r.pair_index)) return false;
+              seen.add(r.pair_index);
+              return true;
+            }).map(resp => {
+              const pair = pairs[resp.pair_index] || [];
+              const details = formFields
+                .filter(f => f.type !== "header" && (f.max_score || 0) > 0)
+                .map(f => ({
+                  label: f.label,
+                  value: String((resp.answers_json as any)?.[f.id] || "—"),
+                  score: `${f.max_score || 0} pts`,
+                }));
+
+              let aiFeedbackText: string | null = null;
+              if (resp.ai_feedback_json) {
+                if (typeof resp.ai_feedback_json === "string") {
+                  aiFeedbackText = resp.ai_feedback_json;
+                } else if (typeof resp.ai_feedback_json === "object") {
+                  aiFeedbackText = Object.entries(resp.ai_feedback_json as Record<string, any>)
+                    .map(([k, v]) => {
+                      const field = formFields.find(f => f.id === k);
+                      const label = field?.label || k;
+                      if (typeof v === "object") return `${label}: Nota ${(v as any).score || 0} — ${(v as any).feedback || ""}`;
+                      return `${label}: ${v}`;
+                    }).join("\n");
+                }
+              }
+
+              return {
+                pairIndex: resp.pair_index,
+                students: pair.map((p: any) => ({ name: p.student_name, email: p.student_email || undefined })),
+                score: Number(resp.admin_score ?? resp.ai_score ?? 0),
+                maxScore: 10,
+                details,
+                aiScore: resp.ai_score != null ? Number(resp.ai_score) : null,
+                adminScore: resp.admin_score != null ? Number(resp.admin_score) : null,
+                aiFeedback: aiFeedbackText,
+                adminFeedback: resp.admin_feedback || null,
+              } as PairReport;
+            });
+          })()}
+        />
+      )}
 
       <Tabs defaultValue="participants">
         <TabsList>
