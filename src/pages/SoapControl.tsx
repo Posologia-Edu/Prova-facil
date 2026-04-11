@@ -409,37 +409,81 @@ export default function SoapControl() {
         const reportPairs: PairReport[] = allStudents.map((student, idx) => {
           const peerEval = peerResponses.find((r: any) => r.target_participant_id === student.id);
           let peerScore: number | null = null;
+          const sections: ReportSection[] = [];
+
+          // Peer evaluation section
           if (peerEval && evalFields.length > 0) {
             let totalScore = 0, totalMax = 0;
+            const peerItems: { label: string; value: string; score?: string }[] = [];
             for (const field of evalFields) {
-              if (!field.max_score) continue;
-              totalMax += field.max_score;
-              totalScore += computeFieldScore(field, (peerEval.answers_json as Record<string, any>)?.[field.id]);
+              if (field.type === "header") continue;
+              const answer = (peerEval.answers_json as Record<string, any>)?.[field.id];
+              const fieldScore = field.max_score ? computeFieldScore(field, answer) : 0;
+              if (field.max_score) {
+                totalMax += field.max_score;
+                totalScore += fieldScore;
+              }
+              peerItems.push({
+                label: field.label,
+                value: String(answer || "—"),
+                score: field.max_score ? `${fieldScore.toFixed(1)}/${field.max_score} pts` : undefined,
+              });
             }
             peerScore = totalMax > 0 ? (totalScore / totalMax) * 10 : 0;
+            // Find evaluator name
+            const evaluator = allStudents.find(s => {
+              const evalResp = peerResponses.find((r: any) => r.target_participant_id === student.id);
+              return evalResp && (evalResp as any).participant_id === s.id;
+            });
+            const evalTitle = evaluator
+              ? `Avaliação por Pares (por ${evaluator.student_name}) — ${peerScore.toFixed(1)}/10`
+              : `Avaliação por Pares — ${peerScore.toFixed(1)}/10`;
+            sections.push({ title: evalTitle, items: peerItems });
           }
-          const soapResp = soapResponses.find((r: any) => r.participant_id === student.id);
-          const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
-          const scores = [peerScore, adminSc].filter((s): s is number => s != null);
-          const finalScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
 
-          const details: { label: string; value: string }[] = [];
+          // SOAP answers section
+          const soapResp = soapResponses.find((r: any) => r.participant_id === student.id);
           if (soapResp?.answers_json) {
-            Object.entries(soapResp.answers_json as Record<string, any>)
-              .filter(([k]) => k !== "_feedback")
-              .forEach(([k, v]) => {
-                details.push({ label: resolveLabel(k), value: String(v || "—") });
-              });
+            const soapForm = forms.find((f: any) => f.form_type !== "peer_evaluation" && !f.title?.toLowerCase().includes("avaliação"));
+            const soapFields: FormField[] = soapForm ? (soapForm.content_json as FormField[]) : [];
+            const answerItems: { label: string; value: string; score?: string }[] = [];
+            
+            if (soapFields.length > 0) {
+              for (const field of soapFields) {
+                if (field.type === "header") continue;
+                const answer = (soapResp.answers_json as Record<string, any>)?.[field.id];
+                answerItems.push({
+                  label: field.label,
+                  value: String(answer || "—"),
+                });
+              }
+            } else {
+              Object.entries(soapResp.answers_json as Record<string, any>)
+                .filter(([k]) => k !== "_feedback")
+                .forEach(([k, v]) => {
+                  answerItems.push({ label: resolveLabel(k), value: String(v || "—") });
+                });
+            }
+            if (answerItems.length > 0) {
+              sections.push({ title: "Respostas do SOAP", items: answerItems });
+            }
           }
+
+          const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
+          const aiSc = soapResp?.ai_score != null ? Number(soapResp.ai_score) : null;
+          const allScores = [peerScore, adminSc, aiSc].filter((s): s is number => s != null);
+          const finalScore = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
 
           return {
             pairIndex: idx,
             students: [{ name: student.student_name, email: student.student_email || undefined }],
             score: finalScore,
             maxScore: 10,
-            details,
-            aiScore: soapResp?.ai_score != null ? Number(soapResp.ai_score) : null,
+            details: [],
+            sections,
+            aiScore: aiSc,
             adminScore: adminSc,
+            peerScore: peerScore,
             aiFeedback: soapResp?.ai_feedback_json ? (typeof soapResp.ai_feedback_json === "string" ? soapResp.ai_feedback_json : JSON.stringify(soapResp.ai_feedback_json)) : null,
             adminFeedback: soapResp?.admin_feedback || null,
           };
