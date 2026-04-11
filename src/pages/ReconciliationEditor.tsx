@@ -805,6 +805,14 @@ export default function ReconciliationEditor() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">{cc.title}</CardTitle>
                   <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" title="Salvar no Banco" onClick={async () => {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session) return;
+                      await supabase.from("clinical_case_bank").insert({ user_id: session.user.id, phase: "reconciliation" as const, title: cc.title, content: cc.content || "" });
+                      toast({ title: "Caso salvo no banco!" });
+                    }}>
+                      <Save className="h-3.5 w-3.5" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => { setEditingCaseId(cc.id); setCaseTitle(cc.title); setCaseContent(cc.content || ""); }}>
                       Editar
                     </Button>
