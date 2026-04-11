@@ -171,10 +171,10 @@ function generatePdf(pair: PairReport, stageType: StageType, roomTitle: string, 
     allSections.push(...pair.sections);
   }
 
-  const sectionColors = [
+  const sectionColors: { bg: readonly [number, number, number]; accent: readonly [number, number, number] }[] = [
     { bg: LIGHT_BG, accent: BLUE },
-    { bg: GREEN_BG, accent: [22, 163, 74] as readonly [number, number, number] },
-    { bg: PURPLE_BG, accent: [126, 34, 206] as readonly [number, number, number] },
+    { bg: GREEN_BG, accent: [22, 163, 74] },
+    { bg: PURPLE_BG, accent: [126, 34, 206] },
     { bg: BLUE_BG, accent: BLUE },
   ];
 
