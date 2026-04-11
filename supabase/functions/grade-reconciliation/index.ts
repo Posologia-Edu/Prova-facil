@@ -44,13 +44,15 @@ Sua tarefa é comparar as respostas do aluno com o espelho de respostas (gabarit
 
 Para cada item, atribua uma nota de 0 até o máximo de pontos e forneça feedback específico.
 
-Além da avaliação por item, produza um feedback geral estruturado e profissional contendo:
-- **Resumo**: síntese do desempenho geral (2-3 frases)
-- **Pontos Positivos**: aspectos que o aluno acertou ou demonstrou domínio
-- **Pontos de Melhoria**: aspectos que precisam ser aprimorados, com orientações específicas
-- **Recomendações**: sugestões de estudo ou ações para melhorar o desempenho
+IMPORTANTE: Todo o feedback deve ser direcionado DIRETAMENTE AO ALUNO, usando linguagem em segunda pessoa ("você demonstrou...", "você precisa melhorar...", "recomendamos que você..."). Nunca escreva feedback direcionado ao professor. O aluno é quem lerá este feedback.
 
-O feedback deve ser construtivo, educativo e profissional, sempre em português.
+Além da avaliação por item, produza um feedback geral estruturado e profissional contendo:
+- **Resumo**: síntese do desempenho geral do aluno (2-3 frases, dirigidas ao aluno)
+- **Pontos Positivos**: aspectos que o aluno acertou ou demonstrou domínio (ex: "Você identificou corretamente...")
+- **Pontos de Melhoria**: aspectos que o aluno precisa aprimorar, com orientações específicas sobre O QUE errou e COMO melhorar (ex: "Você precisa revisar a classificação de discrepâncias...")
+- **Recomendações**: sugestões concretas de estudo ou prática para o aluno melhorar (ex: "Recomendamos que você revise os conceitos de...")
+
+O feedback deve ser construtivo, educativo e profissional, sempre em português e sempre dirigido ao aluno.
 Retorne o resultado usando a função fornecida.`,
         },
         { role: "user", content: comparisonPrompt },
