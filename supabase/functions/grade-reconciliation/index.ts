@@ -22,7 +22,7 @@ serve(async (req) => {
     const fields = Array.isArray(form_fields) ? form_fields : [];
     const answerKeyFields = Array.isArray(answer_key_json) ? answer_key_json : [];
 
-    let comparisonPrompt = "Compare as respostas do aluno com o espelho de respostas e avalie cada item.\n\n";
+    let comparisonPrompt = "Compare as respostas do aluno com o espelho de respostas (gabarito do professor) e avalie cada item.\n\n";
     
     fields.forEach((field: any, idx: number) => {
       const studentAnswer = answers_json[field.id] || "(sem resposta)";
@@ -31,15 +31,26 @@ serve(async (req) => {
       
       comparisonPrompt += `Item ${idx + 1}: "${field.label}" (máx ${field.max_score || 0} pts)\n`;
       comparisonPrompt += `  Resposta do aluno: ${typeof studentAnswer === "object" ? JSON.stringify(studentAnswer) : studentAnswer}\n`;
-      comparisonPrompt += `  Espelho: ${expectedAnswer}\n\n`;
+      comparisonPrompt += `  Espelho (gabarito): ${expectedAnswer}\n\n`;
     });
 
     const { response } = await callAiWithFallback({
       messages: [
         {
           role: "system",
-          content: `Você é um avaliador acadêmico de saúde. Avalie as respostas dos alunos comparando com o espelho de respostas fornecido pelo professor.
-Para cada item, forneça uma nota (de 0 até o máximo de pontos) e um feedback construtivo em português.
+          content: `Você é um avaliador acadêmico especializado em ciências da saúde, com foco em reconciliação medicamentosa. 
+
+Sua tarefa é comparar as respostas do aluno com o espelho de respostas (gabarito) fornecido pelo professor e produzir uma avaliação profissional detalhada.
+
+Para cada item, atribua uma nota de 0 até o máximo de pontos e forneça feedback específico.
+
+Além da avaliação por item, produza um feedback geral estruturado e profissional contendo:
+- **Resumo**: síntese do desempenho geral (2-3 frases)
+- **Pontos Positivos**: aspectos que o aluno acertou ou demonstrou domínio
+- **Pontos de Melhoria**: aspectos que precisam ser aprimorados, com orientações específicas
+- **Recomendações**: sugestões de estudo ou ações para melhorar o desempenho
+
+O feedback deve ser construtivo, educativo e profissional, sempre em português.
 Retorne o resultado usando a função fornecida.`,
         },
         { role: "user", content: comparisonPrompt },
@@ -49,7 +60,7 @@ Retorne o resultado usando a função fornecida.`,
           type: "function",
           function: {
             name: "submit_grading",
-            description: "Submit the grading results for each form field",
+            description: "Submit the grading results for each form field with structured feedback",
             parameters: {
               type: "object",
               properties: {
@@ -66,7 +77,7 @@ Retorne o resultado usando a função fornecida.`,
                   },
                 },
                 total_score: { type: "number", description: "Total score sum" },
-                general_feedback: { type: "string", description: "Overall feedback in Portuguese" },
+                general_feedback: { type: "string", description: "Structured overall feedback in Portuguese with sections: Resumo, Pontos Positivos, Pontos de Melhoria, Recomendações" },
               },
               required: ["items", "total_score", "general_feedback"],
             },
@@ -83,7 +94,7 @@ Retorne o resultado usando a função fornecida.`,
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
+        return new Response(JSON.stringify({ error: "Créditos de IA insuficientes. Adicione créditos nas configurações do workspace." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

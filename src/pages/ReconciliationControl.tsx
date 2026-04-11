@@ -390,23 +390,30 @@ export default function ReconciliationControl() {
             {/* Pair selector */}
             <div className="space-y-2">
               <h3 className="font-medium text-sm">Selecionar Dupla</h3>
-              {responses.map(resp => (
-                <button
-                  key={resp.id}
-                  onClick={() => handleSelectPair(resp.pair_index)}
-                  className={`w-full text-left p-3 rounded border transition-colors ${
-                    selectedPairIndex === resp.pair_index
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:bg-muted"
-                  }`}
-                >
-                  <p className="text-sm font-medium">{pairNames(resp.pair_index)}</p>
-                  <div className="flex gap-2 mt-1">
-                    {resp.ai_score != null && <Badge variant="outline" className="text-xs">IA: {resp.ai_score}</Badge>}
-                    {resp.admin_score != null && <Badge className="text-xs">Admin: {resp.admin_score}</Badge>}
-                  </div>
-                </button>
-              ))}
+              {(() => {
+                const seen = new Set<number>();
+                return responses.filter(resp => {
+                  if (seen.has(resp.pair_index)) return false;
+                  seen.add(resp.pair_index);
+                  return true;
+                }).map(resp => (
+                  <button
+                    key={resp.id}
+                    onClick={() => handleSelectPair(resp.pair_index)}
+                    className={`w-full text-left p-3 rounded border transition-colors ${
+                      selectedPairIndex === resp.pair_index
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:bg-muted"
+                    }`}
+                  >
+                    <p className="text-sm font-medium">{pairNames(resp.pair_index)}</p>
+                    <div className="flex gap-2 mt-1">
+                      {resp.ai_score != null && <Badge variant="outline" className="text-xs">IA: {resp.ai_score}</Badge>}
+                      {resp.admin_score != null && <Badge className="text-xs">Admin: {resp.admin_score}</Badge>}
+                    </div>
+                  </button>
+                ));
+              })()}
               {!responses.length && <p className="text-sm text-muted-foreground">Sem respostas</p>}
             </div>
 
