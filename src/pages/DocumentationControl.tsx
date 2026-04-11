@@ -252,14 +252,26 @@ export default function DocumentationControl() {
             const refResp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
             const mResp = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
 
-            const details: { label: string; value: string; score?: string }[] = [];
+            const sections: { title: string; items: { label: string; value: string; score?: string }[] }[] = [];
+            
             if (refResp) {
-              referralFields.forEach(f => {
-                details.push({
-                  label: `[Encaminhamento] ${f.label}`,
+              sections.push({
+                title: "Encaminhamento",
+                items: referralFields.map(f => ({
+                  label: f.label,
                   value: String((refResp.answers_json as any)?.[f.id] || "—"),
-                  score: `${f.max_score || 0} pts`,
-                });
+                  score: (f.max_score || 0) > 0 ? `${f.max_score} pts` : undefined,
+                })),
+              });
+            }
+            if (mResp) {
+              sections.push({
+                title: "Quadro Resumo de Medicamentos",
+                items: medFields.map(f => ({
+                  label: f.label,
+                  value: String((mResp.answers_json as any)?.[f.id] || "—"),
+                  score: (f.max_score || 0) > 0 ? `${f.max_score} pts` : undefined,
+                })),
               });
             }
 
@@ -289,7 +301,8 @@ export default function DocumentationControl() {
               students: pair.map((p: any) => ({ name: p.student_name, email: p.student_email || undefined })),
               score: hasAdmin ? totalAdmin : totalAI,
               maxScore: 10,
-              details,
+              details: [],
+              sections,
               aiScore: totalAI || null,
               adminScore: hasAdmin ? totalAdmin : null,
               aiFeedback: aiFeedbackText,
