@@ -416,7 +416,7 @@ export default function SoapControl() {
             let totalScore = 0, totalMax = 0;
             const peerItems: { label: string; value: string; score?: string }[] = [];
             for (const field of evalFields) {
-              if (field.type === "header") continue;
+              if (field.type === "section_header" || field.type === "image_block" || field.type === "video_block") continue;
               const answer = (peerEval.answers_json as Record<string, any>)?.[field.id];
               const fieldScore = field.max_score ? computeFieldScore(field, answer) : 0;
               if (field.max_score) {
@@ -450,7 +450,7 @@ export default function SoapControl() {
             
             if (soapFields.length > 0) {
               for (const field of soapFields) {
-                if (field.type === "header") continue;
+                if (field.type === "section_header" || field.type === "image_block" || field.type === "video_block") continue;
                 const answer = (soapResp.answers_json as Record<string, any>)?.[field.id];
                 answerItems.push({
                   label: field.label,
