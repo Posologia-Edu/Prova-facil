@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAiWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,14 +17,13 @@ Avalie as respostas considerando o registro cronológico da evolução do pacien
 Avalie as respostas considerando a técnica SBAR: Situação (identificação clara do problema atual), Background (histórico relevante), Avaliação (análise clínica) e Recomendação (plano de ação).`,
 };
 
+const gradingTools = [{ type: "function", function: { name: "submit_grading", description: "Submit grading results", parameters: { type: "object", properties: { items: { type: "array", items: { type: "object", properties: { field_id: { type: "string" }, score: { type: "number" }, feedback: { type: "string" } }, required: ["field_id", "score", "feedback"] } }, total_score: { type: "number", description: "Nota total (0-10)" }, general_feedback: { type: "string" } }, required: ["total_score", "general_feedback"] } } }];
+const gradingToolChoice = { type: "function", function: { name: "submit_grading" } };
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-
   try {
     const { room_id, module_type, pair_index, response, answer_key, form_fields } = await req.json();
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     let comparisonPrompt = "Avalie as respostas do aluno comparando com o espelho de respostas.\n\n";
     comparisonPrompt += "A nota total é de 0 a 10,0 pontos.\n\n";
@@ -37,7 +37,6 @@ serve(async (req) => {
       } else if (Array.isArray(answer_key)) { keyFields = answer_key; }
 
       const fields = Array.isArray(form_fields) ? form_fields : [];
-
       fields.forEach((field: any, idx: number) => {
         const studentAnswer = response.answers_json?.[field.id] || "(sem resposta)";
         const keyField = keyFields.find((k: any) => k.id === field.id);
@@ -50,46 +49,25 @@ serve(async (req) => {
 
     const systemPrompt = moduleSystemPrompts[module_type] || moduleSystemPrompts.acolhimento;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: `${systemPrompt}\n\nDê uma nota de 0 a 10,0 e feedback detalhado em português. Retorne usando a função fornecida.` },
-          { role: "user", content: comparisonPrompt },
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "submit_grading",
-            description: "Submit grading results",
-            parameters: {
-              type: "object",
-              properties: {
-                items: { type: "array", items: { type: "object", properties: { field_id: { type: "string" }, score: { type: "number" }, feedback: { type: "string" } }, required: ["field_id", "score", "feedback"] } },
-                total_score: { type: "number", description: "Nota total (0-10)" },
-                general_feedback: { type: "string" },
-              },
-              required: ["total_score", "general_feedback"],
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "submit_grading" } },
-      }),
+    const { response: aiResponse } = await callAiWithFallback({
+      messages: [
+        { role: "system", content: `${systemPrompt}\n\nDê uma nota de 0 a 10,0 e feedback detalhado em português. Retorne usando a função fornecida.` },
+        { role: "user", content: comparisonPrompt },
+      ],
+      tools: gradingTools,
+      tool_choice: gradingToolChoice,
     });
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       if (aiResponse.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error("AI gateway error");
+      throw new Error("AI error");
     }
 
     const aiResult = await aiResponse.json();
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
     let grading: any = {};
     if (toolCall?.function?.arguments) grading = JSON.parse(toolCall.function.arguments);
-
     const totalScore = Math.min(Number(grading.total_score) || 0, 10);
 
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
@@ -104,14 +82,9 @@ serve(async (req) => {
       }).eq("id", response.id);
     }
 
-    return new Response(JSON.stringify({
-      score: totalScore,
-      feedback: grading.general_feedback || "",
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ score: totalScore, feedback: grading.general_feedback || "" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("grade-nursing error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

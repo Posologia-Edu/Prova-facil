@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAiWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,12 +17,13 @@ Avalie as respostas considerando: cálculo de necessidades energéticas (GEB/GET
 Avalie as respostas considerando: clareza da comunicação, adequação das orientações ao perfil do paciente, educação alimentar e nutricional, metas realistas, estratégias de adesão e acompanhamento.`,
 };
 
+const gradingTools = [{ type: "function", function: { name: "submit_grading", description: "Submit grading results", parameters: { type: "object", properties: { items: { type: "array", items: { type: "object", properties: { field_id: { type: "string" }, score: { type: "number" }, feedback: { type: "string" } }, required: ["field_id", "score", "feedback"] } }, total_score: { type: "number" }, general_feedback: { type: "string" } }, required: ["total_score", "general_feedback"] } } }];
+const gradingToolChoice = { type: "function", function: { name: "submit_grading" } };
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const { room_id, module_type, pair_index, response, answer_key, form_fields } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     let comparisonPrompt = "Avalie as respostas do aluno comparando com o espelho de respostas.\n\nA nota total é de 0 a 10,0 pontos.\n\n";
     if (response && answer_key) {
@@ -37,24 +39,19 @@ serve(async (req) => {
     }
 
     const systemPrompt = moduleSystemPrompts[module_type] || moduleSystemPrompts.anamnese_nutricional;
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: `${systemPrompt}\n\nDê uma nota de 0 a 10,0 e feedback detalhado em português. Retorne usando a função fornecida.` },
-          { role: "user", content: comparisonPrompt },
-        ],
-        tools: [{ type: "function", function: { name: "submit_grading", description: "Submit grading results", parameters: { type: "object", properties: { items: { type: "array", items: { type: "object", properties: { field_id: { type: "string" }, score: { type: "number" }, feedback: { type: "string" } }, required: ["field_id", "score", "feedback"] } }, total_score: { type: "number" }, general_feedback: { type: "string" } }, required: ["total_score", "general_feedback"] } } }],
-        tool_choice: { type: "function", function: { name: "submit_grading" } },
-      }),
+    const { response: aiResponse } = await callAiWithFallback({
+      messages: [
+        { role: "system", content: `${systemPrompt}\n\nDê uma nota de 0 a 10,0 e feedback detalhado em português. Retorne usando a função fornecida.` },
+        { role: "user", content: comparisonPrompt },
+      ],
+      tools: gradingTools,
+      tool_choice: gradingToolChoice,
     });
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       if (aiResponse.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error("AI gateway error");
+      throw new Error("AI error");
     }
 
     const aiResult = await aiResponse.json();
