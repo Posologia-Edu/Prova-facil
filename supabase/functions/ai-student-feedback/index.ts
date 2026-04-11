@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAiWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verify JWT
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const anonClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader || "" } } });
     const { data: { user }, error: authErr } = await anonClient.auth.getUser();
@@ -28,7 +28,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "studentEmail required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Gather student performance data
     const { data: sessions } = await supabase
       .from("exam_sessions")
       .select("id, total_score, max_score, status, finished_at, publication_id")
@@ -52,7 +51,6 @@ serve(async (req) => {
       }
     }
 
-    // Build AI prompt
     const prompt = `Você é um tutor educacional especializado em ciências da saúde. Analise o desempenho do aluno e forneça feedback personalizado.
 
 Dados do aluno (email: ${studentEmail}):
@@ -69,18 +67,8 @@ Forneça um feedback estruturado em JSON com:
 
 Responda APENAS com o JSON, sem markdown.`;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const { response: aiResponse } = await callAiWithFallback({
+      messages: [{ role: "user", content: prompt }],
     });
 
     if (!aiResponse.ok) {
@@ -100,7 +88,6 @@ Responda APENAS com o JSON, sem markdown.`;
       feedbackJson = { summary: rawContent, strengths: [], weaknesses: [], recommendations: [], trend: "stable" };
     }
 
-    // Store feedback
     const { data: saved, error: saveErr } = await supabase
       .from("student_ai_feedbacks")
       .insert({

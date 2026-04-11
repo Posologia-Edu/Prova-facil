@@ -91,6 +91,9 @@ async function logAiUsage(
   }
 }
 
+// Priority order: Google first, then remaining providers alphabetically
+const PROVIDER_PRIORITY = ["google", "openai", "openrouter", "groq", "anthropic"];
+
 async function getActiveProviders(): Promise<ProviderConfig[]> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -104,7 +107,7 @@ async function getActiveProviders(): Promise<ProviderConfig[]> {
 
   if (!data || data.length === 0) return [];
 
-  return data.map((row: any) => {
+  const providers = data.map((row: any) => {
     const config = PROVIDER_CONFIGS[row.provider];
     if (!config) return null;
     return {
@@ -114,6 +117,15 @@ async function getActiveProviders(): Promise<ProviderConfig[]> {
       defaultModel: config.defaultModel,
     };
   }).filter(Boolean) as ProviderConfig[];
+
+  // Sort by priority: Google first, then by PROVIDER_PRIORITY order
+  providers.sort((a, b) => {
+    const aIdx = PROVIDER_PRIORITY.indexOf(a.provider);
+    const bIdx = PROVIDER_PRIORITY.indexOf(b.provider);
+    return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+  });
+
+  return providers;
 }
 
 async function callAnthropicApi(provider: ProviderConfig, options: AiCallOptions): Promise<Response> {

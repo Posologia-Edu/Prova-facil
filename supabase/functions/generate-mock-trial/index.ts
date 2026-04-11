@@ -15,34 +15,22 @@ serve(async (req) => {
     // If PDF was uploaded as base64, decode and extract text
     let extractedPdfText = pdfContent || "";
     if (pdfBase64 && !extractedPdfText) {
-      // Use AI to extract text from the PDF by sending it as a document
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (LOVABLE_API_KEY) {
-        try {
-          const extractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
-              messages: [
-                { role: "system", content: "Extract ALL text content from this PDF document. Return the complete text preserving structure, headings, and paragraphs. Do not summarize." },
-                { role: "user", content: [
-                  { type: "text", text: "Extract all text from this PDF:" },
-                  { type: "image_url", image_url: { url: `data:application/pdf;base64,${pdfBase64}` } }
-                ]}
-              ],
-            }),
-          });
-          if (extractResponse.ok) {
-            const extractData = await extractResponse.json();
-            extractedPdfText = extractData.choices?.[0]?.message?.content || "";
-          }
-        } catch (e) {
-          console.error("PDF extraction error:", e);
+      try {
+        const { response: extractResponse } = await callAiWithFallback({
+          messages: [
+            { role: "system", content: "Extract ALL text content from this PDF document. Return the complete text preserving structure, headings, and paragraphs. Do not summarize." },
+            { role: "user", content: [
+              { type: "text", text: "Extract all text from this PDF:" },
+              { type: "image_url", image_url: { url: `data:application/pdf;base64,${pdfBase64}` } }
+            ] as any}
+          ],
+        });
+        if (extractResponse.ok) {
+          const extractData = await extractResponse.json();
+          extractedPdfText = extractData.choices?.[0]?.message?.content || "";
         }
+      } catch (e) {
+        console.error("PDF extraction error:", e);
       }
     }
 
