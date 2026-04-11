@@ -133,7 +133,7 @@ export default function ReconciliationEditor() {
     return Boolean(formTitle.trim());
   };
 
-  // Clinical case editor
+  const [caseBankOpen, setCaseBankOpen] = useState(false);
   const [caseTitle, setCaseTitle] = useState("");
   const [caseContent, setCaseContent] = useState("");
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
