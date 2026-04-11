@@ -22,12 +22,24 @@ serve(async (req) => {
     const fields = Array.isArray(form_fields) ? form_fields : [];
     const answerKeyFields = Array.isArray(answer_key_json) ? answer_key_json : [];
 
+    // Build a normalized label map from the answer key for robust matching
+    const normalizeLabel = (l: string) => (l || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const answerKeyByLabel: Record<string, any> = {};
+    answerKeyFields.forEach((k: any) => {
+      if (k.label) answerKeyByLabel[normalizeLabel(k.label)] = k;
+    });
+
     let comparisonPrompt = "Compare as respostas do aluno com o espelho de respostas (gabarito do professor) e avalie cada item.\n\n";
     
-    fields.forEach((field: any, idx: number) => {
+    // Filter only scorable fields (max_score > 0 and not section_header)
+    const scorableFields = fields.filter((f: any) => f.type !== "section_header" && (f.max_score || 0) > 0);
+    
+    scorableFields.forEach((field: any, idx: number) => {
       const studentAnswer = answers_json[field.id] || "(sem resposta)";
-      const keyField = answerKeyFields.find((k: any) => k.id === field.id);
-      const expectedAnswer = keyField?.correct_answer || keyField?.options?.join(", ") || keyField?.label || "(sem espelho)";
+      // Match by ID first, then by normalized label
+      const keyField = answerKeyFields.find((k: any) => k.id === field.id) 
+        || answerKeyByLabel[normalizeLabel(field.label)];
+      const expectedAnswer = keyField?.correct_answer || keyField?.options?.join(", ") || "(sem espelho)";
       
       comparisonPrompt += `Item ${idx + 1}: "${field.label}" (máx ${field.max_score || 0} pts)\n`;
       comparisonPrompt += `  Resposta do aluno: ${typeof studentAnswer === "object" ? JSON.stringify(studentAnswer) : studentAnswer}\n`;
