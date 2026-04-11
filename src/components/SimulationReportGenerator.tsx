@@ -9,16 +9,23 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type StageType = "anamnese" | "soap" | "reconciliacao" | "documentacao";
 
+export interface ReportSection {
+  title: string;
+  items: { label: string; value: string; score?: string }[];
+}
+
 export interface PairReport {
   pairIndex: number;
   students: { name: string; email?: string }[];
   score: number;
   maxScore: number;
   details: { label: string; value: string; score?: string }[];
+  sections?: ReportSection[];
   aiFeedback?: string | null;
   adminFeedback?: string | null;
   aiScore?: number | null;
   adminScore?: number | null;
+  peerScore?: number | null;
 }
 
 interface SimulationReportProps {
@@ -36,6 +43,247 @@ const stageLabels: Record<StageType, string> = {
   documentacao: "Documentação",
 };
 
+// Colors
+const BLUE = [37, 99, 235] as const;
+const DARK = [30, 41, 59] as const;
+const MUTED = [100, 116, 139] as const;
+const LIGHT_BG = [248, 250, 252] as const;
+const BLUE_BG = [239, 246, 255] as const;
+const GREEN_BG = [240, 253, 244] as const;
+const PURPLE_BG = [250, 245, 255] as const;
+const BORDER = [226, 232, 240] as const;
+
+function generatePdf(pair: PairReport, stageType: StageType, roomTitle: string, roomDate?: string): { blob: Blob; base64: string } {
+  const doc = new jsPDF();
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
+  const marginL = 14;
+  const marginR = 14;
+  const contentW = pw - marginL - marginR;
+  let y = 0;
+
+  const addPageIfNeeded = (space: number) => {
+    if (y + space > ph - 22) {
+      doc.addPage();
+      y = 18;
+    }
+  };
+
+  const drawLine = (yPos: number) => {
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.3);
+    doc.line(marginL, yPos, pw - marginR, yPos);
+  };
+
+  const writeWrapped = (text: string, x: number, startY: number, maxW: number, fontSize: number, color: readonly [number, number, number], bold = false): number => {
+    doc.setFontSize(fontSize);
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(text, maxW);
+    const lineH = fontSize * 0.45;
+    for (const line of lines) {
+      addPageIfNeeded(lineH + 1);
+      doc.text(line, x, startY);
+      startY += lineH;
+    }
+    return startY;
+  };
+
+  // ── HEADER ──
+  doc.setFillColor(...BLUE);
+  doc.rect(0, 0, pw, 42, "F");
+  // Accent bar
+  doc.setFillColor(29, 78, 216);
+  doc.rect(0, 42, pw, 3, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Relatório — ${stageLabels[stageType]}`, marginL, 16);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(roomTitle, marginL, 25);
+
+  doc.setFontSize(9);
+  doc.setTextColor(200, 220, 255);
+  doc.text(roomDate || new Date().toLocaleDateString("pt-BR"), pw - marginR, 25, { align: "right" });
+  doc.text("ProvaFácil", marginL, 34);
+  y = 54;
+
+  // ── STUDENT NAME ──
+  const studentLabel = pair.students.length > 1 ? "Dupla" : "Aluno(a)";
+  const nameStr = pair.students.map(s => s.name).join(" & ");
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...DARK);
+  doc.text(`${studentLabel}: ${nameStr}`, marginL, y);
+  y += 10;
+
+  // ── SCORE BOX ──
+  const boxH = 28;
+  doc.setFillColor(...LIGHT_BG);
+  doc.roundedRect(marginL, y, contentW, boxH, 3, 3, "F");
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(marginL, y, contentW, boxH, 3, 3, "S");
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...DARK);
+  doc.text("Nota Final", marginL + 8, y + 11);
+
+  const pct = pair.maxScore > 0 ? (pair.score / pair.maxScore * 100) : 0;
+  // Color based on score
+  if (pct >= 70) doc.setTextColor(22, 163, 74);
+  else if (pct >= 50) doc.setTextColor(202, 138, 4);
+  else doc.setTextColor(220, 38, 38);
+
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${pair.score.toFixed(1)} / ${pair.maxScore.toFixed(1)}`, pw - marginR - 8, y + 14, { align: "right" });
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...MUTED);
+  doc.text(`(${pct.toFixed(0)}%)`, pw - marginR - 8, y + 22, { align: "right" });
+
+  // Score breakdown inside box
+  const scores: string[] = [];
+  if (pair.adminScore != null) scores.push(`Professor: ${pair.adminScore.toFixed(1)}`);
+  if (pair.peerScore != null) scores.push(`Pares: ${pair.peerScore.toFixed(1)}`);
+  if (pair.aiScore != null) scores.push(`IA: ${pair.aiScore.toFixed(1)}`);
+  if (scores.length > 0) {
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text(scores.join("  •  "), marginL + 8, y + 22);
+  }
+  y += boxH + 10;
+
+  // ── SECTIONS (peer evaluations, student answers, etc.) ──
+  const allSections: ReportSection[] = [];
+  
+  // If there are details but no sections, put details in a default section
+  if (pair.details.length > 0 && (!pair.sections || pair.sections.length === 0)) {
+    allSections.push({ title: "Respostas", items: pair.details });
+  }
+  if (pair.sections) {
+    allSections.push(...pair.sections);
+  }
+
+  const sectionColors = [
+    { bg: LIGHT_BG, accent: BLUE },
+    { bg: GREEN_BG, accent: [22, 163, 74] as readonly [number, number, number] },
+    { bg: PURPLE_BG, accent: [126, 34, 206] as readonly [number, number, number] },
+    { bg: BLUE_BG, accent: BLUE },
+  ];
+
+  for (let si = 0; si < allSections.length; si++) {
+    const section = allSections[si];
+    const colors = sectionColors[si % sectionColors.length];
+
+    addPageIfNeeded(20);
+    // Section header
+    doc.setFillColor(...colors.accent);
+    doc.rect(marginL, y, 3, 8, "F");
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text(section.title, marginL + 7, y + 6);
+    y += 12;
+
+    for (const item of section.items) {
+      addPageIfNeeded(16);
+      // Item background
+      doc.setFillColor(...colors.bg);
+      const valueLines = doc.splitTextToSize(item.value || "—", contentW - 16);
+      const itemH = Math.max(10, 6 + valueLines.length * 3.8);
+      doc.roundedRect(marginL + 2, y - 2, contentW - 4, itemH + 2, 1.5, 1.5, "F");
+
+      // Label
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...DARK);
+      const labelText = item.label;
+      doc.text(labelText, marginL + 6, y + 3);
+
+      // Score badge
+      if (item.score) {
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...MUTED);
+        doc.text(item.score, pw - marginR - 6, y + 3, { align: "right" });
+      }
+
+      // Value
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(71, 85, 105);
+      let vy = y + 7;
+      for (const line of valueLines) {
+        addPageIfNeeded(5);
+        doc.text(line, marginL + 6, vy);
+        vy += 3.8;
+      }
+      y += itemH + 3;
+    }
+    y += 4;
+  }
+
+  // ── AI FEEDBACK ──
+  if (pair.aiFeedback) {
+    addPageIfNeeded(25);
+    drawLine(y);
+    y += 6;
+    doc.setFillColor(...BLUE_BG);
+    doc.roundedRect(marginL, y - 3, contentW, 10, 2, 2, "F");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BLUE);
+    doc.text("🤖  Feedback da IA", marginL + 5, y + 3);
+    y += 12;
+
+    y = writeWrapped(pair.aiFeedback, marginL + 5, y, contentW - 10, 8, DARK);
+    y += 6;
+  }
+
+  // ── ADMIN FEEDBACK ──
+  if (pair.adminFeedback) {
+    addPageIfNeeded(25);
+    drawLine(y);
+    y += 6;
+    doc.setFillColor(...PURPLE_BG);
+    doc.roundedRect(marginL, y - 3, contentW, 10, 2, 2, "F");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(126, 34, 206);
+    doc.text("👨‍🏫  Feedback do Professor", marginL + 5, y + 3);
+    y += 12;
+
+    y = writeWrapped(pair.adminFeedback, marginL + 5, y, contentW - 10, 8, DARK);
+    y += 6;
+  }
+
+  // ── FOOTER ──
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    // Footer line
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.3);
+    doc.line(marginL, ph - 14, pw - marginR, ph - 14);
+    doc.setFontSize(7);
+    doc.setTextColor(...MUTED);
+    doc.text(`Página ${i} de ${totalPages}`, pw / 2, ph - 8, { align: "center" });
+    doc.text("Gerado por ProvaFácil", marginL, ph - 8);
+    doc.text(new Date().toLocaleString("pt-BR"), pw - marginR, ph - 8, { align: "right" });
+  }
+
+  const blob = doc.output("blob");
+  const base64 = doc.output("datauristring").split(",")[1];
+  return { blob, base64 };
+}
+
 export function SimulationReportGenerator({ stageName, stageType, roomTitle, roomDate, pairs }: SimulationReportProps) {
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
@@ -43,162 +291,12 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
   const [generatedPdfs, setGeneratedPdfs] = useState<Map<number, { blob: Blob; base64: string }>>(new Map());
   const [sendResults, setSendResults] = useState<{ email: string; success: boolean }[]>([]);
 
-  const generatePdf = (pair: PairReport): { blob: Blob; base64: string } => {
-    const doc = new jsPDF();
-    const pw = doc.internal.pageSize.getWidth();
-    const ph = doc.internal.pageSize.getHeight();
-    let y = 15;
-
-    const addPageIfNeeded = (neededSpace: number) => {
-      if (y + neededSpace > ph - 20) {
-        doc.addPage();
-        y = 20;
-      }
-    };
-
-    // Header
-    doc.setFillColor(37, 99, 235);
-    doc.rect(0, 0, pw, 38, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.text(`Relatório — ${stageLabels[stageType]}`, 15, 16);
-    doc.setFontSize(10);
-    doc.text(roomTitle, 15, 24);
-    doc.text(roomDate || new Date().toLocaleDateString("pt-BR"), pw - 15, 24, { align: "right" });
-    doc.setFontSize(9);
-    doc.text("ProvaFácil", 15, 32);
-    y = 48;
-
-    // Students
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    const studentLabel = pair.students.length > 1 ? "Dupla" : "Aluno(a)";
-    doc.text(`${studentLabel}: ${pair.students.map(s => s.name).join(" & ")}`, 15, y);
-    y += 10;
-
-    // Score summary
-    doc.setFillColor(245, 245, 245);
-    doc.roundedRect(15, y, pw - 30, 22, 3, 3, "F");
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Nota Final", 20, y + 9);
-    doc.setFontSize(16);
-    const scoreText = `${pair.score.toFixed(1)} / ${pair.maxScore.toFixed(1)}`;
-    doc.text(scoreText, pw - 20, y + 14, { align: "right" });
-    const pct = pair.maxScore > 0 ? (pair.score / pair.maxScore * 100) : 0;
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text(`(${pct.toFixed(0)}%)`, pw - 20, y + 20, { align: "right" });
-    y += 30;
-
-    // Individual scores
-    doc.setTextColor(0, 0, 0);
-    if (pair.aiScore != null || pair.adminScore != null) {
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text("Detalhamento de Notas", 15, y); y += 7;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-
-      if (pair.adminScore != null) {
-        doc.text(`• Nota do Professor: ${pair.adminScore}`, 20, y); y += 5;
-      }
-      if (pair.aiScore != null) {
-        doc.text(`• Nota da IA: ${pair.aiScore}`, 20, y); y += 5;
-      }
-      y += 5;
-    }
-
-    // Details (answers)
-    if (pair.details.length > 0) {
-      addPageIfNeeded(20);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text("Respostas", 15, y); y += 7;
-
-      for (const detail of pair.details) {
-        addPageIfNeeded(20);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(80, 80, 80);
-        const labelLine = detail.score ? `${detail.label} (${detail.score})` : detail.label;
-        doc.text(labelLine, 15, y); y += 4;
-
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(0, 0, 0);
-        const lines = doc.splitTextToSize(detail.value || "—", pw - 35);
-        for (const line of lines) {
-          addPageIfNeeded(5);
-          doc.text(line, 20, y); y += 4;
-        }
-        y += 3;
-      }
-    }
-
-    // AI Feedback
-    if (pair.aiFeedback) {
-      addPageIfNeeded(30);
-      y += 3;
-      doc.setFillColor(239, 246, 255);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(37, 99, 235);
-      doc.text("Feedback da IA", 15, y); y += 7;
-
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(8);
-      const feedbackLines = doc.splitTextToSize(pair.aiFeedback, pw - 35);
-      for (const line of feedbackLines) {
-        addPageIfNeeded(5);
-        doc.text(line, 20, y); y += 4;
-      }
-      y += 5;
-    }
-
-    // Admin Feedback
-    if (pair.adminFeedback) {
-      addPageIfNeeded(30);
-      y += 3;
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(100, 30, 200);
-      doc.text("Feedback do Professor", 15, y); y += 7;
-
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(8);
-      const feedbackLines = doc.splitTextToSize(pair.adminFeedback, pw - 35);
-      for (const line of feedbackLines) {
-        addPageIfNeeded(5);
-        doc.text(line, 20, y); y += 4;
-      }
-      y += 5;
-    }
-
-    // Footer
-    const totalPages = doc.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFontSize(7);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Página ${i} de ${totalPages}`, pw / 2, ph - 8, { align: "center" });
-      doc.text("Gerado por ProvaFácil", 15, ph - 8);
-    }
-
-    const blob = doc.output("blob");
-    const base64 = doc.output("datauristring").split(",")[1];
-    return { blob, base64 };
-  };
-
   const handleGenerateAll = async () => {
     setGenerating(true);
     try {
       const pdfs = new Map<number, { blob: Blob; base64: string }>();
       for (const pair of pairs) {
-        const result = generatePdf(pair);
+        const result = generatePdf(pair, stageType, roomTitle, roomDate);
         pdfs.set(pair.pairIndex, result);
       }
       setGeneratedPdfs(pdfs);
@@ -217,7 +315,7 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
     const url = URL.createObjectURL(pdf.blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `relatorio-${stageType}-dupla${pair.pairIndex + 1}.pdf`;
+    a.download = `relatorio-${stageType}-${pair.pairIndex + 1}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -225,37 +323,31 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
   const sendEmail = async (pair: PairReport) => {
     const pdf = generatedPdfs.get(pair.pairIndex);
     if (!pdf) return;
-
     const emails = pair.students.map(s => s.email).filter((e): e is string => !!e);
     if (emails.length === 0) {
       toast.error("Nenhum email cadastrado para esta dupla.");
       return;
     }
-
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-simulation-report", {
         body: {
           emails,
           pdfBase64: pdf.base64,
-          fileName: `relatorio-${stageType}-dupla${pair.pairIndex + 1}.pdf`,
+          fileName: `relatorio-${stageType}-${pair.pairIndex + 1}.pdf`,
           roomTitle,
           stageName: stageLabels[stageType],
           studentNames: pair.students.map(s => s.name),
         },
       });
-
       if (error) throw error;
-
       const results = data?.results || [];
       const newSendResults = results.map((r: any) => ({ email: r.email, success: r.success }));
       setSendResults(prev => [...prev, ...newSendResults]);
-
-      const allSuccess = newSendResults.every((r: any) => r.success);
-      if (allSuccess) {
+      if (newSendResults.every((r: any) => r.success)) {
         toast.success(`Relatório enviado para ${emails.join(", ")}`);
       } else {
-        toast.error("Alguns emails falharam. Verifique os resultados.");
+        toast.error("Alguns emails falharam.");
       }
     } catch (err) {
       toast.error("Erro ao enviar email");
@@ -270,16 +362,14 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
     for (const pair of pairs) {
       const pdf = generatedPdfs.get(pair.pairIndex);
       if (!pdf) continue;
-
       const emails = pair.students.map(s => s.email).filter((e): e is string => !!e);
       if (emails.length === 0) continue;
-
       try {
         const { data, error } = await supabase.functions.invoke("send-simulation-report", {
           body: {
             emails,
             pdfBase64: pdf.base64,
-            fileName: `relatorio-${stageType}-dupla${pair.pairIndex + 1}.pdf`,
+            fileName: `relatorio-${stageType}-${pair.pairIndex + 1}.pdf`,
             roomTitle,
             stageName: stageLabels[stageType],
             studentNames: pair.students.map(s => s.name),
@@ -289,9 +379,7 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
           const results = data.results.map((r: any) => ({ email: r.email, success: r.success }));
           setSendResults(prev => [...prev, ...results]);
         }
-      } catch {
-        // continue with next
-      }
+      } catch { /* continue */ }
     }
     setSending(false);
     toast.success("Envio concluído!");
@@ -322,7 +410,6 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
             {pairs.map(pair => {
               const hasEmails = pair.students.some(s => !!s.email);
               const sentEmails = sendResults.filter(r => pair.students.some(s => s.email === r.email));
-
               return (
                 <div key={pair.pairIndex} className="border rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -344,7 +431,6 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
                       </Button>
                     </div>
                   </div>
-
                   {sentEmails.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {sentEmails.map((r, i) => (
