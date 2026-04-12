@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, Plus, Trash2, Share2, Copy, BookOpen } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, Save, Plus, Trash2, Share2, Copy, BookOpen, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
@@ -22,6 +23,15 @@ export default function ProgressTestEditor() {
   const [applicationDate, setApplicationDate] = useState("");
   const [targetYears, setTargetYears] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [status, setStatus] = useState("draft");
+  const [saving, setSaving] = useState(false);
+  
+  // AI Generator state
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiCourse, setAiCourse] = useState("Medicina");
+  const [aiSubjects, setAiSubjects] = useState("");
+  const [aiDifficulty, setAiDifficulty] = useState("variada");
+  const [aiQuestionsPerYear, setAiQuestionsPerYear] = useState<Record<string, number>>({ "1": 5, "2": 5, "3": 5, "4": 5, "5": 5, "6": 5 });
+  const [aiGenerating, setAiGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const { data: test } = useQuery({
