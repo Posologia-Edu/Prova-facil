@@ -65,18 +65,35 @@ export default function ProgressTestStudentPortal() {
     const { data: tqs } = await supabase.from("progress_test_questions" as any).select("*").eq("test_id", testId).order("position");
     if (tqs && tqs.length > 0) {
       const questionIds = (tqs as any[]).map((q: any) => q.question_id);
-      const { data: qData } = await supabase.from("question_bank").select("id, content_json, type").in("id", questionIds);
-      const enriched = (tqs as any[]).map((tq: any) => ({
-        ...tq,
-        questionData: (qData || []).find((q: any) => q.id === tq.question_id),
-      }));
+      const { data: qData, error: qError } = await supabase.from("question_bank").select("id, content_json, type").in("id", questionIds);
+      if (qError) {
+        console.error("Erro ao carregar questões:", qError);
+        toast({ title: "Erro ao carregar conteúdo das questões. Verifique se o teste está publicado.", variant: "destructive" });
+      }
+      const enriched = (tqs as any[]).map((tq: any) => {
+        const qd = (qData || []).find((q: any) => q.id === tq.question_id);
+        if (qd) {
+          // Safely parse content_json if it's a string
+          if (typeof qd.content_json === "string") {
+            try { qd.content_json = JSON.parse(qd.content_json); } catch {}
+          }
+        }
+        return { ...tq, questionData: qd };
+      });
       setQuestions(enriched);
     }
     setLoading(false);
   };
 
+  const questionsWithContent = questions.filter(q => q.questionData?.content_json);
+  const hasLoadError = questions.length > 0 && questionsWithContent.length === 0;
+
   const handleStart = async () => {
     if (!name.trim()) { toast({ title: "Informe seu nome", variant: "destructive" }); return; }
+    if (hasLoadError) {
+      toast({ title: "Conteúdo das questões não foi carregado. Tente recarregar a página.", variant: "destructive" });
+      return;
+    }
     const { data, error } = await supabase.from("progress_test_sessions" as any).insert({
       test_id: testId, student_name: name, student_email: email || null, student_year: Number(studentYear),
     } as any).select().single();
@@ -165,8 +182,11 @@ export default function ProgressTestStudentPortal() {
                 </SelectContent>
               </Select>
             </div>
-            <Button className="w-full" onClick={handleStart} disabled={!name.trim()}>
-              Iniciar Teste ({questions.length} questões)
+            {hasLoadError && (
+              <p className="text-sm text-destructive text-center">⚠️ Não foi possível carregar o conteúdo das questões. Verifique se o teste está publicado ou recarregue a página.</p>
+            )}
+            <Button className="w-full" onClick={handleStart} disabled={!name.trim() || hasLoadError}>
+              Iniciar Teste ({questionsWithContent.length > 0 ? questionsWithContent.length : questions.length} questões)
             </Button>
           </CardContent>
         </Card>

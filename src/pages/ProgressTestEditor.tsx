@@ -127,7 +127,24 @@ export default function ProgressTestEditor() {
 
   const studentPortalUrl = `${window.location.origin}/progress-test/student/${id}`;
 
+  const getIncompleteCount = () => {
+    if (!testQuestions || !questionBank) return 0;
+    return testQuestions.filter((tq: any) => {
+      const q = questionBank.find((q) => q.id === tq.question_id);
+      if (!q) return true;
+      const c = q.content_json as any;
+      const stem = c?.stem || c?.question_text || c?.statement;
+      const opts = c?.options;
+      return !stem || !opts;
+    }).length;
+  };
+
   const handlePublish = async () => {
+    const incomplete = getIncompleteCount();
+    if (incomplete > 0) {
+      toast({ title: `${incomplete} questão(ões) sem enunciado ou alternativas. Revise antes de publicar.`, variant: "destructive" });
+      return;
+    }
     await supabase.from("progress_tests" as any).update({ status: "published", updated_at: new Date().toISOString() } as any).eq("id", id);
     setStatus("published");
     toast({ title: "Teste publicado!" });

@@ -193,10 +193,20 @@ Crie questões variadas cobrindo as áreas temáticas solicitadas, com dificulda
 
     // Insert questions into question_bank and link to progress test
     let insertedCount = 0;
+    let skippedCount = 0;
     for (const q of questions) {
+      // Normalize stem from multiple possible field names
+      const stem = q.stem || q.question_text || q.statement || "";
+      if (!stem || !q.options || !q.correct_answer) {
+        console.warn("Skipping incomplete question:", JSON.stringify(q).slice(0, 200));
+        skippedCount++;
+        continue;
+      }
+
       const contentJson = {
-        question_text: q.stem,
-        stem: q.stem,
+        question_text: stem,
+        stem: stem,
+        statement: stem,
         options: q.options,
         correct_answer: q.correct_answer,
         explanation: q.explanation || "",
@@ -243,6 +253,7 @@ Crie questões variadas cobrindo as áreas temáticas solicitadas, com dificulda
         success: true,
         totalGenerated: questions.length,
         totalInserted: insertedCount,
+        totalSkipped: skippedCount,
         provider,
       }),
       {
