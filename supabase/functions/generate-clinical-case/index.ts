@@ -9,87 +9,44 @@ const corsHeaders = {
 
 const ANAMNESIS_PROMPT = `Você é um especialista em educação farmacêutica clínica. Gere um roteiro de paciente simulado para prática de anamnese farmacêutica.
 
-REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
-- NÃO use Markdown (nenhum #, ##, **, *, ---, \`\`\`, etc.)
-- NÃO comece com frases introdutórias como "Excelente", "Vamos construir", "Aqui está", "Claro" ou similares.
-- Comece DIRETO com o conteúdo do caso clínico.
-- Use APENAS texto plano com seções separadas por linhas em branco.
-- Para títulos de seção, escreva em MAIÚSCULAS seguido de dois pontos. Exemplo: "IDENTIFICAÇÃO DO PACIENTE:"
-- Para tabelas de medicamentos, use formato tabular com espaçamento fixo usando TAB, assim:
-  Medicamento          Dose          Posologia          Tempo de Uso
-  Metformina           850 mg        2x/dia             3 anos
-  Losartana            50 mg         1x/dia             5 anos
-- Listas devem usar "- " (hífen e espaço) como marcador, sem negrito.
+REGRAS OBRIGATÓRIAS:
+1. NÃO use Markdown (nenhum #, ##, **, *, ---, \`\`\`, |---|, etc.)
+2. NÃO comece com frases introdutórias como "Excelente", "Vamos construir", "Aqui está", "Claro", "Certo" ou similares.
+3. NÃO use tabelas. Apresente medicamentos em formato de texto corrido ou lista simples.
+4. Comece DIRETO com o conteúdo.
 
-O roteiro deve conter as seguintes seções:
+FORMATO OBRIGATÓRIO:
+- O caso deve ter um TÍTULO curto no formato: "Nome do Paciente (iniciais), idade"
+  Exemplo: "Geraldo Martins (G.M.), 70 anos"
+- Após o título, escreva um TEXTO CORRIDO (narrativa) descrevendo a história clínica do paciente em 3-5 parágrafos.
+- Inclua no texto corrido: dados do paciente, queixas, histórico de doenças, medicamentos em uso (com doses e posologias mencionados naturalmente no texto), hábitos de vida, comportamento do paciente, e detalhes que o aluno precisaria descobrir durante a anamnese.
+- Os medicamentos devem aparecer naturalmente no texto, exemplo: "Está em uso de metformina 850 mg 2x/dia, glibenclamida 5 mg 1x/dia, losartana 50 mg 2x/dia e omeprazol 20 mg/dia."
+- Adicione detalhes comportamentais e psicossociais que enriqueçam a simulação.
+- NÃO separe em seções com títulos. Escreva como uma narrativa contínua e fluida.
 
-IDENTIFICAÇÃO DO PACIENTE:
-Nome fictício, idade, sexo, profissão, estado civil
-
-QUEIXA PRINCIPAL:
-Motivo da consulta farmacêutica (1-2 frases)
-
-HISTÓRIA DA DOENÇA ATUAL (HDA):
-Descrição cronológica dos sintomas, duração, fatores de melhora/piora
-
-MEDICAMENTOS EM USO:
-Tabela com medicamento, dose, posologia e tempo de uso (mínimo 3-5 medicamentos)
-
-HISTÓRIA PREGRESSA:
-Doenças anteriores, cirurgias, alergias
-
-HISTÓRIA SOCIAL:
-Tabagismo, etilismo, atividade física, alimentação
-
-ORIENTAÇÕES AO ATOR/PACIENTE SIMULADO:
-- Como o paciente deve se comportar
-- Informações que só deve revelar se perguntado
-- Nível de conhecimento sobre seus medicamentos
-
-Gere um caso realista e clinicamente relevante. Use linguagem clara e objetiva.`;
+Gere um caso realista e clinicamente relevante.`;
 
 const RECONCILIATION_PROMPT = `Você é um especialista em educação farmacêutica clínica. Gere um caso clínico completo para prática de reconciliação medicamentosa.
 
-REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
-- NÃO use Markdown (nenhum #, ##, **, *, ---, \`\`\`, etc.)
-- NÃO comece com frases introdutórias como "Excelente", "Vamos construir", "Aqui está", "Claro" ou similares.
-- Comece DIRETO com o conteúdo do caso clínico.
-- Use APENAS texto plano com seções separadas por linhas em branco.
-- Para títulos de seção, escreva em MAIÚSCULAS seguido de dois pontos. Exemplo: "DADOS DO PACIENTE:"
-- Para tabelas, use formato tabular com espaçamento fixo usando TAB, assim:
-  Medicamento          Dose          Posologia          Via
-  Metformina           850 mg        2x/dia             VO
-  Losartana            50 mg         1x/dia             VO
-- Para exames laboratoriais, use formato tabular:
-  Exame                     Resultado          Valor de Referência
-  Glicemia de Jejum         285 mg/dL          70 - 99 mg/dL
-  Creatinina                2,8 mg/dL          0,6 - 1,3 mg/dL
-- Listas devem usar "- " (hífen e espaço) como marcador, sem negrito.
+REGRAS OBRIGATÓRIAS:
+1. NÃO use Markdown (nenhum #, ##, **, *, ---, \`\`\`, |---|, etc.)
+2. NÃO comece com frases introdutórias como "Excelente", "Vamos construir", "Aqui está", "Claro", "Certo" ou similares.
+3. NÃO use tabelas formatadas com | ou tabulação. Apresente tudo em texto corrido ou listas simples com hífen.
+4. Comece DIRETO com o conteúdo.
 
-O caso deve conter:
+FORMATO OBRIGATÓRIO:
+- O caso deve ter um TÍTULO curto no formato: "Nome do Paciente (iniciais), idade"
+  Exemplo: "Larissa Monteiro (L.M.), 31 anos"
+- Após o título, escreva o caso como TEXTO CORRIDO (narrativa) em parágrafos.
+- Parágrafo 1: Dados do paciente (nome, idade, sexo, profissão), motivo da internação/consulta e diagnósticos.
+- Parágrafo 2: Medicamentos em uso domiciliar, mencionados naturalmente no texto com doses e posologias. Exemplo: "Faz uso domiciliar de metformina 850 mg 2x/dia via oral, losartana 50 mg 1x/dia, anlodipino 5 mg 1x/dia e sinvastatina 20 mg à noite."
+- Parágrafo 3: Medicamentos prescritos na internação (se aplicável), incluindo discrepâncias intencionais em relação ao uso domiciliar (omissões, duplicidades, doses diferentes).
+- Parágrafo 4: Exames laboratoriais relevantes e sinais vitais, mencionados naturalmente.
+- Parágrafo 5 (opcional, para uso exclusivo do professor): Breve menção das discrepâncias que o aluno deve identificar.
+- NÃO separe em seções com títulos em maiúsculas. Escreva como narrativa contínua.
+- Inclua discrepâncias clinicamente significativas para identificação pelos alunos.
 
-DADOS DO PACIENTE:
-Nome fictício, idade, sexo, peso, altura, motivo da internação/consulta
-
-DIAGNÓSTICOS:
-Lista de diagnósticos ativos (pelo menos 2-3)
-
-MEDICAMENTOS PRÉ-INTERNAÇÃO / USO DOMICILIAR:
-Tabela com nome, dose, posologia, via de administração (pelo menos 5-8 medicamentos)
-
-MEDICAMENTOS PRESCRITOS NA INTERNAÇÃO / ATUAL:
-Tabela com nome, dose, posologia, via (incluir discrepâncias intencionais: omissões, duplicidades, doses diferentes)
-
-EXAMES LABORATORIAIS RELEVANTES:
-Tabela com exame, resultado e valor de referência
-
-SINAIS VITAIS:
-PA, FC, FR, Temperatura, SpO2
-
-DISCREPÂNCIAS PARA IDENTIFICAÇÃO (USO EXCLUSIVO DO PROFESSOR):
-Lista das discrepâncias que o aluno deve encontrar, com classificação de cada uma (omissão, comissão, dose, frequência, via)
-
-Gere um caso realista com discrepâncias clinicamente significativas para identificação pelos alunos.`;
+Gere um caso realista e clinicamente relevante.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -130,7 +87,7 @@ serve(async (req) => {
       {
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Gere um caso clínico sobre o seguinte tema: ${theme.trim()}. Lembre-se: comece direto com o conteúdo, sem introduções, sem Markdown, texto plano profissional com tabelas formatadas por tabulação.` },
+          { role: "user", content: `Gere um caso clínico sobre o seguinte tema: ${theme.trim()}. Lembre-se: comece direto com o nome do paciente como título, depois escreva tudo em texto corrido narrativo, sem introduções, sem Markdown, sem tabelas, sem seções com títulos em maiúsculas.` },
         ],
       },
       { userId, promptType: `generate-clinical-case-${phase}` },
@@ -152,27 +109,32 @@ serve(async (req) => {
       .replace(/\*/g, "")              // remove italic *
       .replace(/^---+$/gm, "")        // remove horizontal rules
       .replace(/```[\s\S]*?```/g, "")  // remove code blocks
+      .replace(/\|[^\n]+\|/g, "")     // remove markdown table rows
+      .replace(/^[\s|:-]+$/gm, "")    // remove table separators
       .replace(/^\s*\n{3,}/gm, "\n\n") // collapse excessive blank lines
       .trim();
 
     // Remove intro sentences at the start
     const introPatterns = [
-      /^(Excelente|Vamos|Aqui está|Claro|Certo|Perfeito|Ótimo|Com certeza|Sem problemas)[^\n]*\n+/i,
+      /^(Excelente|Vamos|Aqui está|Claro|Certo|Perfeito|Ótimo|Com certeza|Sem problemas|Caso\s*\d*\s*[-–]?\s*)[^\n]*\n+/i,
       /^[^\n]{0,200}(vamos construir|vamos criar|segue|apresento)[^\n]*\n+/i,
     ];
     for (const pattern of introPatterns) {
       content = content.replace(pattern, "");
     }
-    content = content.trim();
+    // Remove section headers in ALL CAPS followed by colon
+    content = content.replace(/^[A-ZÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s/()]{5,}:\s*\n?/gm, "");
+    content = content.replace(/^\s*\n{3,}/gm, "\n\n").trim();
 
-    // Extract title from first meaningful line
+    // Extract title: first line (should be "Name (initials), age")
     const lines = content.split("\n").filter((l: string) => l.trim());
     let title = `Caso - ${theme.trim().substring(0, 50)}`;
-    for (const line of lines) {
-      const clean = line.replace(/^[#*\s]+/, "").replace(/:/g, "").trim();
-      if (clean.length > 5 && clean.length < 100 && !clean.startsWith("-")) {
-        title = clean;
-        break;
+    if (lines.length > 0) {
+      const firstLine = lines[0].replace(/^[#*\s]+/, "").replace(/:$/, "").trim();
+      if (firstLine.length > 3 && firstLine.length < 120) {
+        title = firstLine;
+        // Remove title from content since it will be stored separately
+        content = content.replace(lines[0], "").trim();
       }
     }
 

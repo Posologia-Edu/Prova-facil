@@ -799,58 +799,92 @@ export default function ReconciliationEditor() {
 
         {/* Clinical Cases Tab */}
         <TabsContent value="cases" className="space-y-4">
-          {clinicalCases.map((cc: any) => (
-            <Card key={cc.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{cc.title}</CardTitle>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" title="Salvar no Banco" onClick={async () => {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      if (!session) return;
-                      await supabase.from("clinical_case_bank").insert({ user_id: session.user.id, phase: "reconciliation" as const, title: cc.title, content: cc.content || "" });
-                      toast({ title: "Caso salvo no banco!" });
-                    }}>
-                      <Save className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => { setEditingCaseId(cc.id); setCaseTitle(cc.title); setCaseContent(cc.content || ""); }}>
-                      Editar
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteCase(cc.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-3">{cc.content}</p>
-              </CardContent>
-            </Card>
-          ))}
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{editingCaseId ? "Editar Caso Clínico" : "Novo Caso Clínico"}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Título</Label>
-                <Input value={caseTitle} onChange={e => setCaseTitle(e.target.value)} placeholder="Ex: Caso Clínico 1 - Diabetes" />
-              </div>
-              <div>
-                <Label>Conteúdo</Label>
-                <Textarea value={caseContent} onChange={e => setCaseContent(e.target.value)} rows={8} placeholder="Descreva o caso clínico..." />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={saveCase} disabled={!caseTitle.trim()}>Salvar Caso</Button>
-                {editingCaseId && (
-                  <Button variant="ghost" onClick={() => { setEditingCaseId(null); setCaseTitle(""); setCaseContent(""); }}>
-                    Cancelar
+          {clinicalCases.map((cc: any, i: number) => (
+            <div key={cc.id} className="border rounded-lg p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="font-medium">Caso Clínico {i + 1}</Label>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" title="Salvar no Banco" onClick={async () => {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session) return;
+                    await supabase.from("clinical_case_bank").insert({ user_id: session.user.id, phase: "reconciliation" as const, title: cc.title, content: cc.content || "" });
+                    toast({ title: "Caso salvo no banco!" });
+                  }}>
+                    <Save className="h-3.5 w-3.5" />
                   </Button>
-                )}
+                  <Button variant="ghost" size="sm" onClick={() => deleteCase(cc.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-
+              <Input
+                placeholder={`Caso Clínico ${i + 1}`}
+                value={cc.id === editingCaseId ? caseTitle : cc.title}
+                onChange={(e) => {
+                  if (cc.id !== editingCaseId) {
+                    setEditingCaseId(cc.id);
+                    setCaseTitle(e.target.value);
+                    setCaseContent(cc.content || "");
+                  } else {
+                    setCaseTitle(e.target.value);
+                  }
+                }}
+                onFocus={() => {
+                  if (cc.id !== editingCaseId) {
+                    setEditingCaseId(cc.id);
+                    setCaseTitle(cc.title);
+                    setCaseContent(cc.content || "");
+                  }
+                }}
+                onBlur={async () => {
+                  if (cc.id === editingCaseId && caseTitle.trim()) {
+                    await supabase.from("reconciliation_clinical_cases").update({ title: caseTitle, content: caseContent }).eq("id", cc.id);
+                    refetchCases();
+                  }
+                }}
+              />
+              <Textarea
+                value={cc.id === editingCaseId ? caseContent : cc.content || ""}
+                onChange={(e) => {
+                  if (cc.id !== editingCaseId) {
+                    setEditingCaseId(cc.id);
+                    setCaseTitle(cc.title);
+                    setCaseContent(e.target.value);
+                  } else {
+                    setCaseContent(e.target.value);
+                  }
+                }}
+                onFocus={() => {
+                  if (cc.id !== editingCaseId) {
+                    setEditingCaseId(cc.id);
+                    setCaseTitle(cc.title);
+                    setCaseContent(cc.content || "");
+                  }
+                }}
+                onBlur={async () => {
+                  if (cc.id === editingCaseId && caseTitle.trim()) {
+                    await supabase.from("reconciliation_clinical_cases").update({ title: caseTitle, content: caseContent }).eq("id", cc.id);
+                    refetchCases();
+                  }
+                }}
+                rows={8}
+                placeholder="Descreva o caso clínico..."
+              />
+            </div>
+          ))}
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={async () => {
+              if (!roomId) return;
+              await supabase.from("reconciliation_clinical_cases").insert({
+                room_id: roomId,
+                title: `Caso Clínico ${clinicalCases.length + 1}`,
+                content: "",
+                position: clinicalCases.length,
+              });
+              refetchCases();
+            }}>
+              <Plus className="h-4 w-4 mr-1" />Adicionar Caso Clínico
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setCaseBankOpen(true)}>
               <BookOpen className="h-4 w-4 mr-1" />Banco de Casos
             </Button>
