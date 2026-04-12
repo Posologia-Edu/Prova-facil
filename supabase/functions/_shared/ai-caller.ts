@@ -260,17 +260,66 @@ export async function callAiWithFallback(
         logAiUsage(usedProvider, usedModel, usageContext.promptType, usageContext.userId, tokensIn, tokensOut);
       } catch {
         // Estimate from message length if parsing fails
-        const totalChars = options.messages.reduce((sum, m) => sum + m.content.length, 0);
+        const totalChars = options.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0);
         const estimatedTokens = Math.ceil(totalChars / 4);
         logAiUsage(usedProvider, usedModel, usageContext.promptType, usageContext.userId, estimatedTokens, 0);
       }
     } else {
       // For streaming: estimate input tokens from prompt, output unknown
-      const totalChars = options.messages.reduce((sum, m) => sum + m.content.length, 0);
+      const totalChars = options.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0);
       const estimatedInputTokens = Math.ceil(totalChars / 4);
       logAiUsage(usedProvider, usedModel, usageContext.promptType, usageContext.userId, estimatedInputTokens, 0);
     }
   }
 
   return { response, provider: usedProvider };
+}
+
+/**
+ * Calls AI for image generation with fallback.
+ * Tries Google provider first (supports native image generation), then Lovable AI Gateway.
+ */
+export async function callAiImageWithFallback(
+  options: AiCallOptions,
+  usageContext?: AiUsageContext,
+): Promise<{ response: Response; provider: string }> {
+  const imageOptions: AiCallOptions = {
+    ...options,
+    model: options.model || "google/gemini-2.5-flash-image",
+    modalities: ["image", "text"],
+  };
+
+  // Try Google provider first (native image support)
+  const providers = await getActiveProviders();
+  const googleProvider = providers.find(p => p.provider === "google");
+
+  if (googleProvider) {
+    try {
+      console.log("Trying Google provider for image generation");
+      const response = await callOpenAiCompatibleApi(
+        { ...googleProvider, defaultModel: "gemini-2.5-flash-image" },
+        { ...imageOptions, model: "gemini-2.5-flash-image" },
+      );
+      if (response.ok) {
+        console.log("Successfully used Google for image generation");
+        if (usageContext) {
+          const totalChars = options.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0);
+          logAiUsage("google", "gemini-2.5-flash-image", usageContext.promptType, usageContext.userId, Math.ceil(totalChars / 4), 0);
+        }
+        return { response, provider: "google" };
+      }
+      console.warn(`Google image generation returned ${response.status}, falling back`);
+    } catch (err) {
+      console.warn("Google image generation failed:", (err as Error).message);
+    }
+  }
+
+  // Fallback to Lovable AI Gateway
+  console.log("Using Lovable AI Gateway for image generation");
+  const response = await callLovableAi(imageOptions);
+  if (usageContext) {
+    const totalChars = options.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0);
+    logAiUsage("lovable", imageOptions.model || "google/gemini-2.5-flash-image", usageContext.promptType, usageContext.userId, Math.ceil(totalChars / 4), 0);
+  }
+  return { response, provider: "lovable" };
 }
