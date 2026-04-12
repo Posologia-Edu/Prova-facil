@@ -1,71 +1,62 @@
 
+Objetivo
 
-## Plano: Geração de Imagens Médicas e Teste de Progresso com Prioridade de Provedores Externos
+Corrigir definitivamente o Progress Test para que o portal do aluno sempre exiba enunciado e alternativas das questões geradas por IA.
 
-### Resumo
-Garantir que as duas novas funcionalidades de IA (geração de imagens médicas e geração de teste de progresso) utilizem prioritariamente os provedores de API configurados pelo administrador (Google, OpenAI, etc.) e apenas como fallback o Lovable AI Gateway — seguindo o mesmo padrão já usado no `callAiWithFallback`.
+O que eu encontrei
 
-### Mudanças Necessárias
+- Li o gerador (`generate-progress-test`), o editor e o portal do aluno.
+- Consultei o banco: no teste mais recente há 12 questões, e elas estão salvas com `stem/question_text` e `options`.
+- Portanto, o problema não parece estar na geração atual das questões; os dados existem no banco.
+- O problema mais provável está no acesso do portal público ao `question_bank`: a tela do aluno carrega `progress_test_questions`, depois tenta buscar as questões na `question_bank`, mas essa tabela não tem uma política pública específica para Progress Test.
+- Como o componente hoje ignora falhas dessa consulta, ele cai no fallback `"Questão sem enunciado"` e renderiza sem alternativas.
 
-**1. Estender `ai-caller.ts` para suportar geração de imagens**
+Plano de implementação
 
-O utilitário `callAiWithFallback` atual não suporta o parâmetro `modalities` necessário para geração de imagens. Será adicionado:
-- Nova propriedade `modalities` na interface `AiCallOptions`
-- Propagação do `modalities` nas funções `callOpenAiCompatibleApi` e `callLovableAi`
-- Novo export `callAiImageWithFallback` que tenta primeiro o Google Generative AI (que suporta geração de imagens nativamente) e cai para o Lovable AI Gateway com modelo `google/gemini-2.5-flash-image`
+1. Corrigir o acesso público com segurança
+- Criar uma migration para permitir leitura em `question_bank` somente quando a questão estiver vinculada a um Progress Test publicado.
+- Ajustar também as políticas públicas de `progress_tests` e `progress_test_questions` para expor apenas testes publicados, em vez de deixar tudo público.
+- Manter intacto o acesso do autor e de administradores.
 
-**2. Edge Function `generate-medical-image`**
+2. Tornar o portal do aluno robusto
+- Atualizar `src/pages/ProgressTestStudentPortal.tsx` para:
+  - tratar erro de carregamento de questões em vez de falhar silenciosamente;
+  - bloquear o início da prova se o conteúdo não tiver sido carregado corretamente;
+  - mostrar mensagem clara quando o teste não estiver publicado ou quando houver inconsistência;
+  - manter parse seguro para `content_json` em formato objeto ou string.
 
-- Usa `callAiImageWithFallback` para gerar imagens médicas sintéticas
-- Recebe: `questionText` (enunciado), `imageType` (radiografia, TC, RM, lâmina, ECG, ultrassom), `details` (opcional)
-- O prompt instrui a IA a gerar uma imagem médica educacional realista e inédita
-- Faz upload da imagem base64 resultante para o bucket `question-images`
-- Retorna a URL pública da imagem
-- Trata erros 402/429 com mensagens claras
+3. Blindar a geração para próximos testes
+- Revisar `supabase/functions/generate-progress-test/index.ts` para normalizar campos antes de salvar (`stem`, `question_text`, `statement`, `options`).
+- Impedir inserção de questão incompleta e retornar contagem de itens descartados/inválidos, se houver.
 
-**3. Edge Function `generate-progress-test`**
+4. Melhorar a checagem no editor
+- Ajustar `src/pages/ProgressTestEditor.tsx` para sinalizar questões incompletas antes da publicação.
+- Assim o professor consegue detectar problema antes de compartilhar o link.
 
-- Usa `callAiWithFallback` (já existente) — provedores externos primeiro, Lovable AI como fallback
-- Recebe: `testId`, `course`, `subjects` (áreas temáticas), `questionsPerYear` (mapa ano→quantidade), `difficulty`
-- Gera questões de múltipla escolha via tool calling (saída estruturada em JSON)
-- Salva as questões no `question_bank` e vincula ao `progress_test_questions`
-- Retorna contagem de questões geradas
+Validação depois da implementação
 
-**4. UI — Botão de Imagem Médica (`Questions.tsx`)**
+- Gerar um novo Progress Test com IA.
+- Abrir o portal do aluno sem login.
+- Confirmar que todas as questões exibem enunciado e alternativas A–E.
+- Confirmar que rascunhos não ficam acessíveis publicamente.
+- Testar também um teste já existente para validar retrocompatibilidade.
 
-- Botão "Gerar Imagem Médica" (ícone Sparkles) ao lado do `QuestionImageUploader`
-- Popover/Dialog com: tipo de imagem (select), detalhes adicionais (input opcional), botão "Gerar"
-- Preview da imagem gerada antes de confirmar adição ao array `newImages`
-- Loading state durante geração
+Arquivos prováveis
 
-**5. UI — Gerador de Teste de Progresso (`ProgressTestEditor.tsx`)**
-
-- Botão "Gerar com IA" na interface do editor
-- Dialog com campos: Curso, Áreas Temáticas, Questões por Ano (1º-6º), Dificuldade
-- Ao gerar, chama a edge function e atualiza a lista de questões do teste
-- Loading state com feedback de progresso
-
-**6. Configuração**
-
-- Registrar ambas as funções no `supabase/config.toml` com `verify_jwt = false`
-
-### Arquivos a Criar
-- `supabase/functions/generate-medical-image/index.ts`
+- `supabase/migrations/<nova_migration>.sql`
+- `src/pages/ProgressTestStudentPortal.tsx`
+- `src/pages/ProgressTestEditor.tsx`
 - `supabase/functions/generate-progress-test/index.ts`
 
-### Arquivos a Editar
-- `supabase/functions/_shared/ai-caller.ts` — adicionar suporte a `modalities` e função de imagem
-- `src/pages/Questions.tsx` — botão e dialog de geração de imagem
-- `src/pages/ProgressTestEditor.tsx` — botão e dialog de geração de teste
-- `supabase/config.toml` — registrar novas funções
-
-### Fluxo de Prioridade de Provedores (para ambas as funcionalidades)
+Detalhe técnico importante
 
 ```text
-1. Busca chaves ativas em ai_api_keys
-2. Ordena: Google → OpenAI → OpenRouter → Groq → Anthropic
-3. Tenta cada provedor até obter resposta OK
-4. Se todos falharem → Lovable AI Gateway (fallback)
-5. Log de uso em ai_usage_log
+Fluxo provável do bug atual:
+portal público
+-> lê progress_test_questions
+-> tenta ler question_bank
+-> RLS bloqueia
+-> UI ignora erro
+-> questionData fica undefined
+-> renderiza "Questão sem enunciado" e sem alternativas
 ```
-
