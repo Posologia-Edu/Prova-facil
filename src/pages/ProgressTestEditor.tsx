@@ -133,6 +133,38 @@ export default function ProgressTestEditor() {
     toast({ title: "Teste publicado!" });
   };
 
+  const handleAiGenerate = async () => {
+    if (!aiSubjects.trim()) {
+      toast({ title: "Informe as áreas temáticas", variant: "destructive" });
+      return;
+    }
+    setAiGenerating(true);
+    try {
+      const subjects = aiSubjects.split(",").map(s => s.trim()).filter(Boolean);
+      const { data, error } = await supabase.functions.invoke("generate-progress-test", {
+        body: {
+          testId: id,
+          course: aiCourse,
+          subjects,
+          questionsPerYear: aiQuestionsPerYear,
+          difficulty: aiDifficulty,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: data.error, variant: "destructive" });
+        return;
+      }
+      toast({ title: `${data.totalInserted} questões geradas e adicionadas ao teste!` });
+      refetchQuestions();
+      setAiDialogOpen(false);
+    } catch (err: any) {
+      toast({ title: err.message || "Erro ao gerar teste", variant: "destructive" });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <ModuleHelpGuide moduleKey="progress_test" />
