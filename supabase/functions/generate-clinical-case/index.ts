@@ -7,22 +7,80 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ANAMNESIS_PROMPT = `Você é um especialista em educação farmacêutica clínica. Gere um roteiro de paciente simulado para prática de anamnese farmacêutica.
+const ANAMNESIS_PROMPT = `Você é um especialista em educação farmacêutica clínica. Gere um roteiro completo de paciente simulado para prática de anamnese farmacêutica.
 
 REGRAS OBRIGATÓRIAS:
 1. NÃO use Markdown (nenhum #, ##, **, *, ---, \`\`\`, |---|, etc.)
 2. NÃO comece com frases introdutórias como "Excelente", "Vamos construir", "Aqui está", "Claro", "Certo" ou similares.
-3. NÃO use tabelas. Apresente medicamentos em formato de texto corrido ou lista simples.
-4. Comece DIRETO com o conteúdo.
+3. Comece DIRETO com o título do caso.
 
-FORMATO OBRIGATÓRIO:
-- O caso deve ter um TÍTULO curto no formato: "Nome do Paciente (iniciais), idade"
-  Exemplo: "Geraldo Martins (G.M.), 70 anos"
-- Após o título, escreva um TEXTO CORRIDO (narrativa) descrevendo a história clínica do paciente em 3-5 parágrafos.
-- Inclua no texto corrido: dados do paciente, queixas, histórico de doenças, medicamentos em uso (com doses e posologias mencionados naturalmente no texto), hábitos de vida, comportamento do paciente, e detalhes que o aluno precisaria descobrir durante a anamnese.
-- Os medicamentos devem aparecer naturalmente no texto, exemplo: "Está em uso de metformina 850 mg 2x/dia, glibenclamida 5 mg 1x/dia, losartana 50 mg 2x/dia e omeprazol 20 mg/dia."
-- Adicione detalhes comportamentais e psicossociais que enriqueçam a simulação.
-- NÃO separe em seções com títulos. Escreva como uma narrativa contínua e fluida.
+FORMATO OBRIGATÓRIO (siga EXATAMENTE esta estrutura):
+
+Linha 1: Um título criativo e descritivo para o caso (ex: "Paciente Idoso com Polifarmácia e Declínio da Função Renal")
+
+Depois pule uma linha e siga com:
+
+IDENTIFICAÇÃO DO PACIENTE:
+
+Nome fictício: [nome completo]
+Idade: [idade] anos
+Sexo: [sexo]
+Profissão: [profissão]
+Estado civil: [estado civil]
+
+QUEIXA PRINCIPAL:
+
+[Texto corrido descrevendo a queixa principal do paciente, 2-3 frases]
+
+HISTÓRIA DA DOENÇA ATUAL (HDA):
+
+[Texto corrido com 1-2 parágrafos descrevendo a evolução da doença atual]
+
+MEDICAMENTOS EM USO:
+
+Medicamento          Dose          Posologia          Tempo de Uso
+
+[medicamento1]       [dose]        [posologia]        [tempo]
+[medicamento2]       [dose]        [posologia]        [tempo]
+[Continue com 4-7 medicamentos, alinhados por espaços]
+
+HISTÓRIA PREGRESSA:
+
+- [diagnóstico 1 com tempo]
+- [diagnóstico 2 com tempo]
+- [cirurgias se houver]
+- Alergia: [informação sobre alergias]
+
+HISTÓRIA SOCIAL:
+
+- Tabagismo: [detalhes]
+- Etilismo: [detalhes]
+- Atividade física: [detalhes]
+- Alimentação: [detalhes incluindo ingestão hídrica]
+
+ORIENTAÇÕES AO ATOR/PACIENTE SIMULADO:
+
+- Como o paciente deve se comportar:
+  - [comportamento 1]
+  - [comportamento 2]
+  - [comportamento 3]
+  - [comportamento 4]
+
+- Informações que só deve revelar se perguntado:
+  - [informação oculta 1 - algo clinicamente relevante como automedicação, não adesão, etc.]
+  - [informação oculta 2]
+  - [informação oculta 3]
+  - [informação oculta 4]
+
+- Nível de conhecimento sobre seus medicamentos:
+  - [o que sabe sobre cada medicamento]
+  - [o que NÃO sabe e é relevante clinicamente]
+
+IMPORTANTE:
+- Use espaços para alinhar as colunas das tabelas de medicamentos (NÃO use | ou Markdown)
+- Cada medicamento deve estar em sua própria linha
+- Inclua detalhes realistas e clinicamente relevantes
+- As informações ocultas devem conter problemas farmacoterapêuticos que o aluno precisa descobrir
 
 Gere um caso realista e clinicamente relevante.`;
 
@@ -31,20 +89,76 @@ const RECONCILIATION_PROMPT = `Você é um especialista em educação farmacêut
 REGRAS OBRIGATÓRIAS:
 1. NÃO use Markdown (nenhum #, ##, **, *, ---, \`\`\`, |---|, etc.)
 2. NÃO comece com frases introdutórias como "Excelente", "Vamos construir", "Aqui está", "Claro", "Certo" ou similares.
-3. NÃO use tabelas formatadas com | ou tabulação. Apresente tudo em texto corrido ou listas simples com hífen.
-4. Comece DIRETO com o conteúdo.
+3. Comece DIRETO com o título do caso.
 
-FORMATO OBRIGATÓRIO:
-- O caso deve ter um TÍTULO curto no formato: "Nome do Paciente (iniciais), idade"
-  Exemplo: "Larissa Monteiro (L.M.), 31 anos"
-- Após o título, escreva o caso como TEXTO CORRIDO (narrativa) em parágrafos.
-- Parágrafo 1: Dados do paciente (nome, idade, sexo, profissão), motivo da internação/consulta e diagnósticos.
-- Parágrafo 2: Medicamentos em uso domiciliar, mencionados naturalmente no texto com doses e posologias. Exemplo: "Faz uso domiciliar de metformina 850 mg 2x/dia via oral, losartana 50 mg 1x/dia, anlodipino 5 mg 1x/dia e sinvastatina 20 mg à noite."
-- Parágrafo 3: Medicamentos prescritos na internação (se aplicável), incluindo discrepâncias intencionais em relação ao uso domiciliar (omissões, duplicidades, doses diferentes).
-- Parágrafo 4: Exames laboratoriais relevantes e sinais vitais, mencionados naturalmente.
-- Parágrafo 5 (opcional, para uso exclusivo do professor): Breve menção das discrepâncias que o aluno deve identificar.
-- NÃO separe em seções com títulos em maiúsculas. Escreva como narrativa contínua.
-- Inclua discrepâncias clinicamente significativas para identificação pelos alunos.
+FORMATO OBRIGATÓRIO (siga EXATAMENTE esta estrutura):
+
+Linha 1: Um título criativo e descritivo para o caso (ex: "Cetoacidose Diabética em Paciente com Múltiplas Comorbidades")
+
+Linha 2-3: Um RESUMO de 2-3 frases dando uma visão geral do caso para o aluno entender o contexto antes de começar.
+
+Depois pule uma linha e siga com:
+
+DADOS DO PACIENTE:
+
+Nome: [nome completo]
+Idade: [idade] anos
+Sexo: [sexo]
+Peso: [peso] kg
+Altura: [altura] m
+Motivo da Internação: [motivo detalhado]
+
+DIAGNÓSTICOS:
+
+- [diagnóstico 1 com tempo se aplicável]
+- [diagnóstico 2]
+- [diagnóstico 3]
+- [diagnóstico de internação]
+
+MEDICAMENTOS PRÉ-INTERNAÇÃO / USO DOMICILIAR:
+
+Medicamento           Dose          Posologia       Via
+
+[medicamento1]        [dose]        [posologia]     [via]
+[medicamento2]        [dose]        [posologia]     [via]
+[Continue com 5-8 medicamentos, alinhados por espaços]
+
+MEDICAMENTOS PRESCRITOS NA INTERNAÇÃO / ATUAL:
+
+Medicamento                      Dose                Posologia                       Via
+
+[medicamento1]                   [dose]              [posologia]                     [via]
+[medicamento2]                   [dose]              [posologia]                     [via]
+[Continue, incluindo discrepâncias intencionais e não-intencionais]
+
+EXAMES LABORATORIAIS RELEVANTES:
+
+Exame                     Resultado          Valor de Referência
+
+[exame1]                  [resultado]        [referência]
+[exame2]                  [resultado]        [referência]
+[Continue com 6-10 exames relevantes]
+
+SINAIS VITAIS:
+
+PA: [valor] mmHg
+FC: [valor] bpm
+FR: [valor] ipm
+Temperatura: [valor] °C
+SpO2: [valor]% em ar ambiente
+
+DISCREPÂNCIAS PARA IDENTIFICAÇÃO (USO EXCLUSIVO DO PROFESSOR):
+
+- Omissão: [medicamento] ([intencional/NÃO intencional], [justificativa clínica])
+- Omissão: [medicamento] ([intencional/NÃO intencional], [justificativa])
+- Comissão: [medicamento] ([nova droga], [intencional/NÃO intencional], [justificativa])
+[Continue com todas as discrepâncias, incluindo pelo menos 1 não intencional]
+
+IMPORTANTE:
+- Use espaços para alinhar as colunas das tabelas (NÃO use | ou Markdown)
+- Inclua pelo menos uma discrepância NÃO intencional para o aluno identificar
+- Os exames devem ser coerentes com o quadro clínico
+- As discrepâncias devem ser clinicamente significativas e educativas
 
 Gere um caso realista e clinicamente relevante.`;
 
@@ -82,12 +196,15 @@ serve(async (req) => {
     }
 
     const systemPrompt = phase === "anamnesis" ? ANAMNESIS_PROMPT : RECONCILIATION_PROMPT;
+    const userMessage = phase === "anamnesis"
+      ? `Gere um roteiro de paciente simulado para anamnese farmacêutica sobre o tema: ${theme.trim()}. Siga EXATAMENTE o formato especificado com todas as seções (IDENTIFICAÇÃO, QUEIXA PRINCIPAL, HDA, MEDICAMENTOS EM USO, HISTÓRIA PREGRESSA, HISTÓRIA SOCIAL, ORIENTAÇÕES AO ATOR). Comece com um título criativo, não use Markdown.`
+      : `Gere um caso clínico para reconciliação medicamentosa sobre o tema: ${theme.trim()}. Siga EXATAMENTE o formato especificado com todas as seções (DADOS DO PACIENTE, DIAGNÓSTICOS, MEDICAMENTOS PRÉ-INTERNAÇÃO, MEDICAMENTOS NA INTERNAÇÃO, EXAMES, SINAIS VITAIS, DISCREPÂNCIAS). Comece com um título criativo seguido de um resumo, não use Markdown.`;
 
     const { response } = await callAiWithFallback(
       {
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Gere um caso clínico sobre o seguinte tema: ${theme.trim()}. Lembre-se: comece direto com o nome do paciente como título, depois escreva tudo em texto corrido narrativo, sem introduções, sem Markdown, sem tabelas, sem seções com títulos em maiúsculas.` },
+          { role: "user", content: userMessage },
         ],
       },
       { userId, promptType: `generate-clinical-case-${phase}` },
@@ -102,7 +219,7 @@ serve(async (req) => {
     const data = await response.json();
     let content = data.choices?.[0]?.message?.content || "";
 
-    // Clean up any remaining markdown
+    // Clean up any remaining markdown but KEEP section headers
     content = content
       .replace(/^#+\s*/gm, "")        // remove # headers
       .replace(/\*\*/g, "")            // remove bold **
@@ -122,8 +239,6 @@ serve(async (req) => {
     for (const pattern of introPatterns) {
       content = content.replace(pattern, "");
     }
-    // Remove section headers in ALL CAPS followed by colon
-    content = content.replace(/^[A-ZÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s/()]{5,}:\s*\n?/gm, "");
     content = content.replace(/^\s*\n{3,}/gm, "\n\n").trim();
 
     // Extract title: first line (should be "Name (initials), age")
