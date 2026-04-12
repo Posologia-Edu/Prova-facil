@@ -50,14 +50,22 @@ export default function UpdatePipeline() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       
-      if (res.error) throw res.error;
+      if (res.error) {
+        // Check if the response body has a specific error message (402/429)
+        const errorBody = res.data;
+        if (errorBody?.error) {
+          throw new Error(errorBody.error);
+        }
+        throw res.error;
+      }
       
       localStorage.setItem("roadmap_last_generated", String(Date.now()));
       queryClient.invalidateQueries({ queryKey: ["system-updates"] });
       toast({ title: "🚀 Roadmap atualizado!", description: "8 novas funcionalidades foram adicionadas ao roadmap." });
     } catch (err: any) {
       console.error("Generate roadmap error:", err);
-      toast({ title: "Erro ao gerar roadmap", description: err.message || "Tente novamente.", variant: "destructive" });
+      const msg = err.message || "Tente novamente.";
+      toast({ title: "Erro ao gerar roadmap", description: msg, variant: "destructive" });
     } finally {
       setGenerating(false);
     }

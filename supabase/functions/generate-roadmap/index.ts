@@ -112,6 +112,25 @@ Responda APENAS com um JSON array, sem markdown, sem explicação. Cada item dev
     if (!response.ok) {
       const errText = await response.text();
       console.error("AI error:", errText);
+      
+      if (response.status === 402) {
+        let errorMsg = "Créditos de IA insuficientes. Adicione créditos nas configurações do workspace.";
+        try {
+          const errJson = JSON.parse(errText);
+          if (errJson.message) errorMsg = errJson.message;
+        } catch {}
+        return new Response(JSON.stringify({ error: errorMsg }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
       return new Response(JSON.stringify({ error: "Falha ao gerar sugestões" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
