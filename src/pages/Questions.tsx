@@ -18,6 +18,8 @@ import {
   Trash2,
   X,
   Eye,
+  Loader2,
+  Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +60,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Separator } from "@/components/ui/separator";
@@ -279,6 +286,11 @@ export default function QuestionsPage() {
   const [newEmbed, setNewEmbed] = useState("");
   const [saving, setSaving] = useState(false);
   const [newImages, setNewImages] = useState<string[]>([]);
+  const [medImageType, setMedImageType] = useState("radiography");
+  const [medImageDetails, setMedImageDetails] = useState("");
+  const [medImageGenerating, setMedImageGenerating] = useState(false);
+  const [medImagePreview, setMedImagePreview] = useState<string | null>(null);
+  const [medImagePopoverOpen, setMedImagePopoverOpen] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const insertAtCursor = (template: string) => {
@@ -300,6 +312,45 @@ export default function QuestionsPage() {
     setNewTags("");
     setNewEmbed("");
     setNewImages([]);
+    setMedImagePreview(null);
+    setMedImageDetails("");
+  };
+
+  const handleGenerateMedImage = async () => {
+    if (!newText.trim()) {
+      toast.error("Digite o enunciado da questão antes de gerar a imagem.");
+      return;
+    }
+    setMedImageGenerating(true);
+    setMedImagePreview(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-medical-image", {
+        body: { questionText: newText, imageType: medImageType, details: medImageDetails || undefined },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      if (data?.url) {
+        setMedImagePreview(data.url);
+        toast.success("Imagem gerada! Confirme para adicioná-la à questão.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar imagem médica");
+    } finally {
+      setMedImageGenerating(false);
+    }
+  };
+
+  const handleConfirmMedImage = () => {
+    if (medImagePreview) {
+      setNewImages(prev => [...prev, medImagePreview]);
+      setMedImagePreview(null);
+      setMedImageDetails("");
+      setMedImagePopoverOpen(false);
+      toast.success("Imagem adicionada à questão!");
+    }
   };
 
   const handleCreateQuestion = async () => {
@@ -486,7 +537,81 @@ export default function QuestionsPage() {
                       </Button>
                     </div>
                     <Textarea ref={textareaRef} placeholder="Digite a questão... Use $...$ para LaTeX inline, $$...$$ para LaTeX em bloco, ```lang...``` para código" rows={4} value={newText} onChange={(e) => setNewText(e.target.value)} />
-                    <QuestionImageUploader images={newImages} onChange={setNewImages} />
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <QuestionImageUploader images={newImages} onChange={setNewImages} />
+                      </div>
+                      <Popover open={medImagePopoverOpen} onOpenChange={setMedImagePopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0">
+                            <Stethoscope className="h-4 w-4" />
+                            <Sparkles className="h-3 w-3 text-secondary" />
+                            Gerar Imagem Médica
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-4" align="end">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Stethoscope className="h-4 w-4 text-primary" />
+                              <span className="font-semibold text-sm">Gerador de Imagem Médica por IA</span>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Tipo de Imagem</Label>
+                              <Select value={medImageType} onValueChange={setMedImageType}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="radiography">Radiografia (Raio-X)</SelectItem>
+                                  <SelectItem value="ct">Tomografia (TC)</SelectItem>
+                                  <SelectItem value="mri">Ressonância Magnética (RM)</SelectItem>
+                                  <SelectItem value="histology">Lâmina Histopatológica</SelectItem>
+                                  <SelectItem value="ecg">Eletrocardiograma (ECG)</SelectItem>
+                                  <SelectItem value="ultrasound">Ultrassonografia</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Detalhes adicionais (opcional)</Label>
+                              <Input
+                                className="h-8 text-xs"
+                                placeholder="Ex: pneumotórax à direita, fratura de fêmur..."
+                                value={medImageDetails}
+                                onChange={(e) => setMedImageDetails(e.target.value)}
+                              />
+                            </div>
+                            {medImagePreview && (
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">Pré-visualização:</Label>
+                                <img src={medImagePreview} alt="Imagem médica gerada" className="w-full rounded-lg border object-contain max-h-48" />
+                                <Button type="button" size="sm" className="w-full gap-1" onClick={handleConfirmMedImage}>
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Adicionar à Questão
+                                </Button>
+                              </div>
+                            )}
+                            {!medImagePreview && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="w-full gap-1.5"
+                                onClick={handleGenerateMedImage}
+                                disabled={medImageGenerating || !newText.trim()}
+                              >
+                                {medImageGenerating ? (
+                                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando...</>
+                                ) : (
+                                  <><Sparkles className="h-3.5 w-3.5" /> Gerar Imagem</>
+                                )}
+                              </Button>
+                            )}
+                            {!newText.trim() && !medImageGenerating && (
+                              <p className="text-[10px] text-muted-foreground">Digite o enunciado da questão primeiro.</p>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">

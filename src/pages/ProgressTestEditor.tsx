@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, Plus, Trash2, Share2, Copy, BookOpen } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, Save, Plus, Trash2, Share2, Copy, BookOpen, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 
@@ -23,6 +24,14 @@ export default function ProgressTestEditor() {
   const [targetYears, setTargetYears] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [status, setStatus] = useState("draft");
   const [saving, setSaving] = useState(false);
+  
+  // AI Generator state
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiCourse, setAiCourse] = useState("Medicina");
+  const [aiSubjects, setAiSubjects] = useState("");
+  const [aiDifficulty, setAiDifficulty] = useState("variada");
+  const [aiQuestionsPerYear, setAiQuestionsPerYear] = useState<Record<string, number>>({ "1": 5, "2": 5, "3": 5, "4": 5, "5": 5, "6": 5 });
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   const { data: test } = useQuery({
     queryKey: ["progress-test", id],
@@ -124,6 +133,38 @@ export default function ProgressTestEditor() {
     toast({ title: "Teste publicado!" });
   };
 
+  const handleAiGenerate = async () => {
+    if (!aiSubjects.trim()) {
+      toast({ title: "Informe as áreas temáticas", variant: "destructive" });
+      return;
+    }
+    setAiGenerating(true);
+    try {
+      const subjects = aiSubjects.split(",").map(s => s.trim()).filter(Boolean);
+      const { data, error } = await supabase.functions.invoke("generate-progress-test", {
+        body: {
+          testId: id,
+          course: aiCourse,
+          subjects,
+          questionsPerYear: aiQuestionsPerYear,
+          difficulty: aiDifficulty,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: data.error, variant: "destructive" });
+        return;
+      }
+      toast({ title: `${data.totalInserted} questões geradas e adicionadas ao teste!` });
+      refetchQuestions();
+      setAiDialogOpen(false);
+    } catch (err: any) {
+      toast({ title: err.message || "Erro ao gerar teste", variant: "destructive" });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <ModuleHelpGuide moduleKey="progress_test" />
@@ -184,8 +225,12 @@ export default function ProgressTestEditor() {
 
         <TabsContent value="questions" className="space-y-4 mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Questões do Teste</CardTitle>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAiDialogOpen(true)}>
+                <Sparkles className="h-4 w-4 text-secondary" />
+                Gerar com IA
+              </Button>
             </CardHeader>
             <CardContent className="space-y-3">
               {(!testQuestions || testQuestions.length === 0) ? (
@@ -297,6 +342,86 @@ export default function ProgressTestEditor() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* AI Progress Test Generator Dialog */}
+      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-secondary" />
+              Gerar Teste de Progresso com IA
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Curso</Label>
+              <Select value={aiCourse} onValueChange={setAiCourse}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Medicina">Medicina</SelectItem>
+                  <SelectItem value="Enfermagem">Enfermagem</SelectItem>
+                  <SelectItem value="Farmácia">Farmácia</SelectItem>
+                  <SelectItem value="Odontologia">Odontologia</SelectItem>
+                  <SelectItem value="Fisioterapia">Fisioterapia</SelectItem>
+                  <SelectItem value="Nutrição">Nutrição</SelectItem>
+                  <SelectItem value="Biomedicina">Biomedicina</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Áreas Temáticas (separadas por vírgula)</Label>
+              <Input
+                placeholder="Ex: Cardiologia, Pneumologia, Farmacologia, Anatomia"
+                value={aiSubjects}
+                onChange={(e) => setAiSubjects(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Dificuldade Predominante</Label>
+              <Select value={aiDifficulty} onValueChange={setAiDifficulty}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="variada">Variada (mista)</SelectItem>
+                  <SelectItem value="easy">Fácil</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="hard">Difícil</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Questões por Ano</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6].map(y => (
+                  <div key={y} className="flex items-center gap-2">
+                    <Label className="text-xs w-14 shrink-0">{y}º ano:</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={50}
+                      className="h-8 text-xs"
+                      value={aiQuestionsPerYear[String(y)] || 0}
+                      onChange={(e) => setAiQuestionsPerYear(prev => ({ ...prev, [String(y)]: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total: {Object.values(aiQuestionsPerYear).reduce((s, n) => s + n, 0)} questões
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiDialogOpen(false)} disabled={aiGenerating}>Cancelar</Button>
+            <Button onClick={handleAiGenerate} disabled={aiGenerating || !aiSubjects.trim()} className="gap-1.5">
+              {aiGenerating ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</>
+              ) : (
+                <><Sparkles className="h-4 w-4" /> Gerar Teste</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
