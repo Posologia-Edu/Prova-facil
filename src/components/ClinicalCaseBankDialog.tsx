@@ -9,16 +9,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Search, Plus, Trash2, Download, Sparkles, Loader2, BookOpen } from "lucide-react";
+import { Search, Plus, Trash2, Download, Sparkles, Loader2, BookOpen, CheckCircle } from "lucide-react";
 
 interface ClinicalCaseBankDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   phase: "anamnesis" | "reconciliation";
   onImport: (title: string, content: string) => void;
+  existingTitles?: string[];
 }
 
-export default function ClinicalCaseBankDialog({ open, onOpenChange, phase, onImport }: ClinicalCaseBankDialogProps) {
+export default function ClinicalCaseBankDialog({ open, onOpenChange, phase, onImport, existingTitles = [] }: ClinicalCaseBankDialogProps) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("my-cases");
@@ -44,6 +45,12 @@ export default function ClinicalCaseBankDialog({ open, onOpenChange, phase, onIm
     },
     enabled: open,
   });
+
+  const normalizedExisting = existingTitles.map(t => t.trim().toLowerCase());
+
+  const isCaseAlreadyImported = (title: string) => {
+    return normalizedExisting.includes(title.trim().toLowerCase());
+  };
 
   const filtered = cases.filter((c: any) => {
     if (!search.trim()) return true;
@@ -162,31 +169,41 @@ export default function ClinicalCaseBankDialog({ open, onOpenChange, phase, onIm
               </div>
             ) : (
               <div className="space-y-3">
-                {filtered.map((c: any) => (
-                  <div key={c.id} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{c.title}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{(c.content || "").substring(0, 150)}...</p>
-                        {c.tags?.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {c.tags.map((t: string, i: number) => (
-                              <Badge key={i} variant="secondary" className="text-xs">{t}</Badge>
-                            ))}
+                {filtered.map((c: any) => {
+                  const alreadyImported = isCaseAlreadyImported(c.title);
+                  return (
+                    <div key={c.id} className={`border rounded-lg p-3 space-y-2 ${alreadyImported ? "opacity-60 bg-muted/30" : ""}`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm truncate">{c.title}</p>
+                            {alreadyImported && (
+                              <Badge variant="secondary" className="text-xs shrink-0 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" />Já importado
+                              </Badge>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <div className="flex gap-1 ml-2 shrink-0">
-                        <Button variant="outline" size="sm" onClick={() => handleImport(c)}>
-                          <Download className="h-3.5 w-3.5 mr-1" />Importar
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id)}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{(c.content || "").substring(0, 150)}...</p>
+                          {c.tags?.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {c.tags.map((t: string, i: number) => (
+                                <Badge key={i} variant="secondary" className="text-xs">{t}</Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-1 ml-2 shrink-0">
+                          <Button variant="outline" size="sm" onClick={() => handleImport(c)} disabled={alreadyImported}>
+                            <Download className="h-3.5 w-3.5 mr-1" />{alreadyImported ? "Importado" : "Importar"}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </TabsContent>
