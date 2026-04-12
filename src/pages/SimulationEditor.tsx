@@ -792,6 +792,7 @@ export default function SimulationEditor() {
                     open={caseBankOpen}
                     onOpenChange={setCaseBankOpen}
                     phase="anamnesis"
+                    existingTitles={clinicalCases.map(c => c.title)}
                     onImport={(title, content) => setClinicalCases([...clinicalCases, { id: crypto.randomUUID(), title, script: content }])}
                   />
                 </div>

@@ -850,13 +850,16 @@ export default function ReconciliationEditor() {
             </CardContent>
           </Card>
 
-          <Button variant="outline" size="sm" onClick={() => setCaseBankOpen(true)}>
-            <BookOpen className="h-4 w-4 mr-1" />Banco de Casos
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setCaseBankOpen(true)}>
+              <BookOpen className="h-4 w-4 mr-1" />Banco de Casos
+            </Button>
+          </div>
           <ClinicalCaseBankDialog
             open={caseBankOpen}
             onOpenChange={setCaseBankOpen}
             phase="reconciliation"
+            existingTitles={clinicalCases.map((c: any) => c.title)}
             onImport={async (title, content) => {
               if (!roomId) return;
               await supabase.from("reconciliation_clinical_cases").insert({
