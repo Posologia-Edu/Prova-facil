@@ -18,6 +18,8 @@ import {
   Trash2,
   X,
   Eye,
+  Loader2,
+  Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +60,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Separator } from "@/components/ui/separator";
