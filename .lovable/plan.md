@@ -1,62 +1,50 @@
 
-Objetivo
 
-Corrigir definitivamente o Progress Test para que o portal do aluno sempre exiba enunciado e alternativas das questões geradas por IA.
+## Plano: Reformular o Prompt de Geração do Teste de Progresso para Replicar o Estilo Real
 
-O que eu encontrei
+### O que encontrei nos testes reais
 
-- Li o gerador (`generate-progress-test`), o editor e o portal do aluno.
-- Consultei o banco: no teste mais recente há 12 questões, e elas estão salvas com `stem/question_text` e `options`.
-- Portanto, o problema não parece estar na geração atual das questões; os dados existem no banco.
-- O problema mais provável está no acesso do portal público ao `question_bank`: a tela do aluno carrega `progress_test_questions`, depois tenta buscar as questões na `question_bank`, mas essa tabela não tem uma política pública específica para Progress Test.
-- Como o componente hoje ignora falhas dessa consulta, ele cai no fallback `"Questão sem enunciado"` e renderiza sem alternativas.
+Analisei as 4 provas enviadas (3 de Medicina TPN/ABEM e 1 de Farmácia). O padrão real é muito diferente do que a IA está gerando:
 
-Plano de implementação
+**Características do TPN real (Medicina - ABEM):**
+- Casos clínicos longos e detalhados com dados de exame físico, laboratoriais e de imagem
+- Cada questão tem área temática explícita (Clínica Médica, Cirurgia, Pediatria, GO, Saúde Coletiva, etc.)
+- Exatamente 4 alternativas (A, B, C, D) — NÃO 5
+- Enunciados de 5-15 linhas com cenário clínico realista
+- Pergunta objetiva ao final ("Qual o diagnóstico?", "Qual a conduta?", "Qual o achado esperado?")
+- Alternativas concisas e plausíveis, sem explicações embutidas
 
-1. Corrigir o acesso público com segurança
-- Criar uma migration para permitir leitura em `question_bank` somente quando a questão estiver vinculada a um Progress Test publicado.
-- Ajustar também as políticas públicas de `progress_tests` e `progress_test_questions` para expor apenas testes publicados, em vez de deixar tudo público.
-- Manter intacto o acesso do autor e de administradores.
+**Características do Teste de Progresso real (Farmácia e outros cursos):**
+- 5 alternativas (A, B, C, D, E)
+- Mix de questões com texto-base (artigos, dados, gráficos) + asserções (I, II, III) + questão direta
+- Formatos variados: "É correto o que se afirma em:", "Asserção I PORQUE Asserção II", questão direta
+- Questões de conhecimento geral (interdisciplinares) + específicas
 
-2. Tornar o portal do aluno robusto
-- Atualizar `src/pages/ProgressTestStudentPortal.tsx` para:
-  - tratar erro de carregamento de questões em vez de falhar silenciosamente;
-  - bloquear o início da prova se o conteúdo não tiver sido carregado corretamente;
-  - mostrar mensagem clara quando o teste não estiver publicado ou quando houver inconsistência;
-  - manter parse seguro para `content_json` em formato objeto ou string.
+### Mudanças necessárias
 
-3. Blindar a geração para próximos testes
-- Revisar `supabase/functions/generate-progress-test/index.ts` para normalizar campos antes de salvar (`stem`, `question_text`, `statement`, `options`).
-- Impedir inserção de questão incompleta e retornar contagem de itens descartados/inválidos, se houver.
+**1. Reformular o system prompt do `generate-progress-test`**
+- Para Medicina: gerar questões no estilo TPN/ABEM com casos clínicos detalhados e 4 alternativas (A-D)
+- Para outros cursos (Farmácia, Enfermagem, etc.): gerar questões com 5 alternativas (A-E), incluindo formato de asserções (I/II/III) e textos-base
+- Incluir exemplos reais no prompt (few-shot) para cada formato
+- Exigir que cada questão identifique a área temática/disciplina
 
-4. Melhorar a checagem no editor
-- Ajustar `src/pages/ProgressTestEditor.tsx` para sinalizar questões incompletas antes da publicação.
-- Assim o professor consegue detectar problema antes de compartilhar o link.
+**2. Ajustar o schema da tool call conforme o curso**
+- Medicina: `options` com `a, b, c, d` (4 alternativas), `correct_answer` enum `["a","b","c","d"]`
+- Outros cursos: `options` com `a, b, c, d, e` (5 alternativas), `correct_answer` enum `["a","b","c","d","e"]`
+- Adicionar campo `subject_area` (área temática da questão)
 
-Validação depois da implementação
+**3. Atualizar o portal do aluno para suportar 4 ou 5 alternativas dinamicamente**
+- Detectar quantas alternativas existem no `content_json` e renderizar de acordo
 
-- Gerar um novo Progress Test com IA.
-- Abrir o portal do aluno sem login.
-- Confirmar que todas as questões exibem enunciado e alternativas A–E.
-- Confirmar que rascunhos não ficam acessíveis publicamente.
-- Testar também um teste já existente para validar retrocompatibilidade.
+**4. Atualizar o editor para exibir a área temática**
 
-Arquivos prováveis
+### Arquivos a editar
 
-- `supabase/migrations/<nova_migration>.sql`
-- `src/pages/ProgressTestStudentPortal.tsx`
-- `src/pages/ProgressTestEditor.tsx`
-- `supabase/functions/generate-progress-test/index.ts`
+- `supabase/functions/generate-progress-test/index.ts` — prompt completo reescrito com exemplos few-shot
+- `src/pages/ProgressTestStudentPortal.tsx` — suporte dinâmico a 4 ou 5 alternativas
+- `src/pages/ProgressTestEditor.tsx` — exibir área temática nas questões
 
-Detalhe técnico importante
+### Detalhes técnicos do prompt
 
-```text
-Fluxo provável do bug atual:
-portal público
--> lê progress_test_questions
--> tenta ler question_bank
--> RLS bloqueia
--> UI ignora erro
--> questionData fica undefined
--> renderiza "Questão sem enunciado" e sem alternativas
-```
+O novo prompt incluirá 2-3 exemplos reais (few-shot) de questões no estilo TPN para Medicina e no estilo Teste de Progresso para outros cursos. O prompt será adaptado dinamicamente com base no campo `course` recebido na requisição. Para Medicina, as questões serão obrigatoriamente baseadas em casos clínicos com apresentação de paciente, dados de exame, exames complementares e pergunta objetiva.
+
