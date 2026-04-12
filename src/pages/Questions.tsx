@@ -286,6 +286,11 @@ export default function QuestionsPage() {
   const [newEmbed, setNewEmbed] = useState("");
   const [saving, setSaving] = useState(false);
   const [newImages, setNewImages] = useState<string[]>([]);
+  const [medImageType, setMedImageType] = useState("radiography");
+  const [medImageDetails, setMedImageDetails] = useState("");
+  const [medImageGenerating, setMedImageGenerating] = useState(false);
+  const [medImagePreview, setMedImagePreview] = useState<string | null>(null);
+  const [medImagePopoverOpen, setMedImagePopoverOpen] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const insertAtCursor = (template: string) => {
