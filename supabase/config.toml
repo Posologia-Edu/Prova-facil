@@ -53,3 +53,9 @@ verify_jwt = false
 
 [functions.generate-clinical-case]
 verify_jwt = false
+
+[functions.generate-medical-image]
+verify_jwt = false
+
+[functions.generate-progress-test]
+verify_jwt = false
