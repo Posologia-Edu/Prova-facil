@@ -168,13 +168,17 @@ export default function ProgressTestEditor() {
   return (
     <div className="space-y-6">
       <ModuleHelpGuide moduleKey="progress_test" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/progress-test")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-foreground">Editor de Progress Test</h1>
         </div>
+        <Button variant="outline" onClick={() => setAiDialogOpen(true)} className="gap-1.5">
+          <Sparkles className="h-4 w-4 text-secondary" />
+          Gerar com IA
+        </Button>
         <Button onClick={handleSave} disabled={saving}>
           <Save className="h-4 w-4 mr-2" /> Salvar
         </Button>

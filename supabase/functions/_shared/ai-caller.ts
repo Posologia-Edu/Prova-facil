@@ -21,6 +21,40 @@ interface ProviderConfig {
   defaultModel: string;
 }
 
+function resolveModelForProvider(provider: ProviderConfig, requestedModel?: string): string {
+  if (!requestedModel) return provider.defaultModel;
+
+  if (provider.provider !== "google") {
+    return requestedModel;
+  }
+
+  const normalizedModel = requestedModel.replace(/^google\//, "");
+
+  if (normalizedModel.includes("flash-image")) {
+    return "gemini-2.5-flash-image";
+  }
+
+  if (
+    normalizedModel.includes("3.1-pro-preview") ||
+    normalizedModel.includes("2.5-pro")
+  ) {
+    return "gemini-2.5-pro";
+  }
+
+  if (
+    normalizedModel.includes("3-flash-preview") ||
+    normalizedModel.includes("3.1-flash") ||
+    normalizedModel.includes("2.5-flash-lite") ||
+    normalizedModel.includes("2.5-flash")
+  ) {
+    return "gemini-2.5-flash";
+  }
+
+  return normalizedModel.startsWith("gemini-")
+    ? normalizedModel
+    : provider.defaultModel;
+}
+
 const PROVIDER_CONFIGS: Record<string, { baseUrl: string; defaultModel: string }> = {
   groq: {
     baseUrl: "https://api.groq.com/openai/v1/chat/completions",
@@ -153,8 +187,10 @@ async function callAnthropicApi(provider: ProviderConfig, options: AiCallOptions
 }
 
 async function callOpenAiCompatibleApi(provider: ProviderConfig, options: AiCallOptions): Promise<Response> {
+  const model = resolveModelForProvider(provider, options.model);
+
   const body: any = {
-    model: options.model || provider.defaultModel,
+    model,
     messages: options.messages,
   };
   if (options.stream) body.stream = true;
@@ -227,7 +263,7 @@ export async function callAiWithFallback(
       if (response.ok) {
         console.log(`Successfully used provider: ${provider.provider}`);
         usedProvider = provider.provider;
-        usedModel = options.model || provider.defaultModel;
+        usedModel = resolveModelForProvider(provider, options.model);
         break;
       }
 
