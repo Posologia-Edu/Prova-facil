@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
+import ClinicalCaseContent from "@/components/ClinicalCaseContent";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -979,9 +980,7 @@ export default function SimulationJoin() {
                   {assignedCase ? (
                     <div className="border rounded-lg p-4 space-y-2">
                       <p className="text-sm font-semibold">{assignedCase.title}</p>
-                      <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap text-sm">
-                        {assignedCase.script}
-                      </div>
+                      <ClinicalCaseContent content={assignedCase.script} />
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t("sim_no_cases")}</p>
@@ -1403,7 +1402,7 @@ export default function SimulationJoin() {
                     return (
                       <div>
                         <p className="font-semibold mb-2">{assignedCase.title}</p>
-                        <div>{assignedCase.script}</div>
+                        <ClinicalCaseContent content={assignedCase.script} />
                       </div>
                     );
                   }

@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw, Download, Star, BookmarkPlus, FileDown, Pencil, Save } from "lucide-react";
 import ClinicalCaseBankDialog from "@/components/ClinicalCaseBankDialog";
+import ClinicalCaseContent from "@/components/ClinicalCaseContent";
 import ParticipantEditDialog from "@/components/ParticipantEditDialog";
 import { exportFormToPDF } from "@/lib/form-pdf-export";
 import FormBuilder from "@/components/forms/FormBuilder";
@@ -869,7 +870,16 @@ export default function ReconciliationEditor() {
                 }}
                 rows={8}
                 placeholder="Descreva o caso clínico..."
+                className="font-mono text-sm leading-6"
               />
+              {(cc.id === editingCaseId ? caseContent : cc.content || "").trim() && (
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
+                  <Label className="mb-3 block text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Pré-visualização
+                  </Label>
+                  <ClinicalCaseContent content={cc.id === editingCaseId ? caseContent : cc.content || ""} />
+                </div>
+              )}
             </div>
           ))}
           <div className="flex gap-2">
