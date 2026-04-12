@@ -87,7 +87,7 @@ serve(async (req) => {
       {
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Gere um caso clínico sobre o seguinte tema: ${theme.trim()}. Lembre-se: comece direto com o conteúdo, sem introduções, sem Markdown, texto plano profissional com tabelas formatadas por tabulação.` },
+          { role: "user", content: `Gere um caso clínico sobre o seguinte tema: ${theme.trim()}. Lembre-se: comece direto com o nome do paciente como título, depois escreva tudo em texto corrido narrativo, sem introduções, sem Markdown, sem tabelas, sem seções com títulos em maiúsculas.` },
         ],
       },
       { userId, promptType: `generate-clinical-case-${phase}` },
@@ -109,27 +109,32 @@ serve(async (req) => {
       .replace(/\*/g, "")              // remove italic *
       .replace(/^---+$/gm, "")        // remove horizontal rules
       .replace(/```[\s\S]*?```/g, "")  // remove code blocks
+      .replace(/\|[^\n]+\|/g, "")     // remove markdown table rows
+      .replace(/^[\s|:-]+$/gm, "")    // remove table separators
       .replace(/^\s*\n{3,}/gm, "\n\n") // collapse excessive blank lines
       .trim();
 
     // Remove intro sentences at the start
     const introPatterns = [
-      /^(Excelente|Vamos|Aqui está|Claro|Certo|Perfeito|Ótimo|Com certeza|Sem problemas)[^\n]*\n+/i,
+      /^(Excelente|Vamos|Aqui está|Claro|Certo|Perfeito|Ótimo|Com certeza|Sem problemas|Caso\s*\d*\s*[-–]?\s*)[^\n]*\n+/i,
       /^[^\n]{0,200}(vamos construir|vamos criar|segue|apresento)[^\n]*\n+/i,
     ];
     for (const pattern of introPatterns) {
       content = content.replace(pattern, "");
     }
-    content = content.trim();
+    // Remove section headers in ALL CAPS followed by colon
+    content = content.replace(/^[A-ZÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s/()]{5,}:\s*\n?/gm, "");
+    content = content.replace(/^\s*\n{3,}/gm, "\n\n").trim();
 
-    // Extract title from first meaningful line
+    // Extract title: first line (should be "Name (initials), age")
     const lines = content.split("\n").filter((l: string) => l.trim());
     let title = `Caso - ${theme.trim().substring(0, 50)}`;
-    for (const line of lines) {
-      const clean = line.replace(/^[#*\s]+/, "").replace(/:/g, "").trim();
-      if (clean.length > 5 && clean.length < 100 && !clean.startsWith("-")) {
-        title = clean;
-        break;
+    if (lines.length > 0) {
+      const firstLine = lines[0].replace(/^[#*\s]+/, "").replace(/:$/, "").trim();
+      if (firstLine.length > 3 && firstLine.length < 120) {
+        title = firstLine;
+        // Remove title from content since it will be stored separately
+        content = content.replace(lines[0], "").trim();
       }
     }
 
