@@ -327,7 +327,12 @@ export default function QuestionsPage() {
       const { data, error } = await supabase.functions.invoke("generate-medical-image", {
         body: { questionText: newText, imageType: medImageType, details: medImageDetails || undefined },
       });
-      if (error) throw error;
+
+      if (error) {
+        const errorBody = data as { error?: string } | null;
+        throw new Error(errorBody?.error || error.message || "Erro ao gerar imagem médica");
+      }
+
       if (data?.error) {
         toast.error(data.error);
         return;

@@ -96,6 +96,25 @@ function estimateCost(model: string, tokensInput: number, tokensOutput: number):
   return (tokensInput * costs.input + tokensOutput * costs.output) / 1_000_000;
 }
 
+function extractProviderErrorMessage(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+
+    if (typeof parsed === "string") return parsed;
+    if (typeof parsed?.error === "string") return parsed.error;
+    if (typeof parsed?.message === "string") return parsed.message;
+    if (typeof parsed?.details === "string") return parsed.details;
+    if (typeof parsed?.error?.message === "string") return parsed.error.message;
+  } catch {
+    // Ignore JSON parse failures and fall back to raw text.
+  }
+
+  const trimmed = raw.trim();
+  return trimmed ? trimmed.slice(0, 400) : null;
+}
+
 async function logAiUsage(
   provider: string,
   model: string,
@@ -328,6 +347,7 @@ export async function callAiImageWithFallback(
   // Try Google provider first (native image support)
   const providers = await getActiveProviders();
   const googleProvider = providers.find(p => p.provider === "google");
+  let googleFailure: { status: number; message: string | null } | null = null;
 
   if (googleProvider) {
     try {
@@ -344,8 +364,17 @@ export async function callAiImageWithFallback(
         }
         return { response, provider: "google" };
       }
-      console.warn(`Google image generation returned ${response.status}, falling back`);
+      const errorText = await response.text();
+      googleFailure = {
+        status: response.status,
+        message: extractProviderErrorMessage(errorText),
+      };
+      console.warn(`Google image generation returned ${response.status}, falling back`, googleFailure.message ?? "");
     } catch (err) {
+      googleFailure = {
+        status: 500,
+        message: (err as Error).message,
+      };
       console.warn("Google image generation failed:", (err as Error).message);
     }
   }
@@ -353,6 +382,26 @@ export async function callAiImageWithFallback(
   // Fallback to Lovable AI Gateway
   console.log("Using Lovable AI Gateway for image generation");
   const response = await callLovableAi(imageOptions);
+
+  if (!response.ok && googleFailure) {
+    const fallbackText = await response.text();
+    const fallbackMessage = extractProviderErrorMessage(fallbackText);
+    const googleRateLimited = googleFailure.status === 429;
+    const fallbackCreditsExhausted = response.status === 402;
+
+    const error = googleRateLimited && fallbackCreditsExhausted
+      ? "O provedor Google retornou limite/cota excedida (429) e o fallback do workspace também ficou indisponível por créditos insuficientes. Verifique a cota ou o faturamento da chave Google e tente novamente em alguns minutos."
+      : `Falha ao gerar imagem com o provedor Google (${googleFailure.status}${googleFailure.message ? `: ${googleFailure.message}` : ""}) e também no fallback (${response.status}${fallbackMessage ? `: ${fallbackMessage}` : ""}).`;
+
+    return {
+      response: new Response(JSON.stringify({ error }), {
+        status: googleRateLimited ? 429 : response.status,
+        headers: { "Content-Type": "application/json" },
+      }),
+      provider: "lovable",
+    };
+  }
+
   if (usageContext) {
     const totalChars = options.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0);
     logAiUsage("lovable", imageOptions.model || "google/gemini-2.5-flash-image", usageContext.promptType, usageContext.userId, Math.ceil(totalChars / 4), 0);
