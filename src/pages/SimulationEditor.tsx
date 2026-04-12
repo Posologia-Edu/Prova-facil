@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download, AlertTriangle, CheckCircle, Pencil, Check, X, Star, BookmarkPlus, FileDown, BookOpen, Save } from "lucide-react";
 import ClinicalCaseBankDialog from "@/components/ClinicalCaseBankDialog";
+import ClinicalCaseContent from "@/components/ClinicalCaseContent";
 import { exportFormToPDF } from "@/lib/form-pdf-export";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import FormBuilder from "@/components/forms/FormBuilder";
@@ -777,7 +778,16 @@ export default function SimulationEditor() {
                         }}
                         rows={8}
                         placeholder={t("sim_patient_script_placeholder")}
+                        className="font-mono text-sm leading-6"
                       />
+                      {c.script.trim() && (
+                        <div className="rounded-xl border border-border bg-muted/20 p-4">
+                          <Label className="mb-3 block text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            Pré-visualização
+                          </Label>
+                          <ClinicalCaseContent content={c.script} />
+                        </div>
+                      )}
                     </div>
                   ))}
                   <div className="flex gap-2">

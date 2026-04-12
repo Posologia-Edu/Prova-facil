@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import ClinicalCaseContent from "@/components/ClinicalCaseContent";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
@@ -216,7 +217,7 @@ export default function ReconciliationJoin() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm whitespace-pre-wrap">{clinicalCase.content}</p>
+              <ClinicalCaseContent content={clinicalCase.content} />
             </CardContent>
           </Card>
         )}

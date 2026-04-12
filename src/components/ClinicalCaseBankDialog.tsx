@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import ClinicalCaseContent from "@/components/ClinicalCaseContent";
 import { toast } from "@/hooks/use-toast";
 import { Search, Plus, Trash2, Download, Sparkles, Loader2, BookOpen, CheckCircle } from "lucide-react";
 
@@ -241,8 +242,25 @@ export default function ClinicalCaseBankDialog({ open, onOpenChange, phase, onIm
               </div>
               <div>
                 <Label>Conteúdo</Label>
-                <Textarea value={newContent} onChange={e => setNewContent(e.target.value)} rows={10} placeholder="Descreva o caso clínico completo..." />
+                <Textarea
+                  value={newContent}
+                  onChange={e => setNewContent(e.target.value)}
+                  rows={10}
+                  placeholder="Descreva o caso clínico completo..."
+                  className="min-h-[18rem] font-mono text-sm leading-6"
+                />
               </div>
+              {newContent.trim() && (
+                <div className="space-y-2">
+                  <Label className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Pré-visualização premium
+                  </Label>
+                  <div className="rounded-xl border border-border bg-muted/20 p-4">
+                    {newTitle.trim() && <h4 className="mb-4 text-base font-semibold text-foreground">{newTitle.trim()}</h4>}
+                    <ClinicalCaseContent content={newContent} />
+                  </div>
+                </div>
+              )}
               <div>
                 <Label>Tags (separadas por vírgula)</Label>
                 <Input value={newTags} onChange={e => setNewTags(e.target.value)} placeholder="diabetes, cardiologia, idoso" />
