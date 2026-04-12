@@ -1,55 +1,71 @@
 
 
-## Plano: Banco de Casos Clínicos para Anamnese e Reconciliação
+## Plano: Geração de Imagens Médicas e Teste de Progresso com Prioridade de Provedores Externos
 
 ### Resumo
-Criar um banco centralizado de casos clínicos que o professor pode acessar ao editar salas de Anamnese e Reconciliação. O banco permite salvar, reutilizar e gerar casos via IA, com importação direta para as salas.
+Garantir que as duas novas funcionalidades de IA (geração de imagens médicas e geração de teste de progresso) utilizem prioritariamente os provedores de API configurados pelo administrador (Google, OpenAI, etc.) e apenas como fallback o Lovable AI Gateway — seguindo o mesmo padrão já usado no `callAiWithFallback`.
 
-### Estrutura de Dados
+### Mudanças Necessárias
 
-**Nova tabela `clinical_case_bank`:**
-- `id` (uuid, PK)
-- `user_id` (uuid, ref auth.users) — proprietário
-- `phase` (text: `anamnesis` | `reconciliation`) — fase alvo
-- `title` (text) — título do caso
-- `content` (text) — corpo do caso clínico
-- `tags` (text[]) — tags para organização (ex: "cardiologia", "diabetes")
-- `created_at`, `updated_at`
-- RLS: cada professor vê apenas seus próprios casos
+**1. Estender `ai-caller.ts` para suportar geração de imagens**
 
-### Nova Edge Function `generate-clinical-case`
-- Recebe: `phase` (anamnesis/reconciliation), `theme` (temática desejada pelo professor)
-- Gera via IA um caso clínico completo no formato correto:
-  - **Anamnese**: roteiro do paciente (script) com identificação, queixa principal, HDA, medicamentos, história social
-  - **Reconciliação**: caso clínico com dados do paciente, medicamentos em uso, exames, situação clínica
-- Retorna título + conteúdo para o professor revisar antes de salvar
+O utilitário `callAiWithFallback` atual não suporta o parâmetro `modalities` necessário para geração de imagens. Será adicionado:
+- Nova propriedade `modalities` na interface `AiCallOptions`
+- Propagação do `modalities` nas funções `callOpenAiCompatibleApi` e `callLovableAi`
+- Novo export `callAiImageWithFallback` que tenta primeiro o Google Generative AI (que suporta geração de imagens nativamente) e cai para o Lovable AI Gateway com modelo `google/gemini-2.5-flash-image`
 
-### Novo Componente `ClinicalCaseBankDialog`
-- Dialog acessível nos editores de Anamnese (`SimulationEditor`) e Reconciliação (`ReconciliationEditor`)
-- Duas abas: **"Meus Casos"** e **"Criar Novo"**
-- **Meus Casos**: lista filtrada por fase, com busca por título/tags. Botões para importar (adicionar à sala) ou excluir
-- **Criar Novo**: modo manual (título + conteúdo) ou modo IA (campo de temática + botão "Gerar com IA")
-- Ao importar: caso é inserido diretamente na estrutura da sala (array `clinicalCases` na Anamnese ou tabela `reconciliation_clinical_cases` na Reconciliação)
+**2. Edge Function `generate-medical-image`**
 
-### Integração nos Editores
+- Usa `callAiImageWithFallback` para gerar imagens médicas sintéticas
+- Recebe: `questionText` (enunciado), `imageType` (radiografia, TC, RM, lâmina, ECG, ultrassom), `details` (opcional)
+- O prompt instrui a IA a gerar uma imagem médica educacional realista e inédita
+- Faz upload da imagem base64 resultante para o bucket `question-images`
+- Retorna a URL pública da imagem
+- Trata erros 402/429 com mensagens claras
 
-1. **SimulationEditor.tsx** (Anamnese): Adicionar botão "Banco de Casos" ao lado do botão "Adicionar Caso" na aba `patient_script`. Ao importar do banco, o caso é adicionado ao array `clinicalCases` com `{ id, title, script: content }`.
+**3. Edge Function `generate-progress-test`**
 
-2. **ReconciliationEditor.tsx**: Adicionar botão "Banco de Casos" ao lado do botão de adicionar caso. Ao importar, insere na tabela `reconciliation_clinical_cases` com `{ room_id, title, content, position }`.
+- Usa `callAiWithFallback` (já existente) — provedores externos primeiro, Lovable AI como fallback
+- Recebe: `testId`, `course`, `subjects` (áreas temáticas), `questionsPerYear` (mapa ano→quantidade), `difficulty`
+- Gera questões de múltipla escolha via tool calling (saída estruturada em JSON)
+- Salva as questões no `question_bank` e vincula ao `progress_test_questions`
+- Retorna contagem de questões geradas
 
-3. **Salvar no Banco**: Em ambos os editores, cada caso existente ganha um ícone "Salvar no Banco" para exportar o caso da sala para o banco pessoal do professor.
+**4. UI — Botão de Imagem Médica (`Questions.tsx`)**
 
-### Detalhes Técnicos
+- Botão "Gerar Imagem Médica" (ícone Sparkles) ao lado do `QuestionImageUploader`
+- Popover/Dialog com: tipo de imagem (select), detalhes adicionais (input opcional), botão "Gerar"
+- Preview da imagem gerada antes de confirmar adição ao array `newImages`
+- Loading state durante geração
 
-- **Migração SQL**: Criar tabela `clinical_case_bank` com RLS (owner-based)
-- **Edge Function**: `generate-clinical-case` usando `callAiWithFallback` com prompts específicos por fase
-- **Componente**: `ClinicalCaseBankDialog.tsx` — reutilizável, recebe `phase` e callback `onImport`
-- **Config**: Adicionar função ao `config.toml` com `verify_jwt = false`
+**5. UI — Gerador de Teste de Progresso (`ProgressTestEditor.tsx`)**
 
-### Fluxo do Professor
-1. Abre o editor da sala (Anamnese ou Reconciliação)
-2. Clica em "Banco de Casos"
-3. Pode: importar caso existente, criar manualmente, ou informar uma temática e a IA gera o caso
-4. Revisa e confirma → caso é adicionado à sala
-5. Opcionalmente, pode salvar qualquer caso da sala no banco para reutilização futura
+- Botão "Gerar com IA" na interface do editor
+- Dialog com campos: Curso, Áreas Temáticas, Questões por Ano (1º-6º), Dificuldade
+- Ao gerar, chama a edge function e atualiza a lista de questões do teste
+- Loading state com feedback de progresso
+
+**6. Configuração**
+
+- Registrar ambas as funções no `supabase/config.toml` com `verify_jwt = false`
+
+### Arquivos a Criar
+- `supabase/functions/generate-medical-image/index.ts`
+- `supabase/functions/generate-progress-test/index.ts`
+
+### Arquivos a Editar
+- `supabase/functions/_shared/ai-caller.ts` — adicionar suporte a `modalities` e função de imagem
+- `src/pages/Questions.tsx` — botão e dialog de geração de imagem
+- `src/pages/ProgressTestEditor.tsx` — botão e dialog de geração de teste
+- `supabase/config.toml` — registrar novas funções
+
+### Fluxo de Prioridade de Provedores (para ambas as funcionalidades)
+
+```text
+1. Busca chaves ativas em ai_api_keys
+2. Ordena: Google → OpenAI → OpenRouter → Groq → Anthropic
+3. Tenta cada provedor até obter resposta OK
+4. Se todos falharem → Lovable AI Gateway (fallback)
+5. Log de uso em ai_usage_log
+```
 
