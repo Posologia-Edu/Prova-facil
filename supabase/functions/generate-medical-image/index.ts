@@ -88,22 +88,30 @@ IMPORTANT RULES:
 
     if (!response.ok) {
       const status = response.status;
+      const errorText = await response.text();
+      let errorMessage = "Erro ao gerar imagem médica";
+
+      try {
+        const parsed = JSON.parse(errorText);
+        errorMessage = parsed?.error || parsed?.message || errorMessage;
+      } catch {
+        if (errorText) errorMessage = errorText;
+      }
+
       if (status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }), {
+        return new Response(JSON.stringify({ error: errorMessage || "Limite de requisições excedido. Tente novamente em alguns minutos." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (status === 402) {
-        const body = await response.text();
-        return new Response(JSON.stringify({ error: "Créditos de IA insuficientes. Adicione créditos nas configurações do workspace." }), {
+        return new Response(JSON.stringify({ error: errorMessage || "Créditos de IA insuficientes. Adicione créditos nas configurações do workspace." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errorText = await response.text();
       console.error("AI image generation error:", status, errorText);
-      return new Response(JSON.stringify({ error: "Erro ao gerar imagem médica" }), {
+      return new Response(JSON.stringify({ error: errorMessage }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
