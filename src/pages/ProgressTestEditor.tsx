@@ -225,8 +225,12 @@ export default function ProgressTestEditor() {
 
         <TabsContent value="questions" className="space-y-4 mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Questões do Teste</CardTitle>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAiDialogOpen(true)}>
+                <Sparkles className="h-4 w-4 text-secondary" />
+                Gerar com IA
+              </Button>
             </CardHeader>
             <CardContent className="space-y-3">
               {(!testQuestions || testQuestions.length === 0) ? (
