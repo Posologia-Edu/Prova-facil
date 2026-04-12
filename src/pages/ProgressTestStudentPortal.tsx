@@ -206,7 +206,8 @@ export default function ProgressTestStudentPortal() {
 
   // Exam step
   const currentQ = questions[currentIdx];
-  const content = currentQ?.questionData?.content_json as any;
+  const rawContent = currentQ?.questionData?.content_json;
+  const content = typeof rawContent === "string" ? (() => { try { return JSON.parse(rawContent); } catch { return null; } })() : rawContent;
   const currentAnswer = answers[currentQ?.id] || null;
   const progress = ((currentIdx + 1) / questions.length) * 100;
   const options = parseOptions(content);
