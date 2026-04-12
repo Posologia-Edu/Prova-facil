@@ -122,7 +122,7 @@ export default function ProgressTestEditor() {
     const q = questionBank?.find((q) => q.id === qId);
     if (!q) return "Questão não encontrada";
     const content = q.content_json as any;
-    return content?.stem || content?.statement || `Questão ${q.type}`;
+    return content?.stem || content?.question_text || content?.statement || `Questão ${q.type}`;
   };
 
   const studentPortalUrl = `${window.location.origin}/progress-test/student/${id}`;
