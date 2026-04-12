@@ -1,11 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 interface AiCallOptions {
-  messages: Array<{ role: string; content: string }>;
+  messages: Array<{ role: string; content: string | any[] }>;
   model?: string;
   stream?: boolean;
   tools?: any[];
   tool_choice?: any;
+  modalities?: string[];
 }
 
 interface AiUsageContext {
@@ -159,6 +160,7 @@ async function callOpenAiCompatibleApi(provider: ProviderConfig, options: AiCall
   if (options.stream) body.stream = true;
   if (options.tools) body.tools = options.tools;
   if (options.tool_choice) body.tool_choice = options.tool_choice;
+  if (options.modalities) body.modalities = options.modalities;
 
   return await fetch(provider.baseUrl, {
     method: "POST",
@@ -181,6 +183,7 @@ async function callLovableAi(options: AiCallOptions): Promise<Response> {
   if (options.stream) body.stream = true;
   if (options.tools) body.tools = options.tools;
   if (options.tool_choice) body.tool_choice = options.tool_choice;
+  if (options.modalities) body.modalities = options.modalities;
 
   return await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
