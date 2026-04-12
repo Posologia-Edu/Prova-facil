@@ -255,7 +255,12 @@ export default function ProgressTestStudentPortal() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold">Questão {currentIdx + 1}</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-bold">Questão {currentIdx + 1}</CardTitle>
+              {content?.subject_area && (
+                <Badge variant="outline" className="text-xs">{content.subject_area}</Badge>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="text-sm leading-relaxed text-foreground">

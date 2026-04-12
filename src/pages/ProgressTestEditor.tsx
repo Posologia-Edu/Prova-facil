@@ -259,8 +259,15 @@ export default function ProgressTestEditor() {
               ) : (
                 testQuestions.map((tq: any, idx: number) => (
                   <div key={tq.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                    <span className="text-sm font-medium text-muted-foreground w-8">{idx + 1}.</span>
-                    <span className="text-sm flex-1 line-clamp-1">{getQuestionLabel(tq.question_id)}</span>
+                     <span className="text-sm font-medium text-muted-foreground w-8">{idx + 1}.</span>
+                     <div className="flex-1 min-w-0">
+                       <span className="text-sm line-clamp-1">{getQuestionLabel(tq.question_id)}</span>
+                       {(() => {
+                         const q = questionBank?.find((q) => q.id === tq.question_id);
+                         const area = (q?.content_json as any)?.subject_area;
+                         return area ? <span className="text-xs text-muted-foreground">{area}</span> : null;
+                       })()}
+                     </div>
                     <Select value={String(tq.expected_year)} onValueChange={(v) => updateExpectedYear(tq.id, Number(v))}>
                       <SelectTrigger className="w-28">
                         <SelectValue />
