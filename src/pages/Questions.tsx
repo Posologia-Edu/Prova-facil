@@ -312,6 +312,45 @@ export default function QuestionsPage() {
     setNewTags("");
     setNewEmbed("");
     setNewImages([]);
+    setMedImagePreview(null);
+    setMedImageDetails("");
+  };
+
+  const handleGenerateMedImage = async () => {
+    if (!newText.trim()) {
+      toast.error("Digite o enunciado da questão antes de gerar a imagem.");
+      return;
+    }
+    setMedImageGenerating(true);
+    setMedImagePreview(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-medical-image", {
+        body: { questionText: newText, imageType: medImageType, details: medImageDetails || undefined },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      if (data?.url) {
+        setMedImagePreview(data.url);
+        toast.success("Imagem gerada! Confirme para adicioná-la à questão.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar imagem médica");
+    } finally {
+      setMedImageGenerating(false);
+    }
+  };
+
+  const handleConfirmMedImage = () => {
+    if (medImagePreview) {
+      setNewImages(prev => [...prev, medImagePreview]);
+      setMedImagePreview(null);
+      setMedImageDetails("");
+      setMedImagePopoverOpen(false);
+      toast.success("Imagem adicionada à questão!");
+    }
   };
 
   const handleCreateQuestion = async () => {
