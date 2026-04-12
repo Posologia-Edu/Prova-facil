@@ -342,6 +342,86 @@ export default function ProgressTestEditor() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* AI Progress Test Generator Dialog */}
+      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-secondary" />
+              Gerar Teste de Progresso com IA
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Curso</Label>
+              <Select value={aiCourse} onValueChange={setAiCourse}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Medicina">Medicina</SelectItem>
+                  <SelectItem value="Enfermagem">Enfermagem</SelectItem>
+                  <SelectItem value="Farmácia">Farmácia</SelectItem>
+                  <SelectItem value="Odontologia">Odontologia</SelectItem>
+                  <SelectItem value="Fisioterapia">Fisioterapia</SelectItem>
+                  <SelectItem value="Nutrição">Nutrição</SelectItem>
+                  <SelectItem value="Biomedicina">Biomedicina</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Áreas Temáticas (separadas por vírgula)</Label>
+              <Input
+                placeholder="Ex: Cardiologia, Pneumologia, Farmacologia, Anatomia"
+                value={aiSubjects}
+                onChange={(e) => setAiSubjects(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Dificuldade Predominante</Label>
+              <Select value={aiDifficulty} onValueChange={setAiDifficulty}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="variada">Variada (mista)</SelectItem>
+                  <SelectItem value="easy">Fácil</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="hard">Difícil</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Questões por Ano</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6].map(y => (
+                  <div key={y} className="flex items-center gap-2">
+                    <Label className="text-xs w-14 shrink-0">{y}º ano:</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={50}
+                      className="h-8 text-xs"
+                      value={aiQuestionsPerYear[String(y)] || 0}
+                      onChange={(e) => setAiQuestionsPerYear(prev => ({ ...prev, [String(y)]: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total: {Object.values(aiQuestionsPerYear).reduce((s, n) => s + n, 0)} questões
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiDialogOpen(false)} disabled={aiGenerating}>Cancelar</Button>
+            <Button onClick={handleAiGenerate} disabled={aiGenerating || !aiSubjects.trim()} className="gap-1.5">
+              {aiGenerating ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</>
+              ) : (
+                <><Sparkles className="h-4 w-4" /> Gerar Teste</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
