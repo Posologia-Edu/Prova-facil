@@ -35,8 +35,17 @@ function parseOptions(content: any): { key: string; label: string; text: string 
   return [];
 }
 
+function cleanEncodingArtifacts(s: string): string {
+  if (!s) return s;
+  return s
+    .replace(/\n\t{2,}\n/g, "")
+    .replace(/\n {6,}\n/g, "")
+    .replace(/\t{3,}/g, "");
+}
+
 function getStem(content: any): string {
-  return content?.stem || content?.question_text || content?.statement || "";
+  const raw = content?.stem || content?.question_text || content?.statement || "";
+  return cleanEncodingArtifacts(raw);
 }
 
 export default function ProgressTestStudentPortal() {
