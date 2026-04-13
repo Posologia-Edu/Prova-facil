@@ -262,21 +262,59 @@ serve(async (req) => {
       });
     }
 
-    const data = await response.json();
+    // Read as text first to handle encoding issues
+    const rawResponseText = await response.text();
+    let data: any;
+    try {
+      data = JSON.parse(rawResponseText);
+    } catch (e) {
+      console.error("Failed to parse AI response JSON:", e);
+      return new Response(JSON.stringify({ error: "Erro ao processar resposta da IA" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Extract questions from tool call
     let questions: any[] = [];
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       try {
-        const args = typeof toolCall.function.arguments === "string"
-          ? JSON.parse(toolCall.function.arguments)
-          : toolCall.function.arguments;
+        let argsRaw = typeof toolCall.function.arguments === "string"
+          ? toolCall.function.arguments
+          : JSON.stringify(toolCall.function.arguments);
+
+        // Fix broken multi-byte UTF-8 encoding artifacts from Gemini:
+        // Accented chars (ô, ã, ç, ê, etc.) get replaced by \n\t+\n sequences
+        argsRaw = argsRaw.replace(/\\n(?:\\t)+\\n/g, "");
+        // Also handle already-decoded variants (literal newlines + tabs)
+        argsRaw = argsRaw.replace(/\n\t+\n/g, "");
+
+        const args = JSON.parse(argsRaw);
         questions = args.questions || [];
       } catch (e) {
         console.error("Failed to parse tool call arguments:", e);
       }
     }
+
+    // Deep-clean all string values to remove any remaining encoding artifacts
+    function cleanEncodingArtifacts(obj: any): any {
+      if (typeof obj === "string") {
+        return obj
+          .replace(/\n\t{2,}\n/g, "")
+          .replace(/\n {6,}\n/g, "")
+          .replace(/\t{3,}/g, "");
+      }
+      if (Array.isArray(obj)) return obj.map(cleanEncodingArtifacts);
+      if (obj && typeof obj === "object") {
+        const cleaned: any = {};
+        for (const [k, v] of Object.entries(obj)) {
+          cleaned[k] = cleanEncodingArtifacts(v);
+        }
+        return cleaned;
+      }
+      return obj;
+    }
+    questions = cleanEncodingArtifacts(questions);
 
     if (questions.length === 0) {
       return new Response(JSON.stringify({ error: "A IA não gerou questões. Tente novamente." }), {

@@ -20,23 +20,33 @@ const LETTER_LABELS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 function parseOptions(content: any): { key: string; label: string; text: string }[] {
   if (!content?.options) return [];
   const opts = content.options;
+  const clean = (s: string) => s.replace(/\n\t{2,}\n/g, "").replace(/\n {6,}\n/g, "").replace(/\t{3,}/g, "");
   if (!Array.isArray(opts) && typeof opts === "object") {
     return Object.entries(opts)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, text], i) => ({ key, label: LETTER_LABELS[i] || key.toUpperCase(), text: String(text) }));
+      .map(([key, text], i) => ({ key, label: LETTER_LABELS[i] || key.toUpperCase(), text: clean(String(text)) }));
   }
   if (Array.isArray(opts)) {
     return opts.map((opt: any, i: number) => ({
       key: String(opt.id ?? LETTER_LABELS[i]?.toLowerCase() ?? i),
       label: LETTER_LABELS[i] || String(i + 1),
-      text: typeof opt === "string" ? opt : opt.text || "",
+      text: clean(typeof opt === "string" ? opt : opt.text || ""),
     }));
   }
   return [];
 }
 
+function cleanEncodingArtifacts(s: string): string {
+  if (!s) return s;
+  return s
+    .replace(/\n\t{2,}\n/g, "")
+    .replace(/\n {6,}\n/g, "")
+    .replace(/\t{3,}/g, "");
+}
+
 function getStem(content: any): string {
-  return content?.stem || content?.question_text || content?.statement || "";
+  const raw = content?.stem || content?.question_text || content?.statement || "";
+  return cleanEncodingArtifacts(raw);
 }
 
 export default function ProgressTestStudentPortal() {
