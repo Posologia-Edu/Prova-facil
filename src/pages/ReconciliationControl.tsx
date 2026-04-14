@@ -369,7 +369,17 @@ export default function ReconciliationControl() {
           {!responses.length ? (
             <p className="text-sm text-muted-foreground">Nenhuma resposta recebida ainda.</p>
           ) : (
-            responses.map(resp => {
+            (() => {
+              // Deduplicate: keep only the latest response per pair_index
+              const seen = new Map<number, any>();
+              for (const resp of responses) {
+                const existing = seen.get(resp.pair_index);
+                if (!existing || new Date(resp.created_at) > new Date(existing.created_at)) {
+                  seen.set(resp.pair_index, resp);
+                }
+              }
+              return Array.from(seen.values());
+            })().map(resp => {
               const caseData = clinicalCases.find(c => c.id === resp.clinical_case_id);
               const respAnswerKeyFields = getAnswerKeyFieldsForCase(resp.clinical_case_id);
               return (
