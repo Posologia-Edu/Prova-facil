@@ -1,19 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Save, Plus, Trash2, Share2, Copy, BookOpen, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Share2, Copy, BookOpen, Sparkles, Loader2, ChevronDown, ChevronRight, CheckCircle, XCircle, Ban, BarChart3 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
+
+const LETTER_LABELS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
+function parseOptionsFromContent(content: any): { key: string; label: string; text: string }[] {
+  if (!content?.options) return [];
+  const opts = content.options;
+  if (!Array.isArray(opts) && typeof opts === "object") {
+    return Object.entries(opts)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, text], i) => ({ key, label: LETTER_LABELS[i] || key.toUpperCase(), text: String(text) }));
+  }
+  if (Array.isArray(opts)) {
+    return opts.map((opt: any, i: number) => ({
+      key: String(opt.id ?? LETTER_LABELS[i]?.toLowerCase() ?? i),
+      label: LETTER_LABELS[i] || String(i + 1),
+      text: typeof opt === "string" ? opt : opt.text || "",
+    }));
+  }
+  return [];
+}
 
 export default function ProgressTestEditor() {
   const { id } = useParams<{ id: string }>();
@@ -24,7 +46,9 @@ export default function ProgressTestEditor() {
   const [targetYears, setTargetYears] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [status, setStatus] = useState("draft");
   const [saving, setSaving] = useState(false);
-  
+  const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+
   // AI Generator state
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiCourse, setAiCourse] = useState("Medicina");
@@ -74,6 +98,16 @@ export default function ProgressTestEditor() {
     enabled: !!id,
   });
 
+  const { data: selectedSessionAnswers } = useQuery({
+    queryKey: ["progress-test-answers", selectedSessionId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("progress_test_answers" as any).select("*").eq("session_id", selectedSessionId).order("created_at");
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!selectedSessionId,
+  });
+
   useEffect(() => {
     if (test) {
       setTitle(test.title || "");
@@ -118,11 +152,16 @@ export default function ProgressTestEditor() {
     refetchQuestions();
   };
 
-  const getQuestionLabel = (qId: string) => {
+  const getQuestionContent = (qId: string) => {
     const q = questionBank?.find((q) => q.id === qId);
-    if (!q) return "Questão não encontrada";
-    const content = q.content_json as any;
-    return content?.stem || content?.question_text || content?.statement || `Questão ${q.type}`;
+    if (!q) return null;
+    return q.content_json as any;
+  };
+
+  const getQuestionLabel = (qId: string) => {
+    const content = getQuestionContent(qId);
+    if (!content) return "Questão não encontrada";
+    return content?.stem || content?.question_text || content?.statement || `Questão`;
   };
 
   const studentPortalUrl = `${window.location.origin}/progress-test/student/${id}`;
@@ -181,6 +220,58 @@ export default function ProgressTestEditor() {
       setAiGenerating(false);
     }
   };
+
+  // Analytics for selected session
+  const sessionAnalytics = useMemo(() => {
+    if (!selectedSessionAnswers || !testQuestions || !questionBank) return null;
+    const session = sessions?.find((s: any) => s.id === selectedSessionId);
+    if (!session) return null;
+
+    let correct = 0, incorrect = 0, annulled = 0, blank = 0;
+    const byArea: Record<string, { correct: number; total: number }> = {};
+    const byYear: Record<number, { correct: number; total: number }> = {};
+    const questionDetails: { idx: number; stem: string; area: string; year: number; answer: string | null; correctAnswer: string; isCorrect: boolean; responseType: string }[] = [];
+
+    for (const tq of testQuestions) {
+      const ans = selectedSessionAnswers.find((a: any) => a.question_id === tq.id);
+      const qContent = getQuestionContent(tq.question_id);
+      const responseType = ans?.response_type || "blank";
+      const isCorrect = ans?.is_correct || false;
+      const area = qContent?.subject_area || "Geral";
+      const year = tq.expected_year || 1;
+
+      if (responseType === "answered") { if (isCorrect) correct++; else incorrect++; }
+      else if (responseType === "annulled") annulled++;
+      else blank++;
+
+      if (!byArea[area]) byArea[area] = { correct: 0, total: 0 };
+      byArea[area].total++;
+      if (isCorrect) byArea[area].correct++;
+
+      if (!byYear[year]) byYear[year] = { correct: 0, total: 0 };
+      byYear[year].total++;
+      if (isCorrect) byYear[year].correct++;
+
+      const options = parseOptionsFromContent(qContent);
+      const answerKey = ans?.answer_json?.answer;
+      const answerLabel = answerKey ? (options.find(o => o.key === answerKey)?.label || answerKey.toUpperCase()) : "—";
+      const correctKey = qContent?.correct_answer ?? qContent?.correctAnswer;
+      const correctLabel = correctKey ? (options.find(o => o.key === correctKey)?.label || String(correctKey).toUpperCase()) : "?";
+
+      questionDetails.push({
+        idx: tq.position + 1,
+        stem: (qContent?.stem || qContent?.question_text || "Questão").slice(0, 100),
+        area,
+        year,
+        answer: responseType === "annulled" ? "Anulada" : responseType === "blank" ? "Em branco" : answerLabel,
+        correctAnswer: correctLabel,
+        isCorrect,
+        responseType,
+      });
+    }
+
+    return { session, correct, incorrect, annulled, blank, byArea, byYear, questionDetails };
+  }, [selectedSessionAnswers, testQuestions, questionBank, selectedSessionId, sessions]);
 
   return (
     <div className="space-y-6">
@@ -257,32 +348,72 @@ export default function ProgressTestEditor() {
               {(!testQuestions || testQuestions.length === 0) ? (
                 <p className="text-muted-foreground text-sm text-center py-6">Nenhuma questão adicionada. Importe do banco de questões abaixo.</p>
               ) : (
-                testQuestions.map((tq: any, idx: number) => (
-                  <div key={tq.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                     <span className="text-sm font-medium text-muted-foreground w-8">{idx + 1}.</span>
-                     <div className="flex-1 min-w-0">
-                       <span className="text-sm line-clamp-1">{getQuestionLabel(tq.question_id)}</span>
-                       {(() => {
-                         const q = questionBank?.find((q) => q.id === tq.question_id);
-                         const area = (q?.content_json as any)?.subject_area;
-                         return area ? <span className="text-xs text-muted-foreground">{area}</span> : null;
-                       })()}
-                     </div>
-                    <Select value={String(tq.expected_year)} onValueChange={(v) => updateExpectedYear(tq.id, Number(v))}>
-                      <SelectTrigger className="w-28">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5, 6].map(y => (
-                          <SelectItem key={y} value={String(y)}>{y}º ano</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button variant="ghost" size="icon" onClick={() => removeQuestion(tq.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))
+                testQuestions.map((tq: any, idx: number) => {
+                  const content = getQuestionContent(tq.question_id);
+                  const isExpanded = expandedQuestion === tq.id;
+                  const options = parseOptionsFromContent(content);
+                  const correctKey = content?.correct_answer ?? content?.correctAnswer;
+                  const area = content?.subject_area;
+
+                  return (
+                    <div key={tq.id} className="border rounded-lg overflow-hidden">
+                      <div
+                        className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => setExpandedQuestion(isExpanded ? null : tq.id)}
+                      >
+                        <span className="text-sm font-medium text-muted-foreground w-8">{idx + 1}.</span>
+                        {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm line-clamp-1">{getQuestionLabel(tq.question_id)}</span>
+                          {area && <span className="text-xs text-muted-foreground">{area}</span>}
+                        </div>
+                        <Select value={String(tq.expected_year)} onValueChange={(v) => { updateExpectedYear(tq.id, Number(v)); }}>
+                          <SelectTrigger className="w-28" onClick={(e) => e.stopPropagation()}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5, 6].map(y => (
+                              <SelectItem key={y} value={String(y)}>{y}º ano</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); removeQuestion(tq.id); }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {isExpanded && content && (
+                        <div className="border-t p-4 bg-muted/30 space-y-3">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Enunciado</Label>
+                            <p className="text-sm mt-1 whitespace-pre-wrap">{content?.stem || content?.question_text || content?.statement || "—"}</p>
+                          </div>
+                          {options.length > 0 && (
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Alternativas</Label>
+                              {options.map((opt) => {
+                                const isCorrect = opt.key === correctKey;
+                                return (
+                                  <div key={opt.key} className={`flex items-start gap-2 p-2 rounded text-sm ${isCorrect ? "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800" : "bg-background border"}`}>
+                                    <span className={`font-bold shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-xs ${isCorrect ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"}`}>{opt.label}</span>
+                                    <span className="flex-1">{opt.text}</span>
+                                    {isCorrect && <CheckCircle className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {content?.explanation && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Explicação</Label>
+                              <p className="text-sm mt-1 text-muted-foreground">{content.explanation}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </CardContent>
           </Card>
@@ -341,33 +472,155 @@ export default function ProgressTestEditor() {
         </TabsContent>
 
         <TabsContent value="results" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader><CardTitle>Resultados</CardTitle></CardHeader>
-            <CardContent>
-              {(!sessions || sessions.length === 0) ? (
-                <p className="text-muted-foreground text-sm text-center py-6">Nenhum aluno respondeu ainda.</p>
-              ) : (
-                <div className="space-y-2">
-                  {sessions.map((s: any) => (
-                    <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium text-sm">{s.student_name || "Anônimo"}</p>
-                        <p className="text-xs text-muted-foreground">{s.student_email} — {s.student_year}º ano</p>
+          {selectedSessionId && sessionAnalytics ? (
+            // Detailed analytics view
+            <div className="space-y-4">
+              <Button variant="ghost" onClick={() => setSelectedSessionId(null)} className="gap-1">
+                <ArrowLeft className="h-4 w-4" /> Voltar aos resultados
+              </Button>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Summary card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{sessionAnalytics.session.student_name}</CardTitle>
+                    <CardDescription>{sessionAnalytics.session.student_email} — {sessionAnalytics.session.student_year}º ano</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-4 gap-2 text-center text-sm">
+                      <div className="p-2 rounded-lg bg-green-50 dark:bg-green-950">
+                        <p className="text-lg font-bold text-green-700 dark:text-green-400">{sessionAnalytics.correct}</p>
+                        <p className="text-xs text-muted-foreground">Acertos</p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant={s.status === "finished" ? "default" : "secondary"}>
-                          {s.status === "finished" ? "Finalizado" : "Em andamento"}
-                        </Badge>
-                        {s.total_score != null && (
-                          <span className="text-sm font-semibold">{s.total_score}/{s.max_score}</span>
-                        )}
+                      <div className="p-2 rounded-lg bg-red-50 dark:bg-red-950">
+                        <p className="text-lg font-bold text-red-700 dark:text-red-400">{sessionAnalytics.incorrect}</p>
+                        <p className="text-xs text-muted-foreground">Erros</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-muted">
+                        <p className="text-lg font-bold">{sessionAnalytics.annulled}</p>
+                        <p className="text-xs text-muted-foreground">Anuladas</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-muted">
+                        <p className="text-lg font-bold">{sessionAnalytics.blank}</p>
+                        <p className="text-xs text-muted-foreground">Em branco</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <Separator />
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Pontuação (+1 acerto, −1 erro)</p>
+                      <p className="text-2xl font-bold">{sessionAnalytics.session.total_score} / {sessionAnalytics.session.max_score}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Performance by year */}
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Desempenho por Ano</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    {Object.entries(sessionAnalytics.byYear).sort(([a], [b]) => Number(a) - Number(b)).map(([year, data]) => {
+                      const pct = data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0;
+                      return (
+                        <div key={year} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span>{year}º ano</span>
+                            <span className="font-medium">{data.correct}/{data.total} ({pct}%)</span>
+                          </div>
+                          <Progress value={pct} className="h-2" />
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Performance by area */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">Desempenho por Área Temática</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {Object.entries(sessionAnalytics.byArea).sort(([, a], [, b]) => (a.correct / a.total) - (b.correct / b.total)).map(([area, data]) => {
+                      const pct = data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0;
+                      const color = pct >= 60 ? "text-green-700 dark:text-green-400" : pct >= 40 ? "text-yellow-700 dark:text-yellow-400" : "text-red-700 dark:text-red-400";
+                      return (
+                        <div key={area} className="p-3 border rounded-lg">
+                          <p className="text-sm font-medium truncate">{area}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className={`text-lg font-bold ${color}`}>{pct}%</span>
+                            <span className="text-xs text-muted-foreground">{data.correct}/{data.total}</span>
+                          </div>
+                          <Progress value={pct} className="h-1.5 mt-1" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Question-by-question breakdown */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">Detalhamento por Questão</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-1.5">
+                    {sessionAnalytics.questionDetails.map((qd) => (
+                      <div key={qd.idx} className={`flex items-center gap-3 p-2 rounded text-sm ${qd.isCorrect ? "bg-green-50 dark:bg-green-950" : qd.responseType === "annulled" || qd.responseType === "blank" ? "bg-muted/50" : "bg-red-50 dark:bg-red-950"}`}>
+                        <span className="w-8 text-muted-foreground font-medium">{qd.idx}.</span>
+                        {qd.isCorrect ? <CheckCircle className="h-4 w-4 text-green-600 shrink-0" /> :
+                          qd.responseType === "annulled" ? <Ban className="h-4 w-4 text-muted-foreground shrink-0" /> :
+                          qd.responseType === "blank" ? <span className="w-4 h-4 shrink-0" /> :
+                          <XCircle className="h-4 w-4 text-red-600 shrink-0" />}
+                        <span className="flex-1 truncate">{qd.stem}...</span>
+                        <Badge variant="outline" className="text-[10px] shrink-0">{qd.area}</Badge>
+                        {qd.responseType === "answered" && !qd.isCorrect && (
+                          <span className="text-xs text-muted-foreground shrink-0">Resp: {qd.answer} | Correta: {qd.correctAnswer}</span>
+                        )}
+                        {(qd.responseType === "annulled" || qd.responseType === "blank") && (
+                          <span className="text-xs text-muted-foreground shrink-0">{qd.answer}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card>
+              <CardHeader><CardTitle>Resultados</CardTitle></CardHeader>
+              <CardContent>
+                {(!sessions || sessions.length === 0) ? (
+                  <p className="text-muted-foreground text-sm text-center py-6">Nenhum aluno respondeu ainda.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {sessions.map((s: any) => (
+                      <div
+                        key={s.id}
+                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => s.status === "finished" && setSelectedSessionId(s.id)}
+                      >
+                        <div>
+                          <p className="font-medium text-sm">{s.student_name || "Anônimo"}</p>
+                          <p className="text-xs text-muted-foreground">{s.student_email} — {s.student_year}º ano</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant={s.status === "finished" ? "default" : "secondary"}>
+                            {s.status === "finished" ? "Finalizado" : "Em andamento"}
+                          </Badge>
+                          {s.total_score != null && (
+                            <div className="text-right">
+                              <span className="text-sm font-semibold">{s.total_score}/{s.max_score}</span>
+                              {s.status === "finished" && (
+                                <p className="text-[10px] text-muted-foreground">Clique para detalhes</p>
+                              )}
+                            </div>
+                          )}
+                          {s.status === "finished" && <BarChart3 className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
