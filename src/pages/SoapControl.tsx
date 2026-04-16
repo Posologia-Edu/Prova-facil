@@ -471,6 +471,11 @@ export default function SoapControl() {
 
           const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
           const aiSc = soapResp?.ai_score != null ? Number(soapResp.ai_score) : null;
+          // For solo students, use AI score as peer score
+          const isSolo = student.pair_position === "S";
+          if (isSolo && peerScore == null && aiSc != null) {
+            peerScore = aiSc;
+          }
           const allScores = [peerScore, adminSc, aiSc].filter((s): s is number => s != null);
           const finalScore = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
 
