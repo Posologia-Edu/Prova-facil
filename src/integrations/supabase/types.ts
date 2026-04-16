@@ -4868,6 +4868,8 @@ export type Database = {
         Row: {
           admin_feedback: string | null
           admin_score: number | null
+          ai_feedback_json: Json | null
+          ai_score: number | null
           answers_json: Json
           created_at: string
           form_id: string
@@ -4880,6 +4882,8 @@ export type Database = {
         Insert: {
           admin_feedback?: string | null
           admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
           answers_json?: Json
           created_at?: string
           form_id: string
@@ -4892,6 +4896,8 @@ export type Database = {
         Update: {
           admin_feedback?: string | null
           admin_score?: number | null
+          ai_feedback_json?: Json | null
+          ai_score?: number | null
           answers_json?: Json
           created_at?: string
           form_id?: string
