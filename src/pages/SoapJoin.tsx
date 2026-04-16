@@ -13,6 +13,84 @@ import type { FormField } from "@/components/forms/types";
 type Phase = "login" | "soap" | "waiting_peer" | "evaluate" | "done";
 
 export default function SoapJoin() {
+  // Fire-and-forget AI peer grading for solo students
+  const triggerAIPeerGrading = async (
+    roomData: any,
+    participantData: any,
+    soapFormData: any,
+    answers: Record<string, any>
+  ) => {
+    try {
+      // Get SOAP response ID (just inserted)
+      const { data: soapResps } = await supabase
+        .from("soap_responses")
+        .select("id")
+        .eq("participant_id", participantData.id)
+        .eq("room_id", roomData.id)
+        .is("target_participant_id", null)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (!soapResps?.length) return;
+
+      // Build anamnesis answers with labels
+      let anamAnswers: Record<string, any> = {};
+      if (participantData.anamnesis_participant_id && roomData.anamnesis_room_id) {
+        const { data: anamP } = await supabase
+          .from("simulation_participants")
+          .select("pair_index")
+          .eq("id", participantData.anamnesis_participant_id)
+          .single();
+        if (anamP) {
+          const { data: anamForms } = await supabase
+            .from("simulation_forms")
+            .select("*")
+            .eq("room_id", roomData.anamnesis_room_id)
+            .eq("form_type", "standard");
+          const anamForm = anamForms?.[0];
+          if (anamForm) {
+            const { data: anamResps } = await (supabase.from("simulation_responses") as any)
+              .select("answers_json")
+              .eq("room_id", roomData.anamnesis_room_id)
+              .eq("form_id", anamForm.id)
+              .eq("pair_index", anamP.pair_index)
+              .limit(1);
+            if (anamResps?.[0]?.answers_json) {
+              const fields = Array.isArray(anamForm.content_json) ? (anamForm.content_json as any[]) : [];
+              for (const [key, value] of Object.entries(anamResps[0].answers_json as Record<string, any>)) {
+                if (key === "_feedback") continue;
+                const field = fields.find((f: any) => f.id === key);
+                anamAnswers[field?.label || key] = value;
+              }
+            }
+          }
+        }
+      }
+
+      const soapFormFields = soapFormData ? (Array.isArray(soapFormData.content_json) ? soapFormData.content_json : []) : [];
+
+      await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/grade-soap`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            response_id: soapResps[0].id,
+            soap_answers: answers,
+            anamnesis_answers: anamAnswers,
+            soap_form_fields: soapFormFields,
+            student_name: participantData.student_name || "",
+            patient_name: patientName || "",
+          }),
+        }
+      );
+    } catch (err) {
+      console.error("AI peer grading error:", err);
+    }
+  };
+
   const [pin, setPin] = useState(() => sessionStorage.getItem("soap_pin") || "");
   const [email, setEmail] = useState(() => sessionStorage.getItem("soap_email") || "");
   const [phase, setPhase] = useState<Phase>("login");
@@ -244,10 +322,12 @@ export default function SoapJoin() {
     await supabase.from("soap_participants").update({ status: "submitted" }).eq("id", participant.id);
     setSubmittedSoap(true);
     toast({ title: "SOAP enviado!" });
-    // Solo students skip peer evaluation entirely
+    // Solo students skip peer evaluation — trigger AI peer grading instead
     if (participant.pair_position === "S") {
       await supabase.from("soap_participants").update({ status: "done" }).eq("id", participant.id);
       setPhase("done");
+      // Fire-and-forget AI grading for solo student
+      triggerAIPeerGrading(room, participant, soapForm, soapAnswers).catch(console.error);
     } else {
       await checkPartnerAndPeerStatus(room.id, participant);
     }

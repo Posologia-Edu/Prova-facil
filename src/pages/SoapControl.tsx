@@ -471,6 +471,11 @@ export default function SoapControl() {
 
           const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
           const aiSc = soapResp?.ai_score != null ? Number(soapResp.ai_score) : null;
+          // For solo students, use AI score as peer score
+          const isSolo = student.pair_position === "S";
+          if (isSolo && peerScore == null && aiSc != null) {
+            peerScore = aiSc;
+          }
           const allScores = [peerScore, adminSc, aiSc].filter((s): s is number => s != null);
           const finalScore = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
 
@@ -708,6 +713,7 @@ export default function SoapControl() {
               peerMaxScore: number;
               adminScore: number | null;
               finalScore: number | null;
+              isSolo: boolean;
             }[] = [];
 
             const allStudents = participants.filter((p: any) => p.participant_role !== "teacher");
@@ -717,6 +723,7 @@ export default function SoapControl() {
               const peerEval = peerResponses.find((r: any) => r.target_participant_id === student.id);
               let peerScore: number | null = null;
               let peerMaxScore = 0;
+              const isSolo = student.pair_position === "S";
 
               if (peerEval && evalFields.length > 0) {
                 let totalScore = 0;
@@ -732,9 +739,15 @@ export default function SoapControl() {
                 peerScore = totalMax > 0 ? (totalScore / totalMax) * 10 : 0;
               }
 
-              // Admin score: from SOAP response
+              // Admin score & AI score: from SOAP response
               const soapResp = soapResponses.find((r: any) => r.participant_id === student.id);
               const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
+              const aiSc = soapResp?.ai_score != null ? Number(soapResp.ai_score) : null;
+
+              // For solo students without peer evaluation, use AI score as peer score
+              if (isSolo && peerScore == null && aiSc != null) {
+                peerScore = aiSc;
+              }
 
               // Final: average of available scores
               const scores = [peerScore, adminSc].filter((s): s is number => s != null);
@@ -747,6 +760,7 @@ export default function SoapControl() {
                 peerMaxScore,
                 adminScore: adminSc,
                 finalScore,
+                isSolo,
               });
             }
 
@@ -779,7 +793,10 @@ export default function SoapControl() {
                             <td className="py-3 pr-4 font-medium">{sg.name}</td>
                             <td className="py-3 px-4 text-center">
                               {sg.peerScore != null ? (
-                                <Badge variant="outline">{sg.peerScore.toFixed(1)}</Badge>
+                                <span className="inline-flex items-center gap-1">
+                                  <Badge variant="outline">{sg.peerScore.toFixed(1)}</Badge>
+                                  {sg.isSolo && <span className="text-xs text-muted-foreground">(IA)</span>}
+                                </span>
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}
