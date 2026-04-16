@@ -244,10 +244,12 @@ export default function SoapJoin() {
     await supabase.from("soap_participants").update({ status: "submitted" }).eq("id", participant.id);
     setSubmittedSoap(true);
     toast({ title: "SOAP enviado!" });
-    // Solo students skip peer evaluation entirely
+    // Solo students skip peer evaluation — trigger AI peer grading instead
     if (participant.pair_position === "S") {
       await supabase.from("soap_participants").update({ status: "done" }).eq("id", participant.id);
       setPhase("done");
+      // Fire-and-forget AI grading for solo student
+      triggerAIPeerGrading(room, participant, soapForm, soapAnswers).catch(console.error);
     } else {
       await checkPartnerAndPeerStatus(room.id, participant);
     }
