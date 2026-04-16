@@ -755,6 +755,7 @@ export default function SoapControl() {
                 peerMaxScore,
                 adminScore: adminSc,
                 finalScore,
+                isSolo,
               });
             }
 
@@ -787,7 +788,10 @@ export default function SoapControl() {
                             <td className="py-3 pr-4 font-medium">{sg.name}</td>
                             <td className="py-3 px-4 text-center">
                               {sg.peerScore != null ? (
-                                <Badge variant="outline">{sg.peerScore.toFixed(1)}</Badge>
+                                <span className="inline-flex items-center gap-1">
+                                  <Badge variant="outline">{sg.peerScore.toFixed(1)}</Badge>
+                                  {sg.isSolo && <span className="text-xs text-muted-foreground">(IA)</span>}
+                                </span>
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}
