@@ -708,6 +708,7 @@ export default function SoapControl() {
               peerMaxScore: number;
               adminScore: number | null;
               finalScore: number | null;
+              isSolo: boolean;
             }[] = [];
 
             const allStudents = participants.filter((p: any) => p.participant_role !== "teacher");
