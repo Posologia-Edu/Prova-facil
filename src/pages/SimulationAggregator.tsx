@@ -229,28 +229,23 @@ export default function SimulationAggregator() {
       const roomIds = docRooms.map(r => r.id);
       if (!roomIds.length) return [];
       const { data: participants } = await supabase.from("documentation_participants").select("id, student_email, student_name, room_id, pair_index").in("room_id", roomIds);
-      const { data: responses } = await supabase.from("documentation_responses").select("room_id, pair_index, form_id, admin_score, ai_score, created_at").in("room_id", roomIds);
+      const { data: responses } = await supabase.from("documentation_responses").select("room_id, pair_index, form_id, admin_score, created_at").in("room_id", roomIds);
       if (!participants || !responses) return [];
       return roomIds.map(roomId => {
         const roomParticipants = participants.filter(p => p.room_id === roomId);
         const students = roomParticipants.map(p => {
-          const resps = responses.filter(r => r.room_id === p.room_id && r.pair_index === p.pair_index);
+          const resps = responses.filter(r => r.room_id === p.room_id && r.pair_index === p.pair_index && r.admin_score != null);
           if (resps.length === 0) return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: null };
-          // Deduplicate by form_id: keep best (admin>ai) and most recent per form
-          const byForm = new Map<string, { score: number | null; created_at: string }>();
+          const byForm = new Map<string, { score: number; created_at: string }>();
           resps.forEach(r => {
-            const s = r.admin_score != null ? Number(r.admin_score) : (r.ai_score != null ? Number(r.ai_score) : null);
-            if (s == null) return;
+            const score = Number(r.admin_score);
             const existing = byForm.get(r.form_id);
             if (!existing || new Date(r.created_at).getTime() > new Date(existing.created_at).getTime()) {
-              byForm.set(r.form_id, { score: s, created_at: r.created_at });
+              byForm.set(r.form_id, { score, created_at: r.created_at });
             }
           });
-          const formScores = Array.from(byForm.values()).map(v => v.score!).filter(s => s != null);
-          if (formScores.length === 0) return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: null };
-          // Average across the forms (each form is on 0-10 scale)
-          const avg = formScores.reduce((a, b) => a + b, 0) / formScores.length;
-          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: Math.round(avg * 100) / 100 };
+          const totalAdminScore = Array.from(byForm.values()).reduce((sum, item) => sum + item.score, 0);
+          return { email: p.student_email?.toLowerCase() || "", name: p.student_name, score: Math.round(totalAdminScore * 100) / 100 };
         });
         return { roomId, students };
       });
