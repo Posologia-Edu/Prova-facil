@@ -240,9 +240,12 @@ export default function DocumentationControl() {
   };
 
   const computeTotal = () => {
-    const ref = parseScore(adminReferralScore) ?? 0;
-    const med = parseScore(adminMedScore) ?? 0;
-    return (ref + med).toFixed(1);
+    const summary = getScoreSummary(adminReferralScore, adminMedScore);
+    return {
+      ref: summary.referral,
+      med: summary.medication,
+      total: summary.total.toFixed(1),
+    };
   };
 
   return (
