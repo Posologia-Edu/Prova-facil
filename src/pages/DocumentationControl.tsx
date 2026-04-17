@@ -561,6 +561,19 @@ export default function DocumentationControl() {
         </TabsContent>
 
         <TabsContent value="grading" className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2 p-3 bg-muted/50 rounded-lg border">
+            <div>
+              <p className="text-sm font-medium">Correção automática em lote</p>
+              <p className="text-xs text-muted-foreground">
+                Aplica a correção da IA para todas as duplas com respostas enviadas.
+                {gradingAllAI && ` (${gradingAllProgress.done}/${gradingAllProgress.total})`}
+              </p>
+            </div>
+            <Button onClick={gradeAllWithAI} disabled={gradingAllAI || gradingAI || pairIndicesWithResponses.length === 0}>
+              {gradingAllAI ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Bot className="h-4 w-4 mr-1" />}
+              {gradingAllAI ? `Corrigindo ${gradingAllProgress.done}/${gradingAllProgress.total}...` : "Corrigir todas com IA"}
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <h3 className="font-medium text-sm">Selecionar Dupla</h3>
