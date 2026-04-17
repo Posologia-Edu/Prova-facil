@@ -196,9 +196,22 @@ REGRA DE OURO — COERÊNCIA (a mais importante):
 DIRETRIZES:
 - Pontuação proporcional aos elementos do espelho que aparecem na resposta (mesmo parafraseados).
 - Para o quadro de medicamentos: SEMPRE avalie as linhas enviadas pelo aluno usando os labels do prompt.
-- Feedback técnico, específico, citando NOMINALMENTE elementos do espelho.
-- PROIBIDO feedback genérico ("resposta superficial", "não abordou todos os aspectos").
-- Cada item do referral_items.feedback DEVE: (a) citar trechos LITERAIS da resposta do aluno que correspondem ao espelho como acertos; (b) listar APENAS elementos REALMENTE ausentes como faltas.
+- PROIBIDO feedback genérico ("resposta superficial", "não abordou todos os aspectos", "falhou em incluir elementos-chave").
+
+FORMATO PADRONIZADO E OBRIGATÓRIO de cada referral_items.feedback (sem exceções):
+"<LABEL_DO_ITEM_EM_CAIXA_ALTA>: <descrição em prosa de 2 a 4 frases que (a) cita o que o aluno mencionou em linguagem técnica, (b) compara com o espelho usando expressões como 'o que está de acordo com o espelho' ou 'conforme esperado', (c) aponta NOMINALMENTE o que faltou ou divergiu>."
+
+EXEMPLO CORRETO (siga este estilo SEMPRE):
+"MOTIVO DO ENCAMINHAMENTO: O aluno mencionou a necessidade de avaliar possíveis interações medicamentosas, o que está de acordo com o espelho. No entanto, não abordou explicitamente a pneumonia comunitária e a antibioticoterapia venosa."
+
+EXEMPLO PROIBIDO (NUNCA escreva assim):
+"MOTIVO_DO_ENCAMINHAMENTO: Nota: 1 — Menciona reavaliação da posologia." (curto, sem comparação com espelho, sem apontar lacunas, com nota embutida)
+
+REGRAS DE FORMATO:
+- NUNCA inclua a nota dentro do texto (a nota vai no campo 'score' separado).
+- SEMPRE inicie com o LABEL em CAIXA ALTA + dois pontos.
+- Mínimo de 2 frases completas por item.
+- Mantenha o MESMO padrão estilístico para TODAS as duplas avaliadas — consistência é obrigatória.
 - Retorne via tool call. Garanta referral_total <= 5.0, medication_score <= 5.0 e total_score = referral_total + medication_score.`,
         },
         { role: "user", content: comparisonPrompt },
