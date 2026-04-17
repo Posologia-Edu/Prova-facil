@@ -92,11 +92,21 @@ serve(async (req) => {
       comparisonPrompt += "- ANTES de afirmar que algo 'faltou', releia a RESPOSTA DO ALUNO e CONFIRME que o termo ou conceito realmente NÃO aparece. Se aparecer (mesmo parafraseado), você DEVE creditar como acerto.\n";
       comparisonPrompt += "- É PROIBIDO dizer 'não identificou X' quando X aparece literalmente ou como sinônimo na resposta do aluno. Esse erro invalida a correção.\n";
       comparisonPrompt += "- Exemplo: se o espelho fala em 'omissão do Omeprazol' e o aluno escreve 'a omissão do omeprazol sem justificativa pode piorar...', isso É um acerto.\n\n";
-      comparisonPrompt += "FORMATO DO FEEDBACK POR ITEM:\n";
-      comparisonPrompt += "- ✓ Acertou: cite LITERALMENTE trechos da resposta do aluno que correspondem a elementos do espelho.\n";
-      comparisonPrompt += "- ✗ Faltou: liste apenas elementos do espelho que REALMENTE não aparecem (nem como sinônimo) na resposta.\n";
-      comparisonPrompt += "- ⚠ Divergiu: aponte erros técnicos com a versão correta.\n";
-      comparisonPrompt += "- PROIBIDO frases vagas como 'resposta superficial', 'não abordou todos os aspectos'.\n\n";
+      comparisonPrompt += "FORMATO OBRIGATÓRIO DO FEEDBACK POR ITEM (siga EXATAMENTE este padrão):\n";
+      comparisonPrompt += "Cada feedback deve começar com o LABEL do item em CAIXA ALTA seguido de dois pontos, depois uma análise descritiva em prosa contínua (2 a 4 frases) que:\n";
+      comparisonPrompt += "  1) Diga o que o aluno mencionou/identificou (citando elementos clínicos NOMINAIS extraídos da resposta dele, parafraseados em linguagem técnica).\n";
+      comparisonPrompt += "  2) Compare com o espelho usando frases como 'o que está de acordo com o espelho' ou 'conforme esperado'.\n";
+      comparisonPrompt += "  3) Aponte com precisão o que ficou faltando ou divergiu, citando NOMINALMENTE os elementos ausentes (ex: 'no entanto, não abordou a necessidade de monitoramento de glicemia capilar e função renal').\n";
+      comparisonPrompt += "EXEMPLO DE FEEDBACK CORRETO (use este estilo SEMPRE):\n";
+      comparisonPrompt += "  'MOTIVO DO ENCAMINHAMENTO: O aluno mencionou a necessidade de avaliar possíveis interações medicamentosas, o que está de acordo com o espelho. No entanto, não abordou explicitamente a pneumonia comunitária e a antibioticoterapia venosa.'\n";
+      comparisonPrompt += "EXEMPLO DE FEEDBACK PROIBIDO (NUNCA escreva assim):\n";
+      comparisonPrompt += "  'LABEL: Nota: 1 — Menciona reavaliação da posologia.' (curto demais, sem comparação explícita com espelho, sem apontar o que faltou)\n";
+      comparisonPrompt += "REGRAS:\n";
+      comparisonPrompt += "- NUNCA inclua a nota dentro do texto do feedback (a nota vai no campo 'score' separado).\n";
+      comparisonPrompt += "- NUNCA escreva feedback de uma só linha curta. Mínimo de 2 frases completas por item.\n";
+      comparisonPrompt += "- SEMPRE comece com o LABEL em CAIXA ALTA seguido de dois pontos.\n";
+      comparisonPrompt += "- SEMPRE inclua os 3 elementos: o que acertou + comparação com espelho + o que faltou/divergiu nominalmente.\n";
+      comparisonPrompt += "- PROIBIDO frases vagas como 'resposta superficial', 'não abordou todos os aspectos', 'falhou em incluir elementos-chave'.\n\n";
 
       keyFields.forEach((keyField: any, idx: number) => {
         const labelKey = (keyField.label || "").trim().toLowerCase();
@@ -186,9 +196,22 @@ REGRA DE OURO — COERÊNCIA (a mais importante):
 DIRETRIZES:
 - Pontuação proporcional aos elementos do espelho que aparecem na resposta (mesmo parafraseados).
 - Para o quadro de medicamentos: SEMPRE avalie as linhas enviadas pelo aluno usando os labels do prompt.
-- Feedback técnico, específico, citando NOMINALMENTE elementos do espelho.
-- PROIBIDO feedback genérico ("resposta superficial", "não abordou todos os aspectos").
-- Cada item do referral_items.feedback DEVE: (a) citar trechos LITERAIS da resposta do aluno que correspondem ao espelho como acertos; (b) listar APENAS elementos REALMENTE ausentes como faltas.
+- PROIBIDO feedback genérico ("resposta superficial", "não abordou todos os aspectos", "falhou em incluir elementos-chave").
+
+FORMATO PADRONIZADO E OBRIGATÓRIO de cada referral_items.feedback (sem exceções):
+"<LABEL_DO_ITEM_EM_CAIXA_ALTA>: <descrição em prosa de 2 a 4 frases que (a) cita o que o aluno mencionou em linguagem técnica, (b) compara com o espelho usando expressões como 'o que está de acordo com o espelho' ou 'conforme esperado', (c) aponta NOMINALMENTE o que faltou ou divergiu>."
+
+EXEMPLO CORRETO (siga este estilo SEMPRE):
+"MOTIVO DO ENCAMINHAMENTO: O aluno mencionou a necessidade de avaliar possíveis interações medicamentosas, o que está de acordo com o espelho. No entanto, não abordou explicitamente a pneumonia comunitária e a antibioticoterapia venosa."
+
+EXEMPLO PROIBIDO (NUNCA escreva assim):
+"MOTIVO_DO_ENCAMINHAMENTO: Nota: 1 — Menciona reavaliação da posologia." (curto, sem comparação com espelho, sem apontar lacunas, com nota embutida)
+
+REGRAS DE FORMATO:
+- NUNCA inclua a nota dentro do texto (a nota vai no campo 'score' separado).
+- SEMPRE inicie com o LABEL em CAIXA ALTA + dois pontos.
+- Mínimo de 2 frases completas por item.
+- Mantenha o MESMO padrão estilístico para TODAS as duplas avaliadas — consistência é obrigatória.
 - Retorne via tool call. Garanta referral_total <= 5.0, medication_score <= 5.0 e total_score = referral_total + medication_score.`,
         },
         { role: "user", content: comparisonPrompt },
