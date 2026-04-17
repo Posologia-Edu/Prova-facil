@@ -664,8 +664,11 @@ export default function SimulationAggregator() {
         {/* ── ABA CONSOLIDADO ── */}
         <TabsContent value="consolidated" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">Visão Consolidada por Aluno</CardTitle>
+              <Button size="sm" onClick={exportConsolidatedPDF} disabled={consolidated.length === 0}>
+                <Download className="h-4 w-4 mr-1" />Exportar PDF
+              </Button>
             </CardHeader>
             <CardContent>
               {consolidated.length === 0 ? (
