@@ -150,13 +150,23 @@ export default function DocumentationControl() {
     return Array.from(set).sort((a, b) => a - b);
   }, [responses]);
 
-  const selectedReferralResp = responses.find(r => r.pair_index === selectedPairIndex && r.form_id === referralForm?.id);
-  const selectedMedResp = responses.find(r => r.pair_index === selectedPairIndex && r.form_id === medForm?.id);
+  // When duplicates exist for the same pair+form, prefer the row that has AI feedback/score; fallback to the most recent
+  const findBestResponse = (pairIdx: number | null, formId: string | undefined) => {
+    if (pairIdx === null || !formId) return undefined;
+    const matches = responses.filter(r => r.pair_index === pairIdx && r.form_id === formId);
+    if (matches.length === 0) return undefined;
+    const withAi = matches.filter(r => r.ai_feedback_json != null || r.ai_score != null);
+    const pool = withAi.length > 0 ? withAi : matches;
+    return pool.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+  };
+
+  const selectedReferralResp = findBestResponse(selectedPairIndex, referralForm?.id);
+  const selectedMedResp = findBestResponse(selectedPairIndex, medForm?.id);
 
   const handleSelectPair = (pairIdx: number) => {
     setSelectedPairIndex(pairIdx);
-    const refResp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
-    const mResp = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
+    const refResp = findBestResponse(pairIdx, referralForm?.id);
+    const mResp = findBestResponse(pairIdx, medForm?.id);
     setAdminReferralScore(refResp?.admin_score != null ? String(refResp.admin_score) : "");
     setAdminMedScore(mResp?.admin_score != null ? String(mResp.admin_score) : "");
     setAdminFeedback(refResp?.admin_feedback || mResp?.admin_feedback || "");
