@@ -370,6 +370,122 @@ export default function SimulationAggregator() {
 
   const getModuleGroups = (mod: string) => roomGroups.filter(g => g.module === mod);
 
+  const exportConsolidatedPDF = () => {
+    if (consolidated.length === 0) {
+      toast.error("Nenhum dado para exportar");
+      return;
+    }
+    try {
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+
+      // Premium header band
+      doc.setFillColor(15, 23, 42); // slate-900
+      doc.rect(0, 0, pageW, 32, "F");
+      doc.setFillColor(202, 138, 4); // amber/gold accent
+      doc.rect(0, 32, pageW, 1.5, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text("Boletim Consolidado", 14, 14);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("Simulação Realística — Notas por Módulo", 14, 21);
+
+      // Filters chip on right
+      const filterText = `Semestre: ${selectedSemester === "__all__" ? "Todos" : selectedSemester}   |   Turma: ${selectedTurma === "__all__" ? "Todas" : selectedTurma}`;
+      doc.setFontSize(9);
+      doc.text(filterText, pageW - 14, 14, { align: "right" });
+      const dateStr = new Date().toLocaleString("pt-BR");
+      doc.text(`Emitido em ${dateStr}`, pageW - 14, 21, { align: "right" });
+
+      // Stats summary
+      const withAvg = consolidated.filter(r => r.average != null);
+      const overallAvg = withAvg.length ? withAvg.reduce((a, r) => a + (r.average || 0), 0) / withAvg.length : 0;
+      const approved = withAvg.filter(r => (r.average || 0) >= 7).length;
+
+      const cardsY = 42;
+      const cardW = (pageW - 28 - 16) / 3;
+      const drawCard = (x: number, label: string, value: string, accent: [number, number, number]) => {
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(x, cardsY, cardW, 20, 2, 2, "F");
+        doc.setFillColor(...accent);
+        doc.rect(x, cardsY, 1.5, 20, "F");
+        doc.setTextColor(100, 116, 139);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.text(label.toUpperCase(), x + 5, cardsY + 7);
+        doc.setTextColor(15, 23, 42);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text(value, x + 5, cardsY + 16);
+      };
+      drawCard(14, "Alunos", String(consolidated.length), [37, 99, 235]);
+      drawCard(14 + cardW + 8, "Média Geral", overallAvg.toFixed(2), [202, 138, 4]);
+      drawCard(14 + (cardW + 8) * 2, "Aprovados (≥7)", `${approved}/${withAvg.length}`, [22, 163, 74]);
+
+      // Table
+      const fmt = (v: number | null) => v != null ? v.toFixed(1) : "—";
+      const rows = consolidated.map((r, idx) => [
+        String(idx + 1),
+        r.name,
+        r.email || "—",
+        fmt(r.anamnesis),
+        fmt(r.soap),
+        fmt(r.reconciliation),
+        fmt(r.documentation),
+        fmt(r.average),
+      ]);
+
+      autoTable(doc, {
+        startY: 70,
+        head: [["#", "Aluno", "E-mail", "Anamnese", "SOAP", "Reconciliação", "Documentação", "Média"]],
+        body: rows,
+        theme: "grid",
+        styles: { font: "helvetica", fontSize: 9, cellPadding: 2.5, lineColor: [226, 232, 240], lineWidth: 0.1, textColor: [30, 41, 59] },
+        headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: "bold", halign: "center", fontSize: 9 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: 10, halign: "center", textColor: [100, 116, 139] },
+          1: { cellWidth: 50, fontStyle: "bold" },
+          2: { cellWidth: 60, textColor: [100, 116, 139], fontSize: 8 },
+          3: { halign: "center" },
+          4: { halign: "center" },
+          5: { halign: "center" },
+          6: { halign: "center" },
+          7: { halign: "center", fontStyle: "bold", fillColor: [254, 249, 195] },
+        },
+        didParseCell: (data) => {
+          if (data.section === "body" && data.column.index === 7) {
+            const val = parseFloat(data.cell.text[0]);
+            if (!isNaN(val)) {
+              if (val >= 7) data.cell.styles.textColor = [22, 101, 52];
+              else if (val >= 5) data.cell.styles.textColor = [161, 98, 7];
+              else data.cell.styles.textColor = [153, 27, 27];
+            }
+          }
+        },
+        didDrawPage: () => {
+          const pageNum = doc.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184);
+          doc.text(`Página ${pageNum}`, pageW - 14, pageH - 6, { align: "right" });
+          doc.text("ProvaFácil — Boletim Consolidado", 14, pageH - 6);
+        },
+        margin: { left: 14, right: 14, top: 38 },
+      });
+
+      const fileName = `boletim-consolidado-${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(fileName);
+      toast.success("PDF exportado com sucesso");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao gerar PDF");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
