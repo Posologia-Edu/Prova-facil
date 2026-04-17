@@ -82,6 +82,12 @@ serve(async (req) => {
       comparisonPrompt += "- Pontuação por item: 0 = ausente/incorreto, 25% = muito superficial, 50% = parcial com lacunas relevantes, 75% = correto mas incompleto, 100% = completo e tecnicamente preciso.\n";
       comparisonPrompt += "- NÃO atribua nota máxima quando faltarem elementos importantes do espelho. Seja crítico e específico no feedback.\n";
       comparisonPrompt += "- Ignore campos meramente identificadores (nome, data, sexo) — avalie apenas itens com max_score > 0.\n\n";
+      comparisonPrompt += "FORMATO OBRIGATÓRIO DO FEEDBACK POR ITEM (proibido feedback genérico):\n";
+      comparisonPrompt += "- ✓ Acertou: cite LITERALMENTE os elementos do espelho que o aluno mencionou (ex: 'mencionou interação Enalapril+Hidroclorotiazida').\n";
+      comparisonPrompt += "- ✗ Faltou: liste NOMINALMENTE cada elemento do espelho que o aluno NÃO incluiu (ex: 'não citou a duplicidade de Enalapril 10mg 2x/dia vs habitual 1x/dia', 'não mencionou a omissão do Omeprazol').\n";
+      comparisonPrompt += "- ⚠ Divergiu: aponte erros técnicos específicos com a versão correta do espelho.\n";
+      comparisonPrompt += "- PROIBIDO usar frases vagas como 'faltou incluir todos os elementos-chave', 'resposta superficial', 'não abordou todos os aspectos', 'parcialmente correto'. Sempre nomeie o quê.\n";
+      comparisonPrompt += "- Cada feedback deve ter pelo menos 2 elementos específicos citados nominalmente do espelho.\n\n";
 
       keyFields.forEach((keyField: any, idx: number) => {
         const labelKey = (keyField.label || "").trim().toLowerCase();
