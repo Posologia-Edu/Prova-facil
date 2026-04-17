@@ -160,10 +160,14 @@ export default function DocumentationControl() {
     setAdminFeedback(refResp?.admin_feedback || mResp?.admin_feedback || "");
   };
 
+  // Round to 1 decimal place to avoid floating-point inconsistencies (e.g. 4 + 3 = 6.999... displayed as 6,2 due to stale state)
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+
   const parseScore = (v: string | number | null | undefined) => {
     if (v == null || v === "") return null;
     const n = typeof v === "number" ? v : Number(String(v).replace(",", "."));
-    return Number.isFinite(n) ? Math.min(Math.max(n, 0), 5) : null;
+    if (!Number.isFinite(n)) return null;
+    return round1(Math.min(Math.max(n, 0), 5));
   };
 
   const getScoreSummary = (refScore: string | number | null | undefined, medScore: string | number | null | undefined) => {
@@ -172,7 +176,7 @@ export default function DocumentationControl() {
     return {
       referral,
       medication,
-      total: (referral ?? 0) + (medication ?? 0),
+      total: round1((referral ?? 0) + (medication ?? 0)),
       isComplete: referral !== null && medication !== null,
       hasAny: referral !== null || medication !== null,
     };
@@ -236,9 +240,12 @@ export default function DocumentationControl() {
   };
 
   const computeTotal = () => {
-    const ref = parseScore(adminReferralScore) ?? 0;
-    const med = parseScore(adminMedScore) ?? 0;
-    return (ref + med).toFixed(1);
+    const summary = getScoreSummary(adminReferralScore, adminMedScore);
+    return {
+      ref: summary.referral,
+      med: summary.medication,
+      total: summary.total.toFixed(1),
+    };
   };
 
   return (
@@ -593,9 +600,18 @@ export default function DocumentationControl() {
                       </div>
                     </div>
 
-                    <div className="p-3 bg-muted rounded">
-                      <p className="text-sm font-bold">Nota Total: {computeTotal()}/10,0</p>
-                    </div>
+                    {(() => {
+                      const t = computeTotal();
+                      return (
+                        <div className="p-3 bg-muted rounded space-y-1">
+                          <div className="flex gap-3 text-sm">
+                            <span>Encaminhamento: <strong>{t.ref != null ? t.ref.toFixed(1) : "—"}</strong>/5,0</span>
+                            <span>Quadro: <strong>{t.med != null ? t.med.toFixed(1) : "—"}</strong>/5,0</span>
+                          </div>
+                          <p className="text-sm font-bold">Nota Total: {t.total}/10,0</p>
+                        </div>
+                      );
+                    })()}
 
                     <div>
                       <Label>Feedback do Admin</Label>
