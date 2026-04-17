@@ -160,10 +160,14 @@ export default function DocumentationControl() {
     setAdminFeedback(refResp?.admin_feedback || mResp?.admin_feedback || "");
   };
 
+  // Round to 1 decimal place to avoid floating-point inconsistencies (e.g. 4 + 3 = 6.999... displayed as 6,2 due to stale state)
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+
   const parseScore = (v: string | number | null | undefined) => {
     if (v == null || v === "") return null;
     const n = typeof v === "number" ? v : Number(String(v).replace(",", "."));
-    return Number.isFinite(n) ? Math.min(Math.max(n, 0), 5) : null;
+    if (!Number.isFinite(n)) return null;
+    return round1(Math.min(Math.max(n, 0), 5));
   };
 
   const getScoreSummary = (refScore: string | number | null | undefined, medScore: string | number | null | undefined) => {
@@ -172,7 +176,7 @@ export default function DocumentationControl() {
     return {
       referral,
       medication,
-      total: (referral ?? 0) + (medication ?? 0),
+      total: round1((referral ?? 0) + (medication ?? 0)),
       isComplete: referral !== null && medication !== null,
       hasAny: referral !== null || medication !== null,
     };
