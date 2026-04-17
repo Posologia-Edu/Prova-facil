@@ -47,6 +47,7 @@
         "html2canvas": "^1.4.1",
         "input-otp": "^1.4.2",
         "jspdf": "^4.1.0",
+        "jspdf-autotable": "^5.0.7",
         "katex": "^0.16.43",
         "lucide-react": "^0.462.0",
         "next-themes": "^0.3.0",
@@ -841,6 +842,8 @@
     "json-stable-stringify-without-jsonify": ["json-stable-stringify-without-jsonify@1.0.1", "", {}, "sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw=="],
 
     "jspdf": ["jspdf@4.1.0", "", { "dependencies": { "@babel/runtime": "^7.28.4", "fast-png": "^6.2.0", "fflate": "^0.8.1" }, "optionalDependencies": { "canvg": "^3.0.11", "core-js": "^3.6.0", "dompurify": "^3.3.1", "html2canvas": "^1.0.0-rc.5" } }, "sha512-xd1d/XRkwqnsq6FP3zH1Q+Ejqn2ULIJeDZ+FTKpaabVpZREjsJKRJwuokTNgdqOU+fl55KgbvgZ1pRTSWCP2kQ=="],
+
+    "jspdf-autotable": ["jspdf-autotable@5.0.7", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/jspdf-autotable/-/jspdf-autotable-5.0.7.tgz", { "peerDependencies": { "jspdf": "^2 || ^3 || ^4" } }, "sha512-2wr7H6liNDBYNwt25hMQwXkEWFOEopgKIvR1Eukuw6Zmprm/ZcnmLTQEjW7Xx3FCbD3v7pflLcnMAv/h1jFDQw=="],
 
     "katex": ["katex@0.16.44", "", { "dependencies": { "commander": "^8.3.0" }, "bin": "cli.js" }, "sha512-EkxoDTk8ufHqHlf9QxGwcxeLkWRR3iOuYfRpfORgYfqc8s13bgb+YtRY59NK5ZpRaCwq1kqA6a5lpX8C/eLphQ=="],
 
