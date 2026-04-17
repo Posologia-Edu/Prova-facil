@@ -227,8 +227,8 @@ export default function DocumentationControl() {
   };
 
   const computeTotal = () => {
-    const ref = adminReferralScore ? Number(adminReferralScore) : 0;
-    const med = adminMedScore ? Number(adminMedScore) : 0;
+    const ref = parseScore(adminReferralScore) ?? 0;
+    const med = parseScore(adminMedScore) ?? 0;
     return (ref + med).toFixed(1);
   };
 
