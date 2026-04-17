@@ -49,6 +49,8 @@ export default function DocumentationControl() {
   const [adminMedScore, setAdminMedScore] = useState("");
   const [adminFeedback, setAdminFeedback] = useState("");
   const [gradingAI, setGradingAI] = useState(false);
+  const [gradingAllAI, setGradingAllAI] = useState(false);
+  const [gradingAllProgress, setGradingAllProgress] = useState({ done: 0, total: 0 });
 
   const { data: room } = useQuery({
     queryKey: ["documentation-room", roomId],
@@ -225,6 +227,53 @@ export default function DocumentationControl() {
     } finally {
       setGradingAI(false);
     }
+  };
+
+  const gradeAllWithAI = async () => {
+    const pairsToGrade = pairIndicesWithResponses;
+    if (pairsToGrade.length === 0) {
+      toast({ title: "Sem respostas para corrigir", variant: "destructive" });
+      return;
+    }
+    setGradingAllAI(true);
+    setGradingAllProgress({ done: 0, total: pairsToGrade.length });
+    let success = 0;
+    let failed = 0;
+    for (let i = 0; i < pairsToGrade.length; i++) {
+      const pairIdx = pairsToGrade[i];
+      const refResp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
+      const mResp = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
+      if (!refResp && !mResp) continue;
+      try {
+        const { error } = await supabase.functions.invoke("grade-documentation", {
+          body: {
+            room_id: roomId,
+            pair_index: pairIdx,
+            referral_response: refResp ? { id: refResp.id, answers_json: refResp.answers_json, clinical_case_id: refResp.clinical_case_id } : null,
+            referral_answer_key: referralAnswerKey?.content_json || null,
+            referral_fields: referralForm?.content_json || [],
+            med_response: mResp ? { id: mResp.id, answers_json: mResp.answers_json, clinical_case_id: mResp.clinical_case_id } : null,
+            med_answer_key: medAnswerKey?.content_json || null,
+            med_columns: medContent?.columns || [],
+          },
+        });
+        if (error) throw error;
+        success++;
+      } catch (err: any) {
+        console.error(`Erro ao corrigir dupla ${pairIdx}:`, err);
+        failed++;
+      }
+      setGradingAllProgress({ done: i + 1, total: pairsToGrade.length });
+      // Pequeno delay para evitar rate limiting
+      await new Promise(r => setTimeout(r, 800));
+    }
+    setGradingAllAI(false);
+    queryClient.invalidateQueries({ queryKey: ["documentation-responses", roomId] });
+    toast({
+      title: "Correção em lote concluída",
+      description: `${success} dupla(s) corrigida(s)${failed > 0 ? `, ${failed} falha(s)` : ""}.`,
+      variant: failed > 0 ? "destructive" : "default",
+    });
   };
 
   const pairNames = (pairIdx: number) => {
@@ -512,6 +561,19 @@ export default function DocumentationControl() {
         </TabsContent>
 
         <TabsContent value="grading" className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2 p-3 bg-muted/50 rounded-lg border">
+            <div>
+              <p className="text-sm font-medium">Correção automática em lote</p>
+              <p className="text-xs text-muted-foreground">
+                Aplica a correção da IA para todas as duplas com respostas enviadas.
+                {gradingAllAI && ` (${gradingAllProgress.done}/${gradingAllProgress.total})`}
+              </p>
+            </div>
+            <Button onClick={gradeAllWithAI} disabled={gradingAllAI || gradingAI || pairIndicesWithResponses.length === 0}>
+              {gradingAllAI ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Bot className="h-4 w-4 mr-1" />}
+              {gradingAllAI ? `Corrigindo ${gradingAllProgress.done}/${gradingAllProgress.total}...` : "Corrigir todas com IA"}
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <h3 className="font-medium text-sm">Selecionar Dupla</h3>
