@@ -600,9 +600,18 @@ export default function DocumentationControl() {
                       </div>
                     </div>
 
-                    <div className="p-3 bg-muted rounded">
-                      <p className="text-sm font-bold">Nota Total: {computeTotal()}/10,0</p>
-                    </div>
+                    {(() => {
+                      const t = computeTotal();
+                      return (
+                        <div className="p-3 bg-muted rounded space-y-1">
+                          <div className="flex gap-3 text-sm">
+                            <span>Encaminhamento: <strong>{t.ref != null ? t.ref.toFixed(1) : "—"}</strong>/5,0</span>
+                            <span>Quadro: <strong>{t.med != null ? t.med.toFixed(1) : "—"}</strong>/5,0</span>
+                          </div>
+                          <p className="text-sm font-bold">Nota Total: {t.total}/10,0</p>
+                        </div>
+                      );
+                    })()}
 
                     <div>
                       <Label>Feedback do Admin</Label>
