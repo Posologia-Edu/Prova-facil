@@ -160,10 +160,22 @@ export default function DocumentationControl() {
     setAdminFeedback(refResp?.admin_feedback || mResp?.admin_feedback || "");
   };
 
-  const parseScore = (v: string) => {
+  const parseScore = (v: string | number | null | undefined) => {
     if (v == null || v === "") return null;
-    const n = Number(String(v).replace(",", "."));
+    const n = typeof v === "number" ? v : Number(String(v).replace(",", "."));
     return Number.isFinite(n) ? Math.min(Math.max(n, 0), 5) : null;
+  };
+
+  const getScoreSummary = (refScore: string | number | null | undefined, medScore: string | number | null | undefined) => {
+    const referral = parseScore(refScore);
+    const medication = parseScore(medScore);
+    return {
+      referral,
+      medication,
+      total: (referral ?? 0) + (medication ?? 0),
+      isComplete: referral !== null && medication !== null,
+      hasAny: referral !== null || medication !== null,
+    };
   };
 
   const saveAdminEvaluation = async () => {
@@ -204,9 +216,6 @@ export default function DocumentationControl() {
       if (error) throw error;
       toast({ title: "Correção concluída!" });
       queryClient.invalidateQueries({ queryKey: ["documentation-responses", roomId] });
-      if (data?.referral_score != null) setAdminReferralScore(String(data.referral_score));
-      if (data?.medication_score != null) setAdminMedScore(String(data.medication_score));
-      if (data?.general_feedback) setAdminFeedback(data.general_feedback);
     } catch (err: any) {
       toast({ title: "Erro na correção", description: err.message, variant: "destructive" });
     } finally {
@@ -281,9 +290,8 @@ export default function DocumentationControl() {
               });
             }
 
-            const totalAdmin = (Number(refResp?.admin_score) || 0) + (Number(mResp?.admin_score) || 0);
-            const totalAI = (Number(refResp?.ai_score) || 0) + (Number(mResp?.ai_score) || 0);
-            const hasAdmin = refResp?.admin_score != null || mResp?.admin_score != null;
+            const adminSummary = getScoreSummary(refResp?.admin_score, mResp?.admin_score);
+            const aiSummary = getScoreSummary(refResp?.ai_score, mResp?.ai_score);
 
             let aiFeedbackText: string | null = null;
             if (refResp?.ai_feedback_json || mResp?.ai_feedback_json) {
@@ -305,12 +313,12 @@ export default function DocumentationControl() {
             return {
               pairIndex: pairIdx,
               students: pair.map((p: any) => ({ name: p.student_name, email: p.student_email || undefined })),
-              score: hasAdmin ? totalAdmin : totalAI,
+              score: adminSummary.isComplete ? adminSummary.total : aiSummary.total,
               maxScore: 10,
               details: [],
               sections,
-              aiScore: totalAI || null,
-              adminScore: hasAdmin ? totalAdmin : null,
+              aiScore: aiSummary.isComplete ? aiSummary.total : null,
+              adminScore: adminSummary.isComplete ? adminSummary.total : null,
               aiFeedback: aiFeedbackText,
               adminFeedback: refResp?.admin_feedback || mResp?.admin_feedback || null,
             } as PairReport;
@@ -472,20 +480,20 @@ export default function DocumentationControl() {
                         <div className="flex gap-4 mt-2">
                           {refResp?.ai_score != null && <p className="font-medium text-sm">Encaminhamento: {refResp.ai_score}/5,0</p>}
                           {mResp?.ai_score != null && <p className="font-medium text-sm">Quadro: {mResp.ai_score}/5,0</p>}
-                          {(refResp?.ai_score != null || mResp?.ai_score != null) && (
-                            <p className="font-bold text-sm">Total IA: {((Number(refResp?.ai_score) || 0) + (Number(mResp?.ai_score) || 0)).toFixed(1)}/10,0</p>
+                          {getScoreSummary(refResp?.ai_score, mResp?.ai_score).isComplete && (
+                            <p className="font-bold text-sm">Total IA: {getScoreSummary(refResp?.ai_score, mResp?.ai_score).total.toFixed(1)}/10,0</p>
                           )}
                         </div>
                       </div>
                     )}
 
                     {/* Admin scores summary */}
-                    {(refResp?.admin_score != null || mResp?.admin_score != null) && (
+                    {getScoreSummary(refResp?.admin_score, mResp?.admin_score).isComplete && (
                       <div className="flex gap-4 p-2 bg-muted rounded">
                         {refResp?.admin_score != null && <Badge>Encaminhamento: {refResp.admin_score}/5,0</Badge>}
                         {mResp?.admin_score != null && <Badge>Quadro: {mResp.admin_score}/5,0</Badge>}
                         <Badge variant="default" className="font-bold">
-                          Total: {((Number(refResp?.admin_score) || 0) + (Number(mResp?.admin_score) || 0)).toFixed(1)}/10,0
+                          Total: {getScoreSummary(refResp?.admin_score, mResp?.admin_score).total.toFixed(1)}/10,0
                         </Badge>
                       </div>
                     )}
@@ -503,17 +511,15 @@ export default function DocumentationControl() {
               {pairIndicesWithResponses.map(pairIdx => {
                 const refR = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
                 const mR = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
-                const totalAdmin = (Number(refR?.admin_score) || 0) + (Number(mR?.admin_score) || 0);
-                const totalAI = (Number(refR?.ai_score) || 0) + (Number(mR?.ai_score) || 0);
-                const hasAdmin = refR?.admin_score != null || mR?.admin_score != null;
-                const hasAI = refR?.ai_score != null || mR?.ai_score != null;
+                const adminSummary = getScoreSummary(refR?.admin_score, mR?.admin_score);
+                const aiSummary = getScoreSummary(refR?.ai_score, mR?.ai_score);
 
                 return (
                   <button key={pairIdx} onClick={() => handleSelectPair(pairIdx)} className={`w-full text-left p-3 rounded border transition-colors ${selectedPairIndex === pairIdx ? "border-primary bg-primary/10" : "border-border hover:bg-muted"}`}>
                     <p className="text-sm font-medium">{pairNames(pairIdx)}</p>
                     <div className="flex gap-2 mt-1 flex-wrap">
-                      {hasAI && <Badge variant="outline" className="text-xs">IA: {totalAI.toFixed(1)}</Badge>}
-                      {hasAdmin && <Badge className="text-xs">Admin: {totalAdmin.toFixed(1)}</Badge>}
+                      {aiSummary.isComplete && <Badge variant="outline" className="text-xs">IA: {aiSummary.total.toFixed(1)}</Badge>}
+                      {adminSummary.isComplete && <Badge className="text-xs">Admin: {adminSummary.total.toFixed(1)}</Badge>}
                     </div>
                   </button>
                 );
