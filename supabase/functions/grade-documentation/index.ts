@@ -171,7 +171,8 @@ DIRETRIZES CRÍTICAS:
 - Compare elementos-chave do espelho um a um. Liste no feedback o que faltou ou divergiu.
 - Para o quadro de medicamentos: SEMPRE avalie as linhas enviadas pelo aluno mesmo que os nomes das colunas internas sejam diferentes (use os labels apresentados no prompt).
 - Se o aluno enviou linhas no quadro, NUNCA diga que ele "não preencheu" — avalie-as.
-- Feedback deve ser técnico, específico e construtivo, citando o que estava certo, o que faltou e o que estava errado.
+- Feedback deve ser técnico, específico e construtivo. PROIBIDO usar frases genéricas como "faltou incluir elementos-chave", "resposta superficial" ou "não abordou todos os aspectos" sem nomear quais. Sempre cite NOMINALMENTE (ex: nomes de medicamentos, doses, interações, condutas) os elementos do espelho que o aluno acertou, omitiu ou errou.
+- Cada item do referral_items.feedback deve conter pelo menos 2 elementos específicos extraídos do espelho (medicamento, dose, interação, intervenção concreta).
 - Retorne via tool call. Garanta referral_total <= 5.0, medication_score <= 5.0 e total_score = referral_total + medication_score.`,
         },
         { role: "user", content: comparisonPrompt },
