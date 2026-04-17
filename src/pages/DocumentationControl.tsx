@@ -49,6 +49,8 @@ export default function DocumentationControl() {
   const [adminMedScore, setAdminMedScore] = useState("");
   const [adminFeedback, setAdminFeedback] = useState("");
   const [gradingAI, setGradingAI] = useState(false);
+  const [gradingAllAI, setGradingAllAI] = useState(false);
+  const [gradingAllProgress, setGradingAllProgress] = useState({ done: 0, total: 0 });
 
   const { data: room } = useQuery({
     queryKey: ["documentation-room", roomId],
