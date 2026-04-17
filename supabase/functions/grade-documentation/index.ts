@@ -6,18 +6,57 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Build a row representation using LABELS instead of column IDs.
+// Student rows and answer-key rows can use DIFFERENT column IDs (form vs answer-key forms),
+// but they share the same column LABELS. We map by label so the AI can compare them.
+function rowToLabelMap(row: any, columns: any[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!row || typeof row !== "object") return out;
+  for (const col of columns) {
+    const val = row[col.id];
+    out[col.label] = val == null || val === "" ? "(vazio)" : String(val);
+  }
+  return out;
+}
+
+// Try to find the value for a column label in a row whose keys are unknown column IDs.
+// Falls back to scanning all values when label-based lookup fails.
+function rowToLabelMapByAnyKey(row: any, studentColumns: any[], expectedLabels: string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!row || typeof row !== "object") return out;
+
+  // First: try matching student columns by label (exact)
+  if (studentColumns.length > 0) {
+    for (const label of expectedLabels) {
+      const col = studentColumns.find((c: any) => (c.label || "").trim().toLowerCase() === label.trim().toLowerCase());
+      if (col) {
+        const v = row[col.id];
+        out[label] = v == null || v === "" ? "(vazio)" : String(v);
+      } else {
+        out[label] = "(vazio)";
+      }
+    }
+    return out;
+  }
+
+  // Fallback: just dump all values
+  const values = Object.values(row).filter((v) => v != null && v !== "");
+  expectedLabels.forEach((label, i) => {
+    out[label] = values[i] != null ? String(values[i]) : "(vazio)";
+  });
+  return out;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { room_id, pair_index, referral_response, referral_answer_key, referral_fields, med_response, med_answer_key, med_columns } = await req.json();
 
-    let comparisonPrompt = "Avalie as respostas do aluno comparando com o espelho de respostas.\n\n";
-    comparisonPrompt += "IMPORTANTE: A nota total é dividida em duas partes:\n";
-    comparisonPrompt += "- Encaminhamento: máximo 5,0 pontos\n";
-    comparisonPrompt += "- Quadro Resumo de Medicamentos: máximo 5,0 pontos\n";
-    comparisonPrompt += "- Total: máximo 10,0 pontos\n\n";
+    let comparisonPrompt = "Avalie as respostas do aluno comparando RIGOROSAMENTE com o espelho de respostas.\n\n";
+    comparisonPrompt += "PONTUAÇÃO MÁXIMA:\n- Encaminhamento: 5,0 pontos\n- Quadro Resumo de Medicamentos: 5,0 pontos\n- Total: 10,0 pontos\n\n";
 
+    // -------- REFERRAL --------
     if (referral_response && referral_answer_key) {
       let keyFields: any[] = [];
       if (referral_answer_key.case_answers) {
@@ -27,20 +66,39 @@ serve(async (req) => {
       } else if (Array.isArray(referral_answer_key)) { keyFields = referral_answer_key; }
 
       const fields = Array.isArray(referral_fields) ? referral_fields : [];
+      // Build label-indexed answer map so we can match student answers (by field id in student form)
+      // against the key answers (which use different ids but same labels).
+      const studentAnswers = referral_response.answers_json || {};
+      const studentByLabel: Record<string, string> = {};
+      fields.forEach((field: any) => {
+        const v = studentAnswers[field.id];
+        studentByLabel[(field.label || "").trim().toLowerCase()] =
+          v == null || v === "" ? "(sem resposta)" : (typeof v === "object" ? JSON.stringify(v) : String(v));
+      });
+
       comparisonPrompt += "## FICHA DE ENCAMINHAMENTO (máximo 5,0 pontos)\n\n";
-      fields.forEach((field: any, idx: number) => {
-        const studentAnswer = referral_response.answers_json?.[field.id] || "(sem resposta)";
-        const keyField = keyFields.find((k: any) => k.id === field.id);
-        const expectedAnswer = keyField?.correct_answer || keyField?.options?.join(", ") || keyField?.label || "(sem espelho)";
-        comparisonPrompt += `Item ${idx + 1}: "${field.label}" (máx ${field.max_score || 0} pts)\n`;
-        comparisonPrompt += `  Resposta: ${typeof studentAnswer === "object" ? JSON.stringify(studentAnswer) : studentAnswer}\n`;
-        comparisonPrompt += `  Espelho: ${expectedAnswer}\n\n`;
+      comparisonPrompt += "INSTRUÇÕES DE CORREÇÃO RIGOROSA:\n";
+      comparisonPrompt += "- Compare cada item com o espelho avaliando: (a) presença dos elementos-chave esperados, (b) precisão técnica, (c) completude clínica.\n";
+      comparisonPrompt += "- Pontuação por item: 0 = ausente/incorreto, 25% = muito superficial, 50% = parcial com lacunas relevantes, 75% = correto mas incompleto, 100% = completo e tecnicamente preciso.\n";
+      comparisonPrompt += "- NÃO atribua nota máxima quando faltarem elementos importantes do espelho. Seja crítico e específico no feedback.\n";
+      comparisonPrompt += "- Ignore campos meramente identificadores (nome, data, sexo) — avalie apenas itens com max_score > 0.\n\n";
+
+      keyFields.forEach((keyField: any, idx: number) => {
+        const labelKey = (keyField.label || "").trim().toLowerCase();
+        const studentAnswer = studentByLabel[labelKey] || "(sem resposta)";
+        const expectedAnswer = keyField.correct_answer || (keyField.options ? keyField.options.join(", ") : "") || "(sem espelho)";
+        const maxScore = keyField.max_score || 0;
+        if (maxScore <= 0) return;
+        comparisonPrompt += `Item ${idx + 1}: "${keyField.label}" (máx ${maxScore} pts)\n`;
+        comparisonPrompt += `  RESPOSTA DO ALUNO: ${studentAnswer}\n`;
+        comparisonPrompt += `  ESPELHO ESPERADO: ${expectedAnswer}\n\n`;
       });
     }
 
+    // -------- MEDICATION SUMMARY --------
     if (med_response && med_answer_key) {
       comparisonPrompt += "## QUADRO RESUMO DE MEDICAMENTOS (máximo 5,0 pontos)\n\n";
-      let columns: any[] = [];
+      let keyColumns: any[] = [];
       let expectedRows: any[] = [];
       let rowScore = 1;
 
@@ -49,39 +107,66 @@ serve(async (req) => {
         let caseData: any = null;
         if (caseId && med_answer_key.case_answers[caseId]) caseData = med_answer_key.case_answers[caseId];
         else { const firstKey = Object.keys(med_answer_key.case_answers)[0]; if (firstKey) caseData = med_answer_key.case_answers[firstKey]; }
-        if (caseData) { columns = caseData.columns || []; expectedRows = caseData.answer_rows || []; rowScore = caseData.rows_score || 1; }
+        if (caseData) { keyColumns = caseData.columns || []; expectedRows = caseData.answer_rows || []; rowScore = caseData.rows_score || 1; }
       } else {
-        columns = Array.isArray(med_columns) ? med_columns : (med_answer_key.columns || []);
+        keyColumns = med_answer_key.columns || [];
         expectedRows = med_answer_key.answer_rows || [];
         rowScore = med_answer_key.rows_score || 1;
       }
 
+      // Student rows use the form's columns (different IDs), but same labels as keyColumns.
+      const studentColumns = Array.isArray(med_columns) ? med_columns : [];
+      const labels = keyColumns.map((c: any) => c.label);
       const studentRows = med_response.answers_json?.rows || [];
-      comparisonPrompt += `Colunas: ${columns.map((c: any) => c.label).join(", ")}\n`;
+
+      comparisonPrompt += "INSTRUÇÕES DE CORREÇÃO:\n";
+      comparisonPrompt += `- Cada linha correta vale ${rowScore} ponto(s). Nota máxima do quadro = 5,0.\n`;
+      comparisonPrompt += "- Para cada medicamento do espelho, verifique se o aluno o incluiu e compare Dose, Via, Horário, Finalidade e Observações.\n";
+      comparisonPrompt += "- Atribua nota proporcional por linha: 100% se todos os campos batem com o espelho; 60-80% se faltar 1-2 detalhes menores; 30-50% se faltar dose/via/horário; 0% se medicamento ausente ou completamente errado.\n";
+      comparisonPrompt += "- Nota total do quadro = soma das notas das linhas, limitada a 5,0.\n";
+      comparisonPrompt += "- IMPORTANTE: se o aluno enviou linhas (mesmo que com nomes de colunas diferentes), AVALIE-AS. Só diga 'não preencheu' se studentRows estiver realmente vazio.\n\n";
+
+      comparisonPrompt += `Colunas avaliadas: ${labels.join(", ")}\n`;
       comparisonPrompt += `Pontuação por linha correta: ${rowScore} pts\n\n`;
-      comparisonPrompt += `Respostas do aluno (${studentRows.length} linhas):\n`;
-      studentRows.forEach((row: any, i: number) => {
-        comparisonPrompt += `  Linha ${i + 1}: ${columns.map((c: any) => `${c.label}=${row[c.id] || "vazio"}`).join(", ")}\n`;
-      });
-      comparisonPrompt += `\nEspelho (${expectedRows.length} linhas):\n`;
+
+      comparisonPrompt += `### RESPOSTAS DO ALUNO (${studentRows.length} linha(s)):\n`;
+      if (studentRows.length === 0) {
+        comparisonPrompt += "(nenhuma linha enviada)\n\n";
+      } else {
+        studentRows.forEach((row: any, i: number) => {
+          const mapped = rowToLabelMapByAnyKey(row, studentColumns, labels);
+          const parts = labels.map((l: string) => `${l}=${mapped[l] || "(vazio)"}`);
+          comparisonPrompt += `  Linha ${i + 1}: ${parts.join(" | ")}\n`;
+        });
+      }
+
+      comparisonPrompt += `\n### ESPELHO (${expectedRows.length} linha(s) esperadas):\n`;
       expectedRows.forEach((row: any, i: number) => {
-        comparisonPrompt += `  Linha ${i + 1}: ${columns.map((c: any) => `${c.label}=${row[c.id] || "vazio"}`).join(", ")}\n`;
+        const mapped = rowToLabelMap(row, keyColumns);
+        const parts = labels.map((l: string) => `${l}=${mapped[l] || "(vazio)"}`);
+        comparisonPrompt += `  Linha ${i + 1}: ${parts.join(" | ")}\n`;
       });
+      comparisonPrompt += "\n";
     }
 
     const { response } = await callAiWithFallback({
       messages: [
         {
           role: "system",
-          content: `Você é um avaliador acadêmico de saúde. Avalie as respostas dos alunos comparando com o espelho de respostas.
-A nota do módulo de Documentação é dividida em duas partes:
-- Ficha de Encaminhamento: nota de 0 a 5,0 pontos
-- Quadro Resumo de Medicamentos: nota de 0 a 5,0 pontos
-- Nota total: soma das duas, máximo 10,0 pontos
+          content: `Você é um avaliador acadêmico RIGOROSO de Farmácia Clínica. Avalie as respostas dos alunos comparando criticamente com o espelho.
 
-Para cada item do encaminhamento, dê uma nota proporcional e feedback em português.
-Para o quadro resumo, avalie cada linha comparando com o espelho.
-Retorne usando a função fornecida. Garanta que referral_total <= 5.0 e medication_score <= 5.0.`,
+REGRAS DE PONTUAÇÃO:
+- Ficha de Encaminhamento: 0 a 5,0 pontos. Some os pontos por item; nunca exceda 5,0.
+- Quadro Resumo de Medicamentos: 0 a 5,0 pontos. Some os pontos por linha correta; nunca exceda 5,0.
+- Nota total = referral_total + medication_score, máximo 10,0.
+
+DIRETRIZES CRÍTICAS:
+- Seja rigoroso: respostas vagas, incompletas ou imprecisas NÃO devem receber nota máxima.
+- Compare elementos-chave do espelho um a um. Liste no feedback o que faltou ou divergiu.
+- Para o quadro de medicamentos: SEMPRE avalie as linhas enviadas pelo aluno mesmo que os nomes das colunas internas sejam diferentes (use os labels apresentados no prompt).
+- Se o aluno enviou linhas no quadro, NUNCA diga que ele "não preencheu" — avalie-as.
+- Feedback deve ser técnico, específico e construtivo, citando o que estava certo, o que faltou e o que estava errado.
+- Retorne via tool call. Garanta referral_total <= 5.0, medication_score <= 5.0 e total_score = referral_total + medication_score.`,
         },
         { role: "user", content: comparisonPrompt },
       ],
@@ -96,11 +181,11 @@ Retorne usando a função fornecida. Garanta que referral_total <= 5.0 e medicat
               referral_items: { type: "array", items: { type: "object", properties: { field_id: { type: "string" }, score: { type: "number" }, feedback: { type: "string" } }, required: ["field_id", "score", "feedback"] } },
               referral_total: { type: "number", description: "Nota do encaminhamento (0-5)" },
               medication_score: { type: "number", description: "Nota do quadro resumo (0-5)" },
-              medication_feedback: { type: "string" },
+              medication_feedback: { type: "string", description: "Feedback detalhado do quadro de medicamentos: cite linha por linha o que estava certo/errado/faltando" },
               general_feedback: { type: "string" },
               total_score: { type: "number", description: "Soma de referral_total + medication_score (0-10)" },
             },
-            required: ["referral_total", "medication_score", "total_score", "general_feedback"],
+            required: ["referral_total", "medication_score", "total_score", "general_feedback", "medication_feedback"],
           },
         },
       }],
