@@ -77,17 +77,26 @@ serve(async (req) => {
       });
 
       comparisonPrompt += "## FICHA DE ENCAMINHAMENTO (máximo 5,0 pontos)\n\n";
-      comparisonPrompt += "INSTRUÇÕES DE CORREÇÃO RIGOROSA:\n";
-      comparisonPrompt += "- Compare cada item com o espelho avaliando: (a) presença dos elementos-chave esperados, (b) precisão técnica, (c) completude clínica.\n";
-      comparisonPrompt += "- Pontuação por item: 0 = ausente/incorreto, 25% = muito superficial, 50% = parcial com lacunas relevantes, 75% = correto mas incompleto, 100% = completo e tecnicamente preciso.\n";
-      comparisonPrompt += "- NÃO atribua nota máxima quando faltarem elementos importantes do espelho. Seja crítico e específico no feedback.\n";
+      comparisonPrompt += "METODOLOGIA DE CORREÇÃO (LEIA COM ATENÇÃO):\n";
+      comparisonPrompt += "PASSO 1 — EXTRAÇÃO: Para cada item, leia INTEGRALMENTE a RESPOSTA DO ALUNO e extraia uma lista dos elementos clínicos/técnicos que ele mencionou (medicamentos, doses, discrepâncias, interações, condutas, justificativas).\n";
+      comparisonPrompt += "PASSO 2 — EXTRAÇÃO DO ESPELHO: Faça o mesmo com o ESPELHO ESPERADO, listando os elementos-chave esperados.\n";
+      comparisonPrompt += "PASSO 3 — COMPARAÇÃO JUSTA: Marque cada elemento do espelho como ✓ presente na resposta do aluno (mesmo com palavras diferentes, desde que o conteúdo clínico seja equivalente) ou ✗ ausente. Sinônimos e paráfrases CONTAM como acerto (ex: 'omissão do omeprazol' = 'falta do omeprazol' = 'omeprazol não foi prescrito').\n";
+      comparisonPrompt += "PASSO 4 — PONTUAÇÃO PROPORCIONAL: score = max_score × (elementos do espelho presentes na resposta / total de elementos do espelho). Arredonde para 0.25.\n";
+      comparisonPrompt += "  • 100% se o aluno cobriu todos elementos-chave (mesmo com linguagem diferente).\n";
+      comparisonPrompt += "  • 75% se cobriu a maioria, faltando 1 elemento secundário.\n";
+      comparisonPrompt += "  • 50% se cobriu cerca da metade.\n";
+      comparisonPrompt += "  • 25% se mencionou apenas 1 elemento ou foi muito superficial.\n";
+      comparisonPrompt += "  • 0 apenas se ausente, totalmente incorreto, ou não relacionado.\n";
       comparisonPrompt += "- Ignore campos meramente identificadores (nome, data, sexo) — avalie apenas itens com max_score > 0.\n\n";
-      comparisonPrompt += "FORMATO OBRIGATÓRIO DO FEEDBACK POR ITEM (proibido feedback genérico):\n";
-      comparisonPrompt += "- ✓ Acertou: cite LITERALMENTE os elementos do espelho que o aluno mencionou (ex: 'mencionou interação Enalapril+Hidroclorotiazida').\n";
-      comparisonPrompt += "- ✗ Faltou: liste NOMINALMENTE cada elemento do espelho que o aluno NÃO incluiu (ex: 'não citou a duplicidade de Enalapril 10mg 2x/dia vs habitual 1x/dia', 'não mencionou a omissão do Omeprazol').\n";
-      comparisonPrompt += "- ⚠ Divergiu: aponte erros técnicos específicos com a versão correta do espelho.\n";
-      comparisonPrompt += "- PROIBIDO usar frases vagas como 'faltou incluir todos os elementos-chave', 'resposta superficial', 'não abordou todos os aspectos', 'parcialmente correto'. Sempre nomeie o quê.\n";
-      comparisonPrompt += "- Cada feedback deve ter pelo menos 2 elementos específicos citados nominalmente do espelho.\n\n";
+      comparisonPrompt += "REGRA DE OURO — COERÊNCIA OBRIGATÓRIA:\n";
+      comparisonPrompt += "- ANTES de afirmar que algo 'faltou', releia a RESPOSTA DO ALUNO e CONFIRME que o termo ou conceito realmente NÃO aparece. Se aparecer (mesmo parafraseado), você DEVE creditar como acerto.\n";
+      comparisonPrompt += "- É PROIBIDO dizer 'não identificou X' quando X aparece literalmente ou como sinônimo na resposta do aluno. Esse erro invalida a correção.\n";
+      comparisonPrompt += "- Exemplo: se o espelho fala em 'omissão do Omeprazol' e o aluno escreve 'a omissão do omeprazol sem justificativa pode piorar...', isso É um acerto.\n\n";
+      comparisonPrompt += "FORMATO DO FEEDBACK POR ITEM:\n";
+      comparisonPrompt += "- ✓ Acertou: cite LITERALMENTE trechos da resposta do aluno que correspondem a elementos do espelho.\n";
+      comparisonPrompt += "- ✗ Faltou: liste apenas elementos do espelho que REALMENTE não aparecem (nem como sinônimo) na resposta.\n";
+      comparisonPrompt += "- ⚠ Divergiu: aponte erros técnicos com a versão correta.\n";
+      comparisonPrompt += "- PROIBIDO frases vagas como 'resposta superficial', 'não abordou todos os aspectos'.\n\n";
 
       keyFields.forEach((keyField: any, idx: number) => {
         const labelKey = (keyField.label || "").trim().toLowerCase();
@@ -159,20 +168,27 @@ serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: `Você é um avaliador acadêmico RIGOROSO de Farmácia Clínica. Avalie as respostas dos alunos comparando criticamente com o espelho.
+          content: `Você é um avaliador acadêmico de Farmácia Clínica RIGOROSO mas JUSTO. Sua avaliação DEVE ser COERENTE com o que o aluno realmente escreveu.
 
 REGRAS DE PONTUAÇÃO:
 - Ficha de Encaminhamento: 0 a 5,0 pontos. Some os pontos por item; nunca exceda 5,0.
 - Quadro Resumo de Medicamentos: 0 a 5,0 pontos. Some os pontos por linha correta; nunca exceda 5,0.
 - Nota total = referral_total + medication_score, máximo 10,0.
 
-DIRETRIZES CRÍTICAS:
-- Seja rigoroso: respostas vagas, incompletas ou imprecisas NÃO devem receber nota máxima.
-- Compare elementos-chave do espelho um a um. Liste no feedback o que faltou ou divergiu.
-- Para o quadro de medicamentos: SEMPRE avalie as linhas enviadas pelo aluno mesmo que os nomes das colunas internas sejam diferentes (use os labels apresentados no prompt).
-- Se o aluno enviou linhas no quadro, NUNCA diga que ele "não preencheu" — avalie-as.
-- Feedback deve ser técnico, específico e construtivo. PROIBIDO usar frases genéricas como "faltou incluir elementos-chave", "resposta superficial" ou "não abordou todos os aspectos" sem nomear quais. Sempre cite NOMINALMENTE (ex: nomes de medicamentos, doses, interações, condutas) os elementos do espelho que o aluno acertou, omitiu ou errou.
-- Cada item do referral_items.feedback deve conter pelo menos 2 elementos específicos extraídos do espelho (medicamento, dose, interação, intervenção concreta).
+REGRA DE OURO — COERÊNCIA (a mais importante):
+- ANTES de afirmar que o aluno "não citou" ou "faltou identificar" algo, RELEIA a resposta dele e CONFIRME que o termo/conceito realmente NÃO aparece (nem como sinônimo ou paráfrase).
+- Sinônimos e paráfrases CONTAM como acerto. Exemplos:
+  • "omissão do omeprazol" = "falta do omeprazol" = "omeprazol não foi prescrito"
+  • "aumento da dose de metformina de 2x para 3x" = "discrepância na metformina" = "metformina passou de duas para três vezes ao dia"
+  • "duplicidade do enalapril" = "enalapril 2x/dia vs habitual 1x/dia" = "dose dobrada de enalapril"
+- Se o aluno menciona o conteúdo (mesmo com palavras diferentes), você DEVE creditar como ✓ Acertou. Acusá-lo de NÃO ter escrito algo que ele de fato escreveu é um ERRO GRAVE de avaliação.
+
+DIRETRIZES:
+- Pontuação proporcional aos elementos do espelho que aparecem na resposta (mesmo parafraseados).
+- Para o quadro de medicamentos: SEMPRE avalie as linhas enviadas pelo aluno usando os labels do prompt.
+- Feedback técnico, específico, citando NOMINALMENTE elementos do espelho.
+- PROIBIDO feedback genérico ("resposta superficial", "não abordou todos os aspectos").
+- Cada item do referral_items.feedback DEVE: (a) citar trechos LITERAIS da resposta do aluno que correspondem ao espelho como acertos; (b) listar APENAS elementos REALMENTE ausentes como faltas.
 - Retorne via tool call. Garanta referral_total <= 5.0, medication_score <= 5.0 e total_score = referral_total + medication_score.`,
         },
         { role: "user", content: comparisonPrompt },
