@@ -587,8 +587,8 @@ export default function DocumentationControl() {
                   <button key={pairIdx} onClick={() => handleSelectPair(pairIdx)} className={`w-full text-left p-3 rounded border transition-colors ${selectedPairIndex === pairIdx ? "border-primary bg-primary/10" : "border-border hover:bg-muted"}`}>
                     <p className="text-sm font-medium">{pairNames(pairIdx)}</p>
                     <div className="flex gap-2 mt-1 flex-wrap">
-                      {aiSummary.hasAny && <Badge variant="outline" className="text-xs">IA: {aiSummary.total.toFixed(1)}{!aiSummary.isComplete ? "*" : ""}</Badge>}
-                      {adminSummary.hasAny && <Badge className="text-xs">Admin: {adminSummary.total.toFixed(1)}{!adminSummary.isComplete ? "*" : ""}</Badge>}
+                      {aiSummary.hasAny && <Badge variant="outline" className="text-xs">IA: {aiSummary.total.toFixed(1)}</Badge>}
+                      {adminSummary.hasAny && <Badge className="text-xs">Admin: {adminSummary.total.toFixed(1)}</Badge>}
                     </div>
                   </button>
                 );
