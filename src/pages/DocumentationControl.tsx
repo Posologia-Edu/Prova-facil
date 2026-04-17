@@ -160,18 +160,24 @@ export default function DocumentationControl() {
     setAdminFeedback(refResp?.admin_feedback || mResp?.admin_feedback || "");
   };
 
+  const parseScore = (v: string) => {
+    if (v == null || v === "") return null;
+    const n = Number(String(v).replace(",", "."));
+    return Number.isFinite(n) ? Math.min(Math.max(n, 0), 5) : null;
+  };
+
   const saveAdminEvaluation = async () => {
     // Save referral score
     if (selectedReferralResp) {
       await supabase.from("documentation_responses").update({
-        admin_score: adminReferralScore ? Math.min(Number(adminReferralScore), 5) : null,
+        admin_score: parseScore(adminReferralScore),
         admin_feedback: adminFeedback || null,
       }).eq("id", selectedReferralResp.id);
     }
-    // Save medication score
+
     if (selectedMedResp) {
       await supabase.from("documentation_responses").update({
-        admin_score: adminMedScore ? Math.min(Number(adminMedScore), 5) : null,
+        admin_score: parseScore(adminMedScore),
         admin_feedback: adminFeedback || null,
       }).eq("id", selectedMedResp.id);
     }
@@ -221,8 +227,8 @@ export default function DocumentationControl() {
   };
 
   const computeTotal = () => {
-    const ref = adminReferralScore ? Number(adminReferralScore) : 0;
-    const med = adminMedScore ? Number(adminMedScore) : 0;
+    const ref = parseScore(adminReferralScore) ?? 0;
+    const med = parseScore(adminMedScore) ?? 0;
     return (ref + med).toFixed(1);
   };
 
