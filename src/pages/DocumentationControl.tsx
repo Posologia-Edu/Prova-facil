@@ -150,13 +150,23 @@ export default function DocumentationControl() {
     return Array.from(set).sort((a, b) => a - b);
   }, [responses]);
 
-  const selectedReferralResp = responses.find(r => r.pair_index === selectedPairIndex && r.form_id === referralForm?.id);
-  const selectedMedResp = responses.find(r => r.pair_index === selectedPairIndex && r.form_id === medForm?.id);
+  // When duplicates exist for the same pair+form, prefer the row that has AI feedback/score; fallback to the most recent
+  const findBestResponse = (pairIdx: number | null, formId: string | undefined) => {
+    if (pairIdx === null || !formId) return undefined;
+    const matches = responses.filter(r => r.pair_index === pairIdx && r.form_id === formId);
+    if (matches.length === 0) return undefined;
+    const withAi = matches.filter(r => r.ai_feedback_json != null || r.ai_score != null);
+    const pool = withAi.length > 0 ? withAi : matches;
+    return pool.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+  };
+
+  const selectedReferralResp = findBestResponse(selectedPairIndex, referralForm?.id);
+  const selectedMedResp = findBestResponse(selectedPairIndex, medForm?.id);
 
   const handleSelectPair = (pairIdx: number) => {
     setSelectedPairIndex(pairIdx);
-    const refResp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
-    const mResp = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
+    const refResp = findBestResponse(pairIdx, referralForm?.id);
+    const mResp = findBestResponse(pairIdx, medForm?.id);
     setAdminReferralScore(refResp?.admin_score != null ? String(refResp.admin_score) : "");
     setAdminMedScore(mResp?.admin_score != null ? String(mResp.admin_score) : "");
     setAdminFeedback(refResp?.admin_feedback || mResp?.admin_feedback || "");
@@ -241,8 +251,8 @@ export default function DocumentationControl() {
     let failed = 0;
     for (let i = 0; i < pairsToGrade.length; i++) {
       const pairIdx = pairsToGrade[i];
-      const refResp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
-      const mResp = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
+      const refResp = findBestResponse(pairIdx, referralForm?.id);
+      const mResp = findBestResponse(pairIdx, medForm?.id);
       if (!refResp && !mResp) continue;
       try {
         const { error } = await supabase.functions.invoke("grade-documentation", {
@@ -320,8 +330,8 @@ export default function DocumentationControl() {
           roomTitle={room?.title || ""}
           pairs={pairIndicesWithResponses.map(pairIdx => {
             const pair = pairs[pairIdx] || [];
-            const refResp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
-            const mResp = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
+            const refResp = findBestResponse(pairIdx, referralForm?.id);
+            const mResp = findBestResponse(pairIdx, medForm?.id);
 
             const sections: { title: string; items: { label: string; value: string; score?: string }[] }[] = [];
             
@@ -441,8 +451,8 @@ export default function DocumentationControl() {
             <p className="text-sm text-muted-foreground">Nenhuma resposta recebida ainda.</p>
           ) : (
             pairIndicesWithResponses.map(pairIdx => {
-              const refResp = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
-              const mResp = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
+              const refResp = findBestResponse(pairIdx, referralForm?.id);
+              const mResp = findBestResponse(pairIdx, medForm?.id);
               const caseData = clinicalCases.find(c => c.id === (refResp || mResp)?.clinical_case_id);
               const caseKeyFields = getReferralKeyFields(caseData?.id);
               const caseMedKey = getMedKeyContent(caseData?.id);
@@ -578,8 +588,8 @@ export default function DocumentationControl() {
             <div className="space-y-2">
               <h3 className="font-medium text-sm">Selecionar Dupla</h3>
               {pairIndicesWithResponses.map(pairIdx => {
-                const refR = responses.find(r => r.pair_index === pairIdx && r.form_id === referralForm?.id);
-                const mR = responses.find(r => r.pair_index === pairIdx && r.form_id === medForm?.id);
+                const refR = findBestResponse(pairIdx, referralForm?.id);
+                const mR = findBestResponse(pairIdx, medForm?.id);
                 const adminSummary = getScoreSummary(refR?.admin_score, mR?.admin_score);
                 const aiSummary = getScoreSummary(refR?.ai_score, mR?.ai_score);
 
