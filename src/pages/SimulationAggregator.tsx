@@ -324,8 +324,8 @@ export default function SimulationAggregator() {
     processModule(docScores, "documentation");
 
     map.forEach(row => {
-      const scores = [row.anamnesis, row.soap, row.reconciliation, row.documentation].filter(s => s != null) as number[];
-      row.average = scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100 : null;
+      const total = (row.anamnesis ?? 0) + (row.soap ?? 0) + (row.reconciliation ?? 0) + (row.documentation ?? 0);
+      row.average = Math.round((total / 4) * 100) / 100;
     });
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
