@@ -668,16 +668,16 @@ export default function VPAnalytics() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {g.correction_status === "graded" ? (
-                            <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
-                              <Eye className="h-3.5 w-3.5 mr-1" /> Detalhes
-                            </Button>
-                          ) : (
-                            <div className="text-xs text-muted-foreground">
-                              {g.has_mai ? "MAI enviado" : `${g.message_count} msg do aluno`}
-                            </div>
-                          )}
+                          <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
+                          </Button>
                         </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
                       </TableRow>
                     );
                   })}
