@@ -151,8 +151,8 @@ SCHEMA OBRIGATÓRIO (JSON)
   "nota_mai_0a4": 0.0,
   "nota_final_0a10": 0.0,
   "nota_microlearning_0a5": 0.0,
-  "feedback_resumido": "3-5 bullets concisos com pontos fortes e fracos",
-  "orientacoes_melhoria": "3-5 bullets com ações práticas para o estudante melhorar",
+  "feedback_resumido": "STRING única em markdown com 3-5 bullets iniciados por '- ' separados por \\n. NUNCA retorne array.",
+  "orientacoes_melhoria": "STRING única em markdown com 3-5 bullets iniciados por '- ' separados por \\n. NUNCA retorne array.",
   "flags_seguranca": ["lista de problemas críticos identificados, ou vazio"]
 }
 
@@ -212,8 +212,14 @@ Avalie agora seguindo rigorosamente o schema do system prompt.`;
       });
     }
 
-    // Merge evidencias into orientacoes for richer feedback display
-    let orientacoes = gradeResult.orientacoes_melhoria || "";
+    // Coerce array-shaped fields into markdown bullet strings (defensive normalization)
+    const coerceToMarkdown = (val: any): string => {
+      if (val == null) return "";
+      if (Array.isArray(val)) return val.map((v) => `- ${String(v).trim()}`).join("\n");
+      return String(val);
+    };
+    const feedbackResumido = coerceToMarkdown(gradeResult.feedback_resumido);
+    let orientacoes = coerceToMarkdown(gradeResult.orientacoes_melhoria);
     if (gradeResult.evidencias) {
       const ev = gradeResult.evidencias;
       const evidLines: string[] = [];
@@ -244,7 +250,7 @@ Avalie agora seguindo rigorosamente o schema do system prompt.`;
       bonus_penalidades: gradeResult.bonus_penalidades || {},
       nota_final: gradeResult.nota_final_0a10 || 0,
       nota_microlearning: gradeResult.nota_microlearning_0a5 || 0,
-      feedback_resumido: gradeResult.feedback_resumido || "",
+      feedback_resumido: feedbackResumido,
       orientacoes_melhoria: orientacoes,
       flags_seguranca: gradeResult.flags_seguranca || [],
     };

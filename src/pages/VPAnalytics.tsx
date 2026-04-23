@@ -219,6 +219,28 @@ export default function VPAnalytics() {
     setLoading(false);
   };
 
+  // Normalize text fields that the AI may return as a JSON array string
+  // e.g. '["bullet 1","bullet 2"]' -> "- bullet 1\n- bullet 2"
+  const normalizeRichText = (raw: string | null | undefined): string => {
+    if (!raw) return "";
+    const trimmed = String(raw).trim();
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const arr = JSON.parse(trimmed);
+        if (Array.isArray(arr)) {
+          return arr.map((item) => `- ${String(item).trim()}`).join("\n");
+        }
+      } catch { /* fall through */ }
+    }
+    // Also handle Postgres array literal '{"a","b"}' just in case
+    if (trimmed.startsWith("{") && trimmed.endsWith("}") && trimmed.includes('","')) {
+      const inner = trimmed.slice(1, -1);
+      const parts = inner.split('","').map((s) => s.replace(/^"|"$/g, "").trim());
+      return parts.map((p) => `- ${p}`).join("\n");
+    }
+    return trimmed;
+  };
+
   const openDetail = async (grade: GradeRow) => {
     setDetailGrade(grade);
     setEditMode(false);
@@ -228,8 +250,8 @@ export default function VPAnalytics() {
       subscores: subscoreKeys.reduce((acc, k) => ({ ...acc, [k]: Number(subs[k]) || 0 }), {} as Record<string, number>),
       nota_final: grade.nota_final ?? 0,
       nota_microlearning: grade.nota_microlearning ?? 0,
-      feedback_resumido: grade.feedback_resumido || "",
-      orientacoes_melhoria: grade.orientacoes_melhoria || "",
+      feedback_resumido: normalizeRichText(grade.feedback_resumido),
+      orientacoes_melhoria: normalizeRichText(grade.orientacoes_melhoria),
       flags_seguranca: flagsArr.join("\n"),
     });
     setTranscriptLoading(true);
@@ -807,7 +829,7 @@ export default function VPAnalytics() {
                       placeholder="Pontos fortes e fracos do estudante..."
                     />
                   ) : detailGrade.feedback_resumido ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(detailGrade.feedback_resumido) }} />
+                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(normalizeRichText(detailGrade.feedback_resumido)) }} />
                   ) : <p className="text-sm text-muted-foreground italic">Sem feedback.</p>}
                 </div>
 
@@ -821,7 +843,7 @@ export default function VPAnalytics() {
                       placeholder="Ações práticas para o aluno melhorar..."
                     />
                   ) : detailGrade.orientacoes_melhoria ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(detailGrade.orientacoes_melhoria) }} />
+                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(normalizeRichText(detailGrade.orientacoes_melhoria)) }} />
                   ) : <p className="text-sm text-muted-foreground italic">Sem orientações.</p>}
                 </div>
 
@@ -859,7 +881,7 @@ export default function VPAnalytics() {
                   ) : transcript.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Nenhuma mensagem encontrada.</p>
                   ) : (
-                    <div className="space-y-2 max-h-[40vh] overflow-y-auto border rounded-lg p-3">
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto border rounded-lg p-3">
                       {transcript.map((msg, i) => (
                         <div key={i} className={`p-3 rounded-lg text-sm ${msg.role === "user" ? "bg-primary/10 ml-8" : "bg-muted mr-8"}`}>
                           <div className="flex items-center gap-2 mb-1">
