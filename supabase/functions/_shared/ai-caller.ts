@@ -24,11 +24,31 @@ interface ProviderConfig {
 function resolveModelForProvider(provider: ProviderConfig, requestedModel?: string): string {
   if (!requestedModel) return provider.defaultModel;
 
-  if (provider.provider !== "google") {
+  const normalizedModel = requestedModel.replace(/^(google|openai)\//, "");
+
+  if (provider.provider === "groq") {
+    return normalizedModel.includes("llama") || normalizedModel.includes("mixtral")
+      ? normalizedModel
+      : provider.defaultModel;
+  }
+
+  if (provider.provider === "openai") {
+    return normalizedModel.startsWith("gpt-") || normalizedModel.startsWith("o")
+      ? normalizedModel
+      : provider.defaultModel;
+  }
+
+  if (provider.provider === "anthropic") {
+    return normalizedModel.startsWith("claude") ? normalizedModel : provider.defaultModel;
+  }
+
+  if (provider.provider === "openrouter") {
     return requestedModel;
   }
 
-  const normalizedModel = requestedModel.replace(/^google\//, "");
+  if (provider.provider !== "google") {
+    return provider.defaultModel;
+  }
 
   if (normalizedModel.includes("flash-image")) {
     return "gemini-2.5-flash-image";
