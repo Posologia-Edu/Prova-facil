@@ -169,33 +169,50 @@ export default function VPAnalytics() {
 
     if (filteredCvpIds.length === 0) { toast.info("Nenhum paciente virtual encontrado."); setGrading(false); return; }
 
-    // Get completed sessions
+    // Get ALL sessions (any status) for selected filters — sessions with any meaningful interaction can be graded
     const { data: sessions } = await supabase
       .from("virtual_patient_sessions")
-      .select("id, class_virtual_patient_id")
-      .in("class_virtual_patient_id", filteredCvpIds)
-      .eq("status", "completed");
+      .select("id, class_virtual_patient_id, status")
+      .in("class_virtual_patient_id", filteredCvpIds);
 
     if (!sessions || sessions.length === 0) {
-      toast.info("Nenhuma sessão concluída para corrigir.");
+      toast.info("Nenhuma sessão encontrada nesta turma.");
       setGrading(false);
       return;
     }
 
-    // Get already graded sessions
-    const { data: existingGrades } = await supabase
-      .from("virtual_patient_grades")
-      .select("session_id")
-      .in("session_id", sessions.map(s => s.id));
+    // Filter sessions that have at least 2 student messages OR a completed MAI
+    const sessionIds = sessions.map(s => s.id);
+    const [{ data: msgCounts }, { data: maiList }] = await Promise.all([
+      supabase
+        .from("virtual_patient_messages")
+        .select("session_id")
+        .in("session_id", sessionIds)
+        .eq("role", "user"),
+      supabase
+        .from("virtual_patient_mai_scores")
+        .select("session_id")
+        .in("session_id", sessionIds),
+    ]);
 
-    const gradedIds = new Set((existingGrades || []).map(g => g.session_id));
-    const toGrade = sessions.filter(s => !gradedIds.has(s.id));
+    const msgCountMap: Record<string, number> = {};
+    (msgCounts || []).forEach((m: any) => {
+      msgCountMap[m.session_id] = (msgCountMap[m.session_id] || 0) + 1;
+    });
+    const hasMai = new Set((maiList || []).map((m: any) => m.session_id));
 
-    if (toGrade.length === 0) {
-      toast.info("Todas as sessões já foram corrigidas.");
+    const eligible = sessions.filter(s =>
+      s.status === "completed" || hasMai.has(s.id) || (msgCountMap[s.id] || 0) >= 2
+    );
+
+    if (eligible.length === 0) {
+      toast.info("Nenhuma sessão com interação suficiente para corrigir ainda.");
       setGrading(false);
       return;
     }
+
+    // Always re-grade everything when teacher clicks "Corrigir Turma" so updated rubric applies
+    const toGrade = eligible;
 
     toast.info(`Corrigindo ${toGrade.length} sessão(ões)...`);
 
