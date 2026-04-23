@@ -897,7 +897,7 @@ export default function VPAnalytics() {
                   )}
                 </div>
               </div>
-            </ScrollArea>
+            </div>
           )}
           {editMode && (
             <DialogFooter className="border-t pt-4">
