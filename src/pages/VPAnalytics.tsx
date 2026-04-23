@@ -8,9 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Save, Pencil } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
@@ -66,6 +70,16 @@ export default function VPAnalytics() {
   const [detailGrade, setDetailGrade] = useState<GradeRow | null>(null);
   const [transcript, setTranscript] = useState<TranscriptMsg[]>([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    subscores: Record<string, number>;
+    nota_final: number;
+    nota_microlearning: number;
+    feedback_resumido: string;
+    orientacoes_melhoria: string;
+    flags_seguranca: string;
+  } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Batch grading
   const [grading, setGrading] = useState(false);
@@ -207,6 +221,17 @@ export default function VPAnalytics() {
 
   const openDetail = async (grade: GradeRow) => {
     setDetailGrade(grade);
+    setEditMode(false);
+    const subs = (grade.subscores && typeof grade.subscores === "object") ? grade.subscores : {};
+    const flagsArr = Array.isArray(grade.flags_seguranca) ? grade.flags_seguranca : [];
+    setEditForm({
+      subscores: subscoreKeys.reduce((acc, k) => ({ ...acc, [k]: Number(subs[k]) || 0 }), {} as Record<string, number>),
+      nota_final: grade.nota_final ?? 0,
+      nota_microlearning: grade.nota_microlearning ?? 0,
+      feedback_resumido: grade.feedback_resumido || "",
+      orientacoes_melhoria: grade.orientacoes_melhoria || "",
+      flags_seguranca: flagsArr.join("\n"),
+    });
     setTranscriptLoading(true);
     const { data } = await supabase
       .from("virtual_patient_messages")
@@ -215,6 +240,56 @@ export default function VPAnalytics() {
       .order("created_at", { ascending: true });
     setTranscript((data as TranscriptMsg[]) || []);
     setTranscriptLoading(false);
+  };
+
+  const recomputeFinal = (subs: Record<string, number>) => {
+    const total = subscoreKeys.reduce((s, k) => s + (Number(subs[k]) || 0), 0);
+    return Math.max(0, Math.min(10, total));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!detailGrade || !editForm) return;
+    setSavingEdit(true);
+    const flagsArr = editForm.flags_seguranca
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const payload = {
+      subscores: editForm.subscores,
+      nota_final: Number(editForm.nota_final) || 0,
+      nota_microlearning: Number(editForm.nota_microlearning) || 0,
+      feedback_resumido: editForm.feedback_resumido,
+      orientacoes_melhoria: editForm.orientacoes_melhoria,
+      flags_seguranca: flagsArr,
+    };
+    // Upsert: if a grade row already exists update; otherwise insert (allows manual grading of pending sessions)
+    const { data: existing } = await supabase
+      .from("virtual_patient_grades")
+      .select("id")
+      .eq("session_id", detailGrade.session_id)
+      .maybeSingle();
+
+    let error;
+    if (existing?.id) {
+      ({ error } = await supabase.from("virtual_patient_grades").update(payload).eq("id", existing.id));
+    } else {
+      ({ error } = await supabase.from("virtual_patient_grades").insert({
+        ...payload,
+        session_id: detailGrade.session_id,
+        class_virtual_patient_id: detailGrade.class_virtual_patient_id,
+        bonus_penalidades: {},
+      }));
+    }
+
+    setSavingEdit(false);
+    if (error) {
+      toast.error("Não foi possível salvar os ajustes: " + error.message);
+      return;
+    }
+    toast.success("Avaliação ajustada com sucesso.");
+    setEditMode(false);
+    setDetailGrade(null);
+    await loadGrades();
   };
 
   const handleBatchGrade = async () => {
@@ -593,15 +668,10 @@ export default function VPAnalytics() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {g.correction_status === "graded" ? (
-                            <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
-                              <Eye className="h-3.5 w-3.5 mr-1" /> Detalhes
-                            </Button>
-                          ) : (
-                            <div className="text-xs text-muted-foreground">
-                              {g.has_mai ? "MAI enviado" : `${g.message_count} msg do aluno`}
-                            </div>
-                          )}
+                          <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -614,14 +684,19 @@ export default function VPAnalytics() {
       )}
 
       {/* Detail Dialog */}
-      <Dialog open={!!detailGrade} onOpenChange={(open) => !open && setDetailGrade(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+      <Dialog open={!!detailGrade} onOpenChange={(open) => { if (!open) { setDetailGrade(null); setEditMode(false); } }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>
-              Detalhes — {detailGrade?.student_name || detailGrade?.student_email || "Aluno"}
+            <DialogTitle className="flex items-center justify-between gap-3">
+              <span>Detalhes — {detailGrade?.student_name || detailGrade?.student_email || "Aluno"}</span>
+              {detailGrade && !editMode && (
+                <Button size="sm" variant="outline" onClick={() => setEditMode(true)}>
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" /> Ajustar avaliação
+                </Button>
+              )}
             </DialogTitle>
           </DialogHeader>
-          {detailGrade && (
+          {detailGrade && editForm && (
             <ScrollArea className="flex-1 pr-4">
               <div className="space-y-6">
                 {/* Subscores — Anamnese */}
@@ -631,7 +706,20 @@ export default function VPAnalytics() {
                     {subscoreKeys.slice(0, 6).map(key => (
                       <div key={key} className="p-3 rounded-lg border text-center">
                         <p className="text-xs text-muted-foreground">{subscoreLabels[key]}</p>
-                        <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(2)}/1</p>
+                        {editMode ? (
+                          <Input
+                            type="number" step="0.05" min="0" max="1"
+                            className="mt-1 text-center font-bold"
+                            value={editForm.subscores[key] ?? 0}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value) || 0;
+                              const newSubs = { ...editForm.subscores, [key]: v };
+                              setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs), nota_microlearning: recomputeFinal(newSubs) / 2 });
+                            }}
+                          />
+                        ) : (
+                          <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(2)}/1</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -644,18 +732,55 @@ export default function VPAnalytics() {
                     {subscoreKeys.slice(6).map(key => (
                       <div key={key} className="p-3 rounded-lg border text-center">
                         <p className="text-xs text-muted-foreground">{subscoreLabels[key]}</p>
-                        <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(2)}/1</p>
+                        {editMode ? (
+                          <Input
+                            type="number" step="0.05" min="0" max="1"
+                            className="mt-1 text-center font-bold"
+                            value={editForm.subscores[key] ?? 0}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value) || 0;
+                              const newSubs = { ...editForm.subscores, [key]: v };
+                              setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs), nota_microlearning: recomputeFinal(newSubs) / 2 });
+                            }}
+                          />
+                        ) : (
+                          <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(2)}/1</p>
+                        )}
                       </div>
                     ))}
                   </div>
-                  <div className="mt-3 p-3 rounded-lg border text-center bg-primary/5">
-                    <p className="text-xs text-muted-foreground">Nota Final</p>
-                    <p className="text-2xl font-bold mt-1">{(detailGrade.nota_final || 0).toFixed(1)}/10</p>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-lg border text-center bg-primary/5">
+                      <p className="text-xs text-muted-foreground">Nota Final (0–10)</p>
+                      {editMode ? (
+                        <Input
+                          type="number" step="0.1" min="0" max="10"
+                          className="mt-1 text-center font-bold text-lg"
+                          value={editForm.nota_final}
+                          onChange={(e) => setEditForm({ ...editForm, nota_final: parseFloat(e.target.value) || 0 })}
+                        />
+                      ) : (
+                        <p className="text-2xl font-bold mt-1">{(detailGrade.nota_final || 0).toFixed(1)}/10</p>
+                      )}
+                    </div>
+                    <div className="p-3 rounded-lg border text-center">
+                      <p className="text-xs text-muted-foreground">Microlearning (0–5)</p>
+                      {editMode ? (
+                        <Input
+                          type="number" step="0.1" min="0" max="5"
+                          className="mt-1 text-center font-bold text-lg"
+                          value={editForm.nota_microlearning}
+                          onChange={(e) => setEditForm({ ...editForm, nota_microlearning: parseFloat(e.target.value) || 0 })}
+                        />
+                      ) : (
+                        <p className="text-2xl font-bold mt-1">{(detailGrade.nota_microlearning || 0).toFixed(1)}/5</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Bonus/Penalties */}
-                {detailGrade.bonus_penalidades && (
+                {/* Bonus/Penalties (read-only) */}
+                {!editMode && detailGrade.bonus_penalidades && Object.keys(detailGrade.bonus_penalidades).length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold mb-2">Bônus / Penalidades</h4>
                     <div className="grid grid-cols-3 gap-3 text-sm">
@@ -672,45 +797,69 @@ export default function VPAnalytics() {
                 )}
 
                 {/* Feedback */}
-                {detailGrade.feedback_resumido && (
-                  <div>
-                    <h4 className="text-sm font-semibold mb-2">Feedback Resumido</h4>
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Feedback Resumido</h4>
+                  {editMode ? (
+                    <Textarea
+                      rows={5}
+                      value={editForm.feedback_resumido}
+                      onChange={(e) => setEditForm({ ...editForm, feedback_resumido: e.target.value })}
+                      placeholder="Pontos fortes e fracos do estudante..."
+                    />
+                  ) : detailGrade.feedback_resumido ? (
                     <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(detailGrade.feedback_resumido) }} />
-                  </div>
-                )}
+                  ) : <p className="text-sm text-muted-foreground italic">Sem feedback.</p>}
+                </div>
 
-                {detailGrade.orientacoes_melhoria && (
-                  <div>
-                    <h4 className="text-sm font-semibold mb-2">Orientações de Melhoria</h4>
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Orientações de Melhoria</h4>
+                  {editMode ? (
+                    <Textarea
+                      rows={6}
+                      value={editForm.orientacoes_melhoria}
+                      onChange={(e) => setEditForm({ ...editForm, orientacoes_melhoria: e.target.value })}
+                      placeholder="Ações práticas para o aluno melhorar..."
+                    />
+                  ) : detailGrade.orientacoes_melhoria ? (
                     <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(detailGrade.orientacoes_melhoria) }} />
-                  </div>
-                )}
+                  ) : <p className="text-sm text-muted-foreground italic">Sem orientações.</p>}
+                </div>
 
                 {/* Flags */}
-                {Array.isArray(detailGrade.flags_seguranca) && detailGrade.flags_seguranca.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold mb-2 text-destructive flex items-center gap-1.5">
-                      <ShieldAlert className="h-4 w-4" /> Flags de Segurança
-                    </h4>
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 text-destructive flex items-center gap-1.5">
+                    <ShieldAlert className="h-4 w-4" /> Flags de Segurança
+                  </h4>
+                  {editMode ? (
+                    <>
+                      <Label className="text-xs text-muted-foreground">Uma flag por linha</Label>
+                      <Textarea
+                        rows={3}
+                        value={editForm.flags_seguranca}
+                        onChange={(e) => setEditForm({ ...editForm, flags_seguranca: e.target.value })}
+                        placeholder="Ex.: Ignorou alergia a dipirona"
+                      />
+                    </>
+                  ) : Array.isArray(detailGrade.flags_seguranca) && detailGrade.flags_seguranca.length > 0 ? (
                     <ul className="list-disc list-inside space-y-1 text-sm text-destructive">
                       {detailGrade.flags_seguranca.map((f: string, i: number) => <li key={i}>{f}</li>)}
                     </ul>
-                  </div>
-                )}
+                  ) : <p className="text-sm text-muted-foreground italic">Nenhuma flag.</p>}
+                </div>
 
                 <Separator />
 
                 {/* Transcript */}
                 <div>
                   <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                    <MessageSquare className="h-4 w-4" /> Transcript Completo
+                    <MessageSquare className="h-4 w-4" /> Conversa do Aluno com o Paciente
                   </h4>
                   {transcriptLoading ? (
                     <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin" /></div>
                   ) : transcript.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Nenhuma mensagem encontrada.</p>
                   ) : (
-                    <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+                    <div className="space-y-2 max-h-[40vh] overflow-y-auto border rounded-lg p-3">
                       {transcript.map((msg, i) => (
                         <div key={i} className={`p-3 rounded-lg text-sm ${msg.role === "user" ? "bg-primary/10 ml-8" : "bg-muted mr-8"}`}>
                           <div className="flex items-center gap-2 mb-1">
@@ -727,6 +876,15 @@ export default function VPAnalytics() {
                 </div>
               </div>
             </ScrollArea>
+          )}
+          {editMode && (
+            <DialogFooter className="border-t pt-4">
+              <Button variant="ghost" onClick={() => setEditMode(false)} disabled={savingEdit}>Cancelar</Button>
+              <Button onClick={handleSaveEdit} disabled={savingEdit}>
+                {savingEdit ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
+                Salvar ajustes
+              </Button>
+            </DialogFooter>
           )}
         </DialogContent>
       </Dialog>
