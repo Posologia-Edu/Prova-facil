@@ -250,7 +250,7 @@ Avalie agora seguindo rigorosamente o schema do system prompt.`;
       bonus_penalidades: gradeResult.bonus_penalidades || {},
       nota_final: gradeResult.nota_final_0a10 || 0,
       nota_microlearning: gradeResult.nota_microlearning_0a5 || 0,
-      feedback_resumido: gradeResult.feedback_resumido || "",
+      feedback_resumido: feedbackResumido,
       orientacoes_melhoria: orientacoes,
       flags_seguranca: gradeResult.flags_seguranca || [],
     };
