@@ -306,7 +306,8 @@ export async function callAiWithFallback(
         break;
       }
 
-      console.warn(`Provider ${provider.provider} returned ${response.status}, trying next...`);
+      const errBody = await response.text().catch(() => "");
+      console.warn(`Provider ${provider.provider} returned ${response.status}: ${errBody.slice(0, 500)}`);
       response = null;
     } catch (err) {
       console.warn(`Provider ${provider.provider} failed:`, (err as Error).message);
