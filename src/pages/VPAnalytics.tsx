@@ -37,6 +37,11 @@ interface CVPOption { id: string; patient_id: string; class_id: string; }
 interface GradeRow {
   id: string;
   session_id: string;
+  class_virtual_patient_id: string;
+  correction_status: "graded" | "pending";
+  session_status: string;
+  message_count: number;
+  has_mai: boolean;
   subscores: any;
   bonus_penalidades: any;
   nota_final: number | null;
@@ -73,10 +78,34 @@ export default function VPAnalytics() {
     if (!user) return;
     const [classesRes, cvpsRes] = await Promise.all([
       supabase.from("classes").select("id, name").eq("user_id", user.id).is("deleted_at", null).order("name"),
-      supabase.from("class_virtual_patients").select("id, patient_id, class_id"),
+      supabase
+        .from("class_virtual_patients")
+        .select("id, patient_id, class_id, classes!inner(user_id)")
+        .eq("classes.user_id", user.id),
     ]);
     setClasses(classesRes.data || []);
     setCvps((cvpsRes.data as CVPOption[]) || []);
+  };
+
+  const getFunctionErrorMessage = async (error: any) => {
+    let message = error?.message || "Não foi possível gerar a correção.";
+    const context = error?.context;
+
+    if (context instanceof Response) {
+      try {
+        const payload = await context.clone().json();
+        message = payload?.error || payload?.detail || message;
+      } catch {
+        try {
+          const text = await context.text();
+          if (text) message = text;
+        } catch {
+          // ignore context parsing failures
+        }
+      }
+    }
+
+    return message;
   };
 
   const loadGrades = async () => {
@@ -103,35 +132,74 @@ export default function VPAnalytics() {
 
     if (filteredCvpIds.length === 0) { setGrades([]); setLoading(false); return; }
 
-    const { data: gradesData } = await supabase
-      .from("virtual_patient_grades")
-      .select("id, session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id")
+    const { data: sessionsData } = await supabase
+      .from("virtual_patient_sessions")
+      .select("id, class_virtual_patient_id, status, student_email, student_name")
       .in("class_virtual_patient_id", filteredCvpIds);
 
-    if (!gradesData || gradesData.length === 0) {
-      // Also load sessions without grades to show ungraded count
+    if (!sessionsData || sessionsData.length === 0) {
       setGrades([]);
       setLoading(false);
       return;
     }
 
-    // Get session info for student names
-    const sessionIds = gradesData.map(g => g.session_id);
-    const { data: sessionsData } = await supabase
-      .from("virtual_patient_sessions")
-      .select("id, student_email, student_name")
-      .in("id", sessionIds);
+    const sessionIds = sessionsData.map((session) => session.id);
+    const [{ data: msgCounts }, { data: maiList }, { data: gradesData }] = await Promise.all([
+      supabase
+        .from("virtual_patient_messages")
+        .select("session_id")
+        .in("session_id", sessionIds)
+        .eq("role", "user"),
+      supabase
+        .from("virtual_patient_mai_scores")
+        .select("session_id")
+        .in("session_id", sessionIds),
+      supabase
+        .from("virtual_patient_grades")
+        .select("id, session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id")
+        .in("class_virtual_patient_id", filteredCvpIds),
+    ]);
 
-    const sessionMap: Record<string, { email: string; name: string }> = {};
-    (sessionsData || []).forEach((s: any) => {
-      sessionMap[s.id] = { email: s.student_email || "", name: s.student_name || "" };
+    const msgCountMap: Record<string, number> = {};
+    (msgCounts || []).forEach((msg: any) => {
+      msgCountMap[msg.session_id] = (msgCountMap[msg.session_id] || 0) + 1;
     });
 
-    const enriched: GradeRow[] = gradesData.map(g => ({
-      ...g,
-      student_email: sessionMap[g.session_id]?.email,
-      student_name: sessionMap[g.session_id]?.name,
-    }));
+    const hasMai = new Set((maiList || []).map((item: any) => item.session_id));
+    const gradeMap = new Map((gradesData || []).map((grade: any) => [grade.session_id, grade]));
+
+    const eligibleSessions = sessionsData.filter((session) => (
+      session.status === "completed" ||
+      hasMai.has(session.id) ||
+      (msgCountMap[session.id] || 0) >= 2
+    ));
+
+    const enriched: GradeRow[] = eligibleSessions
+      .map((session: any) => {
+        const grade = gradeMap.get(session.id);
+        return {
+          id: grade?.id || session.id,
+          session_id: session.id,
+          class_virtual_patient_id: session.class_virtual_patient_id,
+          correction_status: grade ? "graded" : "pending",
+          session_status: session.status || "in_progress",
+          message_count: msgCountMap[session.id] || 0,
+          has_mai: hasMai.has(session.id),
+          subscores: grade?.subscores || {},
+          bonus_penalidades: grade?.bonus_penalidades || {},
+          nota_final: grade?.nota_final ?? null,
+          nota_microlearning: grade?.nota_microlearning ?? null,
+          feedback_resumido: grade?.feedback_resumido ?? null,
+          orientacoes_melhoria: grade?.orientacoes_melhoria ?? null,
+          flags_seguranca: grade?.flags_seguranca || [],
+          student_email: session.student_email || "",
+          student_name: session.student_name || "",
+        };
+      })
+      .sort((a, b) => {
+        if (a.correction_status !== b.correction_status) return a.correction_status === "graded" ? -1 : 1;
+        return (a.student_name || a.student_email || "").localeCompare(b.student_name || b.student_email || "");
+      });
 
     setGrades(enriched);
     setLoading(false);
@@ -217,20 +285,27 @@ export default function VPAnalytics() {
     toast.info(`Corrigindo ${toGrade.length} sessão(ões)...`);
 
     let success = 0;
+    const failures: string[] = [];
     for (const session of toGrade) {
-      try {
-        await supabase.functions.invoke("grade-virtual-patient", {
-          body: { session_id: session.id, class_virtual_patient_id: session.class_virtual_patient_id },
-        });
+      const { error } = await supabase.functions.invoke("grade-virtual-patient", {
+        body: { session_id: session.id, class_virtual_patient_id: session.class_virtual_patient_id },
+      });
+
+      if (error) {
+        failures.push(await getFunctionErrorMessage(error));
+      } else {
         success++;
-      } catch (err) {
-        console.error("Grade error for session", session.id, err);
       }
     }
 
-    toast.success(`${success}/${toGrade.length} sessão(ões) corrigida(s) com sucesso.`);
+    if (success > 0) {
+      toast.success(`${success}/${toGrade.length} sessão(ões) corrigida(s) com sucesso.`);
+    }
+    if (failures.length > 0) {
+      toast.error(failures[0]);
+    }
     setGrading(false);
-    loadGrades();
+    await loadGrades();
   };
 
   // --- Computed metrics ---
