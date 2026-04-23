@@ -521,20 +521,33 @@ export default function VPAnalytics() {
           {detailGrade && (
             <ScrollArea className="flex-1 pr-4">
               <div className="space-y-6">
-                {/* Subscores */}
+                {/* Subscores — Anamnese */}
                 <div>
-                  <h4 className="text-sm font-semibold mb-3">Subscores</h4>
+                  <h4 className="text-sm font-semibold mb-3">Anamnese (0–6)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {subscoreKeys.map(key => (
+                    {subscoreKeys.slice(0, 6).map(key => (
                       <div key={key} className="p-3 rounded-lg border text-center">
                         <p className="text-xs text-muted-foreground">{subscoreLabels[key]}</p>
-                        <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(1)}/2</p>
+                        <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(2)}/1</p>
                       </div>
                     ))}
-                    <div className="p-3 rounded-lg border text-center bg-primary/5">
-                      <p className="text-xs text-muted-foreground">Nota Final</p>
-                      <p className="text-lg font-bold mt-1">{(detailGrade.nota_final || 0).toFixed(1)}/10</p>
-                    </div>
+                  </div>
+                </div>
+
+                {/* Subscores — MAI */}
+                <div>
+                  <h4 className="text-sm font-semibold mb-3">MAI – Medication Appropriateness Index (0–4)</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {subscoreKeys.slice(6).map(key => (
+                      <div key={key} className="p-3 rounded-lg border text-center">
+                        <p className="text-xs text-muted-foreground">{subscoreLabels[key]}</p>
+                        <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(2)}/1</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 p-3 rounded-lg border text-center bg-primary/5">
+                    <p className="text-xs text-muted-foreground">Nota Final</p>
+                    <p className="text-2xl font-bold mt-1">{(detailGrade.nota_final || 0).toFixed(1)}/10</p>
                   </div>
                 </div>
 
