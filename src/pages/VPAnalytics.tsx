@@ -843,7 +843,7 @@ export default function VPAnalytics() {
                       placeholder="Ações práticas para o aluno melhorar..."
                     />
                   ) : detailGrade.orientacoes_melhoria ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(detailGrade.orientacoes_melhoria) }} />
+                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(normalizeRichText(detailGrade.orientacoes_melhoria)) }} />
                   ) : <p className="text-sm text-muted-foreground italic">Sem orientações.</p>}
                 </div>
 
