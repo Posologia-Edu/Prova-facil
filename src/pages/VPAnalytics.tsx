@@ -70,6 +70,16 @@ export default function VPAnalytics() {
   const [detailGrade, setDetailGrade] = useState<GradeRow | null>(null);
   const [transcript, setTranscript] = useState<TranscriptMsg[]>([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    subscores: Record<string, number>;
+    nota_final: number;
+    nota_microlearning: number;
+    feedback_resumido: string;
+    orientacoes_melhoria: string;
+    flags_seguranca: string;
+  } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Batch grading
   const [grading, setGrading] = useState(false);
