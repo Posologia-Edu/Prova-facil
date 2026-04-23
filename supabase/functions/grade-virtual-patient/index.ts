@@ -212,8 +212,14 @@ Avalie agora seguindo rigorosamente o schema do system prompt.`;
       });
     }
 
-    // Merge evidencias into orientacoes for richer feedback display
-    let orientacoes = gradeResult.orientacoes_melhoria || "";
+    // Coerce array-shaped fields into markdown bullet strings (defensive normalization)
+    const coerceToMarkdown = (val: any): string => {
+      if (val == null) return "";
+      if (Array.isArray(val)) return val.map((v) => `- ${String(v).trim()}`).join("\n");
+      return String(val);
+    };
+    const feedbackResumido = coerceToMarkdown(gradeResult.feedback_resumido);
+    let orientacoes = coerceToMarkdown(gradeResult.orientacoes_melhoria);
     if (gradeResult.evidencias) {
       const ev = gradeResult.evidencias;
       const evidLines: string[] = [];
