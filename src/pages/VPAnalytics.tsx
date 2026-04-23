@@ -678,11 +678,6 @@ export default function VPAnalytics() {
                   })}
                 </TableBody>
               </Table>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
             </CardContent>
           </Card>
         </>
