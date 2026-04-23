@@ -336,13 +336,19 @@ export default function VirtualPatientRoom() {
     const allIds = isGroupSession ? groupSessionIds : [sessionId];
 
     try {
-      await Promise.all(allIds.map(id =>
+      const results = await Promise.all(allIds.map(id =>
         supabase.functions.invoke("grade-virtual-patient", {
           body: { session_id: id, class_virtual_patient_id: cvpId },
         })
       ));
+      const failed = results.find((result) => result.error);
+      if (failed?.error) {
+        throw failed.error;
+      }
+      toast.success("Correção e feedback gerados com sucesso.");
     } catch (err) {
       console.warn("Auto-grading failed:", err);
+      toast.error("Atendimento concluído, mas a correção automática não foi gerada agora. Tente em 'Análise VP' > 'Corrigir Turma'.");
     }
   };
 

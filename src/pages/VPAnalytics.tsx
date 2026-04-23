@@ -441,7 +441,7 @@ export default function VPAnalytics() {
                   <div className="rounded-lg bg-primary/10 p-2.5"><Users className="h-5 w-5 text-primary" /></div>
                   <div>
                      <p className="text-2xl font-bold">{eligibleCount}</p>
-                    <p className="text-xs text-muted-foreground">Alunos avaliados</p>
+                     <p className="text-xs text-muted-foreground">Sessões elegíveis</p>
                   </div>
                 </div>
               </CardContent>
@@ -451,8 +451,8 @@ export default function VPAnalytics() {
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-primary/10 p-2.5"><Award className="h-5 w-5 text-primary" /></div>
                   <div>
-                    <p className="text-2xl font-bold">{avgNota.toFixed(1)}</p>
-                    <p className="text-xs text-muted-foreground">Nota média (0-10)</p>
+                    <p className="text-2xl font-bold">{gradedCount}</p>
+                    <p className="text-xs text-muted-foreground">Correções concluídas</p>
                   </div>
                 </div>
               </CardContent>
@@ -462,8 +462,8 @@ export default function VPAnalytics() {
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-primary/10 p-2.5"><TrendingUp className="h-5 w-5 text-primary" /></div>
                   <div>
-                    <p className="text-2xl font-bold">{avgMicro.toFixed(1)}</p>
-                    <p className="text-xs text-muted-foreground">Microlearning (0-5)</p>
+                    <p className="text-2xl font-bold">{pendingCount}</p>
+                    <p className="text-xs text-muted-foreground">Pendentes de correção</p>
                   </div>
                 </div>
               </CardContent>
@@ -481,6 +481,7 @@ export default function VPAnalytics() {
             </Card>
           </div>
 
+          {gradedCount > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Score Distribution */}
             <Card>
@@ -516,9 +517,10 @@ export default function VPAnalytics() {
               </CardContent>
             </Card>
           </div>
+          )}
 
           {/* Flags de Segurança */}
-          {topFlags.length > 0 && (
+          {gradedCount > 0 && topFlags.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -550,6 +552,7 @@ export default function VPAnalytics() {
                   <TableRow>
                     <TableHead>Aluno</TableHead>
                     <TableHead>E-mail</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Nota (0-10)</TableHead>
                     <TableHead className="text-center">Microlearning</TableHead>
                     <TableHead className="text-center">Flags</TableHead>
@@ -564,11 +567,24 @@ export default function VPAnalytics() {
                         <TableCell className="font-medium">{g.student_name || "—"}</TableCell>
                         <TableCell className="text-muted-foreground text-sm">{g.student_email || "—"}</TableCell>
                         <TableCell className="text-center">
-                          <Badge variant={(g.nota_final || 0) >= 6 ? "default" : "destructive"}>
-                            {(g.nota_final || 0).toFixed(1)}
-                          </Badge>
+                          {g.correction_status === "graded" ? (
+                            <Badge variant="default">Corrigido</Badge>
+                          ) : (
+                            <Badge variant="secondary">Pendente</Badge>
+                          )}
                         </TableCell>
-                        <TableCell className="text-center">{(g.nota_microlearning || 0).toFixed(1)}</TableCell>
+                        <TableCell className="text-center">
+                          {g.correction_status === "graded" ? (
+                            <Badge variant={(g.nota_final || 0) >= 6 ? "default" : "destructive"}>
+                              {(g.nota_final || 0).toFixed(1)}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">Aguardando</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {g.correction_status === "graded" ? (g.nota_microlearning || 0).toFixed(1) : "—"}
+                        </TableCell>
                         <TableCell className="text-center">
                           {flags.length > 0 ? (
                             <Badge variant="destructive" className="text-xs">{flags.length}</Badge>
@@ -577,9 +593,15 @@ export default function VPAnalytics() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
-                            <Eye className="h-3.5 w-3.5 mr-1" /> Detalhes
-                          </Button>
+                          {g.correction_status === "graded" ? (
+                            <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
+                              <Eye className="h-3.5 w-3.5 mr-1" /> Detalhes
+                            </Button>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">
+                              {g.has_mai ? "MAI enviado" : `${g.message_count} msg do aluno`}
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
