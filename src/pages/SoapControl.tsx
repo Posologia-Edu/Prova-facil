@@ -740,7 +740,14 @@ export default function SoapControl() {
               }
 
               // Admin score & AI score: from SOAP response
-              const soapResp = soapResponses.find((r: any) => r.participant_id === student.id);
+              // SOAP é submetido por um aluno da dupla; nota do professor vale para ambos da mesma dupla.
+              let soapResp = soapResponses.find((r: any) => r.participant_id === student.id);
+              if (!soapResp && student.pair_index >= 0) {
+                soapResp = soapResponses.find((r: any) => {
+                  const submitter = participants.find((p: any) => p.id === r.participant_id);
+                  return submitter && submitter.pair_index === student.pair_index;
+                });
+              }
               const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
               const aiSc = soapResp?.ai_score != null ? Number(soapResp.ai_score) : null;
 
