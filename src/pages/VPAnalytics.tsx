@@ -221,6 +221,17 @@ export default function VPAnalytics() {
 
   const openDetail = async (grade: GradeRow) => {
     setDetailGrade(grade);
+    setEditMode(false);
+    const subs = (grade.subscores && typeof grade.subscores === "object") ? grade.subscores : {};
+    const flagsArr = Array.isArray(grade.flags_seguranca) ? grade.flags_seguranca : [];
+    setEditForm({
+      subscores: subscoreKeys.reduce((acc, k) => ({ ...acc, [k]: Number(subs[k]) || 0 }), {} as Record<string, number>),
+      nota_final: grade.nota_final ?? 0,
+      nota_microlearning: grade.nota_microlearning ?? 0,
+      feedback_resumido: grade.feedback_resumido || "",
+      orientacoes_melhoria: grade.orientacoes_melhoria || "",
+      flags_seguranca: flagsArr.join("\n"),
+    });
     setTranscriptLoading(true);
     const { data } = await supabase
       .from("virtual_patient_messages")
@@ -229,6 +240,56 @@ export default function VPAnalytics() {
       .order("created_at", { ascending: true });
     setTranscript((data as TranscriptMsg[]) || []);
     setTranscriptLoading(false);
+  };
+
+  const recomputeFinal = (subs: Record<string, number>) => {
+    const total = subscoreKeys.reduce((s, k) => s + (Number(subs[k]) || 0), 0);
+    return Math.max(0, Math.min(10, total));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!detailGrade || !editForm) return;
+    setSavingEdit(true);
+    const flagsArr = editForm.flags_seguranca
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const payload = {
+      subscores: editForm.subscores,
+      nota_final: Number(editForm.nota_final) || 0,
+      nota_microlearning: Number(editForm.nota_microlearning) || 0,
+      feedback_resumido: editForm.feedback_resumido,
+      orientacoes_melhoria: editForm.orientacoes_melhoria,
+      flags_seguranca: flagsArr,
+    };
+    // Upsert: if a grade row already exists update; otherwise insert (allows manual grading of pending sessions)
+    const { data: existing } = await supabase
+      .from("virtual_patient_grades")
+      .select("id")
+      .eq("session_id", detailGrade.session_id)
+      .maybeSingle();
+
+    let error;
+    if (existing?.id) {
+      ({ error } = await supabase.from("virtual_patient_grades").update(payload).eq("id", existing.id));
+    } else {
+      ({ error } = await supabase.from("virtual_patient_grades").insert({
+        ...payload,
+        session_id: detailGrade.session_id,
+        class_virtual_patient_id: detailGrade.class_virtual_patient_id,
+        bonus_penalidades: {},
+      }));
+    }
+
+    setSavingEdit(false);
+    if (error) {
+      toast.error("Não foi possível salvar os ajustes: " + error.message);
+      return;
+    }
+    toast.success("Avaliação ajustada com sucesso.");
+    setEditMode(false);
+    setDetailGrade(null);
+    await loadGrades();
   };
 
   const handleBatchGrade = async () => {
