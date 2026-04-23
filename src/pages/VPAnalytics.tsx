@@ -881,7 +881,7 @@ export default function VPAnalytics() {
                   ) : transcript.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Nenhuma mensagem encontrada.</p>
                   ) : (
-                    <div className="space-y-2 max-h-[40vh] overflow-y-auto border rounded-lg p-3">
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto border rounded-lg p-3">
                       {transcript.map((msg, i) => (
                         <div key={i} className={`p-3 rounded-lg text-sm ${msg.role === "user" ? "bg-primary/10 ml-8" : "bg-muted mr-8"}`}>
                           <div className="flex items-center gap-2 mb-1">
