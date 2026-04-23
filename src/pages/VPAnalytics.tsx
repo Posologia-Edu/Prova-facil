@@ -169,33 +169,50 @@ export default function VPAnalytics() {
 
     if (filteredCvpIds.length === 0) { toast.info("Nenhum paciente virtual encontrado."); setGrading(false); return; }
 
-    // Get completed sessions
+    // Get ALL sessions (any status) for selected filters — sessions with any meaningful interaction can be graded
     const { data: sessions } = await supabase
       .from("virtual_patient_sessions")
-      .select("id, class_virtual_patient_id")
-      .in("class_virtual_patient_id", filteredCvpIds)
-      .eq("status", "completed");
+      .select("id, class_virtual_patient_id, status")
+      .in("class_virtual_patient_id", filteredCvpIds);
 
     if (!sessions || sessions.length === 0) {
-      toast.info("Nenhuma sessão concluída para corrigir.");
+      toast.info("Nenhuma sessão encontrada nesta turma.");
       setGrading(false);
       return;
     }
 
-    // Get already graded sessions
-    const { data: existingGrades } = await supabase
-      .from("virtual_patient_grades")
-      .select("session_id")
-      .in("session_id", sessions.map(s => s.id));
+    // Filter sessions that have at least 2 student messages OR a completed MAI
+    const sessionIds = sessions.map(s => s.id);
+    const [{ data: msgCounts }, { data: maiList }] = await Promise.all([
+      supabase
+        .from("virtual_patient_messages")
+        .select("session_id")
+        .in("session_id", sessionIds)
+        .eq("role", "user"),
+      supabase
+        .from("virtual_patient_mai_scores")
+        .select("session_id")
+        .in("session_id", sessionIds),
+    ]);
 
-    const gradedIds = new Set((existingGrades || []).map(g => g.session_id));
-    const toGrade = sessions.filter(s => !gradedIds.has(s.id));
+    const msgCountMap: Record<string, number> = {};
+    (msgCounts || []).forEach((m: any) => {
+      msgCountMap[m.session_id] = (msgCountMap[m.session_id] || 0) + 1;
+    });
+    const hasMai = new Set((maiList || []).map((m: any) => m.session_id));
 
-    if (toGrade.length === 0) {
-      toast.info("Todas as sessões já foram corrigidas.");
+    const eligible = sessions.filter(s =>
+      s.status === "completed" || hasMai.has(s.id) || (msgCountMap[s.id] || 0) >= 2
+    );
+
+    if (eligible.length === 0) {
+      toast.info("Nenhuma sessão com interação suficiente para corrigir ainda.");
       setGrading(false);
       return;
     }
+
+    // Always re-grade everything when teacher clicks "Corrigir Turma" so updated rubric applies
+    const toGrade = eligible;
 
     toast.info(`Corrigindo ${toGrade.length} sessão(ões)...`);
 
@@ -244,20 +261,36 @@ export default function VPAnalytics() {
     else scoreRanges[4].count++;
   });
 
-  // Radar data (avg subscores)
-  const subscoreKeys = ["anamnese", "plano_inicial", "exames", "reavaliacao_ajustes", "mai"];
+  // Radar data (avg subscores) — new professional rubric (Anamnese 6 + MAI 4)
+  const subscoreKeys = [
+    "identificacao_acolhimento",
+    "queixa_principal_hda",
+    "historia_medicamentosa",
+    "antecedentes_comorbidades",
+    "habitos_estilo_vida",
+    "escuta_raciocinio_clinico",
+    "mai_completude",
+    "mai_coerencia_clinica",
+    "mai_justificativa_critica",
+    "mai_seguranca_paciente",
+  ];
   const subscoreLabels: Record<string, string> = {
-    anamnese: "Anamnese",
-    plano_inicial: "Plano Inicial",
-    exames: "Exames",
-    reavaliacao_ajustes: "Reavaliação",
-    mai: "MAI",
+    identificacao_acolhimento: "Acolhimento",
+    queixa_principal_hda: "Queixa / HDA",
+    historia_medicamentosa: "Hist. Medicam.",
+    antecedentes_comorbidades: "Antecedentes",
+    habitos_estilo_vida: "Hábitos",
+    escuta_raciocinio_clinico: "Raciocínio",
+    mai_completude: "MAI Completude",
+    mai_coerencia_clinica: "MAI Coerência",
+    mai_justificativa_critica: "MAI Crítica",
+    mai_seguranca_paciente: "MAI Segurança",
   };
   const radarData = subscoreKeys.map(key => {
     const avg = gradedCount > 0
       ? grades.reduce((s, g) => s + (g.subscores?.[key] || 0), 0) / gradedCount
       : 0;
-    return { category: subscoreLabels[key], score: avg, maxScore: 2 };
+    return { category: subscoreLabels[key], score: avg, maxScore: 1 };
   });
 
   // Flag frequency
@@ -313,8 +346,11 @@ export default function VPAnalytics() {
         <Card>
           <CardContent className="py-16 text-center">
             <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-            <p className="text-muted-foreground">Nenhuma avaliação encontrada.</p>
-            <p className="text-muted-foreground text-sm mt-1">Aguarde os alunos completarem os atendimentos ou use "Corrigir Turma".</p>
+            <p className="text-muted-foreground">Nenhuma avaliação corrigida ainda.</p>
+            <p className="text-muted-foreground text-sm mt-1 max-w-md mx-auto">
+              Clique em <strong>"Corrigir Turma"</strong> para que o agente avalie automaticamente todas as sessões com interação suficiente
+              (anamnese + MAI), gerando notas multidimensionais por critério profissional.
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -488,20 +524,33 @@ export default function VPAnalytics() {
           {detailGrade && (
             <ScrollArea className="flex-1 pr-4">
               <div className="space-y-6">
-                {/* Subscores */}
+                {/* Subscores — Anamnese */}
                 <div>
-                  <h4 className="text-sm font-semibold mb-3">Subscores</h4>
+                  <h4 className="text-sm font-semibold mb-3">Anamnese (0–6)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {subscoreKeys.map(key => (
+                    {subscoreKeys.slice(0, 6).map(key => (
                       <div key={key} className="p-3 rounded-lg border text-center">
                         <p className="text-xs text-muted-foreground">{subscoreLabels[key]}</p>
-                        <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(1)}/2</p>
+                        <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(2)}/1</p>
                       </div>
                     ))}
-                    <div className="p-3 rounded-lg border text-center bg-primary/5">
-                      <p className="text-xs text-muted-foreground">Nota Final</p>
-                      <p className="text-lg font-bold mt-1">{(detailGrade.nota_final || 0).toFixed(1)}/10</p>
-                    </div>
+                  </div>
+                </div>
+
+                {/* Subscores — MAI */}
+                <div>
+                  <h4 className="text-sm font-semibold mb-3">MAI – Medication Appropriateness Index (0–4)</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {subscoreKeys.slice(6).map(key => (
+                      <div key={key} className="p-3 rounded-lg border text-center">
+                        <p className="text-xs text-muted-foreground">{subscoreLabels[key]}</p>
+                        <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(2)}/1</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 p-3 rounded-lg border text-center bg-primary/5">
+                    <p className="text-xs text-muted-foreground">Nota Final</p>
+                    <p className="text-2xl font-bold mt-1">{(detailGrade.nota_final || 0).toFixed(1)}/10</p>
                   </div>
                 </div>
 
