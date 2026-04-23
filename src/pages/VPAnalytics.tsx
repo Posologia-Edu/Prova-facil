@@ -181,7 +181,7 @@ export default function VPAnalytics() {
           id: grade?.id || session.id,
           session_id: session.id,
           class_virtual_patient_id: session.class_virtual_patient_id,
-          correction_status: grade ? "graded" : "pending",
+          correction_status: (grade ? "graded" : "pending") as GradeRow["correction_status"],
           session_status: session.status || "in_progress",
           message_count: msgCountMap[session.id] || 0,
           has_mai: hasMai.has(session.id),
@@ -309,11 +309,14 @@ export default function VPAnalytics() {
   };
 
   // --- Computed metrics ---
-  const gradedCount = grades.length;
-  const avgNota = gradedCount > 0 ? grades.reduce((s, g) => s + (g.nota_final || 0), 0) / gradedCount : 0;
-  const avgMicro = gradedCount > 0 ? grades.reduce((s, g) => s + (g.nota_microlearning || 0), 0) / gradedCount : 0;
+  const gradedRows = grades.filter((grade) => grade.correction_status === "graded");
+  const gradedCount = gradedRows.length;
+  const eligibleCount = grades.length;
+  const pendingCount = eligibleCount - gradedCount;
+  const avgNota = gradedCount > 0 ? gradedRows.reduce((s, g) => s + (g.nota_final || 0), 0) / gradedCount : 0;
+  const avgMicro = gradedCount > 0 ? gradedRows.reduce((s, g) => s + (g.nota_microlearning || 0), 0) / gradedCount : 0;
 
-  const allFlags = grades.flatMap(g => {
+  const allFlags = gradedRows.flatMap(g => {
     const f = g.flags_seguranca;
     return Array.isArray(f) ? f : [];
   });
@@ -327,7 +330,7 @@ export default function VPAnalytics() {
     { range: "6-8", count: 0, color: "hsl(142, 50%, 50%)" },
     { range: "8-10", count: 0, color: "hsl(142, 60%, 35%)" },
   ];
-  grades.forEach(g => {
+  gradedRows.forEach(g => {
     const n = g.nota_final || 0;
     if (n < 2) scoreRanges[0].count++;
     else if (n < 4) scoreRanges[1].count++;
@@ -417,11 +420,11 @@ export default function VPAnalytics() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      ) : gradedCount === 0 ? (
+          ) : eligibleCount === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
             <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-            <p className="text-muted-foreground">Nenhuma avaliação corrigida ainda.</p>
+            <p className="text-muted-foreground">Nenhuma sessão elegível encontrada ainda.</p>
             <p className="text-muted-foreground text-sm mt-1 max-w-md mx-auto">
               Clique em <strong>"Corrigir Turma"</strong> para que o agente avalie automaticamente todas as sessões com interação suficiente
               (anamnese + MAI), gerando notas multidimensionais por critério profissional.
@@ -437,7 +440,7 @@ export default function VPAnalytics() {
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-primary/10 p-2.5"><Users className="h-5 w-5 text-primary" /></div>
                   <div>
-                    <p className="text-2xl font-bold">{gradedCount}</p>
+                     <p className="text-2xl font-bold">{eligibleCount}</p>
                     <p className="text-xs text-muted-foreground">Alunos avaliados</p>
                   </div>
                 </div>
