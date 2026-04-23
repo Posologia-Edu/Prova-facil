@@ -829,7 +829,7 @@ export default function VPAnalytics() {
                       placeholder="Pontos fortes e fracos do estudante..."
                     />
                   ) : detailGrade.feedback_resumido ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(detailGrade.feedback_resumido) }} />
+                    <div className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(normalizeRichText(detailGrade.feedback_resumido)) }} />
                   ) : <p className="text-sm text-muted-foreground italic">Sem feedback.</p>}
                 </div>
 
