@@ -346,8 +346,11 @@ export default function VPAnalytics() {
         <Card>
           <CardContent className="py-16 text-center">
             <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-            <p className="text-muted-foreground">Nenhuma avaliação encontrada.</p>
-            <p className="text-muted-foreground text-sm mt-1">Aguarde os alunos completarem os atendimentos ou use "Corrigir Turma".</p>
+            <p className="text-muted-foreground">Nenhuma avaliação corrigida ainda.</p>
+            <p className="text-muted-foreground text-sm mt-1 max-w-md mx-auto">
+              Clique em <strong>"Corrigir Turma"</strong> para que o agente avalie automaticamente todas as sessões com interação suficiente
+              (anamnese + MAI), gerando notas multidimensionais por critério profissional.
+            </p>
           </CardContent>
         </Card>
       ) : (
