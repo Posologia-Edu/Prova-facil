@@ -219,6 +219,28 @@ export default function VPAnalytics() {
     setLoading(false);
   };
 
+  // Normalize text fields that the AI may return as a JSON array string
+  // e.g. '["bullet 1","bullet 2"]' -> "- bullet 1\n- bullet 2"
+  const normalizeRichText = (raw: string | null | undefined): string => {
+    if (!raw) return "";
+    const trimmed = String(raw).trim();
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const arr = JSON.parse(trimmed);
+        if (Array.isArray(arr)) {
+          return arr.map((item) => `- ${String(item).trim()}`).join("\n");
+        }
+      } catch { /* fall through */ }
+    }
+    // Also handle Postgres array literal '{"a","b"}' just in case
+    if (trimmed.startsWith("{") && trimmed.endsWith("}") && trimmed.includes('","')) {
+      const inner = trimmed.slice(1, -1);
+      const parts = inner.split('","').map((s) => s.replace(/^"|"$/g, "").trim());
+      return parts.map((p) => `- ${p}`).join("\n");
+    }
+    return trimmed;
+  };
+
   const openDetail = async (grade: GradeRow) => {
     setDetailGrade(grade);
     setEditMode(false);
@@ -228,8 +250,8 @@ export default function VPAnalytics() {
       subscores: subscoreKeys.reduce((acc, k) => ({ ...acc, [k]: Number(subs[k]) || 0 }), {} as Record<string, number>),
       nota_final: grade.nota_final ?? 0,
       nota_microlearning: grade.nota_microlearning ?? 0,
-      feedback_resumido: grade.feedback_resumido || "",
-      orientacoes_melhoria: grade.orientacoes_melhoria || "",
+      feedback_resumido: normalizeRichText(grade.feedback_resumido),
+      orientacoes_melhoria: normalizeRichText(grade.orientacoes_melhoria),
       flags_seguranca: flagsArr.join("\n"),
     });
     setTranscriptLoading(true);
