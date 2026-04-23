@@ -261,20 +261,36 @@ export default function VPAnalytics() {
     else scoreRanges[4].count++;
   });
 
-  // Radar data (avg subscores)
-  const subscoreKeys = ["anamnese", "plano_inicial", "exames", "reavaliacao_ajustes", "mai"];
+  // Radar data (avg subscores) — new professional rubric (Anamnese 6 + MAI 4)
+  const subscoreKeys = [
+    "identificacao_acolhimento",
+    "queixa_principal_hda",
+    "historia_medicamentosa",
+    "antecedentes_comorbidades",
+    "habitos_estilo_vida",
+    "escuta_raciocinio_clinico",
+    "mai_completude",
+    "mai_coerencia_clinica",
+    "mai_justificativa_critica",
+    "mai_seguranca_paciente",
+  ];
   const subscoreLabels: Record<string, string> = {
-    anamnese: "Anamnese",
-    plano_inicial: "Plano Inicial",
-    exames: "Exames",
-    reavaliacao_ajustes: "Reavaliação",
-    mai: "MAI",
+    identificacao_acolhimento: "Acolhimento",
+    queixa_principal_hda: "Queixa / HDA",
+    historia_medicamentosa: "Hist. Medicam.",
+    antecedentes_comorbidades: "Antecedentes",
+    habitos_estilo_vida: "Hábitos",
+    escuta_raciocinio_clinico: "Raciocínio",
+    mai_completude: "MAI Completude",
+    mai_coerencia_clinica: "MAI Coerência",
+    mai_justificativa_critica: "MAI Crítica",
+    mai_seguranca_paciente: "MAI Segurança",
   };
   const radarData = subscoreKeys.map(key => {
     const avg = gradedCount > 0
       ? grades.reduce((s, g) => s + (g.subscores?.[key] || 0), 0) / gradedCount
       : 0;
-    return { category: subscoreLabels[key], score: avg, maxScore: 2 };
+    return { category: subscoreLabels[key], score: avg, maxScore: 1 };
   });
 
   // Flag frequency
