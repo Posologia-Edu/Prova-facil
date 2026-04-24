@@ -23,6 +23,7 @@ import { ROLE_LABELS as EVAL_ROLE_LABELS } from "@/lib/mock-trial-evaluation-tem
 import { ResultsPanel } from "@/components/mock-trial/ResultsPanel";
 import { MockTrialCaseBankDialog } from "@/components/mock-trial/MockTrialCaseBankDialog";
 import { CaseImagesPanel } from "@/components/mock-trial/CaseImagesPanel";
+import { WitnessesEditor } from "@/components/mock-trial/WitnessesEditor";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
