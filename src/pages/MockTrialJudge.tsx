@@ -419,7 +419,75 @@ export default function MockTrialJudge() {
         </Card>
       )}
 
-      {/* Process content for the judge to read */}
+      {/* Participating groups for the selected case */}
+      {selectedCase && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Grupos Participantes deste Processo
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(() => {
+              const caseAssignments = assignments.filter(a => a.case_id === selectedCase.id);
+              if (caseAssignments.length === 0) {
+                return <p className="text-sm text-muted-foreground">Nenhum grupo distribuído para este processo.</p>;
+              }
+              const order = ["prosecution", "defense", "jury"];
+              const sorted = [...caseAssignments].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role));
+              return sorted.map(a => {
+                const group = groups.find(g => g.id === a.group_id);
+                if (!group) return null;
+                const members = students.filter(s => s.group_id === group.id);
+                const formForRole = forms.find(f => f.target_role === a.role);
+                const submitted = formForRole
+                  ? responses.some(r => r.group_id === group.id && r.form_id === formForRole.id)
+                  : false;
+                return (
+                  <div key={a.id} className={`rounded-lg border p-3 ${ROLE_COLORS[a.role] || ""}`}>
+                    <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-semibold">
+                          Grupo {group.group_number}
+                          {group.name ? ` – ${group.name}` : ""}
+                        </Badge>
+                        <Badge variant="secondary">{ROLE_LABELS[a.role] || a.role}</Badge>
+                      </div>
+                      {formForRole && (
+                        submitted ? (
+                          <Badge className="bg-green-600 text-white border-green-700">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Formulário enviado
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-dashed">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Aguardando envio
+                          </Badge>
+                        )
+                      )}
+                    </div>
+                    {members.length > 0 ? (
+                      <ul className="text-sm text-foreground/90 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pl-1">
+                        {members.map(m => (
+                          <li key={m.id} className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
+                            <span>{m.student_name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Nenhum aluno cadastrado neste grupo.</p>
+                    )}
+                  </div>
+                );
+              });
+            })()}
+          </CardContent>
+        </Card>
+      )}
+
       {selectedCase && (
         <Card>
           <CardHeader>
