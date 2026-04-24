@@ -42,6 +42,11 @@ function PhaseTimer({ session }: { session: any }) {
       setTimeLeft(0);
       return;
     }
+    if (session.is_paused) {
+      setTimeLeft(session.paused_remaining_seconds ?? 0);
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+      return;
+    }
     const tick = () => {
       const startedAt = new Date(session.current_phase_started_at).getTime();
       const elapsed = Math.floor((Date.now() - startedAt) / 1000);
@@ -55,7 +60,7 @@ function PhaseTimer({ session }: { session: any }) {
     tick();
     intervalRef.current = setInterval(tick, 1000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [session?.current_phase_started_at, session?.phase_duration_seconds]);
+  }, [session?.current_phase_started_at, session?.phase_duration_seconds, session?.is_paused, session?.paused_remaining_seconds]);
 
   if (!session?.phase_duration_seconds) return null;
   const m = Math.floor(timeLeft / 60);
@@ -64,6 +69,7 @@ function PhaseTimer({ session }: { session: any }) {
     <div className={`flex items-center gap-2 text-2xl font-mono font-bold ${timeLeft <= 60 ? "text-destructive animate-pulse" : "text-primary"}`}>
       <Clock className="h-5 w-5" />
       {String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}
+      {session?.is_paused && <span className="text-xs uppercase tracking-wider text-muted-foreground">(pausado)</span>}
     </div>
   );
 }
