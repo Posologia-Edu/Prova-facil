@@ -198,6 +198,13 @@ export default function MockTrialEditor() {
     }
   }, [trial]);
 
+  // Garantir templates de avaliação (juiz/professor)
+  useEffect(() => {
+    if (id) {
+      ensureEvaluationForms(id).then(() => refetchEvaluationForms());
+    }
+  }, [id, refetchEvaluationForms]);
+
   useEffect(() => {
     setFormDrafts((prev) => {
       const next: Record<string, FormField[]> = {};
