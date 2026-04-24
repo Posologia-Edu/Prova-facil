@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, CheckCircle2, Clock, RefreshCw, Sparkles, Gavel, GraduationCap, Users } from "lucide-react";
+import { BarChart3, CheckCircle2, Clock, RefreshCw, Sparkles, Gavel, GraduationCap, Users, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvaluationForm";
 import { consolidateScores } from "@/lib/mock-trial-evaluations";
+import { formatGroupLabel } from "@/lib/mock-trial-utils";
 
 interface Props {
   cases: any[];
@@ -118,7 +119,7 @@ export function ResultsPanel(props: Props) {
                         {ROLE_LABEL[c.role]}
                       </Badge>
                       <CardTitle className="text-base">
-                        Grupo {group?.group_number}{group?.name ? ` – ${group.name}` : ""}
+                        {formatGroupLabel(group)}
                       </CardTitle>
                     </div>
                   </CardHeader>
@@ -164,11 +165,16 @@ export function ResultsPanel(props: Props) {
                 <Card key={a.id} className={`border ${ROLE_COLOR[a.role] || ""}`}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline">{ROLE_LABEL[a.role]}</Badge>
                         <CardTitle className="text-sm">
-                          Grupo {group.group_number}{group.name ? ` – ${group.name}` : ""}
+                          {formatGroupLabel(group)}
                         </CardTitle>
+                        <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          {selectedCase.title}
+                          {selectedCase.case_number ? ` · nº ${selectedCase.case_number}` : ""}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         {judgeEval && (
@@ -263,7 +269,7 @@ export function ResultsPanel(props: Props) {
                             {ROLE_LABEL[e.evaluated_role]}
                           </Badge>
                           <span className="font-medium text-sm">
-                            Grupo {group?.group_number}{group?.name ? ` – ${group.name}` : ""}
+                            {formatGroupLabel(group)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -306,7 +312,7 @@ export function ResultsPanel(props: Props) {
                     sessionId={session.id}
                     caseId={selectedCase.id}
                     groupId={a.group_id}
-                    groupLabel={`Grupo ${group.group_number}${group.name ? ` – ${group.name}` : ""}`}
+                    groupLabel={formatGroupLabel(group)}
                     evaluatedRole={a.role}
                     evaluatorType="teacher"
                     fields={teacherForm.fields_json}

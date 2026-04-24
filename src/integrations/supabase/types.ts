@@ -2498,7 +2498,9 @@ export type Database = {
           created_at: string
           current_phase_started_at: string | null
           id: string
+          is_paused: boolean
           judge_notes: string | null
+          paused_remaining_seconds: number | null
           phase_duration_seconds: number | null
           status: string
         }
@@ -2507,7 +2509,9 @@ export type Database = {
           created_at?: string
           current_phase_started_at?: string | null
           id?: string
+          is_paused?: boolean
           judge_notes?: string | null
+          paused_remaining_seconds?: number | null
           phase_duration_seconds?: number | null
           status?: string
         }
@@ -2516,7 +2520,9 @@ export type Database = {
           created_at?: string
           current_phase_started_at?: string | null
           id?: string
+          is_paused?: boolean
           judge_notes?: string | null
+          paused_remaining_seconds?: number | null
           phase_duration_seconds?: number | null
           status?: string
         }

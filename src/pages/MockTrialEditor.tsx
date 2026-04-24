@@ -23,6 +23,7 @@ import { ROLE_LABELS as EVAL_ROLE_LABELS } from "@/lib/mock-trial-evaluation-tem
 import { ResultsPanel } from "@/components/mock-trial/ResultsPanel";
 import { MockTrialCaseBankDialog } from "@/components/mock-trial/MockTrialCaseBankDialog";
 import { CaseImagesPanel } from "@/components/mock-trial/CaseImagesPanel";
+import { WitnessesEditor } from "@/components/mock-trial/WitnessesEditor";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
@@ -580,9 +581,38 @@ export default function MockTrialEditor() {
             <Card key={c.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <CardTitle className="text-base">{c.title}</CardTitle>
-                    <p className="text-xs text-muted-foreground">Processo nº {c.case_number}</p>
+                  <div className="flex-1 min-w-[260px] space-y-1">
+                    <Input
+                      value={c.title || ""}
+                      onChange={(e) => {
+                        const newTitle = e.target.value;
+                        queryClient.setQueryData(["mock-trial-cases", id], (curr: any[] | undefined) =>
+                          curr?.map(x => x.id === c.id ? { ...x, title: newTitle } : x) || []
+                        );
+                      }}
+                      onBlur={async (e) => {
+                        await supabase.from("mock_trial_cases").update({ title: e.target.value }).eq("id", c.id);
+                      }}
+                      className="text-base font-semibold border-none px-0 focus-visible:ring-0 h-auto"
+                      placeholder="Título do processo"
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Processo nº</span>
+                      <Input
+                        value={c.case_number || ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          queryClient.setQueryData(["mock-trial-cases", id], (curr: any[] | undefined) =>
+                            curr?.map(x => x.id === c.id ? { ...x, case_number: v } : x) || []
+                          );
+                        }}
+                        onBlur={async (e) => {
+                          await supabase.from("mock_trial_cases").update({ case_number: e.target.value }).eq("id", c.id);
+                        }}
+                        className="h-7 text-xs w-40"
+                        placeholder="000/2026"
+                      />
+                    </div>
                   </div>
                   <div className="flex gap-1 flex-wrap">
                     <Button size="sm" variant="outline" onClick={() => { setEditingCaseId(c.id); setEditingCaseContent(c.process_content || ""); }}>
@@ -603,25 +633,15 @@ export default function MockTrialEditor() {
                 </div>
               </CardHeader>
               <CardContent>
-                {c.characters_json && (c.characters_json as any[]).length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Personagens:</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {(c.characters_json as any[]).map((char: any, idx: number) => (
-                        <div key={idx} className="p-3 rounded-lg bg-muted/50 border">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant={char.side === "prosecution" ? "destructive" : "default"}>
-                              {char.side === "prosecution" ? "Acusação" : "Defesa"}
-                            </Badge>
-                            <span className="text-sm font-medium">{char.name}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">{char.profession}</p>
-                          {char.instructions && <p className="text-xs mt-1 line-clamp-3">{char.instructions}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <WitnessesEditor
+                  caseId={c.id}
+                  characters={(c.characters_json as any[]) || []}
+                  onChange={(updated) => {
+                    queryClient.setQueryData(["mock-trial-cases", id], (curr: any[] | undefined) =>
+                      curr?.map(x => x.id === c.id ? { ...x, characters_json: updated } : x) || []
+                    );
+                  }}
+                />
                 {c.process_content && (
                   <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{c.process_content.substring(0, 200)}...</p>
                 )}

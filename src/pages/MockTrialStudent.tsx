@@ -42,6 +42,11 @@ function PhaseTimer({ session }: { session: any }) {
       setTimeLeft(0);
       return;
     }
+    if (session.is_paused) {
+      setTimeLeft(session.paused_remaining_seconds ?? 0);
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+      return;
+    }
     const tick = () => {
       const startedAt = new Date(session.current_phase_started_at).getTime();
       const elapsed = Math.floor((Date.now() - startedAt) / 1000);
@@ -55,7 +60,7 @@ function PhaseTimer({ session }: { session: any }) {
     tick();
     intervalRef.current = setInterval(tick, 1000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [session?.current_phase_started_at, session?.phase_duration_seconds]);
+  }, [session?.current_phase_started_at, session?.phase_duration_seconds, session?.is_paused, session?.paused_remaining_seconds]);
 
   if (!session?.phase_duration_seconds) return null;
   const m = Math.floor(timeLeft / 60);
@@ -64,6 +69,7 @@ function PhaseTimer({ session }: { session: any }) {
     <div className={`flex items-center gap-2 text-2xl font-mono font-bold ${timeLeft <= 60 ? "text-destructive animate-pulse" : "text-primary"}`}>
       <Clock className="h-5 w-5" />
       {String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}
+      {session?.is_paused && <span className="text-xs uppercase tracking-wider text-muted-foreground">(pausado)</span>}
     </div>
   );
 }
@@ -173,11 +179,15 @@ export default function MockTrialStudent() {
             }
             return [...prev, newRow];
           });
+          // Auto-advance: when a different case becomes active, jump to it
+          if (ACTIVE_STATUSES.has(newRow.status) && newRow.case_id !== selectedCaseId) {
+            setSelectedCaseId(newRow.case_id);
+          }
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [authenticated, cases]);
+  }, [authenticated, cases, selectedCaseId]);
 
   // Get my role for a specific case
   const getMyRole = (caseId: string) => {
@@ -282,29 +292,22 @@ export default function MockTrialStudent() {
       {(() => {
         const sessionStatus = selectedSession?.status || "pending";
         const isSessionActive = ACTIVE_STATUSES.has(sessionStatus);
+        const isFinished = sessionStatus === "finished";
 
-        // Session not started or finished → block everyone
-        if (!isSessionActive) {
+        // Session finished → block everyone
+        if (isFinished) {
           return (
             <Card>
               <CardContent className="py-12 text-center">
                 <Gavel className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium">
-                  {sessionStatus === "finished"
-                    ? "Sessão finalizada"
-                    : "Aguarde o início da sessão do Júri Simulado"}
-                </h3>
-                <p className="text-muted-foreground">
-                  {sessionStatus === "finished"
-                    ? "Este processo foi encerrado pelo(a) juiz(a)."
-                    : "O(a) juiz(a) ainda não iniciou este processo. As abas serão liberadas em instantes."}
-                </p>
+                <h3 className="text-lg font-medium">Sessão finalizada</h3>
+                <p className="text-muted-foreground">Este processo foi encerrado pelo(a) juiz(a).</p>
               </CardContent>
             </Card>
           );
         }
 
-        // Session active but my group does not participate
+        // Group does not participate (regardless of status)
         if (!myRole) {
           return (
             <Card>
@@ -314,6 +317,28 @@ export default function MockTrialStudent() {
                 <p className="text-muted-foreground">Selecione outro processo ou aguarde instruções</p>
               </CardContent>
             </Card>
+          );
+        }
+
+        // Pre-session (pending) and participant → allow only reading the process
+        if (!isSessionActive) {
+          return (
+            <div className="space-y-4">
+              <Card className="border-dashed">
+                <CardContent className="py-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    A sessão ainda não foi iniciada pelo(a) juiz(a). Você pode <strong>ler e estudar o processo</strong> abaixo
+                    para se preparar. Os formulários e personagens só serão liberados quando o juiz iniciar a sessão.
+                  </p>
+                </CardContent>
+              </Card>
+              <LegalProcessRenderer
+                content={selectedCase?.process_content || "Conteúdo do processo não disponível"}
+                caseNumber={selectedCase?.case_number}
+                title={selectedCase?.title}
+                caseId={selectedCase?.id}
+              />
+            </div>
           );
         }
 

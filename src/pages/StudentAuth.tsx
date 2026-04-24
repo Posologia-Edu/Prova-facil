@@ -231,10 +231,45 @@ export default function StudentAuth() {
           setLoading(false);
           return;
         }
+
+        // In group mode, auto-pull all members of the same mock-trial group
+        // from any of the provided e-mails. The user only needs to type ONE
+        // valid e-mail; the rest are inferred from the group roster.
+        if (assessmentType === "group") {
+          const { data: trialGroups } = await supabase
+            .from("mock_trial_groups")
+            .select("id")
+            .eq("mock_trial_id", mockTrialRoom.id);
+          const groupIds = (trialGroups || []).map((g: any) => g.id);
+          let foundGroupId: string | null = null;
+          if (groupIds.length > 0) {
+            const { data: studs } = await supabase
+              .from("mock_trial_students")
+              .select("group_id, student_email")
+              .in("group_id", groupIds);
+            for (const ge of validGroupEmails) {
+              const match = (studs || []).find(
+                (s: any) => (s.student_email || "").trim().toLowerCase() === ge,
+              );
+              if (match) { foundGroupId = match.group_id; break; }
+            }
+            if (!foundGroupId) {
+              toast({ title: "Grupo não encontrado", description: "Nenhum dos e-mails informados está cadastrado em um grupo deste Júri Simulado.", variant: "destructive" });
+              setLoading(false);
+              return;
+            }
+            // Use the first member of that group as the primary email
+            const groupMembers = (studs || []).filter((s: any) => s.group_id === foundGroupId);
+            const primary = groupMembers[0]?.student_email || validGroupEmails[0];
+            sessionStorage.setItem("mt_pin", normalizedPin);
+            sessionStorage.setItem("mt_email", primary);
+            navigate(`/mock-trial/portal/${normalizedPin}`);
+            return;
+          }
+        }
+
         sessionStorage.setItem("mt_pin", normalizedPin);
         sessionStorage.setItem("mt_email", primaryEmail);
-        // Determine if user is judge (match judge_name is not reliable here, use email)
-        // Route to combined page that detects role
         navigate(`/mock-trial/portal/${normalizedPin}`);
         return;
       }
