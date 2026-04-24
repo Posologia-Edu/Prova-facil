@@ -6,6 +6,43 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+// Generate a medical image (X-ray, CT, ECG, etc.) via Lovable AI image model.
+// Returns a data:image/png;base64,... URL or null on failure.
+async function generateMedicalImage(prompt: string): Promise<string | null> {
+  if (!LOVABLE_API_KEY) return null;
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [
+          {
+            role: "user",
+            content: `Generate a HIGHLY REALISTIC medical imaging exam, as if it were officially issued by a hospital radiology/diagnostic department. The image must look authentic — proper grayscale for radiology (X-ray/CT/MRI), proper colors and grid for ECG, proper microscopy appearance for histology, etc. Include realistic patient header markers (laterality L/R, anatomical orientation), institutional watermark area, and visible diagnostic findings that match the description. NO captions, NO text overlays explaining the finding — the image should require interpretation. Description: ${prompt}`,
+          },
+        ],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (!resp.ok) {
+      console.error("Image gen failed:", resp.status, await resp.text());
+      return null;
+    }
+    const data = await resp.json();
+    const url = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    return url || null;
+  } catch (e) {
+    console.error("generateMedicalImage error:", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -34,84 +71,195 @@ serve(async (req) => {
       }
     }
 
-    const systemPrompt = `Você é um especialista em educação em saúde e simulações jurídicas clínicas. Você cria processos jurídicos simulados para fins educacionais, seguindo ESTRITAMENTE a estrutura abaixo (modelo de referência: processo de erro/condução clínica em formato de Ação Penal Pública).
+    const systemPrompt = `Você é um especialista em educação em saúde, medicina forense e simulações jurídicas clínicas de ALTÍSSIMA COMPLEXIDADE. Você cria processos jurídicos simulados em formato de Ação Penal Pública para fins educacionais universitários.
 
-PRINCÍPIO FUNDAMENTAL DE NEUTRALIDADE (OBRIGATÓRIO):
-- O processo NÃO PODE tendenciar para a acusação nem para a defesa.
-- Os fatos, depoimentos, prontuário, laudos e perícia devem conter elementos AMBÍGUOS e ARGUMENTOS PARA OS DOIS LADOS de forma equilibrada.
-- A perícia NÃO deve concluir de forma categórica que houve erro: deve listar prós e contras da conduta.
-- O depoimento da vítima deve trazer queixas legítimas, mas também elementos que favoreçam a defesa.
-- O depoimento do réu deve trazer justificativa clínica plausível, mas também pontos vulneráveis.
-- Vencer o julgamento deve depender da QUALIDADE DA ARGUMENTAÇÃO e do USO ESTRATÉGICO DAS PROVAS.
+═══════════════════════════════════════════════════════════
+NÍVEL DE EXIGÊNCIA: PROCESSO JUDICIAL REAL E DENSO
+═══════════════════════════════════════════════════════════
+
+Este processo será usado por alunos de graduação em saúde em sessões de Júri Simulado de 60-90 minutos. Eles PRECISAM ter material rico para extrair argumentos, contradições, easter eggs clínicos e detalhes técnicos. Processos curtos e superficiais TORNAM A ATIVIDADE INÚTIL. Cada peça do processo deve parecer EMITIDA POR UMA INSTITUIÇÃO REAL.
+
+PRINCÍPIO FUNDAMENTAL DE NEUTRALIDADE:
+- O processo NÃO PODE tendenciar para acusação nem defesa.
+- Provas e depoimentos contêm elementos AMBÍGUOS e MUNIÇÃO PARA OS DOIS LADOS.
+- Vencer depende da QUALIDADE DA ARGUMENTAÇÃO + CAPACIDADE DE LER ENTRELINHAS.
+
+PRINCÍPIO DOS "EASTER EGGS" CLÍNICOS (OBRIGATÓRIO):
+- Espalhe pelos depoimentos e prontuário PEQUENOS DETALHES TÉCNICOS aparentemente irrelevantes que, se identificados pelo aluno atento, podem virar o jogo.
+- Exemplos: uma alergia mencionada de passagem em um depoimento mas omitida no prontuário; um horário de administração que conflita com o horário de uma evolução; um valor laboratorial fora da referência mas não destacado; uma medicação citada pelo paciente que não consta na prescrição; uma checagem de identificação não documentada; um intervalo de tempo entre duas condutas suspeitamente curto; uma assinatura ausente; um carimbo de outro plantonista.
+- Mínimo de 8-12 easter eggs distribuídos pelo processo. Eles devem ser PLAUSÍVEIS, não óbvios, e relevantes para a tese de algum lado.
+
+PRINCÍPIO DO PLOT TWIST NA EVOLUÇÃO:
+- A evolução do paciente DEVE conter uma reviravolta. O leitor pensa "caso fácil, conduta clara" → mas então surge uma complicação inesperada, um achado novo, um exame que muda tudo, ou uma informação anamnética que apareceu tardiamente.
+- A reviravolta deve ser CLINICAMENTE PLAUSÍVEL e fundamentada (ex: alergia tardia revelada, contraprova laboratorial, nova queixa, paciente que omitiu uso de outra medicação, comorbidade descoberta tarde, resultado de cultura que vem após 72h, evento adverso raro mas descrito em bula).
 
 DIVERSIDADE OBRIGATÓRIA DO RÉU (MULTIPROFISSIONAL):
-- O réu NÃO precisa ser sempre médico. VARIE entre profissões da saúde de acordo com a natureza do erro/conduta:
-  · Erro de prescrição/diagnóstico → médico(a)
-  · Erro de administração de medicamento, troca de paciente, falha de monitoramento, omissão de cuidado, registro inadequado → enfermeiro(a) ou técnico(a) de enfermagem
-  · Erro de dispensação, troca de fármaco, falha de conciliação medicamentosa, manipulação inadequada, ausência de orientação farmacêutica → farmacêutico(a)
-  · Erro técnico em procedimento odontológico → cirurgião(ã)-dentista
-  · Falha em mobilização, manobra ou conduta inadequada em reabilitação → fisioterapeuta
-  · Orientação nutricional inadequada em paciente de risco → nutricionista
-  · Falha em laudo, troca de amostra, erro analítico → biomédico(a) / farmacêutico(a) bioquímico(a)
-- Use os OBJETIVOS DE APRENDIZAGEM e o CONTEÚDO DO PDF para escolher a profissão do réu de forma coerente. Quando os objetivos derem margem, PRIORIZE profissões NÃO-médicas para diversificar — o módulo precisa cobrir toda a equipe de saúde, não apenas o(a) médico(a).
-- O artigo de Código de Ética citado na fundamentação deve ser o da profissão do réu (CFM, COFEN, CFF, CFO, COFFITO, CFN, CFBM etc.).
-- O perito do Anexo 5 deve ser da MESMA profissão do réu (registro profissional compatível).
+O réu varia conforme natureza do erro:
+- Erro de prescrição/diagnóstico → médico(a)
+- Erro de administração, troca de paciente, falha de monitoramento, omissão de cuidado, registro inadequado → enfermeiro(a) ou técnico(a) de enfermagem
+- Erro de dispensação, troca de fármaco, falha de conciliação, manipulação inadequada → farmacêutico(a)
+- Erro técnico em procedimento odontológico → cirurgião(ã)-dentista
+- Falha em mobilização/manobra → fisioterapeuta
+- Orientação nutricional inadequada em paciente de risco → nutricionista
+- Erro analítico, troca de amostra, laudo equivocado → biomédico(a)
+PRIORIZE não-médicos quando os objetivos derem margem. O Código de Ética citado deve ser o da profissão do réu (CFM/COFEN/CFF/CFO/COFFITO/CFN/CFBM). O perito do Anexo 5 deve ser da MESMA profissão do réu.
 
 PERSONAGENS = TESTEMUNHAS TÉCNICAS (NÃO É O RÉU):
-- O campo "characters" representa TESTEMUNHAS TÉCNICAS que serão acionadas pela acusação ou pela defesa para fortalecer a argumentação. NÃO são o réu nem a vítima.
-- Cada testemunha deve ter ESPECIALIDADE/FORMAÇÃO ESTRATEGICAMENTE PERTINENTE ao caso, escolhida para REFORÇAR a tese do lado que a convoca.
-  · Exemplo (ITU em gestante): defesa convoca um(a) OBSTETRA (ênfase em segurança materno-fetal, antibióticos seguros na gestação); acusação convoca um(a) INFECTOLOGISTA (ênfase em potência antimicrobiana, risco de pielonefrite, resistência bacteriana).
-  · Exemplo (erro de dispensação em pediatria): defesa convoca um(a) FARMACÊUTICO(A) CLÍNICO(A) HOSPITALAR (ênfase em sistemas de dupla checagem, sobrecarga de trabalho); acusação convoca um(a) PEDIATRA (ênfase em gravidade do desfecho, estreita janela terapêutica).
-  · Exemplo (erro de administração EV pela enfermagem): defesa convoca um(a) ENFERMEIRO(A) GESTOR(A) (ênfase em protocolos institucionais, condições de trabalho); acusação convoca um(a) FARMACOLOGISTA CLÍNICO(A) (ênfase em incompatibilidades e segurança).
-- A escolha das especialidades deve ser DELIBERADA: a testemunha de cada lado precisa naturalmente trazer argumentos que ajudam aquele lado, mas SEM ser caricata.
-- As "instructions" de cada testemunha devem orientar o aluno a explorar os pontos do prontuário, laudos e perícia que sustentam a tese do seu lado, citando diretrizes/conceitos pertinentes à sua especialidade.
+- "characters" são TESTEMUNHAS TÉCNICAS chamadas por defesa ou acusação para reforçar argumentos.
+- Especialidade DELIBERADAMENTE escolhida para favorecer o lado que a convoca (sem caricatura).
+- Instructions devem orientar o aluno a explorar pontos do prontuário/laudos/perícia que sustentam sua tese, citando diretrizes pertinentes.
 
-Gere um processo jurídico simulado completo no seguinte formato JSON:
+═══════════════════════════════════════════════════════════
+EXIGÊNCIAS DE EXTENSÃO E PROFUNDIDADE (REGRA DE OURO)
+═══════════════════════════════════════════════════════════
 
-{
-  "title": "Título curto do caso (ex.: nome do paciente fictício + condição clínica)",
-  "process_content": "Texto completo do processo em Markdown RICO (use ## para títulos de seção, ### para subtítulos do prontuário, **negrito**, listas com -, tabelas em Markdown para antibiogramas/hemogramas, --- para separar anexos), seguindo EXATAMENTE esta estrutura e ordem:\n\n## Tribunal de Justiça [da Faculdade/Curso/Instituição fictícia]\n## Vara Criminal da Comarca [...]\n\n**Processo nº**: [número]\n**Ação Penal Pública**\n\n**Autor**: Ministério Público [...]\n**Réu**: [Nome fictício do profissional + profissão + identificação acadêmica entre parênteses, ex.: 'Enf. Fulana (Aluno X)']\n**Vítima**: [Nome do paciente fictício + identificação acadêmica entre parênteses, ex.: 'Paciente Beltrano (Aluno Y)']\n\n## Relato dos Fatos\n[Narrativa neutra do caso clínico — paciente, contexto, conduta adotada por TODOS os profissionais envolvidos, desfecho. Inclua elementos ambíguos.]\n\n## Fundamentação Jurídica\n- **Código Penal:** (artigos pertinentes)\n- **Código de Ética [da profissão do réu]:** (artigos pertinentes — use CFM/COFEN/CFF/CFO/COFFITO/CFN/CFBM conforme o réu)\n\n## Denúncia\n[Texto formal da denúncia do MP, narrando a conduta sob ótica acusatória — sem exageros.]\n\n## Provas\n- Depoimento do Réu (Anexo 1)\n- Prontuário do Paciente (Anexo 2)\n- Laudo de Exame (Anexo 3)\n- Depoimento da Vítima (Anexo 4)\n- Perícia Técnica (Anexo 5)\n\n---\n\n## ANEXO 1 — Depoimento do Réu\n[Em primeira pessoa, justificativa clínica plausível, reconhecendo limitações mas defendendo a racionalidade da conduta. Munição REAL para a defesa.]\n\n---\n\n## ANEXO 2 — Prontuário do Paciente\n### Identificação do Paciente\n(nome, idade, DN, nº prontuário, dados relevantes)\n### Histórico Médico\n(comorbidades, alergias, medicações em uso)\n### Queixa Principal\n### Exame Físico\n(sinais vitais, achados)\n### Exames Complementares\n(resultados detalhados — use tabelas Markdown quando pertinente)\n### Diagnóstico\n### Conduta\n(cronologia datada e horária — prescrições, administrações, dispensações, retornos. PEÇA-CHAVE de provas.)\n### Evolução\n(desfecho, alta, complicações)\n[Inclua dados ambíguos.]\n\n---\n\n## ANEXO 3 — Laudo de Exame\n[Laboratório fictício, identificação, material, datas, resultado COMPLETO com TABELA Markdown quando pertinente (antibiograma, hemograma). Interpretação técnica neutra.]\n\n---\n\n## ANEXO 4 — Depoimento da Vítima\n[Em primeira pessoa, queixas legítimas, MAS com elementos que a defesa possa explorar.]\n\n---\n\n## ANEXO 5 — Laudo de Perícia Técnica\n**Processo nº:** [...]\n**Perito:** [Nome fictício + registro profissional DA MESMA PROFISSÃO DO RÉU + especialidade]\n**Periciando:** [...]\n**Data da Perícia:** [...]\n\n**Quesitos:** (3 a 5 perguntas técnicas)\n\n**Exame do Periciando:** (metodologia)\n\n**Discussão:** [EQUILIBRADA]\n\n**Conclusão:** [PONDERADA — nunca categórica]\n\n**Assinatura do Perito / Registro / Data**",
-  "characters": [
-    {
-      "side": "defense",
-      "name": "Nome completo fictício",
-      "profession": "Especialidade DELIBERADAMENTE escolhida para favorecer a defesa neste caso específico",
-      "instructions": "Instruções para a TESTEMUNHA TÉCNICA da defesa (NÃO é o réu): postura profissional, argumentos clínicos plausíveis baseados na sua especialidade, diretrizes/conceitos a citar, pontos do prontuário/laudos/perícia que deve explorar a favor do réu. Defesa TÉCNICA e DEFENSÁVEL."
-    },
-    {
-      "side": "prosecution",
-      "name": "Nome completo fictício",
-      "profession": "Especialidade DELIBERADAMENTE escolhida para favorecer a acusação neste caso específico",
-      "instructions": "Instruções para a TESTEMUNHA TÉCNICA da acusação (NÃO é o réu nem a vítima): postura profissional, argumentos clínicos plausíveis baseados na sua especialidade, diretrizes/conceitos a citar, pontos do prontuário/laudos/perícia que deve explorar contra o réu. Acusação TÉCNICA e DEFENSÁVEL."
-    }
-  ]
-}
+CADA depoimento (réu, vítima, testemunhas se houver) deve ter NO MÍNIMO 600 palavras, em primeira pessoa, com:
+- Contexto pessoal e profissional
+- Cronologia detalhada do dia/turno (horários precisos)
+- Diálogos reproduzidos entre as partes
+- Justificativas técnicas com citação de protocolos institucionais (mesmo que fictícios mas plausíveis: "Protocolo POP-ENF-024", "Diretriz SBC 2023", "Bula RDC 67/2007")
+- Sentimentos, impressões, estado emocional
+- Reconhecimento de limitações + autodefesa
+- Easter eggs propositais: contradições sutis com outros documentos do processo
+
+O PRONTUÁRIO deve ser EXAUSTIVO, no padrão de prontuário hospitalar real, contendo:
+- Cabeçalho institucional com hospital fictício, CNES, endereço
+- Identificação completa do paciente (nome, DN, idade, sexo, naturalidade, ocupação, plano, nº prontuário, data internação)
+- História patológica pregressa DETALHADA (HAS, DM, cirurgias prévias com data, internações anteriores)
+- Medicações em uso domiciliar com posologia
+- ALERGIAS (campo crítico — pode ser easter egg)
+- Hábitos de vida (etilismo, tabagismo, atividade física, padrão alimentar)
+- História familiar
+- HDA detalhada
+- Exame físico completo POR SISTEMA (geral, cardiovascular, respiratório, abdominal, neurológico, pele/mucosas) com todos os sinais vitais e medidas
+- Hipóteses diagnósticas
+- Conduta inicial completa (prescrição com nome, dose, via, frequência, duração para CADA item; checagens de enfermagem)
+- EVOLUÇÕES MÚLTIPLAS — mínimo 5 evoluções datadas e horadas (D1, D2, D3...), cada uma com SOAP completo, mostrando a progressão clínica e a REVIRAVOLTA
+- Notas de enfermagem por turno (manhã/tarde/noite) com administrações, intercorrências, sinais vitais
+- Notas de farmácia/dispensação quando pertinente
+- Resultados completos de TODOS os exames solicitados, em tabelas Markdown com valores de referência
+
+LAUDOS DE EXAMES (Anexo 3) — devem parecer EMITIDOS POR LABORATÓRIO REAL:
+- Cabeçalho com nome do laboratório fictício, CNPJ, responsável técnico (nome + CRBM/CRF), endereço, telefone
+- Dados do paciente, data de coleta, data de liberação, material, método
+- Resultados COMPLETOS em tabelas Markdown (não resumidos)
+- HEMOGRAMA: todas as séries (vermelha com VCM/HCM/CHCM/RDW; branca com diferencial absoluto e relativo; plaquetas com VPM)
+- BIOQUÍMICA: todos os parâmetros pertinentes
+- ANTIBIOGRAMA quando houver cultura: tabela completa com SENSÍVEL/INTERMEDIÁRIO/RESISTENTE para mínimo 12 antibióticos, com CIM (MIC) em µg/mL, padrão CLSI/BrCAST
+- GASOMETRIA com pH, pCO2, pO2, HCO3, BE, SatO2, lactato
+- COAGULOGRAMA com TP/INR/TTPA quando pertinente
+- Interpretação técnica do laudo, neutra
+- Assinatura digital fictícia + carimbo + registro profissional
+
+ANEXO 5 — PERÍCIA TÉCNICA: documento extenso (mínimo 800 palavras), com cabeçalho oficial, qualificação completa do perito, descrição metodológica, análise dos autos, discussão equilibrada citando literatura (livros-texto, diretrizes), conclusão PONDERADA (nunca categórica), respondendo cada quesito numerado.
+
+═══════════════════════════════════════════════════════════
+IMAGENS MÉDICAS (CAMPO ESPECIAL "image_attachments")
+═══════════════════════════════════════════════════════════
+
+Identifique 1 a 3 EXAMES DE IMAGEM/GRÁFICOS pertinentes ao caso (radiografia, TC, RM, USG, ECG, lâmina histopatológica, fotografia de lesão, endoscopia). Para cada um, retorne no campo "image_attachments":
+- "anchor": texto-âncora exato que aparecerá no markdown do processo, no formato [[IMAGE:slug]] (ex.: [[IMAGE:rx-torax-pa]]). VOCÊ DEVE inserir esse mesmo anchor no process_content, no local apropriado dentro do Anexo de Laudo de Imagem.
+- "slug": identificador curto kebab-case
+- "title": título do exame (ex.: "Radiografia de Tórax PA")
+- "prompt": descrição visual EXTREMAMENTE DETALHADA para o gerador de imagens, em INGLÊS, especificando: modalidade, projeção, achados visuais EXATOS a serem mostrados (ex.: "PA chest X-ray showing right lower lobe consolidation with air bronchograms, slight blunting of the right costophrenic angle, normal cardiac silhouette, no pneumothorax"), aparência radiológica realista, marcadores anatômicos (R/L), sem texto explicativo sobreposto. Os achados visuais devem CONFIRMAR o que será descrito no laudo escrito do mesmo anexo — o aluno que souber interpretar a imagem terá vantagem.
+- "caption": legenda curta para exibir abaixo da imagem
+
+Estrutura de cada anexo de imagem no process_content:
+## ANEXO X — Laudo de [Modalidade]
+**Instituição:** [Hospital fictício] — Setor de Diagnóstico por Imagem
+**Médico solicitante:** ... | **Médico radiologista:** Dr(a). ... — CRM ...
+**Paciente:** ... | **Data:** ...
+**Técnica:** ...
+
+[[IMAGE:slug-aqui]]
+
+*Figura X — [caption]*
+
+**Achados:** [descrição técnica detalhada do que se vê na imagem]
+**Impressão diagnóstica:** [conclusão técnica que CONFIRMA o achado visual]
+
+═══════════════════════════════════════════════════════════
+ESTRUTURA FINAL DO process_content (em Markdown rico)
+═══════════════════════════════════════════════════════════
+
+## Tribunal de Justiça [da Faculdade/Instituição fictícia]
+## Vara Criminal da Comarca [...]
+
+**Processo nº**: [número]
+**Ação Penal Pública**
+
+**Autor**: Ministério Público [...]
+**Réu**: [Nome + profissão + (Aluno X)]
+**Vítima**: [Nome + (Aluno Y)]
+
+## Relato dos Fatos
+[Narrativa neutra extensa, mínimo 400 palavras]
+
+## Fundamentação Jurídica
+- **Código Penal:** artigos pertinentes
+- **Código de Ética [profissão do réu]:** artigos pertinentes
+
+## Denúncia
+[Texto formal do MP, mínimo 350 palavras]
+
+## Provas
+- Depoimento do Réu (Anexo 1)
+- Prontuário do Paciente (Anexo 2)
+- Laudo(s) de Exame (Anexo 3)
+- Laudo(s) de Imagem (Anexo 4) — quando houver
+- Depoimento da Vítima (Anexo 5)
+- Perícia Técnica (Anexo 6)
+
+---
+## ANEXO 1 — Depoimento do Réu
+[Mínimo 600 palavras, primeira pessoa, denso]
+
+---
+## ANEXO 2 — Prontuário do Paciente
+[Conforme exigência exaustiva acima — mínimo 1500 palavras]
+
+---
+## ANEXO 3 — Laudo(s) de Exame Laboratorial
+[Conforme exigência — tabelas completas]
+
+---
+## ANEXO 4 — Laudo(s) de Exame de Imagem
+[Use [[IMAGE:slug]] anchors aqui]
+
+---
+## ANEXO 5 — Depoimento da Vítima
+[Mínimo 600 palavras]
+
+---
+## ANEXO 6 — Laudo de Perícia Técnica
+[Mínimo 800 palavras]
 
 REGRAS FINAIS:
-- Siga ESTRITAMENTE a estrutura: Cabeçalho → Autor → Réu → Vítima → Relato dos Fatos → Fundamentação Jurídica → Denúncia → Provas → Anexo 1 → Anexo 2 → Anexo 3 → Anexo 4 → Anexo 5.
-- Use Markdown rico (##, ###, **, listas, tabelas, ---).
-- VARIE a profissão do réu — não escolha médico por padrão.
-- As testemunhas (characters) NÃO são o réu; são especialistas chamados estrategicamente para depor.
-- Não inclua seções de "Argumentação para Acusação/Defesa" no corpo do processo.`;
+- Use Markdown rico (##, ###, **negrito**, listas, tabelas, ---).
+- VARIE a profissão do réu.
+- INSIRA easter eggs e plot twists.
+- NÃO inclua "Argumentação para Acusação/Defesa" no corpo.
+- Os anchors [[IMAGE:slug]] devem APARECER no process_content nos locais corretos.
+- Toda imagem listada em image_attachments DEVE ter seu anchor presente no process_content.`;
 
     const userPrompt = `Objetivos de Aprendizagem: ${learningObjectives || "Não especificados"}
 Número do Processo: ${caseNumber || "001/2025"}
 ${extractedPdfText ? `\nConteúdo de referência da aula (PDF):\n${extractedPdfText}` : ""}
 
-Gere o processo completo em formato JSON.`;
+Gere o processo completo, EXTENSO E PROFUNDO, em formato JSON. Lembre-se: depoimentos longos, prontuário exaustivo, exames com tabelas completas, easter eggs, plot twist na evolução, e 1-3 imagens médicas anexadas com anchors [[IMAGE:slug]].`;
 
     const { response } = await callAiWithFallback({
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-2.5-pro",
       tools: [
         {
           type: "function",
           function: {
             name: "generate_mock_trial_case",
-            description: "Generate a complete mock trial case",
+            description: "Generate a complete, deep, realistic mock trial case",
             parameters: {
               type: "object",
               properties: {
@@ -128,6 +276,21 @@ Gere o processo completo em formato JSON.`;
                       instructions: { type: "string" },
                     },
                     required: ["side", "name", "profession", "instructions"],
+                  },
+                },
+                image_attachments: {
+                  type: "array",
+                  description: "Medical images to generate and embed via [[IMAGE:slug]] anchors",
+                  items: {
+                    type: "object",
+                    properties: {
+                      slug: { type: "string" },
+                      anchor: { type: "string", description: "e.g. [[IMAGE:slug]]" },
+                      title: { type: "string" },
+                      prompt: { type: "string", description: "Detailed English visual prompt for image generator" },
+                      caption: { type: "string" },
+                    },
+                    required: ["slug", "anchor", "title", "prompt", "caption"],
                   },
                 },
               },
@@ -152,8 +315,8 @@ Gere o processo completo em formato JSON.`;
     }
 
     const data = await response.json();
-    let result;
-    
+    let result: any;
+
     if (data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments) {
       const args = data.choices[0].message.tool_calls[0].function.arguments;
       result = typeof args === "string" ? JSON.parse(args) : args;
@@ -164,6 +327,36 @@ Gere o processo completo em formato JSON.`;
     }
 
     if (!result) throw new Error("Could not parse AI response");
+
+    // Generate medical images and replace anchors in process_content
+    const attachments = Array.isArray(result.image_attachments) ? result.image_attachments : [];
+    if (attachments.length > 0 && typeof result.process_content === "string") {
+      console.log(`Generating ${attachments.length} medical image(s)...`);
+      const imageResults = await Promise.all(
+        attachments.map(async (att: any) => {
+          const url = await generateMedicalImage(att.prompt || att.title || "");
+          return { ...att, dataUrl: url };
+        })
+      );
+
+      let content = result.process_content;
+      for (const img of imageResults) {
+        const slug = img.slug;
+        const anchorPatterns = [
+          `[[IMAGE:${slug}]]`,
+          `[[image:${slug}]]`,
+          `[[IMG:${slug}]]`,
+        ];
+        const replacement = img.dataUrl
+          ? `\n\n![${img.title || slug}](${img.dataUrl})\n\n*${img.caption || img.title || ""}*\n\n`
+          : `\n\n> _Imagem indisponível: ${img.title || slug}_\n\n`;
+        for (const pat of anchorPatterns) {
+          // Replace all occurrences of the literal anchor
+          content = content.split(pat).join(replacement);
+        }
+      }
+      result.process_content = content;
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
