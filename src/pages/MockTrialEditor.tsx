@@ -22,6 +22,7 @@ import { ensureEvaluationForms, consolidateScores } from "@/lib/mock-trial-evalu
 import { ROLE_LABELS as EVAL_ROLE_LABELS } from "@/lib/mock-trial-evaluation-templates";
 import { ResultsPanel } from "@/components/mock-trial/ResultsPanel";
 import { MockTrialCaseBankDialog } from "@/components/mock-trial/MockTrialCaseBankDialog";
+import { CaseImagesPanel } from "@/components/mock-trial/CaseImagesPanel";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
@@ -320,8 +321,8 @@ export default function MockTrialEditor() {
         body: { learningObjectives: aiObjectives, caseNumber, pdfBase64 },
       });
       if (error) throw error;
-      
-      const { error: insertError } = await supabase.from("mock_trial_cases").insert({
+
+      const { data: inserted, error: insertError } = await supabase.from("mock_trial_cases").insert({
         mock_trial_id: id!,
         position: cases.length,
         case_number: caseNumber,
@@ -329,10 +330,35 @@ export default function MockTrialEditor() {
         process_content: data.process_content,
         learning_objectives: aiObjectives,
         characters_json: data.characters || [],
-      });
+      }).select().single();
       if (insertError) throw insertError;
 
-      toast.success("Processo gerado com sucesso!");
+      // Persist image attachments and trigger async generation per image
+      const attachments = Array.isArray(data.image_attachments) ? data.image_attachments : [];
+      if (inserted && attachments.length > 0) {
+        const rows = attachments.map((a: any) => ({
+          case_id: inserted.id,
+          slug: a.slug,
+          anchor: a.anchor || `[[IMAGE:${a.slug}]]`,
+          title: a.title || "",
+          caption: a.caption || "",
+          prompt: a.prompt || a.title || "",
+          status: "pending",
+        }));
+        const { data: imgRows } = await (supabase as any)
+          .from("mock_trial_case_images")
+          .insert(rows)
+          .select();
+        // Trigger generation for each image (fire-and-forget)
+        for (const r of imgRows || []) {
+          supabase.functions.invoke("generate-mock-trial-image", { body: { imageId: r.id } })
+            .catch((err) => console.error("Image trigger failed:", err));
+        }
+        toast.success(`Processo gerado! ${rows.length} imagem(ns) sendo gerada(s) em segundo plano.`);
+      } else {
+        toast.success("Processo gerado com sucesso!");
+      }
+
       setAiDialogOpen(false);
       setAiObjectives("");
       setAiPdfFile(null);
@@ -599,6 +625,7 @@ export default function MockTrialEditor() {
                 {c.process_content && (
                   <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{c.process_content.substring(0, 200)}...</p>
                 )}
+                <CaseImagesPanel caseId={c.id} />
               </CardContent>
             </Card>
           ))}
