@@ -291,6 +291,28 @@ export default function MockTrials() {
           ))}
         </div>
       )}
+
+      <Dialog open={!!renameTrial} onOpenChange={(o) => !o && setRenameTrial(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renomear Júri Simulado</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="trial-name">Nome</Label>
+            <Input
+              id="trial-name"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && saveRename()}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameTrial(null)}>Cancelar</Button>
+            <Button onClick={saveRename}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
