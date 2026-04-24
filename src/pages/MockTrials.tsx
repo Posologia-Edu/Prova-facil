@@ -95,7 +95,102 @@ export default function MockTrials() {
     fetchTrials();
   };
 
-  const statusLabels: Record<string, string> = {
+  const openRename = (trial: MockTrial) => {
+    setRenameTrial(trial);
+    setRenameValue(trial.title);
+  };
+
+  const saveRename = async () => {
+    if (!renameTrial) return;
+    const newTitle = renameValue.trim();
+    if (!newTitle) { toast.error("Título não pode ser vazio"); return; }
+    const { error } = await supabase
+      .from("mock_trials")
+      .update({ title: newTitle })
+      .eq("id", renameTrial.id);
+    if (error) { toast.error("Erro ao renomear"); return; }
+    toast.success("Nome atualizado");
+    setRenameTrial(null);
+    fetchTrials();
+  };
+
+  const duplicateTrial = async (trial: MockTrial) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    setDuplicating(trial.id);
+    try {
+      // 1. Create new trial
+      const { data: newTrial, error: trialErr } = await supabase
+        .from("mock_trials")
+        .insert({
+          user_id: session.user.id,
+          title: `${trial.title} (Cópia)`,
+          description: trial.description,
+          judge_name: trial.judge_name,
+          status: "draft",
+        })
+        .select()
+        .single();
+      if (trialErr || !newTrial) throw trialErr || new Error("Falha ao criar");
+
+      // 2. Duplicate cases
+      const { data: cases } = await supabase
+        .from("mock_trial_cases")
+        .select("*")
+        .eq("mock_trial_id", trial.id);
+      if (cases && cases.length > 0) {
+        await supabase.from("mock_trial_cases").insert(
+          cases.map((c: any) => ({
+            mock_trial_id: newTrial.id,
+            position: c.position,
+            case_number: c.case_number,
+            title: c.title,
+            process_content: c.process_content,
+            learning_objectives: c.learning_objectives,
+            characters_json: c.characters_json,
+          }))
+        );
+      }
+
+      // 3. Duplicate groups
+      const { data: groups } = await supabase
+        .from("mock_trial_groups")
+        .select("*")
+        .eq("mock_trial_id", trial.id);
+      if (groups && groups.length > 0) {
+        await supabase.from("mock_trial_groups").insert(
+          groups.map((g: any) => ({
+            mock_trial_id: newTrial.id,
+            group_number: g.group_number,
+            name: g.name,
+          }))
+        );
+      }
+
+      // 4. Duplicate forms
+      const { data: forms } = await supabase
+        .from("mock_trial_forms")
+        .select("*")
+        .eq("mock_trial_id", trial.id);
+      if (forms && forms.length > 0) {
+        await supabase.from("mock_trial_forms").insert(
+          forms.map((f: any) => ({
+            mock_trial_id: newTrial.id,
+            target_role: f.target_role,
+            title: f.title,
+            fields_json: f.fields_json,
+          }))
+        );
+      }
+
+      toast.success("Júri simulado duplicado");
+      fetchTrials();
+    } catch (e: any) {
+      toast.error("Erro ao duplicar: " + (e?.message || ""));
+    } finally {
+      setDuplicating(null);
+    }
+  };
     draft: "Rascunho",
     active: "Ativo",
     finished: "Finalizado",
