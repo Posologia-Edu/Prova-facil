@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, CheckCircle2, Clock, RefreshCw, Sparkles, Gavel, GraduationCap, Users } from "lucide-react";
+import { BarChart3, CheckCircle2, Clock, RefreshCw, Sparkles, Gavel, GraduationCap, Users, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvaluationForm";
 import { consolidateScores } from "@/lib/mock-trial-evaluations";
+import { formatGroupLabel } from "@/pages/MockTrialJudge";
 
 interface Props {
   cases: any[];
