@@ -503,13 +503,19 @@ Gere AGORA o processo completo seguindo EXATAMENTE o padrão-ouro de qualidade d
 
 Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
 
-    const { response } = await callAiWithFallback({
+    // Call Lovable AI Gateway directly to avoid the multi-provider fallback chain
+    // (which currently has an invalid Google key and Groq fails on the large tool-call output).
+    // gemini-2.5-flash returns within ~60-90s for this prompt; gemini-2.5-pro often exceeds the
+    // 150s edge-function wall clock and the gateway connection is killed.
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY não configurado");
+    }
+    const aiPayload: any = {
+      model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      model: "google/gemini-2.5-pro",
-      
       tools: [
         {
           type: "function",
