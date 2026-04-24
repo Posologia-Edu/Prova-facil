@@ -8,15 +8,68 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Gavel, Play, Pause, SkipForward, Volume2 } from "lucide-react";
+import { Gavel, Play, Pause, SkipForward, Square, FileText } from "lucide-react";
+import { LegalProcessRenderer } from "@/components/mock-trial/LegalProcessRenderer";
 
 const PHASES = [
-  { key: "announcement", label: "Anúncio do Caso", duration: 120 },
-  { key: "prosecution", label: "Acusação", duration: 300 },
-  { key: "defense", label: "Defesa", duration: 300 },
-  { key: "jury_questions", label: "Perguntas do Júri", duration: 300 },
-  { key: "deliberation", label: "Deliberação", duration: 300 },
-  { key: "verdict", label: "Veredito", duration: 0 },
+  {
+    key: "announcement",
+    label: "Anúncio do Caso",
+    duration: 120,
+    instructions: [
+      "Leia em voz alta o título e o resumo do caso clínico (formato jurídico).",
+      "Relembre o tema central da deliberação (pergunta que o júri deve responder).",
+    ],
+  },
+  {
+    key: "defense",
+    label: "Fala da Defesa",
+    duration: 300,
+    instructions: [
+      "Chame o grupo de defesa.",
+      "Lembre que eles podem usar suas testemunhas técnicas (1 min por testemunha).",
+      "Avise quando faltar 1 minuto para encerrar.",
+    ],
+  },
+  {
+    key: "prosecution",
+    label: "Fala da Acusação",
+    duration: 300,
+    instructions: [
+      "Chame o grupo de acusação.",
+      "Reforce que também podem acionar testemunhas.",
+      "Controle o tempo e anuncie a aproximação do final.",
+    ],
+  },
+  {
+    key: "jury_questions",
+    label: "Perguntas do Júri Técnico",
+    duration: 300,
+    instructions: [
+      "Dê voz ao grupo que representa o júri técnico.",
+      "Permita até 3 perguntas, sendo no máximo 2 para um mesmo grupo.",
+      "Estimule perguntas claras e com foco na conduta, evidência ou raciocínio clínico.",
+    ],
+  },
+  {
+    key: "deliberation",
+    label: "Deliberação do Júri",
+    duration: 300,
+    instructions: [
+      "Instrua o júri técnico a deliberar em voz baixa.",
+      "Peça que preencham a ficha do júri técnico.",
+      "Um representante deve anunciar o veredito e a justificativa técnica.",
+    ],
+  },
+  {
+    key: "verdict",
+    label: "Veredito",
+    duration: 0,
+    instructions: [
+      "Registre o veredito proferido pelo júri técnico.",
+      "Encerre a sessão usando o botão de finalizar processo.",
+    ],
+  },
 ];
 
 export default function MockTrialJudge() {
@@ -95,13 +148,27 @@ export default function MockTrialJudge() {
   const currentPhaseIndex = PHASES.findIndex(p => p.key === session?.status);
   const currentPhase = currentPhaseIndex >= 0 ? PHASES[currentPhaseIndex] : null;
 
+  // Sync timer from session timestamps (so it works after refresh / for accurate countdown)
+  useEffect(() => {
+    if (!session?.current_phase_started_at || !session?.phase_duration_seconds) {
+      setTimeLeft(0);
+      setIsRunning(false);
+      return;
+    }
+    const startedAt = new Date(session.current_phase_started_at).getTime();
+    const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+    const remaining = Math.max(0, session.phase_duration_seconds - elapsed);
+    setTimeLeft(remaining);
+    setIsRunning(remaining > 0);
+    alertPlayedRef.current = remaining <= 60;
+  }, [session?.current_phase_started_at, session?.phase_duration_seconds, session?.status]);
+
   // Timer logic
   useEffect(() => {
-    if (!isRunning || !currentPhase || currentPhase.duration === 0) {
+    if (!isRunning) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
-
     intervalRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -116,31 +183,35 @@ export default function MockTrialJudge() {
         return prev - 1;
       });
     }, 1000);
-
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isRunning, currentPhase]);
+  }, [isRunning]);
 
   const startPhase = useCallback(async (phaseKey: string) => {
     if (!session?.id) return;
     const phase = PHASES.find(p => p.key === phaseKey);
     alertPlayedRef.current = false;
-    setTimeLeft(phase?.duration || 0);
-    setIsRunning(phase?.duration ? true : false);
     await supabase.from("mock_trial_sessions").update({
       status: phaseKey,
       current_phase_started_at: new Date().toISOString(),
+      phase_duration_seconds: phase?.duration || 0,
     }).eq("id", session.id);
   }, [session?.id]);
 
-  const nextPhase = async () => {
-    const nextIdx = currentPhaseIndex + 1;
-    if (nextIdx < PHASES.length) {
-      await startPhase(PHASES[nextIdx].key);
-    } else {
-      await supabase.from("mock_trial_sessions").update({ status: "finished" }).eq("id", session.id);
-      setIsRunning(false);
-      setTimeLeft(0);
-    }
+  const startSession = async () => {
+    await startPhase("announcement");
+    toast.success("Sessão iniciada! Apenas os grupos participantes verão o processo.");
+  };
+
+  const finishSession = async () => {
+    if (!session?.id) return;
+    await supabase.from("mock_trial_sessions").update({
+      status: "finished",
+      current_phase_started_at: null,
+      phase_duration_seconds: null,
+    }).eq("id", session.id);
+    setIsRunning(false);
+    setTimeLeft(0);
+    toast.success("Sessão finalizada. O processo foi inativado para todos os grupos.");
   };
 
   const togglePause = () => setIsRunning(prev => !prev);
@@ -150,6 +221,11 @@ export default function MockTrialJudge() {
     const sec = s % 60;
     return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   };
+
+  const selectedCase = cases.find(c => c.id === selectedCaseId);
+  const isActive = session && session.status !== "pending" && session.status !== "finished";
+  const isPending = !session || session.status === "pending";
+  const isFinished = session?.status === "finished";
 
   if (!authenticated) {
     return (
@@ -173,7 +249,6 @@ export default function MockTrialJudge() {
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
-      {/* Hidden audio for alerts */}
       <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbsGEcBj+a2telezo0T6PY5a5bFgkrmNjlw3k7HjKS2O3Ms2QcDSaR2/DNu3U1FS2S3fDQwHw9GC2T3/LRw4JHHC+W4fTTx4dOJjiZ4/bWyo5XLT2e5fja0JVWM0Ch6Pze1ppgPkio7fzj3J9rRlKs8QDm46V5UmC0+AXr6q2AX3G/AQjx7sGJaoPFDRD19NaSf5TQGBz8+OqXi5jZIx8AAAAAA==" />
 
       <div className="flex items-center gap-4">
@@ -184,80 +259,136 @@ export default function MockTrialJudge() {
         </div>
       </div>
 
-      {/* Case Selector */}
+      {/* Case Selector + Start/Finish */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
-              <SelectTrigger className="w-64"><SelectValue placeholder="Selecione o processo" /></SelectTrigger>
+              <SelectTrigger className="w-80"><SelectValue placeholder="Selecione o processo" /></SelectTrigger>
               <SelectContent>
                 {cases.map(c => <SelectItem key={c.id} value={c.id}>{c.title} ({c.case_number})</SelectItem>)}
               </SelectContent>
             </Select>
-            {session?.status === "pending" && (
-              <Button onClick={() => startPhase("announcement")}>
-                <Play className="h-4 w-4 mr-1" />Iniciar Sessão
+
+            {isPending && (
+              <Button onClick={startSession}>
+                <Play className="h-4 w-4 mr-1" />Iniciar Processo
               </Button>
+            )}
+            {isActive && (
+              <Button onClick={finishSession} variant="destructive">
+                <Square className="h-4 w-4 mr-1" />Finalizar Processo
+              </Button>
+            )}
+            {isFinished && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">Processo finalizado</Badge>
+                <Button onClick={startSession} size="sm" variant="outline">
+                  <Play className="h-4 w-4 mr-1" />Reabrir
+                </Button>
+              </div>
+            )}
+            {isActive && currentPhase && (
+              <Badge variant="default" className="ml-auto">Fase atual: {currentPhase.label}</Badge>
             )}
           </div>
         </CardContent>
       </Card>
 
       {/* Timer Display */}
-      {session && session.status !== "pending" && session.status !== "finished" && (
+      {isActive && (
         <Card className="border-2 border-primary">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
               <Badge variant="default" className="text-lg px-4 py-1">
-                {currentPhase?.label || session.status}
+                {currentPhase?.label}
               </Badge>
-              <div className={`text-8xl font-mono font-bold ${timeLeft <= 60 ? "text-destructive animate-pulse" : "text-foreground"}`}>
-                {formatTime(timeLeft)}
-              </div>
-              <div className="flex justify-center gap-4">
-                <Button onClick={togglePause} variant="outline" size="lg">
-                  {isRunning ? <Pause className="h-5 w-5 mr-1" /> : <Play className="h-5 w-5 mr-1" />}
-                  {isRunning ? "Pausar" : "Retomar"}
-                </Button>
-                <Button onClick={nextPhase} size="lg">
-                  <SkipForward className="h-5 w-5 mr-1" />
-                  Próxima Fase
-                </Button>
-              </div>
+              {currentPhase && currentPhase.duration > 0 ? (
+                <>
+                  <div className={`text-8xl font-mono font-bold ${timeLeft <= 60 ? "text-destructive animate-pulse" : "text-foreground"}`}>
+                    {formatTime(timeLeft)}
+                  </div>
+                  <div className="flex justify-center gap-4">
+                    <Button onClick={togglePause} variant="outline" size="lg">
+                      {isRunning ? <Pause className="h-5 w-5 mr-1" /> : <Play className="h-5 w-5 mr-1" />}
+                      {isRunning ? "Pausar" : "Retomar"}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground">Esta fase não tem cronômetro.</p>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {session?.status === "finished" && (
-        <Card className="border-2 border-primary">
-          <CardContent className="py-12 text-center">
-            <Gavel className="h-12 w-12 text-primary mx-auto mb-4" />
-            <h3 className="text-xl font-bold">Sessão Finalizada</h3>
+      {/* Phase Selector with Instructions */}
+      {isActive && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Fases da Sessão</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-2 flex-wrap">
+              {PHASES.map((phase, idx) => {
+                const isCurrent = phase.key === session?.status;
+                const isPast = currentPhaseIndex > idx;
+                return (
+                  <Button
+                    key={phase.key}
+                    onClick={() => startPhase(phase.key)}
+                    variant={isCurrent ? "default" : isPast ? "secondary" : "outline"}
+                    size="sm"
+                  >
+                    {idx + 1}. {phase.label}
+                    {phase.duration > 0 && (
+                      <span className="ml-2 text-xs opacity-70">{Math.floor(phase.duration / 60)}min</span>
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {currentPhase && (
+              <Card className="bg-muted/40 border-primary/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <SkipForward className="h-4 w-4" />
+                    Orientações – {currentPhase.label}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">
+                    {currentPhase.instructions.map((ins, i) => (
+                      <li key={i}>{ins}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Phase Progress */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Sequência de Fases</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2 flex-wrap">
-            {PHASES.map((phase, idx) => {
-              const isCurrent = phase.key === session?.status;
-              const isPast = currentPhaseIndex > idx;
-              return (
-                <div key={phase.key} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${isCurrent ? "bg-primary text-primary-foreground border-primary" : isPast ? "bg-muted border-muted" : "border-border"}`}>
-                  <span className="text-sm font-medium">{idx + 1}. {phase.label}</span>
-                  {phase.duration > 0 && <span className="text-xs opacity-70">{Math.floor(phase.duration / 60)}min</span>}
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Process content for the judge to read */}
+      {selectedCase && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Texto do Processo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LegalProcessRenderer
+              content={selectedCase.process_content || "Conteúdo do processo não disponível"}
+              caseNumber={selectedCase.case_number}
+              title={selectedCase.title}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

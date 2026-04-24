@@ -2284,6 +2284,7 @@ export type Database = {
           current_phase_started_at: string | null
           id: string
           judge_notes: string | null
+          phase_duration_seconds: number | null
           status: string
         }
         Insert: {
@@ -2292,6 +2293,7 @@ export type Database = {
           current_phase_started_at?: string | null
           id?: string
           judge_notes?: string | null
+          phase_duration_seconds?: number | null
           status?: string
         }
         Update: {
@@ -2300,6 +2302,7 @@ export type Database = {
           current_phase_started_at?: string | null
           id?: string
           judge_notes?: string | null
+          phase_duration_seconds?: number | null
           status?: string
         }
         Relationships: [
