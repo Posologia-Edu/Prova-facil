@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3, Upload, X, Pencil, RefreshCw, CheckCircle2, Library, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3, Upload, X, Pencil, RefreshCw, CheckCircle2, Library, Save, Loader2, AlertTriangle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { generateDistribution } from "@/lib/mock-trial-distribution";
@@ -309,6 +310,28 @@ export default function MockTrialEditor() {
   // ---- Job-based generation (async, multi-step, validated) ----
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [jobProgress, setJobProgress] = useState<any>(null);
+
+  // On mount / trial change: resume tracking any in-flight job for this trial
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("mock_trial_generation_jobs")
+        .select("*")
+        .eq("mock_trial_id", id)
+        .in("status", ["queued", "planning", "generating_section", "generating_annex", "assembling"])
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (cancelled) return;
+      const job = (data || [])[0];
+      if (job) {
+        setActiveJobId(job.id);
+        setJobProgress(job);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
 
   useEffect(() => {
     if (!activeJobId) return;
@@ -617,12 +640,54 @@ export default function MockTrialEditor() {
         {/* PROCESSOS TAB */}
         <TabsContent value="cases" className="space-y-4">
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={addCase}><Plus className="h-4 w-4 mr-1" />Adicionar Processo</Button>
-            <Button variant="secondary" onClick={() => setAiDialogOpen(true)}><Sparkles className="h-4 w-4 mr-1" />Gerar com IA</Button>
-            <Button variant="outline" onClick={() => setBankOpen(true)}>
+            <Button onClick={addCase} disabled={!!activeJobId}><Plus className="h-4 w-4 mr-1" />Adicionar Processo</Button>
+            <Button variant="secondary" onClick={() => setAiDialogOpen(true)} disabled={!!activeJobId}>
+              <Sparkles className="h-4 w-4 mr-1" />
+              {activeJobId ? "Gerando..." : "Gerar com IA"}
+            </Button>
+            <Button variant="outline" onClick={() => setBankOpen(true)} disabled={!!activeJobId}>
               <Library className="h-4 w-4 mr-1" />Banco de Processos
             </Button>
           </div>
+
+          {activeJobId && jobProgress && (
+            <Card className="border-primary/40 bg-primary/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  {jobProgress.mode === "regenerate" ? "Regenerando processo" : "Gerando novo processo"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{jobProgress.current_step || "Aguardando…"}</span>
+                  <span className="font-mono">{Math.min(100, Math.round(jobProgress.progress || 0))}%</span>
+                </div>
+                <Progress value={Math.min(100, jobProgress.progress || 0)} />
+                {typeof jobProgress.completed_steps === "number" && typeof jobProgress.total_steps === "number" && jobProgress.total_steps > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Etapa {jobProgress.completed_steps} de {jobProgress.total_steps} • Status: {jobProgress.status}
+                  </p>
+                )}
+                {Array.isArray(jobProgress.validation_issues) && jobProgress.validation_issues.length > 0 && (
+                  <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300 flex gap-2">
+                    <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                    <div>
+                      <strong>Avisos de validação:</strong>
+                      <ul className="list-disc ml-4 mt-1 space-y-0.5">
+                        {jobProgress.validation_issues.slice(-5).map((iss: string, i: number) => (
+                          <li key={i}>{iss}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  A geração roda em segundo plano (até ~6 min). Você pode navegar por outras abas — o progresso continua.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {cases.map((c: any) => (
             <Card key={c.id}>
@@ -669,7 +734,7 @@ export default function MockTrialEditor() {
                       size="sm"
                       variant="outline"
                       onClick={() => regenerateCase(c)}
-                      disabled={regeneratingCaseId === c.id || !c.learning_objectives}
+                      disabled={regeneratingCaseId === c.id || !!activeJobId || !c.learning_objectives}
                       title={c.learning_objectives ? "Substituir o conteúdo deste processo por uma nova geração de IA" : "Sem objetivos de aprendizagem salvos para regenerar"}
                     >
                       <Sparkles className="h-3 w-3 mr-1" />
@@ -752,8 +817,8 @@ export default function MockTrialEditor() {
                     )}
                   </div>
                 </div>
-                <Button onClick={generateWithAI} disabled={aiGenerating || (!aiObjectives.trim() && !aiPdfFile)} className="w-full">
-                  {aiGenerating ? "Gerando..." : "Gerar Processo"}
+                <Button onClick={generateWithAI} disabled={aiGenerating || !!activeJobId || (!aiObjectives.trim() && !aiPdfFile)} className="w-full">
+                  {aiGenerating || activeJobId ? "Gerando…" : "Gerar Processo"}
                   <Sparkles className="h-4 w-4 ml-2" />
                 </Button>
               </div>
