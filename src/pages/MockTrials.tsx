@@ -28,6 +28,9 @@ export default function MockTrials() {
   const navigate = useNavigate();
   const [trials, setTrials] = useState<MockTrial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [renameTrial, setRenameTrial] = useState<MockTrial | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [duplicating, setDuplicating] = useState<string | null>(null);
 
   const fetchTrials = async () => {
     const { data: { session } } = await supabase.auth.getSession();
