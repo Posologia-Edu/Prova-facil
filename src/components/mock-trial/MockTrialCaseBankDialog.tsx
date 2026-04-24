@@ -15,6 +15,7 @@ interface BankCase {
   learning_objectives: string | null;
   process_content: string;
   characters_json: any;
+  images_json: any;
   tags: string[];
   created_at: string;
 }
@@ -69,7 +70,7 @@ export function MockTrialCaseBankDialog({
     try {
       const year = new Date().getFullYear();
       const newCaseNumber = `${String(nextPosition + 1).padStart(3, "0")}/${year}`;
-      const { error } = await supabase.from("mock_trial_cases").insert({
+      const { data: insertedCase, error } = await supabase.from("mock_trial_cases").insert({
         mock_trial_id: mockTrialId,
         position: nextPosition,
         case_number: newCaseNumber,
@@ -77,8 +78,29 @@ export function MockTrialCaseBankDialog({
         process_content: item.process_content,
         learning_objectives: item.learning_objectives,
         characters_json: item.characters_json || [],
-      });
+      }).select("id").single();
       if (error) throw error;
+
+      const images = Array.isArray(item.images_json) ? item.images_json : [];
+      if (insertedCase?.id && images.length > 0) {
+        const rows = images.slice(0, 3).map((img: any) => ({
+          case_id: insertedCase.id,
+          slug: img.slug,
+          anchor: img.anchor || `[[IMAGE:${img.slug}]]`,
+          title: img.title || "",
+          caption: img.caption || "",
+          prompt: img.prompt || img.title || img.slug || "",
+          status: img.image_url ? "ready" : (img.status || "pending"),
+          image_url: img.image_url || null,
+          storage_path: img.storage_path || null,
+        }));
+
+        const { error: imageInsertError } = await (supabase as any)
+          .from("mock_trial_case_images")
+          .insert(rows);
+        if (imageInsertError) throw imageInsertError;
+      }
+
       toast.success("Processo importado do banco");
       onImported();
       onOpenChange(false);
@@ -158,6 +180,11 @@ export function MockTrialCaseBankDialog({
                         {Array.isArray(item.characters_json) && item.characters_json.length > 0 && (
                           <span className="text-[10px] text-muted-foreground">
                             • {item.characters_json.length} personagens
+                          </span>
+                        )}
+                        {Array.isArray(item.images_json) && item.images_json.length > 0 && (
+                          <span className="text-[10px] text-muted-foreground">
+                            • {item.images_json.length} imagens
                           </span>
                         )}
                         {(item.tags || []).map((t) => (
