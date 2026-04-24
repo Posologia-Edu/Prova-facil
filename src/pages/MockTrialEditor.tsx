@@ -191,6 +191,34 @@ export default function MockTrialEditor() {
   const [editingCaseContent, setEditingCaseContent] = useState("");
   const [formDrafts, setFormDrafts] = useState<Record<string, FormField[]>>({});
   const formSaveTimersRef = useRef<Record<string, number>>({});
+  const [bankOpen, setBankOpen] = useState(false);
+  const [savingToBankId, setSavingToBankId] = useState<string | null>(null);
+
+  const saveCaseToBank = async (c: any) => {
+    setSavingToBankId(c.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Você precisa estar autenticado");
+        return;
+      }
+      const { error } = await (supabase as any).from("mock_trial_case_bank").insert({
+        user_id: user.id,
+        title: c.title || "Processo sem título",
+        case_number: c.case_number || null,
+        learning_objectives: c.learning_objectives || null,
+        process_content: c.process_content || "",
+        characters_json: c.characters_json || [],
+        source_case_id: c.id,
+      });
+      if (error) throw error;
+      toast.success("Processo salvo no banco — disponível para reuso em outros Júris Simulados");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao salvar no banco");
+    } finally {
+      setSavingToBankId(null);
+    }
+  };
 
   useEffect(() => {
     if (trial) {
