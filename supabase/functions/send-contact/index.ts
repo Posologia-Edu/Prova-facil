@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@4.0.0";
+import { Resend } from "https://esm.sh/resend@4.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +31,7 @@ serve(async (req) => {
     const { error } = await resend.emails.send({
       from: "ProvaFácil <onboarding@resend.dev>",
       to: ["sergio.araujo@ufrn.br"],
-      reply_to: email,
+      replyTo: email,
       subject: `[ProvaFácil Contato] ${category}${subject ? ` - ${subject}` : ""} — ${name}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">

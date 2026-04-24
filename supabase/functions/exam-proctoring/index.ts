@@ -27,7 +27,7 @@ async function getAuthenticatedUserId(req: Request) {
   return data.user.id;
 }
 
-async function assertPublicationOwner(req: Request, supabase: ReturnType<typeof createClient>, publicationId: string) {
+async function assertPublicationOwner(req: Request, supabase: any, publicationId: string) {
   const userId = await getAuthenticatedUserId(req);
   if (!userId) {
     return { errorResponse: json({ error: "Não autenticado." }, 401) };
