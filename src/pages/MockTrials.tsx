@@ -276,7 +276,13 @@ export default function MockTrials() {
                     <Edit className="h-3 w-3 mr-1" />
                     Editar
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => deleteTrial(trial.id)}>
+                  <Button size="sm" variant="ghost" title="Renomear" onClick={() => openRename(trial)}>
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" title="Duplicar" disabled={duplicating === trial.id} onClick={() => duplicateTrial(trial)}>
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" title="Excluir" onClick={() => deleteTrial(trial.id)}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
