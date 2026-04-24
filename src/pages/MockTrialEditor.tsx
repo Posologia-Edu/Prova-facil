@@ -628,6 +628,45 @@ export default function MockTrialEditor() {
         )}
       </div>
 
+      {activeJobId && jobProgress && (
+        <Card className="border-primary/40 bg-primary/5 sticky top-2 z-20 shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              {jobProgress.mode === "regenerate" ? "Regenerando processo" : "Gerando novo processo"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{jobProgress.current_step || "Aguardando…"}</span>
+              <span className="font-mono">{Math.min(100, Math.round(jobProgress.progress || 0))}%</span>
+            </div>
+            <Progress value={Math.min(100, jobProgress.progress || 0)} />
+            {typeof jobProgress.completed_steps === "number" && typeof jobProgress.total_steps === "number" && jobProgress.total_steps > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Etapa {jobProgress.completed_steps} de {jobProgress.total_steps} • Status: {jobProgress.status}
+              </p>
+            )}
+            {Array.isArray(jobProgress.validation_issues) && jobProgress.validation_issues.length > 0 && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300 flex gap-2">
+                <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                <div>
+                  <strong>Avisos de validação:</strong>
+                  <ul className="list-disc ml-4 mt-1 space-y-0.5">
+                    {jobProgress.validation_issues.slice(-5).map((iss: string, i: number) => (
+                      <li key={i}>{iss}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              A geração roda em segundo plano (até ~6 min). Você pode navegar por outras abas — o progresso continua.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="cases" className="space-y-4">
         <TabsList className="flex-wrap">
           <TabsTrigger value="cases"><FileText className="h-4 w-4 mr-1" />Processos</TabsTrigger>
@@ -650,45 +689,6 @@ export default function MockTrialEditor() {
               <Library className="h-4 w-4 mr-1" />Banco de Processos
             </Button>
           </div>
-
-          {activeJobId && jobProgress && (
-            <Card className="border-primary/40 bg-primary/5">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  {jobProgress.mode === "regenerate" ? "Regenerando processo" : "Gerando novo processo"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{jobProgress.current_step || "Aguardando…"}</span>
-                  <span className="font-mono">{Math.min(100, Math.round(jobProgress.progress || 0))}%</span>
-                </div>
-                <Progress value={Math.min(100, jobProgress.progress || 0)} />
-                {typeof jobProgress.completed_steps === "number" && typeof jobProgress.total_steps === "number" && jobProgress.total_steps > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Etapa {jobProgress.completed_steps} de {jobProgress.total_steps} • Status: {jobProgress.status}
-                  </p>
-                )}
-                {Array.isArray(jobProgress.validation_issues) && jobProgress.validation_issues.length > 0 && (
-                  <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300 flex gap-2">
-                    <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                    <div>
-                      <strong>Avisos de validação:</strong>
-                      <ul className="list-disc ml-4 mt-1 space-y-0.5">
-                        {jobProgress.validation_issues.slice(-5).map((iss: string, i: number) => (
-                          <li key={i}>{iss}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-                <p className="text-[11px] text-muted-foreground">
-                  A geração roda em segundo plano (até ~6 min). Você pode navegar por outras abas — o progresso continua.
-                </p>
-              </CardContent>
-            </Card>
-          )}
 
           {cases.map((c: any) => (
             <Card key={c.id}>
