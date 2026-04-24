@@ -607,7 +607,7 @@ export default function MockTrialJudge() {
                     sessionId={session.id}
                     caseId={selectedCase.id}
                     groupId={a.group_id}
-                    groupLabel={`Grupo ${group.group_number}${group.name ? ` – ${group.name}` : ""}`}
+                    groupLabel={formatGroupLabel(group)}
                     evaluatedRole={a.role}
                     evaluatorType="judge"
                     evaluatorName={judgeName}
