@@ -795,8 +795,8 @@ export default function MockTrialEditor() {
                     )}
                   </div>
                 </div>
-                <Button onClick={generateWithAI} disabled={aiGenerating || (!aiObjectives.trim() && !aiPdfFile)} className="w-full">
-                  {aiGenerating ? "Gerando..." : "Gerar Processo"}
+                <Button onClick={generateWithAI} disabled={aiGenerating || !!activeJobId || (!aiObjectives.trim() && !aiPdfFile)} className="w-full">
+                  {aiGenerating || activeJobId ? "Gerando…" : "Gerar Processo"}
                   <Sparkles className="h-4 w-4 ml-2" />
                 </Button>
               </div>
