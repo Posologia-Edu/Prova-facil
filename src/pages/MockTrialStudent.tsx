@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Gavel, FileText, ClipboardList, Users } from "lucide-react";
+import { Gavel, FileText, ClipboardList, Users, Clock } from "lucide-react";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
 import { LegalProcessRenderer } from "@/components/mock-trial/LegalProcessRenderer";
@@ -23,6 +23,50 @@ const PHASE_LABELS: Record<string, string> = {
   verdict: "Veredito",
   finished: "Sessão Finalizada",
 };
+
+const ACTIVE_STATUSES = new Set([
+  "announcement",
+  "prosecution",
+  "defense",
+  "jury_questions",
+  "deliberation",
+  "verdict",
+]);
+
+function PhaseTimer({ session }: { session: any }) {
+  const [timeLeft, setTimeLeft] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!session?.current_phase_started_at || !session?.phase_duration_seconds) {
+      setTimeLeft(0);
+      return;
+    }
+    const tick = () => {
+      const startedAt = new Date(session.current_phase_started_at).getTime();
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      const remaining = Math.max(0, session.phase_duration_seconds - elapsed);
+      setTimeLeft(remaining);
+      if (remaining <= 0 && intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+    tick();
+    intervalRef.current = setInterval(tick, 1000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [session?.current_phase_started_at, session?.phase_duration_seconds]);
+
+  if (!session?.phase_duration_seconds) return null;
+  const m = Math.floor(timeLeft / 60);
+  const s = timeLeft % 60;
+  return (
+    <div className={`flex items-center gap-2 text-2xl font-mono font-bold ${timeLeft <= 60 ? "text-destructive animate-pulse" : "text-primary"}`}>
+      <Clock className="h-5 w-5" />
+      {String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}
+    </div>
+  );
+}
 
 export default function MockTrialStudent() {
   const { accessCode } = useParams<{ accessCode: string }>();
