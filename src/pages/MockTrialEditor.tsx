@@ -712,7 +712,7 @@ export default function MockTrialEditor() {
                       size="sm"
                       variant="outline"
                       onClick={() => regenerateCase(c)}
-                      disabled={regeneratingCaseId === c.id || !c.learning_objectives}
+                      disabled={regeneratingCaseId === c.id || !!activeJobId || !c.learning_objectives}
                       title={c.learning_objectives ? "Substituir o conteúdo deste processo por uma nova geração de IA" : "Sem objetivos de aprendizagem salvos para regenerar"}
                     >
                       <Sparkles className="h-3 w-3 mr-1" />
