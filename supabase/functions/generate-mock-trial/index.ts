@@ -10,11 +10,15 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 // Generate a medical image (X-ray, CT, ECG, etc.) via Lovable AI image model.
 // Returns a data:image/png;base64,... URL or null on failure.
-async function generateMedicalImage(prompt: string): Promise<string | null> {
+// Has an individual timeout so a slow image never blocks the whole response.
+async function generateMedicalImage(prompt: string, timeoutMs = 45000): Promise<string | null> {
   if (!LOVABLE_API_KEY) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: controller.signal,
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
@@ -38,8 +42,10 @@ async function generateMedicalImage(prompt: string): Promise<string | null> {
     const url = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     return url || null;
   } catch (e) {
-    console.error("generateMedicalImage error:", e);
+    console.error("generateMedicalImage error:", (e as Error).message);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -173,7 +179,7 @@ ANEXO 5 — PERÍCIA TÉCNICA: documento extenso (mínimo 800 palavras), com cab
 IMAGENS MÉDICAS (CAMPO ESPECIAL "image_attachments")
 ═══════════════════════════════════════════════════════════
 
-Identifique 1 a 3 EXAMES DE IMAGEM/GRÁFICOS pertinentes ao caso (radiografia, TC, RM, USG, ECG, lâmina histopatológica, fotografia de lesão, endoscopia). Para cada um, retorne no campo "image_attachments":
+Identifique 1 a 2 EXAMES DE IMAGEM/GRÁFICOS pertinentes ao caso (radiografia, TC, RM, USG, ECG, lâmina histopatológica, fotografia de lesão, endoscopia). Para cada um, retorne no campo "image_attachments":
 - "anchor": texto-âncora exato que aparecerá no markdown do processo, no formato [[IMAGE:slug]] (ex.: [[IMAGE:rx-torax-pa]]). VOCÊ DEVE inserir esse mesmo anchor no process_content, no local apropriado dentro do Anexo de Laudo de Imagem.
 - "slug": identificador curto kebab-case
 - "title": título do exame (ex.: "Radiografia de Tórax PA")
@@ -308,9 +314,10 @@ Gere o processo completo, EXTENSO E PROFUNDO, em formato JSON. Lembre-se: depoim
     if (!result) throw new Error("Could not parse AI response");
 
     // Generate medical images and replace anchors in process_content
-    const attachments = Array.isArray(result.image_attachments) ? result.image_attachments : [];
+    // Cap at 2 images to keep total response time within gateway timeout (~150s).
+    const attachments = (Array.isArray(result.image_attachments) ? result.image_attachments : []).slice(0, 2);
     if (attachments.length > 0 && typeof result.process_content === "string") {
-      console.log(`Generating ${attachments.length} medical image(s)...`);
+      console.log(`Generating ${attachments.length} medical image(s) in parallel...`);
       const imageResults = await Promise.all(
         attachments.map(async (att: any) => {
           const url = await generateMedicalImage(att.prompt || att.title || "");
