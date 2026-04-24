@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ImageIcon, RefreshCw, Upload, CheckCircle2, AlertTriangle, Loader2, Trash2 } from "lucide-react";
+import { ImageIcon, RefreshCw, Upload, CheckCircle2, AlertTriangle, Loader2, Trash2, Sparkles } from "lucide-react";
 
 interface CaseImage {
   id: string;
