@@ -2153,6 +2153,65 @@ export type Database = {
         }
         Relationships: []
       }
+      mock_trial_case_images: {
+        Row: {
+          anchor: string
+          attempts: number
+          caption: string
+          case_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          image_url: string | null
+          prompt: string
+          slug: string
+          status: string
+          storage_path: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          anchor: string
+          attempts?: number
+          caption?: string
+          case_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          image_url?: string | null
+          prompt?: string
+          slug: string
+          status?: string
+          storage_path?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          anchor?: string
+          attempts?: number
+          caption?: string
+          case_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          image_url?: string | null
+          prompt?: string
+          slug?: string
+          status?: string
+          storage_path?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_case_images_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mock_trial_cases: {
         Row: {
           case_number: string
