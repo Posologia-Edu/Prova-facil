@@ -88,6 +88,11 @@ export default function MockTrialJudge() {
   const [judgeName, setJudgeName] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [trial, setTrial] = useState<any>(null);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [forms, setForms] = useState<any[]>([]);
+  const [responses, setResponses] = useState<any[]>([]);
   const [cases, setCases] = useState<any[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [session, setSession] = useState<any>(null);
