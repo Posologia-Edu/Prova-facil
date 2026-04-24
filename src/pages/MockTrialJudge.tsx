@@ -538,8 +538,7 @@ export default function MockTrialJudge() {
                     <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="font-semibold">
-                          Grupo {group.group_number}
-                          {group.name ? ` – ${group.name}` : ""}
+                          {formatGroupLabel(group)}
                         </Badge>
                         <Badge variant="secondary">{ROLE_LABELS[a.role] || a.role}</Badge>
                       </div>
@@ -558,7 +557,7 @@ export default function MockTrialJudge() {
                       )}
                     </div>
                     {members.length > 0 ? (
-                      <ul className="text-sm text-foreground/90 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pl-1">
+                      <ul className="text-sm text-foreground/90 flex flex-col gap-1 pl-1">
                         {members.map(m => (
                           <li key={m.id} className="flex items-center gap-2">
                             <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
