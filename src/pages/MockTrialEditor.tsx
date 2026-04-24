@@ -464,6 +464,8 @@ export default function MockTrialEditor() {
       setRegeneratingCaseId(null);
     }
   };
+
+  const initGroupsRanRef = useRef(false);
   const initGroups = async () => {
     if (!id || initGroupsRanRef.current) return;
     initGroupsRanRef.current = true;
