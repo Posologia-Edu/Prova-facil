@@ -561,6 +561,13 @@ export default function MockTrialJudge() {
         );
       })()}
 
+      {selectedCase && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Texto do Processo
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <LegalProcessRenderer
