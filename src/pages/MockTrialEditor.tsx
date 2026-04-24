@@ -524,22 +524,35 @@ export default function MockTrialEditor() {
 
         {/* PROCESSOS TAB */}
         <TabsContent value="cases" className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button onClick={addCase}><Plus className="h-4 w-4 mr-1" />Adicionar Processo</Button>
             <Button variant="secondary" onClick={() => setAiDialogOpen(true)}><Sparkles className="h-4 w-4 mr-1" />Gerar com IA</Button>
+            <Button variant="outline" onClick={() => setBankOpen(true)}>
+              <Library className="h-4 w-4 mr-1" />Banco de Processos
+            </Button>
           </div>
 
           {cases.map((c: any) => (
             <Card key={c.id}>
               <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
                     <CardTitle className="text-base">{c.title}</CardTitle>
                     <p className="text-xs text-muted-foreground">Processo nº {c.case_number}</p>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap">
                     <Button size="sm" variant="outline" onClick={() => { setEditingCaseId(c.id); setEditingCaseContent(c.process_content || ""); }}>
                       <FileText className="h-3 w-3 mr-1" />Editar Processo
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => saveCaseToBank(c)}
+                      disabled={savingToBankId === c.id || !c.process_content}
+                      title="Salvar este processo no banco para reutilizar em outros Júris Simulados"
+                    >
+                      <Save className="h-3 w-3 mr-1" />
+                      {savingToBankId === c.id ? "Salvando..." : "Salvar no banco"}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => deleteCase(c.id)}><Trash2 className="h-3 w-3" /></Button>
                   </div>
