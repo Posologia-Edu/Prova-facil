@@ -119,7 +119,7 @@ export function ResultsPanel(props: Props) {
                         {ROLE_LABEL[c.role]}
                       </Badge>
                       <CardTitle className="text-base">
-                        Grupo {group?.group_number}{group?.name ? ` – ${group.name}` : ""}
+                        {formatGroupLabel(group)}
                       </CardTitle>
                     </div>
                   </CardHeader>
@@ -168,7 +168,7 @@ export function ResultsPanel(props: Props) {
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">{ROLE_LABEL[a.role]}</Badge>
                         <CardTitle className="text-sm">
-                          Grupo {group.group_number}{group.name ? ` – ${group.name}` : ""}
+                          {formatGroupLabel(group)}
                         </CardTitle>
                       </div>
                       <div className="flex items-center gap-2">
@@ -264,7 +264,7 @@ export function ResultsPanel(props: Props) {
                             {ROLE_LABEL[e.evaluated_role]}
                           </Badge>
                           <span className="font-medium text-sm">
-                            Grupo {group?.group_number}{group?.name ? ` – ${group.name}` : ""}
+                            {formatGroupLabel(group)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -307,7 +307,7 @@ export function ResultsPanel(props: Props) {
                     sessionId={session.id}
                     caseId={selectedCase.id}
                     groupId={a.group_id}
-                    groupLabel={`Grupo ${group.group_number}${group.name ? ` – ${group.name}` : ""}`}
+                    groupLabel={formatGroupLabel(group)}
                     evaluatedRole={a.role}
                     evaluatorType="teacher"
                     fields={teacherForm.fields_json}
