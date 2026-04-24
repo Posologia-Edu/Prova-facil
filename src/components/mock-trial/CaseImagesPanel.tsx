@@ -110,7 +110,8 @@ export function CaseImagesPanel({ caseId }: Props) {
   };
 
   const addCustomImage = async () => {
-    const slug = newSlug.trim() || `img-${Math.random().toString(36).slice(2, 7)}`;
+    const slug = (newSlug.trim() || `img-${Math.random().toString(36).slice(2, 7)}`)
+      .toLowerCase().replace(/[^a-z0-9-]/g, "-");
     const { data, error } = await (supabase as any)
       .from("mock_trial_case_images")
       .insert({
@@ -131,6 +132,61 @@ export function CaseImagesPanel({ caseId }: Props) {
     setNewSlug(""); setNewTitle(""); setNewPrompt("");
     if (data) regenerate(data.id);
   };
+
+  const handleCreateFromUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCreatingFromUpload(true);
+    try {
+      const slug = (newSlug.trim() || `img-${Math.random().toString(36).slice(2, 7)}`)
+        .toLowerCase().replace(/[^a-z0-9-]/g, "-");
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${caseId}/manual-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("mock-trial-images")
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("mock-trial-images").getPublicUrl(path);
+      const { data: row, error } = await (supabase as any)
+        .from("mock_trial_case_images")
+        .insert({
+          case_id: caseId,
+          slug,
+          anchor: `[[IMAGE:${slug}]]`,
+          title: newTitle.trim() || "Imagem do processo",
+          caption: "",
+          prompt: newPrompt.trim() || newTitle.trim() || slug,
+          status: "ready",
+          image_url: urlData.publicUrl,
+          storage_path: path,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Inserir âncora no conteúdo do processo se ainda não existir
+      const { data: caseRow } = await (supabase as any)
+        .from("mock_trial_cases")
+        .select("case_content")
+        .eq("id", caseId)
+        .single();
+      const content: string = caseRow?.case_content || "";
+      if (content && !content.includes(`[[IMAGE:${slug}]]`)) {
+        const updated = content + `\n\n[[IMAGE:${slug}]]\n\n`;
+        await (supabase as any).from("mock_trial_cases").update({ case_content: updated }).eq("id", caseId);
+      }
+
+      setNewSlug(""); setNewTitle(""); setNewPrompt("");
+      toast.success("Imagem enviada e vinculada ao processo");
+      load();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao enviar imagem");
+    } finally {
+      setCreatingFromUpload(false);
+      if (newFileRef.current) newFileRef.current.value = "";
+    }
+  };
+
 
   const StatusBadge = ({ status }: { status: string }) => {
     if (status === "ready") return <Badge className="bg-green-500/15 text-green-700 border-green-500/30 dark:text-green-300"><CheckCircle2 className="h-3 w-3 mr-1" />Pronta</Badge>;
