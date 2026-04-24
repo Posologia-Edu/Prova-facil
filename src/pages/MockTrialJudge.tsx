@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Gavel, Play, Pause, SkipForward, Square, FileText, Users, CheckCircle2, Clock } from "lucide-react";
 import { LegalProcessRenderer } from "@/components/mock-trial/LegalProcessRenderer";
+import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvaluationForm";
+import { ensureEvaluationForms } from "@/lib/mock-trial-evaluations";
 
 const ROLE_LABELS: Record<string, string> = {
   prosecution: "Acusação",
