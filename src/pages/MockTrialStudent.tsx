@@ -258,10 +258,11 @@ export default function MockTrialStudent() {
       {selectedSession && (
         <Card className="border-primary/30">
           <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{PHASE_LABELS[selectedSession.status] || selectedSession.status}</Badge>
-              </div>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <Badge variant="outline">{PHASE_LABELS[selectedSession.status] || selectedSession.status}</Badge>
+              {ACTIVE_STATUSES.has(selectedSession.status) && myRole && (
+                <PhaseTimer session={selectedSession} />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -278,75 +279,108 @@ export default function MockTrialStudent() {
         </div>
       )}
 
-      {!myRole ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium">Seu grupo não participa deste processo</h3>
-            <p className="text-muted-foreground">Selecione outro processo ou aguarde instruções</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Tabs defaultValue="process" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="process"><FileText className="h-4 w-4 mr-1" />Processo</TabsTrigger>
-            {myCharacters.length > 0 && <TabsTrigger value="characters"><Users className="h-4 w-4 mr-1" />Personagens</TabsTrigger>}
-            {myForms.length > 0 && <TabsTrigger value="forms"><ClipboardList className="h-4 w-4 mr-1" />Formulário</TabsTrigger>}
-          </TabsList>
+      {(() => {
+        const sessionStatus = selectedSession?.status || "pending";
+        const isSessionActive = ACTIVE_STATUSES.has(sessionStatus);
 
-          <TabsContent value="process">
-            <LegalProcessRenderer
-              content={selectedCase?.process_content || "Conteúdo do processo não disponível"}
-              caseNumber={selectedCase?.case_number}
-              title={selectedCase?.title}
-            />
-          </TabsContent>
+        // Session not started or finished → block everyone
+        if (!isSessionActive) {
+          return (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Gavel className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium">
+                  {sessionStatus === "finished"
+                    ? "Sessão finalizada"
+                    : "Aguarde o início da sessão do Júri Simulado"}
+                </h3>
+                <p className="text-muted-foreground">
+                  {sessionStatus === "finished"
+                    ? "Este processo foi encerrado pelo(a) juiz(a)."
+                    : "O(a) juiz(a) ainda não iniciou este processo. As abas serão liberadas em instantes."}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        }
 
-          {myCharacters.length > 0 && (
-            <TabsContent value="characters">
-              <Card className="mb-4 border-dashed bg-muted/30">
-                <CardContent className="py-3 text-xs text-muted-foreground">
-                  <strong className="text-foreground">Testemunha técnica:</strong> este personagem NÃO é o réu.
-                  Trata-se de um(a) profissional convocado(a) pela {myRole === "prosecution" ? "acusação" : "defesa"} para
-                  prestar depoimento técnico e fortalecer a argumentação do seu grupo. Estude as instruções e use
-                  estrategicamente durante o júri.
-                </CardContent>
-              </Card>
-              {myCharacters.map((char: any, idx: number) => (
-                <Card key={idx} className="mb-4">
-                  <CardHeader>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant={char.side === "prosecution" ? "destructive" : "default"}>
-                        Testemunha da {char.side === "prosecution" ? "Acusação" : "Defesa"}
-                      </Badge>
-                      <CardTitle className="text-base">{char.name}</CardTitle>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{char.profession}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm whitespace-pre-wrap">{char.instructions}</p>
+        // Session active but my group does not participate
+        if (!myRole) {
+          return (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium">Seu grupo não participa deste processo</h3>
+                <p className="text-muted-foreground">Selecione outro processo ou aguarde instruções</p>
+              </CardContent>
+            </Card>
+          );
+        }
+
+        // Active + participant → show full content
+        return (
+          <Tabs defaultValue="process" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="process"><FileText className="h-4 w-4 mr-1" />Processo</TabsTrigger>
+              {myCharacters.length > 0 && <TabsTrigger value="characters"><Users className="h-4 w-4 mr-1" />Personagens</TabsTrigger>}
+              {myForms.length > 0 && <TabsTrigger value="forms"><ClipboardList className="h-4 w-4 mr-1" />Formulário</TabsTrigger>}
+            </TabsList>
+
+            <TabsContent value="process">
+              <LegalProcessRenderer
+                content={selectedCase?.process_content || "Conteúdo do processo não disponível"}
+                caseNumber={selectedCase?.case_number}
+                title={selectedCase?.title}
+              />
+            </TabsContent>
+
+            {myCharacters.length > 0 && (
+              <TabsContent value="characters">
+                <Card className="mb-4 border-dashed bg-muted/30">
+                  <CardContent className="py-3 text-xs text-muted-foreground">
+                    <strong className="text-foreground">Testemunha técnica:</strong> este personagem NÃO é o réu.
+                    Trata-se de um(a) profissional convocado(a) pela {myRole === "prosecution" ? "acusação" : "defesa"} para
+                    prestar depoimento técnico e fortalecer a argumentação do seu grupo. Estude as instruções e use
+                    estrategicamente durante o júri.
                   </CardContent>
                 </Card>
-              ))}
-            </TabsContent>
-          )}
+                {myCharacters.map((char: any, idx: number) => (
+                  <Card key={idx} className="mb-4">
+                    <CardHeader>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant={char.side === "prosecution" ? "destructive" : "default"}>
+                          Testemunha da {char.side === "prosecution" ? "Acusação" : "Defesa"}
+                        </Badge>
+                        <CardTitle className="text-base">{char.name}</CardTitle>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{char.profession}</p>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm whitespace-pre-wrap">{char.instructions}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
+            )}
 
-          {myForms.length > 0 && (
-            <TabsContent value="forms">
-              {myForms.map((form: any) => (
-                <MockTrialFormCard
-                  key={form.id}
-                  form={form}
-                  onSubmit={(answers) => submitResponse(form.id, answers)}
-                />
-              ))}
-            </TabsContent>
-          )}
-        </Tabs>
-      )}
+            {myForms.length > 0 && (
+              <TabsContent value="forms">
+                {myForms.map((form: any) => (
+                  <MockTrialFormCard
+                    key={form.id}
+                    form={form}
+                    onSubmit={(answers) => submitResponse(form.id, answers)}
+                  />
+                ))}
+              </TabsContent>
+            )}
+          </Tabs>
+        );
+      })()}
     </div>
   );
 }
+
 
 function MockTrialFormCard({ form, onSubmit }: { form: any; onSubmit: (answers: Record<string, any>) => void }) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
