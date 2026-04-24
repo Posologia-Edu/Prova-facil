@@ -7,33 +7,37 @@ import type { FormField } from "@/components/forms/types";
 
 const scaleField = (id: string, label: string, description?: string): FormField => ({
   id,
-  type: "scale" as any,
+  type: "scale",
   label,
   description,
   required: true,
-  min: 0,
-  max: 10,
-} as any);
+  max_score: 10,
+  scale_max: 10,
+  scale_min_label: "Insuficiente",
+  scale_max_label: "Excelente",
+});
+
+const commentsField: FormField = {
+  id: "comments",
+  type: "textarea",
+  label: "Observações (opcional)",
+  required: false,
+};
 
 export const JUDGE_EVALUATION_TEMPLATE: { title: string; fields: FormField[] } = {
-  title: "Avaliação do Juiz - Postura processual",
+  title: "Avaliação do Juiz",
   fields: [
     scaleField("rito", "Respeito ao rito processual", "A equipe seguiu a ordem das falas, tempos e regras do júri?"),
     scaleField("clareza", "Clareza e objetividade da argumentação", "A fala foi compreensível e direta ao ponto?"),
     scaleField("postura", "Postura e conduta da equipe", "Demonstrou respeito ao tribunal, aos adversários e às testemunhas?"),
     scaleField("testemunhas", "Uso pertinente de testemunhas", "Acionou testemunhas no momento correto e com objetivo definido?"),
     scaleField("tempo", "Cumprimento do tempo", "Soube administrar o tempo da defesa/acusação sem extrapolar?"),
-    {
-      id: "comments",
-      type: "long_text" as any,
-      label: "Observações do Juiz (opcional)",
-      required: false,
-    } as any,
+    { ...commentsField, label: "Observações do Juiz (opcional)" },
   ],
 };
 
 export const TEACHER_EVALUATION_TEMPLATE: { title: string; fields: FormField[] } = {
-  title: "Avaliação do Professor - Critérios técnicos",
+  title: "Avaliação do Professor",
   fields: [
     scaleField("dominio_caso", "Domínio do caso clínico", "Demonstrou conhecer o prontuário, exames e linha do tempo?"),
     scaleField("evidencia", "Uso de evidências científicas e diretrizes", "Citou guidelines, protocolos ou literatura pertinente?"),
@@ -43,12 +47,7 @@ export const TEACHER_EVALUATION_TEMPLATE: { title: string; fields: FormField[] }
     scaleField("comunicacao", "Comunicação verbal", "Clareza, dicção, tom e capacidade de convencer?"),
     scaleField("trabalho_equipe", "Trabalho em equipe", "Distribuição de papéis, apoio mútuo e sincronia?"),
     scaleField("coerencia", "Coerência com o processo", "As alegações batem com as evidências apresentadas no processo?"),
-    {
-      id: "comments",
-      type: "long_text" as any,
-      label: "Observações do Professor (opcional)",
-      required: false,
-    } as any,
+    { ...commentsField, label: "Observações do Professor (opcional)" },
   ],
 };
 
@@ -63,7 +62,7 @@ export function computeScoreFromCriteria(
   let sum = 0;
   let count = 0;
   for (const f of fields) {
-    if ((f as any).type === "scale") {
+    if (f.type === "scale") {
       const v = Number(answers?.[f.id]);
       if (!isNaN(v)) {
         criteria[f.id] = v;
@@ -74,3 +73,8 @@ export function computeScoreFromCriteria(
   }
   return { score: count > 0 ? Number((sum / count).toFixed(2)) : 0, criteria };
 }
+
+export const ROLE_LABELS: Record<string, string> = {
+  prosecution: "Acusação",
+  defense: "Defesa",
+};
