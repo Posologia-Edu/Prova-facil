@@ -450,6 +450,227 @@ const BLUEPRINT_TOOL: Tool = {
   },
 };
 
+function inferRoleProfile(objectives: string) {
+  const text = objectives.toLowerCase();
+  if (/(odont|dente|bucal|periodont|endodont|ortodont)/i.test(text)) {
+    return {
+      profession: "Cirurgião-Dentista",
+      registryPrefix: "CRO",
+      specialty: "Odontologia Clínica",
+      faculty: "Faculdade de Odontologia",
+      council: "CFO",
+      ethicsCode: "Código de Ética Odontológica",
+    };
+  }
+  if (/(enferm|curativo|punção|cateter|sondagem)/i.test(text)) {
+    return {
+      profession: "Enfermeiro",
+      registryPrefix: "COREN",
+      specialty: "Enfermagem Clínica",
+      faculty: "Faculdade de Enfermagem",
+      council: "COFEN",
+      ethicsCode: "Código de Ética dos Profissionais de Enfermagem",
+    };
+  }
+  if (/(fisiot|reabilita|mobiliza|cinesioter)/i.test(text)) {
+    return {
+      profession: "Fisioterapeuta",
+      registryPrefix: "CREFITO",
+      specialty: "Fisioterapia Hospitalar",
+      faculty: "Faculdade de Fisioterapia",
+      council: "COFFITO",
+      ethicsCode: "Código de Ética e Deontologia da Fisioterapia",
+    };
+  }
+  if (/(nutri|dieta|enteral|parenteral|suplement)/i.test(text)) {
+    return {
+      profession: "Nutricionista",
+      registryPrefix: "CRN",
+      specialty: "Nutrição Clínica",
+      faculty: "Faculdade de Nutrição",
+      council: "CFN",
+      ethicsCode: "Código de Ética e de Conduta do Nutricionista",
+    };
+  }
+  if (/(biom[eé]d|an[aá]lise cl[ií]nica|microbiolog|citologia)/i.test(text)) {
+    return {
+      profession: "Biomédico",
+      registryPrefix: "CRBM",
+      specialty: "Patologia Clínica",
+      faculty: "Faculdade de Biomedicina",
+      council: "CFBM",
+      ethicsCode: "Código de Ética do Profissional Biomédico",
+    };
+  }
+
+  return {
+    profession: "Médico",
+    registryPrefix: "CRM",
+    specialty: /(infect|antibi|fosfomic|pielonef|urin|sepse)/i.test(text) ? "Infectologia" : "Clínica Médica",
+    faculty: "Faculdade de Medicina",
+    council: "CFM",
+    ethicsCode: "Código de Ética Médica",
+  };
+}
+
+function inferVictimProfile(objectives: string) {
+  const text = objectives.toLowerCase();
+  const male = /(\bhomem\b|masculin)/i.test(text);
+  const female = /(\bmulher\b|feminin)/i.test(text);
+  const sex = male ? "masculino" : female ? "feminino" : "masculino";
+  const ageMatch = text.match(/(\d{2})\s*anos/);
+  const age = ageMatch ? Number(ageMatch[1]) : /idos/i.test(text) ? 68 : 57;
+
+  const comorbidities: string[] = [];
+  if (/diab/i.test(text)) comorbidities.push("diabetes mellitus tipo 2");
+  if (/(renal|drc|nefropat)/i.test(text)) comorbidities.push("doença renal crônica estágio 2");
+  if (/(hipertens|has\b)/i.test(text)) comorbidities.push("hipertensão arterial sistêmica");
+  if (!comorbidities.length) comorbidities.push("sem comorbidades relevantes previamente documentadas");
+
+  return {
+    name: male ? "Carlos Henrique de Souza" : female ? "Márcia Helena de Souza" : "Alexandre Martins Costa",
+    age,
+    sex,
+    comorbidities: comorbidities.join("; "),
+    occupation: male ? "motorista de aplicativo" : "auxiliar administrativa",
+  };
+}
+
+function buildFallbackImageAttachments(objectives: string) {
+  const text = objectives.toLowerCase();
+
+  if (/(pielonef|urin|renal|fosfomic)/i.test(text)) {
+    return [
+      {
+        slug: "usg-renal",
+        title: "Ultrassonografia renal com sinais inflamatórios",
+        prompt: "Realistic renal ultrasound exam from a hospital radiology department, adult male diabetic patient, subtle renal pelvis dilation, increased cortical echogenicity, grayscale medical imaging, authentic exam layout, no decorative text",
+        caption: "Ultrassonografia renal demonstrando alterações inflamatórias compatíveis com infecção urinária alta.",
+        anchor: "[[IMAGE:usg-renal]]",
+      },
+      {
+        slug: "tc-abdome-contraste",
+        title: "Tomografia contrastada com achados de pielonefrite",
+        prompt: "Highly realistic contrast-enhanced abdominal CT scan, coronal view, findings compatible with acute pyelonephritis in an adult male diabetic patient, mild perinephric fat stranding, authentic radiology image, grayscale",
+        caption: "Tomografia de abdome sugerindo pielonefrite com comprometimento perirrenal.",
+        anchor: "[[IMAGE:tc-abdome-contraste]]",
+      },
+      {
+        slug: "curva-glicemica",
+        title: "Curva glicêmica hospitalar durante a internação",
+        prompt: "Realistic hospital glycemic trend chart for an adult inpatient with diabetes and infection, clinical dashboard style, white background, authentic medical chart, no branding",
+        caption: "Curva glicêmica hospitalar evidenciando descompensação metabólica durante a evolução infecciosa.",
+        anchor: "[[IMAGE:curva-glicemica]]",
+      },
+    ];
+  }
+
+  if (/(odont|dente|bucal)/i.test(text)) {
+    return [
+      {
+        slug: "rx-panoramica",
+        title: "Radiografia panorâmica odontológica",
+        prompt: "Highly realistic panoramic dental x-ray, subtle procedural complications visible, authentic grayscale radiology image, dental clinic style",
+        caption: "Radiografia panorâmica anexada aos autos para correlação com a conduta discutida.",
+        anchor: "[[IMAGE:rx-panoramica]]",
+      },
+      {
+        slug: "foto-intraoral",
+        title: "Fotografia intraoral padronizada",
+        prompt: "Clinical intraoral photograph, realistic dental documentation, neutral lighting, visible lesion or complication, authentic medical record style",
+        caption: "Fotografia intraoral padronizada do sítio relacionado ao evento clínico.",
+        anchor: "[[IMAGE:foto-intraoral]]",
+      },
+    ];
+  }
+
+  return [
+    {
+      slug: "imagem-diagnostica-1",
+      title: "Exame de imagem principal do caso",
+      prompt: "Highly realistic hospital diagnostic imaging exam related to the described case, authentic grayscale medical image, clinically relevant abnormal finding, no decorative text",
+      caption: "Exame de imagem principal anexado ao processo.",
+      anchor: "[[IMAGE:imagem-diagnostica-1]]",
+    },
+    {
+      slug: "imagem-diagnostica-2",
+      title: "Imagem complementar para correlação clínica",
+      prompt: "Realistic complementary medical imaging exam for a hospital legal case file, clinically coherent abnormal finding, authentic medical layout",
+      caption: "Imagem complementar utilizada para correlação clínico-pericial.",
+      anchor: "[[IMAGE:imagem-diagnostica-2]]",
+    },
+  ];
+}
+
+function buildDeterministicBlueprint(job: any) {
+  const objectives = String(job.learning_objectives || "").trim();
+  const profile = inferRoleProfile(objectives);
+  const victim = inferVictimProfile(objectives);
+  const caseNumber = job.case_number || "001/2026";
+  const topic = objectives || "evento adverso clínico com controvérsia técnico-assistencial";
+  const conciseTopic = topic.length > 110 ? `${topic.slice(0, 107).trim()}...` : topic;
+  const dateBase = "2024";
+
+  return {
+    case_number: caseNumber,
+    title: `Ação Penal Pública: Avaliação crítica de conduta em ${conciseTopic}`,
+    university: "Universidade Integrada de Ciências da Saúde do Litoral",
+    faculty: profile.faculty,
+    city: "Campinas",
+    case_summary: `O processo analisa a conduta profissional adotada em um caso centrado em ${topic}. A vítima apresentou evolução clínica desfavorável após decisão terapêutica discutível, exigindo reavaliação diagnóstica, revisão de evidências e correlação entre diretrizes assistenciais e responsabilidade profissional. Os autos foram estruturados para permitir argumentos plausíveis tanto para acusação quanto para defesa, com dados clínicos, cronologia detalhada e anexos periciais coerentes com o tema.`,
+    defendant: {
+      name: "Dr. Renato Augusto Ferraz",
+      profession: profile.profession,
+      registry: `${profile.registryPrefix} 18452`,
+      workplace: "Hospital Escola São Gabriel",
+      specialty: profile.specialty,
+    },
+    victim,
+    timeline: [
+      { date: `03/07/${dateBase}`, event: `Início dos sintomas relacionados ao tema central: ${topic}.` },
+      { date: `04/07/${dateBase}`, event: "Primeiro atendimento com hipótese diagnóstica inicial e conduta terapêutica discutida nos autos." },
+      { date: `05/07/${dateBase}`, event: "Persistência ou piora clínica, com novos dados laboratoriais e necessidade de reavaliação da estratégia adotada." },
+      { date: `06/07/${dateBase}`, event: "Registro de divergência entre achados objetivos, evolução clínica e manutenção da conduta profissional questionada." },
+      { date: `07/07/${dateBase}`, event: "Transferência ou internação para abordagem mais complexa, com documentação complementar por equipe multidisciplinar." },
+      { date: `09/07/${dateBase}`, event: "Perícia interna e consolidação dos elementos técnico-científicos que embasam acusação e defesa." },
+    ],
+    learning_objectives_internal: objectives
+      ? objectives.split(/[;\n]+/).map((item: string) => item.trim()).filter(Boolean).slice(0, 5)
+      : ["Correlacionar conduta profissional, evidências e desfechos clínicos"],
+    legal_framework: {
+      penal_articles: ["Art. 121, §3º", "Art. 129, §6º", "Art. 132"],
+      ethics_code: profile.ethicsCode,
+      council: profile.council,
+    },
+    planned_annexes: [
+      { slug: "admissao", title: "Prontuário de admissão e anamnese inicial", kind: "prontuario", short_brief: `Documento de admissão contendo quadro inicial, comorbidades e hipótese ligada a ${topic}.` },
+      { slug: "evolucao", title: "Evoluções clínicas e prescrições sequenciais", kind: "prontuario", short_brief: "Sequência de evoluções com horários, prescrições, reavaliações e contradições sutis." },
+      { slug: "laboratorio", title: "Laudo laboratorial e microbiológico", kind: "laudos", short_brief: "Exames objetivos que permitem confrontar a adequação da conduta adotada." },
+      { slug: "imagem", title: "Laudo de imagem e documentação diagnóstica", kind: "imagem", short_brief: "Anexo com exames de imagem coerentes com o quadro clínico e anchors obrigatórios." },
+      { slug: "depoimento", title: "Depoimento técnico do profissional assistente", kind: "depoimento", short_brief: "Versão do réu com justificativas clínicas, limitações contextuais e pontos de autodefesa." },
+      { slug: "pericia", title: "Laudo pericial independente", kind: "pericia", short_brief: "Análise comparativa entre literatura, protocolos e a conduta efetivamente registrada." },
+    ],
+    planned_witnesses: [
+      { name: "Dra. Helena Prado", profession: profile.profession, side: "prosecution", focus: "Avaliar onde a conduta se afastou das diretrizes e do padrão esperado." },
+      { name: "Dr. Marcelo Vianna", profession: "Farmacêutico Clínico", side: "prosecution", focus: "Discutir segurança medicamentosa, posologia e riscos de manutenção terapêutica inadequada." },
+      { name: "Dr. Luís Otávio Barreto", profession: profile.profession, side: "defense", focus: "Explicar decisões clínicas contextualizadas, limitações do cenário e plausibilidade da conduta." },
+      { name: "Enf. Patrícia Nogueira", profession: "Enfermeira", side: "defense", focus: "Correlacionar sinais clínicos observados à beira-leito e a comunicação da equipe assistencial." },
+    ],
+    planned_image_attachments: buildFallbackImageAttachments(objectives),
+    easter_eggs: [
+      "Horário de administração de medicação divergente entre prescrição e evolução de enfermagem.",
+      "Comorbidade importante aparece abreviada em um documento e descrita por extenso em outro.",
+      "Valor laboratorial limítrofe ignorado em uma evolução médica.",
+      "Assinatura digital ausente em uma das prescrições críticas.",
+      "Registro de alergia medicamentosa aparece apenas em documento secundário.",
+      "Escala clínica sugere maior gravidade do que a explicitada na alta.",
+      "Intervalo entre coleta e liberação de exame muda discretamente entre anexos.",
+      "Comunicação entre equipe assistencial e familiar foi registrada com versões conflitantes.",
+    ],
+    plot_twist: `Novo dado objetivo anexado posteriormente ao primeiro atendimento modifica a interpretação inicial do caso sobre ${topic}, permitindo argumentos tanto de negligência quanto de decisão clínica contextualizada.`,
+  };
+}
+
 function bpContext(bp: any): string {
   return `CONTEXTO DO PROCESSO (USE SEMPRE ESTES DADOS — nunca invente nomes diferentes):
 - Universidade: ${bp.university} / ${bp.faculty} / ${bp.city}
