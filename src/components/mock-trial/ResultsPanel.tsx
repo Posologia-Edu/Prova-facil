@@ -142,7 +142,7 @@ export function ResultsPanel(props: Props) {
           )}
         </TabsContent>
 
-        {/* === Envios dos grupos (corrige bug visualização) === */}
+        {/* === Envios dos grupos (formato premium) === */}
         <TabsContent value="submissions" className="space-y-3">
           {caseAssigns.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Nenhum grupo distribuído neste processo.</CardContent></Card>
@@ -151,10 +151,14 @@ export function ResultsPanel(props: Props) {
               const group = groups.find(g => g.id === a.group_id);
               if (!group) return null;
               const formForRole = forms.find((f: any) => f.target_role === a.role);
+              const formFields: any[] = (formForRole?.fields_json || []) as any[];
               const groupResponses = responses.filter((r: any) =>
                 r.session_id === session?.id &&
                 r.group_id === group.id &&
                 (formForRole ? r.form_id === formForRole.id : true)
+              );
+              const judgeEval = caseEvaluations.find(
+                (e: any) => e.group_id === group.id && e.evaluator_type === "judge"
               );
               return (
                 <Card key={a.id} className={`border ${ROLE_COLOR[a.role] || ""}`}>
@@ -166,32 +170,52 @@ export function ResultsPanel(props: Props) {
                           Grupo {group.group_number}{group.name ? ` – ${group.name}` : ""}
                         </CardTitle>
                       </div>
-                      {groupResponses.length > 0 ? (
-                        <Badge className="bg-green-600 text-white border-green-700">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          {groupResponses.length} envio(s)
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-dashed">
-                          <Clock className="h-3 w-3 mr-1" />Aguardando
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {judgeEval && (
+                          <Badge className="bg-amber-600 text-white border-amber-700">
+                            <Gavel className="h-3 w-3 mr-1" />
+                            Juiz: {Number(judgeEval.score).toFixed(1)}/10
+                          </Badge>
+                        )}
+                        {groupResponses.length > 0 ? (
+                          <Badge className="bg-green-600 text-white border-green-700">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            {groupResponses.length} envio(s)
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-dashed">
+                            <Clock className="h-3 w-3 mr-1" />Aguardando
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
+                    {judgeEval?.feedback && (
+                      <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-1">
+                          <Gavel className="h-3 w-3" /> Observação do Juiz
+                        </div>
+                        <p className="text-sm text-foreground/90 whitespace-pre-wrap">{judgeEval.feedback}</p>
+                      </div>
+                    )}
                     {groupResponses.length === 0 ? (
                       <p className="text-xs text-muted-foreground italic">Nenhum envio até o momento.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {groupResponses.map((r: any) => (
-                          <details key={r.id} className="rounded border bg-background p-2">
-                            <summary className="cursor-pointer text-sm font-medium flex items-center justify-between">
-                              <span>{r.student_name || "Anônimo"} <span className="text-xs text-muted-foreground ml-1">{r.student_email}</span></span>
+                          <details key={r.id} open className="rounded-lg border bg-background overflow-hidden">
+                            <summary className="cursor-pointer text-sm font-medium flex items-center justify-between bg-muted/40 px-3 py-2 hover:bg-muted/60 transition">
+                              <span className="flex items-center gap-2">
+                                <Users className="h-3.5 w-3.5 text-primary" />
+                                <span>{r.student_name || "Anônimo"}</span>
+                                {r.student_email && (
+                                  <span className="text-xs text-muted-foreground font-normal">({r.student_email})</span>
+                                )}
+                              </span>
                               <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
                             </summary>
-                            <pre className="text-xs bg-muted p-2 mt-2 rounded overflow-x-auto whitespace-pre-wrap">
-                              {JSON.stringify(r.response_json, null, 2)}
-                            </pre>
+                            <PremiumAnswers fields={formFields} answers={r.response_json || {}} />
                           </details>
                         ))}
                       </div>
