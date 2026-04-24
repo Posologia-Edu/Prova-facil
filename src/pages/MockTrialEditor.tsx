@@ -306,6 +306,54 @@ export default function MockTrialEditor() {
     });
   };
 
+  // ---- Job-based generation (async, multi-step, validated) ----
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [jobProgress, setJobProgress] = useState<any>(null);
+
+  useEffect(() => {
+    if (!activeJobId) return;
+    let cancelled = false;
+    const fetchJob = async () => {
+      const { data } = await (supabase as any)
+        .from("mock_trial_generation_jobs")
+        .select("*")
+        .eq("id", activeJobId)
+        .single();
+      if (cancelled || !data) return;
+      setJobProgress(data);
+      if (data.status === "completed") {
+        toast.success("Processo gerado com sucesso!");
+        setActiveJobId(null);
+        setRegeneratingCaseId(null);
+        setAiGenerating(false);
+        setAiDialogOpen(false);
+        setAiObjectives("");
+        setAiPdfFile(null);
+        refetchCases();
+      } else if (data.status === "failed") {
+        toast.error(data.last_error || "Falha na geração do processo");
+        setActiveJobId(null);
+        setRegeneratingCaseId(null);
+        setAiGenerating(false);
+      }
+    };
+    fetchJob();
+    const ch = supabase
+      .channel(`mt-job-${activeJobId}`)
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "mock_trial_generation_jobs",
+        filter: `id=eq.${activeJobId}`,
+      }, (payload) => {
+        setJobProgress(payload.new);
+        const s = (payload.new as any).status;
+        if (s === "completed" || s === "failed") fetchJob();
+      })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [activeJobId, refetchCases]);
+
   const generateWithAI = async () => {
     if (!aiObjectives.trim() && !aiPdfFile) {
       toast.error("Informe os objetivos ou envie um PDF");
@@ -313,80 +361,27 @@ export default function MockTrialEditor() {
     }
     setAiGenerating(true);
     try {
-      let pdfBase64: string | undefined;
+      let pdfContent: string | undefined;
       if (aiPdfFile) {
-        pdfBase64 = await extractPdfText(aiPdfFile);
+        pdfContent = await extractPdfText(aiPdfFile);
       }
-
       const caseNumber = `${String(cases.length + 1).padStart(3, "0")}/${new Date().getFullYear()}`;
-
-      // Auto-retry up to 3 attempts when the edge function returns a partial/incomplete process (422)
-      let data: any = null;
-      let lastError: any = null;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        if (attempt > 1) {
-          toast.info(`Processo veio incompleto. Tentando novamente (${attempt}/3)...`);
-        }
-        const resp = await supabase.functions.invoke("generate-mock-trial", {
-          body: { learningObjectives: aiObjectives, caseNumber, pdfBase64 },
-        });
-        if (!resp.error && resp.data && !resp.data.error) {
-          data = resp.data;
-          break;
-        }
-        lastError = resp.error || new Error(resp.data?.error || "Erro desconhecido");
-        const msg = String(lastError?.message || "").toLowerCase();
-        // Don't retry on quota/auth errors
-        if (msg.includes("credits") || msg.includes("rate limit") || msg.includes("402") || msg.includes("429")) {
-          throw lastError;
-        }
+      const { data, error } = await supabase.functions.invoke("mock-trial-job", {
+        body: {
+          mockTrialId: id,
+          mode: "create",
+          learningObjectives: aiObjectives,
+          caseNumber,
+          pdfContent,
+        },
+      });
+      if (error || !data?.jobId) {
+        throw new Error(error?.message || data?.error || "Falha ao iniciar geração");
       }
-      if (!data) throw lastError || new Error("Falha ao gerar processo após 3 tentativas");
-
-      const { data: inserted, error: insertError } = await supabase.from("mock_trial_cases").insert({
-        mock_trial_id: id!,
-        position: cases.length,
-        case_number: caseNumber,
-        title: data.title || `Processo ${cases.length + 1}`,
-        process_content: data.process_content,
-        learning_objectives: aiObjectives,
-        characters_json: data.characters || [],
-      }).select().single();
-      if (insertError) throw insertError;
-
-      // Persist image attachments and trigger async generation per image
-      const attachments = Array.isArray(data.image_attachments) ? data.image_attachments : [];
-      if (inserted && attachments.length > 0) {
-        const rows = attachments.map((a: any) => ({
-          case_id: inserted.id,
-          slug: a.slug,
-          anchor: a.anchor || `[[IMAGE:${a.slug}]]`,
-          title: a.title || "",
-          caption: a.caption || "",
-          prompt: a.prompt || a.title || "",
-          status: "pending",
-        }));
-        const { data: imgRows } = await (supabase as any)
-          .from("mock_trial_case_images")
-          .insert(rows)
-          .select();
-        // Trigger generation for each image (fire-and-forget)
-        for (const r of imgRows || []) {
-          supabase.functions.invoke("generate-mock-trial-image", { body: { imageId: r.id } })
-            .catch((err) => console.error("Image trigger failed:", err));
-        }
-        toast.success(`Processo gerado! ${rows.length} imagem(ns) sendo gerada(s) em segundo plano.`);
-      } else {
-        toast.success("Processo gerado com sucesso!");
-      }
-
-      setAiDialogOpen(false);
-      setAiObjectives("");
-      setAiPdfFile(null);
-      refetchCases();
+      setActiveJobId(data.jobId);
+      toast.info("Geração iniciada — acompanhe o progresso na tela");
     } catch (e: any) {
       toast.error(e.message || "Erro ao gerar processo");
-    } finally {
       setAiGenerating(false);
     }
   };
@@ -402,68 +397,26 @@ export default function MockTrialEditor() {
     }
     setRegeneratingCaseId(existingCase.id);
     try {
-      const caseNumber = existingCase.case_number || `${String(cases.length).padStart(3, "0")}/${new Date().getFullYear()}`;
-      let data: any = null;
-      let lastError: any = null;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        if (attempt > 1) {
-          toast.info(`Processo veio incompleto. Tentando novamente (${attempt}/3)...`);
-        }
-        const resp = await supabase.functions.invoke("generate-mock-trial", {
-          body: { learningObjectives: objectives, caseNumber },
-        });
-        if (!resp.error && resp.data && !resp.data.error && resp.data.process_content) {
-          data = resp.data;
-          break;
-        }
-        lastError = resp.error || new Error(resp.data?.error || "Erro desconhecido");
-        const msg = String(lastError?.message || "").toLowerCase();
-        if (msg.includes("credits") || msg.includes("rate limit") || msg.includes("402") || msg.includes("429")) {
-          throw lastError;
-        }
+      const { data, error } = await supabase.functions.invoke("mock-trial-job", {
+        body: {
+          mockTrialId: id,
+          caseId: existingCase.id,
+          mode: "regenerate",
+          learningObjectives: objectives,
+          caseNumber: existingCase.case_number,
+        },
+      });
+      if (error || !data?.jobId) {
+        throw new Error(error?.message || data?.error || "Falha ao iniciar regeneração");
       }
-      if (!data) throw lastError || new Error("Falha após 3 tentativas");
-
-      const { error: updErr } = await supabase
-        .from("mock_trial_cases")
-        .update({
-          title: data.title || existingCase.title,
-          process_content: data.process_content,
-          characters_json: data.characters || existingCase.characters_json || [],
-        })
-        .eq("id", existingCase.id);
-      if (updErr) throw updErr;
-
-      // Reset image attachments: delete old, insert new from result
-      await (supabase as any).from("mock_trial_case_images").delete().eq("case_id", existingCase.id);
-      const attachments = Array.isArray(data.image_attachments) ? data.image_attachments : [];
-      if (attachments.length > 0) {
-        const rows = attachments.map((a: any) => ({
-          case_id: existingCase.id,
-          slug: a.slug,
-          anchor: a.anchor || `[[IMAGE:${a.slug}]]`,
-          title: a.title || "",
-          caption: a.caption || "",
-          prompt: a.prompt || a.title || "",
-          status: "pending",
-        }));
-        const { data: imgRows } = await (supabase as any)
-          .from("mock_trial_case_images")
-          .insert(rows)
-          .select();
-        for (const r of imgRows || []) {
-          supabase.functions.invoke("generate-mock-trial-image", { body: { imageId: r.id } })
-            .catch((err) => console.error("Image trigger failed:", err));
-        }
-      }
-      toast.success("Processo regenerado com sucesso!");
-      refetchCases();
+      setActiveJobId(data.jobId);
+      toast.info("Regeneração iniciada — acompanhe o progresso na tela");
     } catch (e: any) {
       toast.error(e.message || "Erro ao regenerar processo");
-    } finally {
       setRegeneratingCaseId(null);
     }
   };
+
 
   const initGroupsRanRef = useRef(false);
   const initGroups = async () => {
