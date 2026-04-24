@@ -592,11 +592,15 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
       throw new Error("LOVABLE_API_KEY não configurado");
     }
     const aiPayload: any = {
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-2.5-pro",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
+      reasoning: {
+        effort: "medium",
+      },
+      max_completion_tokens: 12000,
       tools: [
         {
           type: "function",
@@ -646,7 +650,7 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
     };
 
     const aiController = new AbortController();
-    const aiTimer = setTimeout(() => aiController.abort(), 140000);
+    const aiTimer = setTimeout(() => aiController.abort(), 220000);
     let response: Response;
     try {
       response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -693,6 +697,18 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
     }
 
     if (!result) throw new Error("Could not parse AI response");
+
+    const validationIssues = validateMockTrialResult(result);
+    if (validationIssues.length > 0) {
+      console.error("Mock trial validation failed:", validationIssues);
+      return new Response(JSON.stringify({
+        error: "A IA retornou um processo incompleto. Tente novamente.",
+        details: validationIssues,
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Image generation is now decoupled: we return image_attachments metadata
     // and the client persists rows in mock_trial_case_images, then triggers
