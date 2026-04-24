@@ -31,6 +31,155 @@ type Tool = {
   };
 };
 
+function extractMessageText(content: any): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (typeof item?.text === "string") return item.text;
+        return "";
+      })
+      .join("\n")
+      .trim();
+  }
+  return "";
+}
+
+function extractFirstJsonObject(text: string): string | null {
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (ch === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (ch === "{") {
+      if (depth === 0) start = i;
+      depth += 1;
+    } else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0 && start >= 0) {
+        return text.slice(start, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseStructuredContentToArgs(rawText: string, tool: Tool): any | null {
+  const text = rawText.trim();
+  if (!text) return null;
+
+  const singleContentField =
+    Object.keys(tool.function.parameters?.properties || {}).length === 1 &&
+    !!tool.function.parameters?.properties?.content;
+
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim();
+  const candidates = [fenced, text, extractFirstJsonObject(text)].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+    } catch {
+      // ignore and try the next strategy
+    }
+  }
+
+  if (singleContentField) {
+    return { content: text };
+  }
+
+  return null;
+}
+
+function extractToolArgs(data: any): { args: any | null; rawText: string } {
+  const message = data?.choices?.[0]?.message;
+  const args = message?.tool_calls?.[0]?.function?.arguments ?? null;
+  const rawText = extractMessageText(message?.content);
+  return { args, rawText };
+}
+
+async function coerceRawTextToToolArgs(rawText: string, tool: Tool): Promise<{ ok: true; data: any } | { ok: false; error: string }> {
+  const direct = parseStructuredContentToArgs(rawText, tool);
+  if (direct) return { ok: true, data: direct };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45_000);
+
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        max_tokens: 3000,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Transforme a saída abaixo nos argumentos exatos da função indicada. Preserve o conteúdo original. Se o texto já for a resposta final de uma seção, mapeie-o para o campo correto do schema.",
+          },
+          {
+            role: "user",
+            content: `Função alvo: ${tool.function.name}\nSchema esperado:\n${JSON.stringify(tool.function.parameters)}\n\nSaída original:\n${rawText}`,
+          },
+        ],
+        tools: [tool],
+        tool_choice: { type: "function", function: { name: tool.function.name } },
+      }),
+    });
+
+    clearTimeout(timer);
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      return { ok: false, error: `Fallback AI ${resp.status}: ${txt.slice(0, 300)}` };
+    }
+
+    const data = await resp.json();
+    const extracted = extractToolArgs(data);
+    if (extracted.args) {
+      return {
+        ok: true,
+        data: typeof extracted.args === "string" ? JSON.parse(extracted.args) : extracted.args,
+      };
+    }
+
+    const parsed = parseStructuredContentToArgs(extracted.rawText, tool);
+    if (parsed) return { ok: true, data: parsed };
+
+    return { ok: false, error: "AI returned no tool_call after fallback coercion" };
+  } catch (e) {
+    clearTimeout(timer);
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
 async function callJson(opts: {
   system: string;
   user: string;
@@ -66,16 +215,25 @@ async function callJson(opts: {
       return { ok: false, status: resp.status, error: `AI ${resp.status}: ${txt.slice(0, 300)}` };
     }
     const data = await resp.json();
-    const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-    if (!args) {
-      const content = data.choices?.[0]?.message?.content;
-      if (typeof content === "string") {
-        const m = content.match(/\{[\s\S]*\}/);
-        if (m) return { ok: true, data: JSON.parse(m[0]) };
-      }
-      return { ok: false, error: "AI returned no tool_call" };
+    const extracted = extractToolArgs(data);
+    if (extracted.args) {
+      return { ok: true, data: typeof extracted.args === "string" ? JSON.parse(extracted.args) : extracted.args };
     }
-    return { ok: true, data: typeof args === "string" ? JSON.parse(args) : args };
+
+    const direct = parseStructuredContentToArgs(extracted.rawText, opts.tool);
+    if (direct) {
+      return { ok: true, data: direct };
+    }
+
+    const recovered = await coerceRawTextToToolArgs(extracted.rawText, opts.tool);
+    if (recovered.ok) {
+      return recovered;
+    }
+
+    return {
+      ok: false,
+      error: recovered.error || `AI returned no tool_call (${extracted.rawText.slice(0, 160)})`,
+    };
   } catch (e) {
     clearTimeout(timer);
     return { ok: false, error: (e as Error).message };
