@@ -135,14 +135,21 @@ PERSONAGENS = TESTEMUNHAS TÉCNICAS (NÃO É O RÉU):
 EXIGÊNCIAS DE EXTENSÃO E PROFUNDIDADE (REGRA DE OURO)
 ═══════════════════════════════════════════════════════════
 
-CADA depoimento (réu, vítima, testemunhas se houver) deve ter NO MÍNIMO 600 palavras, em primeira pessoa, com:
-- Contexto pessoal e profissional
-- Cronologia detalhada do dia/turno (horários precisos)
-- Diálogos reproduzidos entre as partes
-- Justificativas técnicas com citação de protocolos institucionais (mesmo que fictícios mas plausíveis: "Protocolo POP-ENF-024", "Diretriz SBC 2023", "Bula RDC 67/2007")
-- Sentimentos, impressões, estado emocional
-- Reconhecimento de limitações + autodefesa
-- Easter eggs propositais: contradições sutis com outros documentos do processo
+CADA depoimento (réu, vítima, testemunhas se houver) deve ter NO MÍNIMO 700 palavras REAIS ESCRITAS (não rótulo "[700 palavras]"), em primeira pessoa, e seguir OBRIGATORIAMENTE esta estrutura interna em vários parágrafos longos:
+1. Apresentação pessoal e profissional (formação, tempo de atuação, vínculo institucional, registro profissional fictício).
+2. Como tomou conhecimento do caso e qual era seu papel naquele turno/contexto.
+3. CRONOLOGIA HORA A HORA do dia dos fatos, com horários específicos (06h45, 07h10, 07h32, 09h15...) — pelo menos 8 marcos temporais.
+4. DIÁLOGOS reproduzidos entre as partes ("Ela me disse: '...'. Eu respondi: '...'") — pelo menos 4 diálogos transcritos.
+5. Justificativas técnicas detalhadas com citação de protocolos institucionais fictícios mas plausíveis ("Protocolo POP-ENF-024", "Diretriz SBC 2023", "RDC nº 67/2007 da ANVISA", "Manual de Antimicrobianos do Hospital, edição 2022").
+6. Estado emocional, dúvidas, hesitações vividas no momento.
+7. Reconhecimento de limitações + autodefesa argumentada.
+8. EASTER EGGS propositais: contradições sutis com outros documentos do processo (ex.: cita um horário que diverge da nota de enfermagem; menciona uma alergia que não consta no prontuário; afirma ter conferido um exame que ainda não tinha sido liberado).
+
+PROIBIÇÕES ABSOLUTAS para depoimentos:
+- NUNCA escreva um depoimento curto, com 1-3 parágrafos genéricos. Isso INVALIDA TODA A ATIVIDADE.
+- NUNCA resuma. Se o depoimento couber em 200 palavras, você falhou.
+- Cada depoimento deve ter PELO MENOS 6 parágrafos longos e densos.
+- Use linguagem profissional típica da categoria do depoente, com termos técnicos da profissão.
 
 O PRONTUÁRIO deve ser EXAUSTIVO, no padrão de prontuário hospitalar real, contendo:
 - Cabeçalho institucional com hospital fictício, CNES, endereço
@@ -333,9 +340,15 @@ Gere o processo completo, EXTENSO E PROFUNDO, em formato JSON. Lembre-se: depoim
           `[[image:${slug}]]`,
           `[[IMG:${slug}]]`,
         ];
-        const replacement = img.dataUrl
+        // Validate URL: must be a proper data:image/... URL with non-trivial payload
+        const isValidImage =
+          typeof img.dataUrl === "string" &&
+          /^data:image\/(png|jpe?g|webp);base64,/.test(img.dataUrl) &&
+          img.dataUrl.length > 500;
+
+        const replacement = isValidImage
           ? `\n\n![${img.title || slug}](${img.dataUrl})\n\n*${img.caption || img.title || ""}*\n\n`
-          : `\n\n> _Imagem indisponível: ${img.title || slug}_\n\n`;
+          : `\n\n> ⚠️ _Imagem de exame não pôde ser gerada (${img.title || slug}). Considere o laudo escrito acima._\n\n`;
         for (const pat of anchorPatterns) {
           // Replace all occurrences of the literal anchor
           content = content.split(pat).join(replacement);

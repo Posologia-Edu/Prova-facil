@@ -198,11 +198,29 @@ export default function MockTrialJudge() {
   useEffect(() => {
     const loadSession = async () => {
       if (!selectedCaseId) return;
-      const { data } = await supabase.from("mock_trial_sessions").select("*").eq("case_id", selectedCaseId).maybeSingle();
+      const { data, error } = await supabase
+        .from("mock_trial_sessions")
+        .select("*")
+        .eq("case_id", selectedCaseId)
+        .maybeSingle();
+      if (error) {
+        console.error("loadSession select error:", error);
+        toast.error("Erro ao carregar sessão: " + error.message);
+        return;
+      }
       if (data) {
         setSession(data);
       } else {
-        const { data: newSession } = await supabase.from("mock_trial_sessions").insert({ case_id: selectedCaseId }).select().single();
+        const { data: newSession, error: insErr } = await supabase
+          .from("mock_trial_sessions")
+          .insert({ case_id: selectedCaseId })
+          .select()
+          .single();
+        if (insErr) {
+          console.error("loadSession insert error:", insErr);
+          toast.error("Não foi possível criar a sessão: " + insErr.message);
+          return;
+        }
         setSession(newSession);
       }
     };
@@ -263,19 +281,34 @@ export default function MockTrialJudge() {
   }, [isRunning]);
 
   const startPhase = useCallback(async (phaseKey: string) => {
-    if (!session?.id) return;
+    if (!session?.id) {
+      toast.error("Sessão ainda não foi criada para este processo.");
+      return false;
+    }
     const phase = PHASES.find(p => p.key === phaseKey);
     alertPlayedRef.current = false;
-    await supabase.from("mock_trial_sessions").update({
-      status: phaseKey,
-      current_phase_started_at: new Date().toISOString(),
-      phase_duration_seconds: phase?.duration || 0,
-    }).eq("id", session.id);
+    const { data, error } = await supabase
+      .from("mock_trial_sessions")
+      .update({
+        status: phaseKey,
+        current_phase_started_at: new Date().toISOString(),
+        phase_duration_seconds: phase?.duration || 0,
+      })
+      .eq("id", session.id)
+      .select()
+      .single();
+    if (error) {
+      console.error("startPhase error:", error);
+      toast.error("Não foi possível atualizar a fase: " + error.message);
+      return false;
+    }
+    if (data) setSession(data);
+    return true;
   }, [session?.id]);
 
   const startSession = async () => {
-    await startPhase("announcement");
-    toast.success("Sessão iniciada! Apenas os grupos participantes verão o processo.");
+    const ok = await startPhase("announcement");
+    if (ok) toast.success("Sessão iniciada! Apenas os grupos participantes verão o processo.");
   };
 
   const finishSession = async () => {
