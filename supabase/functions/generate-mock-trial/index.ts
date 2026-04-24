@@ -484,11 +484,24 @@ REGRAS FINAIS:
 - Toda imagem listada em image_attachments DEVE ter seu anchor presente no process_content.
 - AUTOVERIFICAÇÃO antes de retornar: revise o process_content e confirme que NÃO há nenhum texto entre colchetes que descreva o que deveria estar ali (ex: "[Mínimo X palavras]", "[Conforme...]", "[...]"). Se encontrar, REESCREVA aquela seção com o conteúdo real.`;
 
-    const userPrompt = `Objetivos de Aprendizagem: ${learningObjectives || "Não especificados"}
-Número do Processo: ${caseNumber || "001/2025"}
-${extractedPdfText ? `\nConteúdo de referência da aula (PDF):\n${extractedPdfText}` : ""}
+    const userPrompt = `**Objetivos de Aprendizagem:** ${learningObjectives || "Não especificados"}
+**Número do Processo:** ${caseNumber || "001/2025"}
+${extractedPdfText ? `\n**Conteúdo de referência da aula (PDF):**\n${extractedPdfText}` : ""}
 
-Gere o processo completo, EXTENSO E PROFUNDO, em formato JSON. Lembre-se: depoimentos longos, prontuário exaustivo, exames com tabelas completas, easter eggs, plot twist na evolução, e 1-3 imagens médicas anexadas com anchors [[IMAGE:slug]].`;
+Gere AGORA o processo completo seguindo EXATAMENTE o padrão-ouro de qualidade descrito no system prompt. Antes de finalizar, faça uma autoverificação:
+
+✅ O "Relato dos Fatos" tem nome real do paciente, data específica, comorbidade nominada, conduta nominal, desfecho explícito? (mínimo 200 palavras)
+✅ A "Fundamentação Jurídica" transcreve o TEXTO de cada artigo do Código Penal e cita o Código de Ética da profissão CORRETA do réu? (não apenas lista número)
+✅ A "Denúncia" abre com vocativo formal "Excelentíssimo Senhor Juiz...", qualifica o réu com nome+registro, lista fatos em bullets cronológicos datados, e termina com pedido condenatório + "Nestes termos, Pede deferimento" + cidade/data?
+✅ Cada Depoimento tem 600+ palavras, abre com "Eu, [nome completo], [registro], venho por meio deste prestar meu depoimento no processo nº ...", narra cronologia hora a hora, contém diálogos transcritos, cita protocolos institucionais e termina com assinatura formal?
+✅ O Prontuário tem identificação completa, alergias destacadas, exame físico por sistema com sinais vitais, tabelas Markdown de exames, mínimo 5 evoluções DATADAS, notas de enfermagem, plot twist clínico?
+✅ Os Laudos Laboratoriais têm cabeçalho de laboratório fictício, tabela completa de antibiograma com Concentração/Resultado/Interpretação, responsável técnico nominado?
+✅ A Perícia Técnica tem 800+ palavras, qualifica o perito (nome+registro+especialidade DA MESMA PROFISSÃO DO RÉU), lista quesitos numerados, cita literatura real (Mandell/Harrison/Goodman&Gilman/diretrizes), responde cada quesito na conclusão?
+✅ Existem 8-12 EASTER EGGS distribuídos (contradições sutis entre depoimentos e prontuário, horários conflitantes, alergias omitidas, doses erradas, assinaturas ausentes)?
+✅ Existe um PLOT TWIST clínico real na evolução do paciente?
+✅ NENHUM colchete-instrução restante? (apenas [[IMAGE:slug]] permitido)
+
+Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
 
     const { response } = await callAiWithFallback({
       messages: [
@@ -496,6 +509,7 @@ Gere o processo completo, EXTENSO E PROFUNDO, em formato JSON. Lembre-se: depoim
         { role: "user", content: userPrompt },
       ],
       model: "google/gemini-2.5-pro",
+      reasoning: { effort: "high" },
       tools: [
         {
           type: "function",
