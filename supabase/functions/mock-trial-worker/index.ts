@@ -285,12 +285,23 @@ function buildBlueprintPrompt(objectives: string, caseNumber: string, pdfContent
 
 Você está PLANEJANDO um processo judicial simulado. NÃO escreva o processo agora — apenas planeje sua estrutura completa, em uma única chamada de função estruturada.
 
-OBJETIVOS DE APRENDIZAGEM: ${objectives || "(não especificados)"}
+==== OBJETIVOS DE APRENDIZAGEM (REGRA INVIOLÁVEL) ====
+${objectives || "(não especificados)"}
+==== FIM DOS OBJETIVOS ====
+
+REGRA CRÍTICA #1: O caso clínico DEVE versar EXATAMENTE sobre o conteúdo descrito nos objetivos acima. O quadro clínico da vítima, o medicamento/procedimento envolvido, a especialidade do réu e o erro técnico discutido PRECISAM corresponder literalmente ao tema dos objetivos. PROIBIDO inventar um caso de tema diferente (ex.: se o objetivo fala em "fosfomicina/pielonefrite/diabético", o caso PRECISA ser sobre infecção urinária alta tratada com fosfomicina em paciente diabético — JAMAIS sobre odontologia estética, harmonização orofacial, cirurgia plástica ou qualquer outro tema não citado).
+
+REGRA CRÍTICA #2: O title DEVE conter, em linguagem natural, a doença/medicamento/procedimento citado nos objetivos. Exemplos: "Ação Penal Pública: Falha terapêutica com Fosfomicina em pielonefrite de paciente diabético". NUNCA use títulos genéricos tipo "A aventura de X em ...".
+
+REGRA CRÍTICA #3: A profissão do réu deve ser COMPATÍVEL com o tema. Tema clínico/farmacológico → médico, farmacêutico, enfermeiro. Tema odontológico → dentista. Tema fisioterápico → fisioterapeuta. Etc. NÃO escolha uma profissão aleatória.
+
+REGRA CRÍTICA #4: planned_image_attachments é OBRIGATÓRIO conter EXATAMENTE 2 a 3 imagens médicas pertinentes ao tema (ex.: ultrassom renal, urocultura, tomografia de abdome para pielonefrite). NUNCA retorne array vazio.
+
 NÚMERO DO PROCESSO: ${caseNumber}
 ${pdfContent ? `\nMATERIAL DE REFERÊNCIA (PDF da aula):\n${pdfContent.slice(0, 6000)}` : ""}
 
 Defina:
-- title (título completo do processo, ex.: "Ação Penal Pública: Negligência ...")
+- title (título completo do processo, OBRIGATORIAMENTE alinhado aos objetivos acima — ex.: "Ação Penal Pública: Negligência terapêutica no manejo de pielonefrite com Fosfomicina")
 - university, faculty (Faculdade fictícia mas plausível, com curso correspondente à profissão do réu), city
 - case_summary (5-10 linhas descrevendo o caso clínico-jurídico)
 - defendant: nome completo, profissão, conselho/registro fictício (ex.: CRM 12345), local de trabalho, especialidade
