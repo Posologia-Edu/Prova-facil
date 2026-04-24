@@ -26,6 +26,7 @@ import { MockTrialCaseBankDialog } from "@/components/mock-trial/MockTrialCaseBa
 import { CaseImagesPanel } from "@/components/mock-trial/CaseImagesPanel";
 import { WitnessesEditor } from "@/components/mock-trial/WitnessesEditor";
 import { InlineEditInput } from "@/components/mock-trial/InlineEditInput";
+import { MockTrialSectionsBuilder } from "@/components/mock-trial/MockTrialSectionsBuilder";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
@@ -190,6 +191,8 @@ export default function MockTrialEditor() {
   const [aiObjectives, setAiObjectives] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiPdfFile, setAiPdfFile] = useState<File | null>(null);
+  const [aiMode, setAiMode] = useState<"skeleton" | "full">("skeleton");
+  const [skeletonCaseId, setSkeletonCaseId] = useState<string | null>(null);
   const [aiPdfExtracting, setAiPdfExtracting] = useState(false);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
   const [editingCaseContent, setEditingCaseContent] = useState("");
@@ -390,6 +393,51 @@ export default function MockTrialEditor() {
       toast.error("Informe os objetivos ou envie um PDF");
       return;
     }
+
+    // SKELETON MODE: criar caso vazio e gerar esqueleto por partes
+    if (aiMode === "skeleton") {
+      setAiGenerating(true);
+      try {
+        const caseNumber = `${String(cases.length + 1).padStart(3, "0")}/${new Date().getFullYear()}`;
+        // Cria o case row primeiro
+        const { data: newCase, error: insErr } = await supabase
+          .from("mock_trial_cases")
+          .insert({
+            mock_trial_id: id!,
+            position: cases.length,
+            case_number: caseNumber,
+            title: "Gerando esqueleto…",
+            learning_objectives: aiObjectives,
+            generation_status: "skeleton_generating",
+          })
+          .select()
+          .single();
+        if (insErr || !newCase) throw new Error(insErr?.message || "Erro ao criar processo");
+
+        const { data, error } = await supabase.functions.invoke("mock-trial-skeleton", {
+          body: {
+            caseId: newCase.id,
+            learningObjectives: aiObjectives,
+            caseNumber,
+          },
+        });
+        if (error || !data?.ok) {
+          throw new Error(error?.message || data?.error || "Falha ao gerar esqueleto");
+        }
+        toast.success("Esqueleto gerado — agora gere cada parte individualmente");
+        setAiDialogOpen(false);
+        setAiObjectives("");
+        setSkeletonCaseId(newCase.id);
+        await refetchCases();
+      } catch (e: any) {
+        toast.error(e.message || "Erro ao gerar esqueleto");
+      } finally {
+        setAiGenerating(false);
+      }
+      return;
+    }
+
+    // FULL MODE (legado): geração tudo-de-uma-vez
     setAiGenerating(true);
     try {
       let pdfContent: string | undefined;
@@ -766,7 +814,18 @@ export default function MockTrialEditor() {
                     );
                   }}
                 />
-                {c.process_content && (
+                {Array.isArray(c.sections_json) && c.sections_json.length > 0 && (
+                  <MockTrialSectionsBuilder
+                    caseId={c.id}
+                    sections={c.sections_json as any}
+                    onChange={(updated) => {
+                      queryClient.setQueryData(["mock-trial-cases", id], (curr: any[] | undefined) =>
+                        curr?.map(x => x.id === c.id ? { ...x, sections_json: updated } : x) || []
+                      );
+                    }}
+                  />
+                )}
+                {c.process_content && (!Array.isArray(c.sections_json) || c.sections_json.length === 0) && (
                   <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{c.process_content.substring(0, 200)}...</p>
                 )}
                 <CaseImagesPanel caseId={c.id} />
@@ -781,6 +840,24 @@ export default function MockTrialEditor() {
                 <DialogTitle>Gerar Processo com IA</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAiMode("skeleton")}
+                    className={`text-left rounded-lg border p-3 text-xs transition-colors ${aiMode === "skeleton" ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                  >
+                    <p className="font-semibold mb-1">📋 Por Partes (recomendado)</p>
+                    <p className="text-muted-foreground">Gera o esqueleto com 10 seções. Você gera cada parte completa individualmente, garantindo qualidade.</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiMode("full")}
+                    className={`text-left rounded-lg border p-3 text-xs transition-colors ${aiMode === "full" ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                  >
+                    <p className="font-semibold mb-1">⚡ Tudo de Uma Vez (legado)</p>
+                    <p className="text-muted-foreground">Geração única em background. Mais rápido, mas pode falhar ou fugir do tema.</p>
+                  </button>
+                </div>
                 <div>
                   <Label>Objetivos de Aprendizagem</Label>
                   <Textarea value={aiObjectives} onChange={e => setAiObjectives(e.target.value)} placeholder="Descreva os objetivos de aprendizagem para o caso clínico..." rows={4} />
@@ -820,7 +897,7 @@ export default function MockTrialEditor() {
                   </div>
                 </div>
                 <Button onClick={generateWithAI} disabled={aiGenerating || !!activeJobId || (!aiObjectives.trim() && !aiPdfFile)} className="w-full">
-                  {aiGenerating || activeJobId ? "Gerando…" : "Gerar Processo"}
+                  {aiGenerating ? "Gerando…" : aiMode === "skeleton" ? "Gerar Esqueleto (10 partes)" : "Gerar Processo Completo"}
                   <Sparkles className="h-4 w-4 ml-2" />
                 </Button>
               </div>

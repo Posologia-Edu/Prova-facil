@@ -2226,6 +2226,7 @@ export type Database = {
           mock_trial_id: string
           position: number
           process_content: string | null
+          sections_json: Json
           title: string
         }
         Insert: {
@@ -2238,6 +2239,7 @@ export type Database = {
           mock_trial_id: string
           position?: number
           process_content?: string | null
+          sections_json?: Json
           title?: string
         }
         Update: {
@@ -2250,6 +2252,7 @@ export type Database = {
           mock_trial_id?: string
           position?: number
           process_content?: string | null
+          sections_json?: Json
           title?: string
         }
         Relationships: [
