@@ -405,6 +405,7 @@ const BLUEPRINT_TOOL: Tool = {
         },
         planned_image_attachments: {
           type: "array",
+          minItems: 2,
           maxItems: 3,
           items: {
             type: "object",
@@ -433,6 +434,7 @@ const BLUEPRINT_TOOL: Tool = {
         "legal_framework",
         "planned_annexes",
         "planned_witnesses",
+        "planned_image_attachments",
         "easter_eggs",
         "plot_twist",
       ],
