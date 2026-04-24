@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvaluationForm";
 import { consolidateScores } from "@/lib/mock-trial-evaluations";
-import { formatGroupLabel } from "@/pages/MockTrialJudge";
+import { formatGroupLabel } from "@/lib/mock-trial-utils";
 
 interface Props {
   cases: any[];
