@@ -271,12 +271,12 @@ export function ResultsPanel(props: Props) {
                           <Badge className="text-base px-3 py-1">{Number(e.score).toFixed(1)}/10</Badge>
                         </div>
                       </div>
-                      {e.feedback && (
-                        <p className="text-sm text-muted-foreground bg-muted/40 p-2 rounded">
-                          {e.feedback}
-                        </p>
-                      )}
-                      <EditableScore evaluationId={e.id} currentScore={Number(e.score)} onSaved={onRefresh} />
+                      <EditableAiEvaluation
+                        evaluationId={e.id}
+                        currentScore={Number(e.score)}
+                        currentFeedback={e.feedback || ""}
+                        onSaved={onRefresh}
+                      />
                     </div>
                   );
                 })
