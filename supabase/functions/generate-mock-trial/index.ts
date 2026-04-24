@@ -600,7 +600,7 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
       reasoning: {
         effort: "medium",
       },
-      max_completion_tokens: 12000,
+      max_tokens: 12000,
       tools: [
         {
           type: "function",
