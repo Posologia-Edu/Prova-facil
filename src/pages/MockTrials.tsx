@@ -191,6 +191,8 @@ export default function MockTrials() {
       setDuplicating(null);
     }
   };
+
+  const statusLabels: Record<string, string> = {
     draft: "Rascunho",
     active: "Ativo",
     finished: "Finalizado",
