@@ -98,6 +98,8 @@ export default function MockTrialJudge() {
   const [cases, setCases] = useState<any[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [session, setSession] = useState<any>(null);
+  const [evaluationForms, setEvaluationForms] = useState<any[]>([]);
+  const [evaluations, setEvaluations] = useState<any[]>([]);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
