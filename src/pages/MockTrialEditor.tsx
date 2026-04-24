@@ -814,7 +814,18 @@ export default function MockTrialEditor() {
                     );
                   }}
                 />
-                {c.process_content && (
+                {Array.isArray(c.sections_json) && c.sections_json.length > 0 && (
+                  <MockTrialSectionsBuilder
+                    caseId={c.id}
+                    sections={c.sections_json as any}
+                    onChange={(updated) => {
+                      queryClient.setQueryData(["mock-trial-cases", id], (curr: any[] | undefined) =>
+                        curr?.map(x => x.id === c.id ? { ...x, sections_json: updated } : x) || []
+                      );
+                    }}
+                  />
+                )}
+                {c.process_content && (!Array.isArray(c.sections_json) || c.sections_json.length === 0) && (
                   <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{c.process_content.substring(0, 200)}...</p>
                 )}
                 <CaseImagesPanel caseId={c.id} />
