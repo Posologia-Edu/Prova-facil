@@ -129,6 +129,19 @@ export default function MockTrialJudge() {
       .eq("access_code", accessCode!)
       .single();
     if (!t) { toast.error("Júri não encontrado"); return; }
+
+    // Verify judge name matches what the teacher configured (case/spacing-insensitive)
+    const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+    const expected = (t.judge_name || "").trim();
+    if (!expected) {
+      toast.error("Este Júri Simulado ainda não tem um juiz cadastrado pelo professor.");
+      return;
+    }
+    if (normalize(expected) !== normalize(name)) {
+      toast.error("Nome não corresponde ao juiz cadastrado para este júri.");
+      return;
+    }
+
     setTrial(t);
 
     const { data: c } = await supabase.from("mock_trial_cases").select("*").eq("mock_trial_id", t.id).order("position");
@@ -348,6 +361,9 @@ export default function MockTrialJudge() {
             <div>
               <Label>Nome do(a) Juiz(a)</Label>
               <Input value={judgeName} onChange={e => setJudgeName(e.target.value)} placeholder="Seu nome" />
+              <p className="text-xs text-muted-foreground mt-1">
+                O nome deve ser exatamente o mesmo cadastrado pelo professor para este Júri.
+              </p>
             </div>
             <Button onClick={() => authenticateJudge(judgeName)} className="w-full">Entrar como Juiz</Button>
           </CardContent>

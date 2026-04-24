@@ -389,6 +389,24 @@ export default function MockTrialEditor() {
     refetchStudents();
   };
 
+  const deleteGroup = async (groupId: string) => {
+    const grp = groups.find(g => g.id === groupId);
+    const studentCount = students.filter(s => s.group_id === groupId).length;
+    const confirmMsg = studentCount > 0
+      ? `Excluir "${grp?.name}"? Os ${studentCount} aluno(s) deste grupo também serão removidos e as distribuições do grupo serão apagadas.`
+      : `Excluir "${grp?.name}"? Distribuições associadas serão apagadas.`;
+    if (!window.confirm(confirmMsg)) return;
+    // Cascade manually: students, assignments, then group
+    await supabase.from("mock_trial_students").delete().eq("group_id", groupId);
+    await supabase.from("mock_trial_assignments").delete().eq("group_id", groupId);
+    const { error } = await supabase.from("mock_trial_groups").delete().eq("id", groupId);
+    if (error) { toast.error("Erro ao excluir grupo: " + error.message); return; }
+    toast.success("Grupo excluído");
+    refetchGroups();
+    refetchStudents();
+    refetchAssignments();
+  };
+
   // DISTRIBUTION
   const generateAutoDistribution = async () => {
     if (groups.length < 3 || cases.length === 0) {
@@ -700,8 +718,21 @@ export default function MockTrialEditor() {
               return (
                 <Card key={g.id}>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{g.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{groupStudents.length} aluno(s)</p>
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-sm truncate">{g.name}</CardTitle>
+                        <p className="text-xs text-muted-foreground">{groupStudents.length} aluno(s)</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => deleteGroup(g.id)}
+                        title="Excluir grupo"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {groupStudents.map(s => (
