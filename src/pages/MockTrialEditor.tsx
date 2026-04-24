@@ -651,6 +651,15 @@ export default function MockTrialEditor() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Banco de Processos */}
+          <MockTrialCaseBankDialog
+            open={bankOpen}
+            onOpenChange={setBankOpen}
+            mockTrialId={id!}
+            nextPosition={cases.length}
+            onImported={() => refetchCases()}
+          />
         </TabsContent>
 
         {/* GRUPOS TAB */}
