@@ -191,6 +191,8 @@ export default function MockTrialEditor() {
   const [aiObjectives, setAiObjectives] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiPdfFile, setAiPdfFile] = useState<File | null>(null);
+  const [aiMode, setAiMode] = useState<"skeleton" | "full">("skeleton");
+  const [skeletonCaseId, setSkeletonCaseId] = useState<string | null>(null);
   const [aiPdfExtracting, setAiPdfExtracting] = useState(false);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
   const [editingCaseContent, setEditingCaseContent] = useState("");
