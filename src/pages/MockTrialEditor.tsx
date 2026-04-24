@@ -311,8 +311,29 @@ export default function MockTrialEditor() {
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [jobProgress, setJobProgress] = useState<any>(null);
 
+  // On mount / trial change: resume tracking any in-flight job for this trial
   useEffect(() => {
-    if (!activeJobId) return;
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("mock_trial_generation_jobs")
+        .select("*")
+        .eq("mock_trial_id", id)
+        .in("status", ["queued", "planning", "generating_section", "generating_annex", "assembling"])
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (cancelled) return;
+      const job = (data || [])[0];
+      if (job) {
+        setActiveJobId(job.id);
+        setJobProgress(job);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+
     let cancelled = false;
     const fetchJob = async () => {
       const { data } = await (supabase as any)
