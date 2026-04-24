@@ -25,6 +25,7 @@ import { ResultsPanel } from "@/components/mock-trial/ResultsPanel";
 import { MockTrialCaseBankDialog } from "@/components/mock-trial/MockTrialCaseBankDialog";
 import { CaseImagesPanel } from "@/components/mock-trial/CaseImagesPanel";
 import { WitnessesEditor } from "@/components/mock-trial/WitnessesEditor";
+import { InlineEditInput } from "@/components/mock-trial/InlineEditInput";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
