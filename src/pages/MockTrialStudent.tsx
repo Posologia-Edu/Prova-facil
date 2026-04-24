@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Gavel, FileText, ClipboardList, Users } from "lucide-react";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
+import { LegalProcessRenderer } from "@/components/mock-trial/LegalProcessRenderer";
 
 const PHASE_LABELS: Record<string, string> = {
   pending: "Aguardando início",
@@ -250,26 +251,29 @@ export default function MockTrialStudent() {
           </TabsList>
 
           <TabsContent value="process">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{selectedCase?.title} — Processo nº {selectedCase?.case_number}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-sm max-w-none whitespace-pre-wrap text-foreground">
-                  {selectedCase?.process_content || "Conteúdo do processo não disponível"}
-                </div>
-              </CardContent>
-            </Card>
+            <LegalProcessRenderer
+              content={selectedCase?.process_content || "Conteúdo do processo não disponível"}
+              caseNumber={selectedCase?.case_number}
+              title={selectedCase?.title}
+            />
           </TabsContent>
 
           {myCharacters.length > 0 && (
             <TabsContent value="characters">
+              <Card className="mb-4 border-dashed bg-muted/30">
+                <CardContent className="py-3 text-xs text-muted-foreground">
+                  <strong className="text-foreground">Testemunha técnica:</strong> este personagem NÃO é o réu.
+                  Trata-se de um(a) profissional convocado(a) pela {myRole === "prosecution" ? "acusação" : "defesa"} para
+                  prestar depoimento técnico e fortalecer a argumentação do seu grupo. Estude as instruções e use
+                  estrategicamente durante o júri.
+                </CardContent>
+              </Card>
               {myCharacters.map((char: any, idx: number) => (
                 <Card key={idx} className="mb-4">
                   <CardHeader>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant={char.side === "prosecution" ? "destructive" : "default"}>
-                        {char.side === "prosecution" ? "Acusação" : "Defesa"}
+                        Testemunha da {char.side === "prosecution" ? "Acusação" : "Defesa"}
                       </Badge>
                       <CardTitle className="text-base">{char.name}</CardTitle>
                     </div>
