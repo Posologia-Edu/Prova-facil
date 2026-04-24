@@ -2111,6 +2111,48 @@ export type Database = {
           },
         ]
       }
+      mock_trial_case_bank: {
+        Row: {
+          case_number: string | null
+          characters_json: Json
+          created_at: string
+          id: string
+          learning_objectives: string | null
+          process_content: string
+          source_case_id: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_number?: string | null
+          characters_json?: Json
+          created_at?: string
+          id?: string
+          learning_objectives?: string | null
+          process_content?: string
+          source_case_id?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_number?: string | null
+          characters_json?: Json
+          created_at?: string
+          id?: string
+          learning_objectives?: string | null
+          process_content?: string
+          source_case_id?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mock_trial_cases: {
         Row: {
           case_number: string
