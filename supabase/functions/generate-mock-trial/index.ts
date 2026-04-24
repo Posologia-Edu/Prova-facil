@@ -40,7 +40,7 @@ Gere um processo jurídico simulado completo no seguinte formato JSON:
 
 {
   "title": "Título do caso (nome do paciente fictício)",
-  "process_content": "Texto completo do processo em Markdown incluindo: Cabeçalho do Tribunal, Número do Processo, Ação Penal, Relato dos Fatos, Fundamentação Jurídica, Denúncia, Lista de Provas, Anexo 1 (Depoimento do Médico), Anexo 2 (Prontuário Médico), Anexo 3 (Laudo Pericial), Anexo 4 (Depoimento do Paciente), Anexo 5 (Laudos de Exames)",
+  "process_content": "Texto completo do processo em Markdown contendo OBRIGATORIAMENTE TODAS as seções a seguir, nesta ordem e com estes títulos exatos em Markdown:\n\n# PROCESSO CLÍNICO [número]\n\n## CABEÇALHO DO TRIBUNAL\n(Tribunal de Justiça do Estado, Vara, Comarca)\n\n## NÚMERO DO PROCESSO\n\n## AÇÃO PENAL\n(Ex.: Ação Penal por Erro Médico)\n\n## RELATO DOS FATOS\n(Narrativa detalhada do caso clínico — paciente, contexto, conduta médica adotada, desfecho)\n\n## FUNDAMENTAÇÃO JURÍDICA\n(Artigos do Código Penal, Código de Ética Médica, CDC quando aplicável)\n\n## DENÚNCIA\n(Texto formal da denúncia do Ministério Público)\n\n## LISTA DE PROVAS\n(Numerada: prontuário, laudos, depoimentos, exames)\n\n## ANEXO 1 — DEPOIMENTO DO MÉDICO\n## ANEXO 2 — PRONTUÁRIO MÉDICO\n## ANEXO 3 — LAUDO PERICIAL\n## ANEXO 4 — DEPOIMENTO DO PACIENTE (ou familiares)\n## ANEXO 5 — LAUDOS DE EXAMES\n\n---\n\n## ARGUMENTAÇÃO A SER AVALIADA PELO JÚRI\n\n### Pela Acusação\n- (4 a 6 bullets com argumentos clínicos/científicos específicos que a acusação deve sustentar — riscos não mitigados, diretrizes descumpridas, complicações possíveis)\n\n### Pela Defesa\n- (4 a 6 bullets com argumentos clínicos/científicos específicos que a defesa deve sustentar — racional da conduta, segurança, alternativas razoáveis)\n\n---\n\n## REFERÊNCIAS SUGERIDAS AOS JURADOS\n- (Lista de 4 a 6 referências reais e pertinentes: diretrizes, sociedades, protocolos, artigos)\n\n---\n\n## INSTRUÇÃO AOS PARTICIPANTES\nO júri deverá considerar:\n- (4 a 6 bullets sobre os critérios de julgamento: gravidade do quadro, evidências disponíveis, segurança do paciente, adequação da conduta, etc.)",
   "characters": [
     {
       "side": "defense",
@@ -59,10 +59,11 @@ Gere um processo jurídico simulado completo no seguinte formato JSON:
 
 O processo deve:
 - Ser realista e educativo
-- Conter detalhes clínicos suficientes para discussão
+- Conter detalhes clínicos suficientes para discussão (sintomas, exames, condutas, dosagens)
 - Ter fundamentação jurídica baseada no Código Penal e Código de Ética Médica
 - Gerar personagens-testemunha com profissões relacionadas ao caso
-- As instruções dos personagens devem orientar sobre como argumentar na perspectiva da especialidade`;
+- As instruções dos personagens devem orientar sobre como argumentar na perspectiva da especialidade
+- INCLUIR OBRIGATORIAMENTE, ao final do process_content, as seções "ARGUMENTAÇÃO A SER AVALIADA PELO JÚRI" (com sub-seções "Pela Acusação" e "Pela Defesa" em formato de bullets), "REFERÊNCIAS SUGERIDAS AOS JURADOS" e "INSTRUÇÃO AOS PARTICIPANTES", conforme estrutura especificada. Estas seções são essenciais para a condução do júri.`;
 
     const userPrompt = `Objetivos de Aprendizagem: ${learningObjectives || "Não especificados"}
 Número do Processo: ${caseNumber || "001/2025"}
