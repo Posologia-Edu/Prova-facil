@@ -840,6 +840,24 @@ export default function MockTrialEditor() {
                 <DialogTitle>Gerar Processo com IA</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAiMode("skeleton")}
+                    className={`text-left rounded-lg border p-3 text-xs transition-colors ${aiMode === "skeleton" ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                  >
+                    <p className="font-semibold mb-1">📋 Por Partes (recomendado)</p>
+                    <p className="text-muted-foreground">Gera o esqueleto com 10 seções. Você gera cada parte completa individualmente, garantindo qualidade.</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiMode("full")}
+                    className={`text-left rounded-lg border p-3 text-xs transition-colors ${aiMode === "full" ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                  >
+                    <p className="font-semibold mb-1">⚡ Tudo de Uma Vez (legado)</p>
+                    <p className="text-muted-foreground">Geração única em background. Mais rápido, mas pode falhar ou fugir do tema.</p>
+                  </button>
+                </div>
                 <div>
                   <Label>Objetivos de Aprendizagem</Label>
                   <Textarea value={aiObjectives} onChange={e => setAiObjectives(e.target.value)} placeholder="Descreva os objetivos de aprendizagem para o caso clínico..." rows={4} />
