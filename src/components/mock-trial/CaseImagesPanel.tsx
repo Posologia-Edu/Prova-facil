@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ImageIcon, RefreshCw, Upload, CheckCircle2, AlertTriangle, Loader2, Trash2 } from "lucide-react";
+import { ImageIcon, RefreshCw, Upload, CheckCircle2, AlertTriangle, Loader2, Trash2, Sparkles } from "lucide-react";
 
 interface CaseImage {
   id: string;
@@ -30,10 +30,12 @@ export function CaseImagesPanel({ caseId }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const newFileRef = useRef<HTMLInputElement>(null);
   const [uploadTargetId, setUploadTargetId] = useState<string | null>(null);
   const [newSlug, setNewSlug] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
+  const [creatingFromUpload, setCreatingFromUpload] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -108,7 +110,8 @@ export function CaseImagesPanel({ caseId }: Props) {
   };
 
   const addCustomImage = async () => {
-    const slug = newSlug.trim() || `img-${Math.random().toString(36).slice(2, 7)}`;
+    const slug = (newSlug.trim() || `img-${Math.random().toString(36).slice(2, 7)}`)
+      .toLowerCase().replace(/[^a-z0-9-]/g, "-");
     const { data, error } = await (supabase as any)
       .from("mock_trial_case_images")
       .insert({
@@ -130,6 +133,61 @@ export function CaseImagesPanel({ caseId }: Props) {
     if (data) regenerate(data.id);
   };
 
+  const handleCreateFromUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCreatingFromUpload(true);
+    try {
+      const slug = (newSlug.trim() || `img-${Math.random().toString(36).slice(2, 7)}`)
+        .toLowerCase().replace(/[^a-z0-9-]/g, "-");
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${caseId}/manual-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("mock-trial-images")
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("mock-trial-images").getPublicUrl(path);
+      const { data: row, error } = await (supabase as any)
+        .from("mock_trial_case_images")
+        .insert({
+          case_id: caseId,
+          slug,
+          anchor: `[[IMAGE:${slug}]]`,
+          title: newTitle.trim() || "Imagem do processo",
+          caption: "",
+          prompt: newPrompt.trim() || newTitle.trim() || slug,
+          status: "ready",
+          image_url: urlData.publicUrl,
+          storage_path: path,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Inserir âncora no conteúdo do processo se ainda não existir
+      const { data: caseRow } = await (supabase as any)
+        .from("mock_trial_cases")
+        .select("case_content")
+        .eq("id", caseId)
+        .single();
+      const content: string = caseRow?.case_content || "";
+      if (content && !content.includes(`[[IMAGE:${slug}]]`)) {
+        const updated = content + `\n\n[[IMAGE:${slug}]]\n\n`;
+        await (supabase as any).from("mock_trial_cases").update({ case_content: updated }).eq("id", caseId);
+      }
+
+      setNewSlug(""); setNewTitle(""); setNewPrompt("");
+      toast.success("Imagem enviada e vinculada ao processo");
+      load();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao enviar imagem");
+    } finally {
+      setCreatingFromUpload(false);
+      if (newFileRef.current) newFileRef.current.value = "";
+    }
+  };
+
+
   const StatusBadge = ({ status }: { status: string }) => {
     if (status === "ready") return <Badge className="bg-green-500/15 text-green-700 border-green-500/30 dark:text-green-300"><CheckCircle2 className="h-3 w-3 mr-1" />Pronta</Badge>;
     if (status === "processing") return <Badge variant="secondary"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Gerando</Badge>;
@@ -143,6 +201,10 @@ export function CaseImagesPanel({ caseId }: Props) {
         <ImageIcon className="h-4 w-4 text-primary" />
         <p className="text-sm font-medium">Imagens médicas do processo</p>
       </div>
+      <p className="text-[11px] text-muted-foreground -mt-2">
+        Cada imagem é vinculada ao processo pelo seu <code className="text-[10px]">slug</code> via âncora <code className="text-[10px]">[[IMAGE:slug]]</code>.
+        Quando o aluno ou o juiz abrir o processo, a imagem aparecerá no lugar da âncora correspondente. Aqui no editor você vê apenas o gerenciamento — a renderização final acontece no portal.
+      </p>
 
       {loading ? (
         <p className="text-xs text-muted-foreground">Carregando...</p>
@@ -190,18 +252,35 @@ export function CaseImagesPanel({ caseId }: Props) {
       )}
 
       <div className="border rounded-lg p-3 bg-muted/10 space-y-2">
-        <p className="text-xs font-medium">Adicionar imagem manualmente</p>
+        <p className="text-xs font-medium">Adicionar nova imagem ao processo</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <Input placeholder="slug (ex: rx-torax)" value={newSlug} onChange={(e) => setNewSlug(e.target.value)} />
           <Input placeholder="Título (ex: Radiografia de Tórax)" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
-          <Input placeholder="Descrição visual em inglês para a IA" value={newPrompt} onChange={(e) => setNewPrompt(e.target.value)} />
+          <Input placeholder="Descrição visual em inglês para a IA (opcional se for upload)" value={newPrompt} onChange={(e) => setNewPrompt(e.target.value)} />
         </div>
-        <Button size="sm" onClick={addCustomImage} disabled={!newTitle.trim() && !newSlug.trim()}>
-          Criar e gerar
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" onClick={addCustomImage} disabled={!newTitle.trim() && !newSlug.trim()}>
+            <Sparkles className="h-3 w-3 mr-1" />
+            Criar e gerar com IA
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => newFileRef.current?.click()}
+            disabled={creatingFromUpload}
+          >
+            <Upload className="h-3 w-3 mr-1" />
+            {creatingFromUpload ? "Enviando..." : "Criar e enviar arquivo"}
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Ao enviar um arquivo, a âncora <code className="text-[10px]">[[IMAGE:slug]]</code> será adicionada automaticamente ao final do processo, caso ainda não exista no texto.
+        </p>
       </div>
 
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleManualUpload} />
+      <input ref={newFileRef} type="file" accept="image/*" className="hidden" onChange={handleCreateFromUpload} />
     </div>
   );
 }
+
