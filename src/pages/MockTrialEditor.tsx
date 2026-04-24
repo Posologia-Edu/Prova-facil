@@ -93,18 +93,83 @@ export default function MockTrialEditor() {
     enabled: !!id,
   });
 
-  // Responses
-  const { data: responses = [] } = useQuery({
-    queryKey: ["mock-trial-responses", id],
+  // Sessions (one per case)
+  const { data: sessions = [], refetch: refetchSessions } = useQuery({
+    queryKey: ["mock-trial-sessions", id, cases.length],
+    queryFn: async () => {
+      if (cases.length === 0) return [];
+      const caseIds = cases.map(c => c.id);
+      const { data, error } = await supabase
+        .from("mock_trial_sessions")
+        .select("*")
+        .in("case_id", caseIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: cases.length > 0,
+  });
+
+  // Responses (FIX: query keyed on form ids, refetched on realtime)
+  const { data: responses = [], refetch: refetchResponses } = useQuery({
+    queryKey: ["mock-trial-responses", id, forms.map((f: any) => f.id).join(",")],
     queryFn: async () => {
       if (forms.length === 0) return [];
-      const formIds = forms.map(f => f.id);
-      const { data, error } = await supabase.from("mock_trial_responses").select("*").in("form_id", formIds).order("created_at");
+      const formIds = forms.map((f: any) => f.id);
+      const { data, error } = await supabase
+        .from("mock_trial_responses")
+        .select("*")
+        .in("form_id", formIds)
+        .order("created_at");
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: forms.length > 0,
   });
+
+  // Evaluations (judge / teacher / ai_jury)
+  const { data: evaluations = [], refetch: refetchEvaluations } = useQuery({
+    queryKey: ["mock-trial-evaluations", id, cases.length],
+    queryFn: async () => {
+      if (cases.length === 0) return [];
+      const caseIds = cases.map(c => c.id);
+      const { data, error } = await supabase
+        .from("mock_trial_evaluations")
+        .select("*")
+        .in("case_id", caseIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: cases.length > 0,
+  });
+
+  // Evaluation forms (judge / teacher templates)
+  const { data: evaluationForms = [], refetch: refetchEvaluationForms } = useQuery({
+    queryKey: ["mock-trial-evaluation-forms", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("mock_trial_evaluation_forms")
+        .select("*")
+        .eq("mock_trial_id", id!);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Realtime: refresh responses + evaluations live
+  useEffect(() => {
+    if (!id) return;
+    const ch = supabase
+      .channel(`mt-editor-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "mock_trial_responses" }, () => {
+        refetchResponses();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "mock_trial_evaluations" }, () => {
+        refetchEvaluations();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [id, refetchResponses, refetchEvaluations]);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
