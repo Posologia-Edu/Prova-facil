@@ -393,6 +393,51 @@ export default function MockTrialEditor() {
       toast.error("Informe os objetivos ou envie um PDF");
       return;
     }
+
+    // SKELETON MODE: criar caso vazio e gerar esqueleto por partes
+    if (aiMode === "skeleton") {
+      setAiGenerating(true);
+      try {
+        const caseNumber = `${String(cases.length + 1).padStart(3, "0")}/${new Date().getFullYear()}`;
+        // Cria o case row primeiro
+        const { data: newCase, error: insErr } = await supabase
+          .from("mock_trial_cases")
+          .insert({
+            mock_trial_id: id!,
+            position: cases.length,
+            case_number: caseNumber,
+            title: "Gerando esqueleto…",
+            learning_objectives: aiObjectives,
+            generation_status: "skeleton_generating",
+          })
+          .select()
+          .single();
+        if (insErr || !newCase) throw new Error(insErr?.message || "Erro ao criar processo");
+
+        const { data, error } = await supabase.functions.invoke("mock-trial-skeleton", {
+          body: {
+            caseId: newCase.id,
+            learningObjectives: aiObjectives,
+            caseNumber,
+          },
+        });
+        if (error || !data?.ok) {
+          throw new Error(error?.message || data?.error || "Falha ao gerar esqueleto");
+        }
+        toast.success("Esqueleto gerado — agora gere cada parte individualmente");
+        setAiDialogOpen(false);
+        setAiObjectives("");
+        setSkeletonCaseId(newCase.id);
+        await refetchCases();
+      } catch (e: any) {
+        toast.error(e.message || "Erro ao gerar esqueleto");
+      } finally {
+        setAiGenerating(false);
+      }
+      return;
+    }
+
+    // FULL MODE (legado): geração tudo-de-uma-vez
     setAiGenerating(true);
     try {
       let pdfContent: string | undefined;
