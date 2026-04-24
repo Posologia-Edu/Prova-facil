@@ -332,44 +332,170 @@ function ScoreBox({ icon, label, value, hint }: { icon: React.ReactNode; label: 
   );
 }
 
-function EditableScore({ evaluationId, currentScore, onSaved }: { evaluationId: string; currentScore: number; onSaved: () => void }) {
+function EditableAiEvaluation({
+  evaluationId,
+  currentScore,
+  currentFeedback,
+  onSaved,
+}: {
+  evaluationId: string;
+  currentScore: number;
+  currentFeedback: string;
+  onSaved: () => void;
+}) {
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(currentScore);
+  const [score, setScore] = useState(currentScore);
+  const [feedback, setFeedback] = useState(currentFeedback);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
     setSaving(true);
     const { error } = await supabase
       .from("mock_trial_evaluations")
-      .update({ score: value, edited_by_teacher: true })
+      .update({ score, feedback, edited_by_teacher: true })
       .eq("id", evaluationId);
     setSaving(false);
     if (error) { toast.error("Erro ao salvar"); return; }
-    toast.success("Nota da IA atualizada");
+    toast.success("Avaliação da IA atualizada");
     setEditing(false);
     onSaved();
   };
 
   if (!editing) {
     return (
-      <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-        Revisar nota
-      </Button>
+      <div className="space-y-2">
+        {currentFeedback && (
+          <div className="rounded-md border bg-muted/30 p-3">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
+              <Sparkles className="h-3 w-3" /> Feedback da IA
+            </div>
+            <p className="text-sm whitespace-pre-wrap text-foreground/90">{currentFeedback}</p>
+          </div>
+        )}
+        <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+          Revisar nota e feedback
+        </Button>
+      </div>
     );
   }
+
   return (
-    <div className="flex items-center gap-2">
-      <input
-        type="number"
-        min={0}
-        max={10}
-        step={0.1}
-        value={value}
-        onChange={e => setValue(Number(e.target.value))}
-        className="w-20 rounded border px-2 py-1 text-sm bg-background"
-      />
-      <Button size="sm" onClick={save} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
-      <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setValue(currentScore); }}>Cancelar</Button>
+    <div className="space-y-2 rounded-md border border-primary/40 bg-primary/5 p-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="text-xs font-medium text-muted-foreground">Nota (0–10):</label>
+        <input
+          type="number"
+          min={0}
+          max={10}
+          step={0.1}
+          value={score}
+          onChange={e => setScore(Number(e.target.value))}
+          className="w-24 rounded border px-2 py-1 text-sm bg-background"
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground block mb-1">Feedback:</label>
+        <textarea
+          value={feedback}
+          onChange={e => setFeedback(e.target.value)}
+          rows={5}
+          className="w-full rounded border px-2 py-1.5 text-sm bg-background resize-y"
+          placeholder="Edite o feedback da IA para refletir sua revisão..."
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" onClick={save} disabled={saving}>
+          {saving ? "Salvando..." : "Salvar revisão"}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => { setEditing(false); setScore(currentScore); setFeedback(currentFeedback); }}
+        >
+          Cancelar
+        </Button>
+      </div>
     </div>
   );
+}
+
+/**
+ * Renders student form answers in a premium, readable format
+ * (instead of raw JSON), pairing each answer with its field label.
+ */
+function PremiumAnswers({ fields, answers }: { fields: any[]; answers: Record<string, any> }) {
+  if (!fields || fields.length === 0) {
+    const entries = Object.entries(answers || {});
+    if (entries.length === 0) {
+      return <div className="px-4 py-3 text-xs text-muted-foreground italic">Sem respostas registradas.</div>;
+    }
+    return (
+      <div className="divide-y">
+        {entries.map(([k, v]) => (
+          <div key={k} className="px-4 py-3">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Resposta</div>
+            <div className="text-sm whitespace-pre-wrap text-foreground/90 bg-muted/30 rounded-md px-3 py-2 border-l-2 border-primary/40">
+              {formatAnswerValue(v)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y">
+      {fields.map((field, idx) => {
+        if (field.type === "section_header") {
+          return (
+            <div key={field.id || idx} className="px-4 py-2 bg-primary/5 border-l-4 border-primary">
+              <div className="text-sm font-semibold text-primary">{field.label}</div>
+              {field.description && (
+                <div className="text-xs text-muted-foreground mt-0.5">{field.description}</div>
+              )}
+            </div>
+          );
+        }
+        if (field.type === "image_block" || field.type === "video_block") return null;
+
+        const raw = answers?.[field.id];
+        const hasAnswer = raw !== undefined && raw !== null && raw !== "" && !(Array.isArray(raw) && raw.length === 0);
+
+        return (
+          <div key={field.id || idx} className="px-4 py-3">
+            <div className="flex items-start justify-between gap-3 mb-1.5">
+              <div className="text-sm font-medium text-foreground/90">
+                {field.label}
+                {field.required && <span className="text-destructive ml-0.5">*</span>}
+              </div>
+              {(field.type === "scale" || field.type === "rating") && hasAnswer && (
+                <Badge variant="secondary" className="font-mono text-xs shrink-0">
+                  {raw}{field.scale_max ? `/${field.scale_max}` : field.rating_max ? `/${field.rating_max}` : ""}
+                </Badge>
+              )}
+            </div>
+            {hasAnswer ? (
+              <div className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed bg-muted/30 rounded-md px-3 py-2 border-l-2 border-primary/40">
+                {formatAnswerValue(raw, field)}
+              </div>
+            ) : (
+              <div className="text-xs italic text-muted-foreground">— sem resposta —</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatAnswerValue(value: any, field?: any): string {
+  if (value == null || value === "") return "—";
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "—";
+    return value.map((v) => `• ${String(v)}`).join("\n");
+  }
+  if (typeof value === "object") {
+    try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+  }
+  return String(value);
 }
