@@ -264,13 +264,20 @@ export default function MockTrialJudge() {
       setIsRunning(false);
       return;
     }
+    if (session.is_paused) {
+      const remaining = session.paused_remaining_seconds ?? 0;
+      setTimeLeft(remaining);
+      setIsRunning(false);
+      alertPlayedRef.current = remaining <= 60;
+      return;
+    }
     const startedAt = new Date(session.current_phase_started_at).getTime();
     const elapsed = Math.floor((Date.now() - startedAt) / 1000);
     const remaining = Math.max(0, session.phase_duration_seconds - elapsed);
     setTimeLeft(remaining);
     setIsRunning(remaining > 0);
     alertPlayedRef.current = remaining <= 60;
-  }, [session?.current_phase_started_at, session?.phase_duration_seconds, session?.status]);
+  }, [session?.current_phase_started_at, session?.phase_duration_seconds, session?.status, session?.is_paused, session?.paused_remaining_seconds]);
 
   // Timer logic
   useEffect(() => {
@@ -308,7 +315,9 @@ export default function MockTrialJudge() {
         status: phaseKey,
         current_phase_started_at: new Date().toISOString(),
         phase_duration_seconds: phase?.duration || 0,
-      })
+        is_paused: false,
+        paused_remaining_seconds: null,
+      } as any)
       .eq("id", session.id)
       .select()
       .single();
@@ -332,13 +341,50 @@ export default function MockTrialJudge() {
       status: "finished",
       current_phase_started_at: null,
       phase_duration_seconds: null,
-    }).eq("id", session.id);
+      is_paused: false,
+      paused_remaining_seconds: null,
+    } as any).eq("id", session.id);
     setIsRunning(false);
     setTimeLeft(0);
-    toast.success("Sessão finalizada. O processo foi inativado para todos os grupos.");
+    toast.success("Sessão finalizada. Avançando para o próximo processo...");
+    // Auto-advance to next case
+    const idx = cases.findIndex(c => c.id === selectedCaseId);
+    if (idx >= 0 && idx < cases.length - 1) {
+      setSelectedCaseId(cases[idx + 1].id);
+    }
   };
 
-  const togglePause = () => setIsRunning(prev => !prev);
+  const togglePause = async () => {
+    if (!session?.id) return;
+    if (session.is_paused) {
+      // Resume: shift current_phase_started_at so remaining = paused_remaining_seconds
+      const remaining = session.paused_remaining_seconds ?? timeLeft;
+      const total = session.phase_duration_seconds || 0;
+      const newStartedAt = new Date(Date.now() - (total - remaining) * 1000).toISOString();
+      const { data } = await supabase
+        .from("mock_trial_sessions")
+        .update({
+          is_paused: false,
+          paused_remaining_seconds: null,
+          current_phase_started_at: newStartedAt,
+        } as any)
+        .eq("id", session.id)
+        .select()
+        .single();
+      if (data) setSession(data);
+    } else {
+      const { data } = await supabase
+        .from("mock_trial_sessions")
+        .update({
+          is_paused: true,
+          paused_remaining_seconds: timeLeft,
+        } as any)
+        .eq("id", session.id)
+        .select()
+        .single();
+      if (data) setSession(data);
+    }
+  };
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
