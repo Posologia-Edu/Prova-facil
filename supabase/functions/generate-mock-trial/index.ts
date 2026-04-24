@@ -503,13 +503,19 @@ Gere AGORA o processo completo seguindo EXATAMENTE o padrão-ouro de qualidade d
 
 Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
 
-    const { response } = await callAiWithFallback({
+    // Call Lovable AI Gateway directly to avoid the multi-provider fallback chain
+    // (which currently has an invalid Google key and Groq fails on the large tool-call output).
+    // gemini-2.5-flash returns within ~60-90s for this prompt; gemini-2.5-pro often exceeds the
+    // 150s edge-function wall clock and the gateway connection is killed.
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY não configurado");
+    }
+    const aiPayload: any = {
+      model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      model: "google/gemini-2.5-pro",
-      
       tools: [
         {
           type: "function",
@@ -556,7 +562,30 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
         },
       ],
       tool_choice: { type: "function", function: { name: "generate_mock_trial_case" } },
-    });
+    };
+
+    const aiController = new AbortController();
+    const aiTimer = setTimeout(() => aiController.abort(), 140000);
+    let response: Response;
+    try {
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        signal: aiController.signal,
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(aiPayload),
+      });
+    } catch (e) {
+      clearTimeout(aiTimer);
+      console.error("AI gateway error:", (e as Error).message);
+      return new Response(
+        JSON.stringify({ error: "A geração demorou demais. Tente novamente." }),
+        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    clearTimeout(aiTimer);
 
     if (!response.ok) {
       const errText = await response.text();
