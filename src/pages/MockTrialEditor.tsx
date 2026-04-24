@@ -20,6 +20,7 @@ import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvaluationForm";
 import { ensureEvaluationForms, consolidateScores } from "@/lib/mock-trial-evaluations";
 import { ROLE_LABELS as EVAL_ROLE_LABELS } from "@/lib/mock-trial-evaluation-templates";
+import { ResultsPanel } from "@/components/mock-trial/ResultsPanel";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
