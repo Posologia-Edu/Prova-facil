@@ -48,6 +48,12 @@ verify_jwt = false
 [functions.generate-mock-trial]
 verify_jwt = false
 
+[functions.mock-trial-job]
+verify_jwt = false
+
+[functions.mock-trial-worker]
+verify_jwt = false
+
 [functions.exam-proctoring]
 verify_jwt = false
 
