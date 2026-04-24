@@ -12,11 +12,15 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3, Upload, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3, Upload, X, Pencil, RefreshCw, CheckCircle2 } from "lucide-react";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { generateDistribution } from "@/lib/mock-trial-distribution";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
+import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvaluationForm";
+import { ensureEvaluationForms, consolidateScores } from "@/lib/mock-trial-evaluations";
+import { ROLE_LABELS as EVAL_ROLE_LABELS } from "@/lib/mock-trial-evaluation-templates";
+import { ResultsPanel } from "@/components/mock-trial/ResultsPanel";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
@@ -93,18 +97,83 @@ export default function MockTrialEditor() {
     enabled: !!id,
   });
 
-  // Responses
-  const { data: responses = [] } = useQuery({
-    queryKey: ["mock-trial-responses", id],
+  // Sessions (one per case)
+  const { data: sessions = [], refetch: refetchSessions } = useQuery({
+    queryKey: ["mock-trial-sessions", id, cases.length],
+    queryFn: async () => {
+      if (cases.length === 0) return [];
+      const caseIds = cases.map(c => c.id);
+      const { data, error } = await supabase
+        .from("mock_trial_sessions")
+        .select("*")
+        .in("case_id", caseIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: cases.length > 0,
+  });
+
+  // Responses (FIX: query keyed on form ids, refetched on realtime)
+  const { data: responses = [], refetch: refetchResponses } = useQuery({
+    queryKey: ["mock-trial-responses", id, forms.map((f: any) => f.id).join(",")],
     queryFn: async () => {
       if (forms.length === 0) return [];
-      const formIds = forms.map(f => f.id);
-      const { data, error } = await supabase.from("mock_trial_responses").select("*").in("form_id", formIds).order("created_at");
+      const formIds = forms.map((f: any) => f.id);
+      const { data, error } = await supabase
+        .from("mock_trial_responses")
+        .select("*")
+        .in("form_id", formIds)
+        .order("created_at");
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: forms.length > 0,
   });
+
+  // Evaluations (judge / teacher / ai_jury)
+  const { data: evaluations = [], refetch: refetchEvaluations } = useQuery({
+    queryKey: ["mock-trial-evaluations", id, cases.length],
+    queryFn: async () => {
+      if (cases.length === 0) return [];
+      const caseIds = cases.map(c => c.id);
+      const { data, error } = await supabase
+        .from("mock_trial_evaluations")
+        .select("*")
+        .in("case_id", caseIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: cases.length > 0,
+  });
+
+  // Evaluation forms (judge / teacher templates)
+  const { data: evaluationForms = [], refetch: refetchEvaluationForms } = useQuery({
+    queryKey: ["mock-trial-evaluation-forms", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("mock_trial_evaluation_forms")
+        .select("*")
+        .eq("mock_trial_id", id!);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Realtime: refresh responses + evaluations live
+  useEffect(() => {
+    if (!id) return;
+    const ch = supabase
+      .channel(`mt-editor-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "mock_trial_responses" }, () => {
+        refetchResponses();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "mock_trial_evaluations" }, () => {
+        refetchEvaluations();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [id, refetchResponses, refetchEvaluations]);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -129,6 +198,13 @@ export default function MockTrialEditor() {
       setJudgeName(trial.judge_name || "");
     }
   }, [trial]);
+
+  // Garantir templates de avaliação (juiz/professor)
+  useEffect(() => {
+    if (id) {
+      ensureEvaluationForms(id).then(() => refetchEvaluationForms());
+    }
+  }, [id, refetchEvaluationForms]);
 
   useEffect(() => {
     setFormDrafts((prev) => {
@@ -747,45 +823,18 @@ export default function MockTrialEditor() {
         </TabsContent>
 
         {/* RESULTADOS TAB */}
-        <TabsContent value="results" className="space-y-4">
-          {responses.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Sem respostas ainda</h3>
-                <p className="text-muted-foreground">As respostas aparecerão aqui após os alunos preencherem os formulários</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {forms.map((form: any) => {
-                const formResponses = responses.filter((r: any) => r.form_id === form.id);
-                return (
-                  <Card key={form.id}>
-                    <CardHeader>
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-base">{form.title}</CardTitle>
-                        <Badge variant="secondary">{formResponses.length} resposta(s)</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {formResponses.map((r: any) => (
-                        <div key={r.id} className="p-3 border rounded mb-2">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm font-medium">{r.student_name || "Anônimo"}</span>
-                            {r.student_email && <span className="text-xs text-muted-foreground">{r.student_email}</span>}
-                          </div>
-                          <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-                            {JSON.stringify(r.response_json, null, 2)}
-                          </pre>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+        <TabsContent value="results" className="space-y-6">
+          <ResultsPanel
+            cases={cases}
+            groups={groups}
+            assignments={assignments}
+            forms={forms}
+            responses={responses}
+            evaluations={evaluations}
+            sessions={sessions}
+            evaluationForms={evaluationForms}
+            onRefresh={() => { refetchEvaluations(); refetchResponses(); }}
+          />
         </TabsContent>
       </Tabs>
     </div>

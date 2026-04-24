@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Gavel, Play, Pause, SkipForward, Square, FileText, Users, CheckCircle2, Clock } from "lucide-react";
 import { LegalProcessRenderer } from "@/components/mock-trial/LegalProcessRenderer";
+import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvaluationForm";
+import { ensureEvaluationForms } from "@/lib/mock-trial-evaluations";
 
 const ROLE_LABELS: Record<string, string> = {
   prosecution: "Acusação",
@@ -96,6 +98,8 @@ export default function MockTrialJudge() {
   const [cases, setCases] = useState<any[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [session, setSession] = useState<any>(null);
+  const [evaluationForms, setEvaluationForms] = useState<any[]>([]);
+  const [evaluations, setEvaluations] = useState<any[]>([]);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -146,6 +150,10 @@ export default function MockTrialJudge() {
     const { data: frms } = await supabase.from("mock_trial_forms").select("*").eq("mock_trial_id", t.id);
     setForms(frms || []);
 
+    // Garantir formulários de avaliação (juiz e professor)
+    const evalForms = await ensureEvaluationForms(t.id);
+    setEvaluationForms(evalForms);
+
     setAuthenticated(true);
   };
 
@@ -166,7 +174,27 @@ export default function MockTrialJudge() {
     return () => { active = false; supabase.removeChannel(channel); };
   }, [session?.id]);
 
-  // Load/create session for selected case
+  // Load evaluations for current session + realtime
+  useEffect(() => {
+    if (!session?.id) { setEvaluations([]); return; }
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("mock_trial_evaluations")
+        .select("*")
+        .eq("session_id", session.id);
+      if (active) setEvaluations(data || []);
+    })();
+    const channel = supabase
+      .channel(`evals-${session.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "mock_trial_evaluations", filter: `session_id=eq.${session.id}` }, () => {
+        supabase.from("mock_trial_evaluations").select("*").eq("session_id", session.id).then(({ data }) => {
+          setEvaluations(data || []);
+        });
+      })
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(channel); };
+  }, [session?.id]);
   useEffect(() => {
     const loadSession = async () => {
       if (!selectedCaseId) return;
@@ -487,6 +515,51 @@ export default function MockTrialJudge() {
           </CardContent>
         </Card>
       )}
+
+      {/* Avaliação do Juiz - Acusação e Defesa */}
+      {selectedCase && session && (() => {
+        const judgeForm = evaluationForms.find(f => f.evaluator_type === "judge");
+        if (!judgeForm) return null;
+        const caseAssigns = assignments.filter(a => a.case_id === selectedCase.id);
+        const targets = caseAssigns.filter(a => a.role === "prosecution" || a.role === "defense");
+        if (targets.length === 0) return null;
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Gavel className="h-4 w-4" />
+                Avaliação do Juiz
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Avalie cada lado considerando postura processual, clareza, respeito ao rito e cumprimento do tempo.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {targets.map(a => {
+                const group = groups.find(g => g.id === a.group_id);
+                if (!group) return null;
+                const existing = evaluations.find(
+                  e => e.group_id === a.group_id && e.evaluator_type === "judge"
+                );
+                return (
+                  <MockTrialEvaluationForm
+                    key={a.id}
+                    sessionId={session.id}
+                    caseId={selectedCase.id}
+                    groupId={a.group_id}
+                    groupLabel={`Grupo ${group.group_number}${group.name ? ` – ${group.name}` : ""}`}
+                    evaluatedRole={a.role}
+                    evaluatorType="judge"
+                    evaluatorName={judgeName}
+                    fields={judgeForm.fields_json}
+                    existing={existing}
+                  />
+                );
+              })}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {selectedCase && (
         <Card>
