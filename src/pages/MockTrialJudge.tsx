@@ -13,23 +13,13 @@ import { LegalProcessRenderer } from "@/components/mock-trial/LegalProcessRender
 import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvaluationForm";
 import { ensureEvaluationForms } from "@/lib/mock-trial-evaluations";
 
+import { formatGroupLabel } from "@/lib/mock-trial-utils";
+
 const ROLE_LABELS: Record<string, string> = {
   prosecution: "Acusação",
   defense: "Defesa",
   jury: "Júri Técnico",
 };
-
-// Format group label avoiding "Grupo N – Grupo N" duplication when name already
-// starts with "Grupo".
-export function formatGroupLabel(group: { group_number?: number; name?: string | null } | null | undefined) {
-  if (!group) return "";
-  const name = (group.name || "").trim();
-  const base = `Grupo ${group.group_number ?? ""}`.trim();
-  if (!name) return base;
-  // If the custom name is already the auto label or starts with "Grupo", use only it
-  if (/^grupo\b/i.test(name)) return name;
-  return `${base} – ${name}`;
-}
 const ROLE_COLORS: Record<string, string> = {
   prosecution: "bg-red-500/10 text-red-700 border-red-500/30 dark:text-red-300",
   defense: "bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-300",
