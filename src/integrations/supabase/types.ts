@@ -2155,6 +2155,120 @@ export type Database = {
           },
         ]
       }
+      mock_trial_evaluation_forms: {
+        Row: {
+          created_at: string
+          evaluator_type: string
+          fields_json: Json
+          id: string
+          mock_trial_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evaluator_type: string
+          fields_json?: Json
+          id?: string
+          mock_trial_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evaluator_type?: string
+          fields_json?: Json
+          id?: string
+          mock_trial_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_evaluation_forms_mock_trial_id_fkey"
+            columns: ["mock_trial_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mock_trial_evaluations: {
+        Row: {
+          ai_generated: boolean
+          case_id: string
+          created_at: string
+          criteria_json: Json
+          edited_by_teacher: boolean
+          evaluated_role: string
+          evaluator_name: string | null
+          evaluator_type: string
+          feedback: string | null
+          group_id: string
+          id: string
+          max_score: number
+          score: number
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_generated?: boolean
+          case_id: string
+          created_at?: string
+          criteria_json?: Json
+          edited_by_teacher?: boolean
+          evaluated_role: string
+          evaluator_name?: string | null
+          evaluator_type: string
+          feedback?: string | null
+          group_id: string
+          id?: string
+          max_score?: number
+          score?: number
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_generated?: boolean
+          case_id?: string
+          created_at?: string
+          criteria_json?: Json
+          edited_by_teacher?: boolean
+          evaluated_role?: string
+          evaluator_name?: string | null
+          evaluator_type?: string
+          feedback?: string | null
+          group_id?: string
+          id?: string
+          max_score?: number
+          score?: number
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_evaluations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_trial_evaluations_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_trial_evaluations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mock_trial_forms: {
         Row: {
           created_at: string
