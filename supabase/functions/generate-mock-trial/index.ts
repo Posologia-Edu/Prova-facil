@@ -39,7 +39,31 @@ async function generateMedicalImage(prompt: string, timeoutMs = 45000): Promise<
       return null;
     }
     const data = await resp.json();
-    const url = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const msg = data.choices?.[0]?.message;
+    // Try multiple known shapes for image responses
+    let url: string | null =
+      msg?.images?.[0]?.image_url?.url ||
+      msg?.images?.[0]?.url ||
+      msg?.image_url?.url ||
+      null;
+
+    // Some providers embed the image as a markdown ![](data:...) inside content
+    if (!url && typeof msg?.content === "string") {
+      const m = msg.content.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/);
+      if (m) url = m[0];
+    }
+    // Some providers return an array content with image_url parts
+    if (!url && Array.isArray(msg?.content)) {
+      for (const part of msg.content) {
+        if (part?.type === "image_url" && part?.image_url?.url) {
+          url = part.image_url.url;
+          break;
+        }
+      }
+    }
+    if (!url) {
+      console.error("Image gen no URL in response:", JSON.stringify(data).slice(0, 500));
+    }
     return url || null;
   } catch (e) {
     console.error("generateMedicalImage error:", (e as Error).message);
