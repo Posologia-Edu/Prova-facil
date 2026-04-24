@@ -38,21 +38,29 @@ export function LegalProcessRenderer({ content, caseNumber, title }: Props) {
 
       {/* Document body — serif typography mimicking judicial publications */}
       <article
-        className="px-8 md:px-12 py-10 max-w-none font-serif text-[15px] leading-[1.8] text-foreground
-                   [&_h1]:text-center [&_h1]:font-bold [&_h1]:text-xl [&_h1]:uppercase [&_h1]:tracking-wider [&_h1]:mt-8 [&_h1]:mb-4
-                   [&_h2]:text-center [&_h2]:font-bold [&_h2]:text-base [&_h2]:uppercase [&_h2]:tracking-wide [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:border-b [&_h2]:border-border [&_h2]:pb-2
-                   [&_h3]:font-semibold [&_h3]:text-[15px] [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-primary
-                   [&_p]:mb-4 [&_p]:text-justify [&_p]:indent-8
-                   [&_strong]:font-semibold [&_strong]:text-foreground
-                   [&_ul]:my-4 [&_ul]:pl-8 [&_ul]:list-disc [&_ul]:space-y-1
-                   [&_ol]:my-4 [&_ol]:pl-8 [&_ol]:list-decimal [&_ol]:space-y-1
-                   [&_li]:text-justify
-                   [&_hr]:my-10 [&_hr]:border-0 [&_hr]:h-px [&_hr]:bg-gradient-to-r [&_hr]:from-transparent [&_hr]:via-border [&_hr]:to-transparent
-                   [&_table]:w-full [&_table]:my-6 [&_table]:border-collapse [&_table]:text-sm [&_table]:font-sans
-                   [&_th]:bg-muted [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold
-                   [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2
-                   [&_blockquote]:border-l-4 [&_blockquote]:border-primary/40 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_blockquote]:my-4
-                   [&_code]:font-mono [&_code]:text-xs [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded"
+        className="px-8 md:px-14 py-12 max-w-none font-serif text-[15.5px] leading-[1.95] text-foreground
+                   [&_h1]:text-center [&_h1]:font-bold [&_h1]:text-2xl [&_h1]:uppercase [&_h1]:tracking-[0.15em] [&_h1]:mt-10 [&_h1]:mb-6 [&_h1]:text-primary
+                   [&_h2]:text-center [&_h2]:font-bold [&_h2]:text-lg [&_h2]:uppercase [&_h2]:tracking-[0.12em] [&_h2]:mt-12 [&_h2]:mb-5 [&_h2]:pb-3 [&_h2]:border-b-2 [&_h2]:border-primary/30 [&_h2]:text-primary
+                   [&_h3]:font-semibold [&_h3]:text-base [&_h3]:uppercase [&_h3]:tracking-wider [&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-foreground/90 [&_h3]:border-l-4 [&_h3]:border-primary/60 [&_h3]:pl-3
+                   [&_h4]:font-semibold [&_h4]:text-[15px] [&_h4]:mt-6 [&_h4]:mb-2 [&_h4]:text-foreground/80
+                   [&_p]:mb-5 [&_p]:text-justify [&_p]:indent-10 [&_p]:hyphens-auto
+                   [&_strong]:font-semibold [&_strong]:text-primary
+                   [&_em]:italic [&_em]:text-foreground/85
+                   [&_ul]:my-5 [&_ul]:pl-10 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:marker:text-primary
+                   [&_ol]:my-5 [&_ol]:pl-10 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:marker:text-primary [&_ol]:marker:font-semibold
+                   [&_li]:text-justify [&_li]:pl-2
+                   [&_li>p]:indent-0 [&_li>p]:mb-2
+                   [&_hr]:my-12 [&_hr]:border-0 [&_hr]:h-px [&_hr]:bg-gradient-to-r [&_hr]:from-transparent [&_hr]:via-primary/40 [&_hr]:to-transparent
+                   [&_table]:w-full [&_table]:my-8 [&_table]:border-collapse [&_table]:text-[13px] [&_table]:font-sans [&_table]:shadow-sm [&_table]:rounded-md [&_table]:overflow-hidden
+                   [&_thead]:bg-primary/10
+                   [&_th]:bg-primary/10 [&_th]:border [&_th]:border-primary/20 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-semibold [&_th]:text-primary [&_th]:uppercase [&_th]:text-[11px] [&_th]:tracking-wider
+                   [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2.5 [&_td]:align-top
+                   [&_tbody_tr:nth-child(even)]:bg-muted/30
+                   [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-5 [&_blockquote]:py-2 [&_blockquote]:my-6 [&_blockquote]:bg-muted/30 [&_blockquote]:italic [&_blockquote]:text-foreground/85 [&_blockquote]:rounded-r-md
+                   [&_blockquote_p]:indent-0
+                   [&_code]:font-mono [&_code]:text-xs [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-primary
+                   [&_img]:my-6 [&_img]:mx-auto [&_img]:rounded-md [&_img]:shadow-md [&_img]:max-h-[520px] [&_img]:border [&_img]:border-border
+                   [&_img+em]:block [&_img+em]:text-center [&_img+em]:text-xs [&_img+em]:text-muted-foreground [&_img+em]:mt-2"
       >
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </article>
