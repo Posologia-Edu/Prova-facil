@@ -562,7 +562,30 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
         },
       ],
       tool_choice: { type: "function", function: { name: "generate_mock_trial_case" } },
-    });
+    };
+
+    const aiController = new AbortController();
+    const aiTimer = setTimeout(() => aiController.abort(), 140000);
+    let response: Response;
+    try {
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        signal: aiController.signal,
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(aiPayload),
+      });
+    } catch (e) {
+      clearTimeout(aiTimer);
+      console.error("AI gateway error:", (e as Error).message);
+      return new Response(
+        JSON.stringify({ error: "A geração demorou demais. Tente novamente." }),
+        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    clearTimeout(aiTimer);
 
     if (!response.ok) {
       const errText = await response.text();
