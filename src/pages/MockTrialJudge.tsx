@@ -174,7 +174,27 @@ export default function MockTrialJudge() {
     return () => { active = false; supabase.removeChannel(channel); };
   }, [session?.id]);
 
-  // Load/create session for selected case
+  // Load evaluations for current session + realtime
+  useEffect(() => {
+    if (!session?.id) { setEvaluations([]); return; }
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("mock_trial_evaluations")
+        .select("*")
+        .eq("session_id", session.id);
+      if (active) setEvaluations(data || []);
+    })();
+    const channel = supabase
+      .channel(`evals-${session.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "mock_trial_evaluations", filter: `session_id=eq.${session.id}` }, () => {
+        supabase.from("mock_trial_evaluations").select("*").eq("session_id", session.id).then(({ data }) => {
+          setEvaluations(data || []);
+        });
+      })
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(channel); };
+  }, [session?.id]);
   useEffect(() => {
     const loadSession = async () => {
       if (!selectedCaseId) return;
