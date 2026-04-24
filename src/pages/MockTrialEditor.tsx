@@ -376,6 +376,35 @@ export default function MockTrialEditor() {
         <div className="flex-1">
           <Input value={title} onChange={e => setTitle(e.target.value)} className="text-xl font-bold border-none px-0 focus-visible:ring-0" placeholder="Título do Júri Simulado" />
         </div>
+        <Badge variant={trial?.status === "active" ? "default" : trial?.status === "finished" ? "outline" : "secondary"}>
+          {trial?.status === "active" ? "Ativo" : trial?.status === "finished" ? "Finalizado" : "Rascunho"}
+        </Badge>
+        {trial?.status !== "active" ? (
+          <Button
+            size="sm"
+            onClick={async () => {
+              const { error } = await supabase.from("mock_trials").update({ status: "active" }).eq("id", id!);
+              if (error) { toast.error("Erro ao ativar"); return; }
+              toast.success("Júri Simulado ativado! Os alunos já podem acessar.");
+              queryClient.invalidateQueries({ queryKey: ["mock-trial", id] });
+            }}
+          >
+            <Gavel className="h-4 w-4 mr-1" /> Ativar
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              const { error } = await supabase.from("mock_trials").update({ status: "draft" }).eq("id", id!);
+              if (error) { toast.error("Erro ao desativar"); return; }
+              toast.success("Júri Simulado desativado");
+              queryClient.invalidateQueries({ queryKey: ["mock-trial", id] });
+            }}
+          >
+            Desativar
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue="cases" className="space-y-4">
