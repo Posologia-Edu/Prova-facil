@@ -711,8 +711,8 @@ async function runOneStep(jobId: string): Promise<{ done: boolean; failed?: bool
       const haystack = `${r.data.title || ""} ${r.data.case_summary || ""} ${r.data?.victim?.comorbidities || ""} ${r.data?.defendant?.profession || ""}`.toLowerCase();
       const stop = new Set(["de","da","do","das","dos","em","no","na","para","com","e","o","a","os","as","um","uma","ao","à","avaliação","tratamento","segurança","efetividade","uso","sobre","pelo","pela"]);
       const keywords = (objectives.toLowerCase().match(/[a-záéíóúâêôãõç]{4,}/gi) || [])
-        .filter((w) => !stop.has(w));
-      const hits = keywords.filter((k) => haystack.includes(k));
+        .filter((w: string) => !stop.has(w));
+      const hits = keywords.filter((k: string) => haystack.includes(k));
       const ratio = keywords.length ? hits.length / keywords.length : 1;
       if (!objectives || ratio >= 0.25 || hits.length >= 2) {
         planned = r.data;
