@@ -333,9 +333,15 @@ Gere o processo completo, EXTENSO E PROFUNDO, em formato JSON. Lembre-se: depoim
           `[[image:${slug}]]`,
           `[[IMG:${slug}]]`,
         ];
-        const replacement = img.dataUrl
+        // Validate URL: must be a proper data:image/... URL with non-trivial payload
+        const isValidImage =
+          typeof img.dataUrl === "string" &&
+          /^data:image\/(png|jpe?g|webp);base64,/.test(img.dataUrl) &&
+          img.dataUrl.length > 500;
+
+        const replacement = isValidImage
           ? `\n\n![${img.title || slug}](${img.dataUrl})\n\n*${img.caption || img.title || ""}*\n\n`
-          : `\n\n> _Imagem indisponível: ${img.title || slug}_\n\n`;
+          : `\n\n> ⚠️ _Imagem de exame não pôde ser gerada (${img.title || slug}). Considere o laudo escrito acima._\n\n`;
         for (const pat of anchorPatterns) {
           // Replace all occurrences of the literal anchor
           content = content.split(pat).join(replacement);
