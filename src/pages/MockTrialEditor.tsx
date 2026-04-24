@@ -718,8 +718,21 @@ export default function MockTrialEditor() {
               return (
                 <Card key={g.id}>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{g.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{groupStudents.length} aluno(s)</p>
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-sm truncate">{g.name}</CardTitle>
+                        <p className="text-xs text-muted-foreground">{groupStudents.length} aluno(s)</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => deleteGroup(g.id)}
+                        title="Excluir grupo"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {groupStudents.map(s => (
