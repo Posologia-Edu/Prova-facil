@@ -201,6 +201,10 @@ export function CaseImagesPanel({ caseId }: Props) {
         <ImageIcon className="h-4 w-4 text-primary" />
         <p className="text-sm font-medium">Imagens médicas do processo</p>
       </div>
+      <p className="text-[11px] text-muted-foreground -mt-2">
+        Cada imagem é vinculada ao processo pelo seu <code className="text-[10px]">slug</code> via âncora <code className="text-[10px]">[[IMAGE:slug]]</code>.
+        Quando o aluno ou o juiz abrir o processo, a imagem aparecerá no lugar da âncora correspondente. Aqui no editor você vê apenas o gerenciamento — a renderização final acontece no portal.
+      </p>
 
       {loading ? (
         <p className="text-xs text-muted-foreground">Carregando...</p>
@@ -248,18 +252,35 @@ export function CaseImagesPanel({ caseId }: Props) {
       )}
 
       <div className="border rounded-lg p-3 bg-muted/10 space-y-2">
-        <p className="text-xs font-medium">Adicionar imagem manualmente</p>
+        <p className="text-xs font-medium">Adicionar nova imagem ao processo</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <Input placeholder="slug (ex: rx-torax)" value={newSlug} onChange={(e) => setNewSlug(e.target.value)} />
           <Input placeholder="Título (ex: Radiografia de Tórax)" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
-          <Input placeholder="Descrição visual em inglês para a IA" value={newPrompt} onChange={(e) => setNewPrompt(e.target.value)} />
+          <Input placeholder="Descrição visual em inglês para a IA (opcional se for upload)" value={newPrompt} onChange={(e) => setNewPrompt(e.target.value)} />
         </div>
-        <Button size="sm" onClick={addCustomImage} disabled={!newTitle.trim() && !newSlug.trim()}>
-          Criar e gerar
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" onClick={addCustomImage} disabled={!newTitle.trim() && !newSlug.trim()}>
+            <Sparkles className="h-3 w-3 mr-1" />
+            Criar e gerar com IA
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => newFileRef.current?.click()}
+            disabled={creatingFromUpload}
+          >
+            <Upload className="h-3 w-3 mr-1" />
+            {creatingFromUpload ? "Enviando..." : "Criar e enviar arquivo"}
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Ao enviar um arquivo, a âncora <code className="text-[10px]">[[IMAGE:slug]]</code> será adicionada automaticamente ao final do processo, caso ainda não exista no texto.
+        </p>
       </div>
 
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleManualUpload} />
+      <input ref={newFileRef} type="file" accept="image/*" className="hidden" onChange={handleCreateFromUpload} />
     </div>
   );
 }
+
