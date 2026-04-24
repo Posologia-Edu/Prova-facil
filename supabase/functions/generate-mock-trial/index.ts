@@ -344,42 +344,20 @@ Gere o processo completo, EXTENSO E PROFUNDO, em formato JSON. Lembre-se: depoim
 
     if (!result) throw new Error("Could not parse AI response");
 
-    // Generate medical images and replace anchors in process_content
-    // Cap at 2 images to keep total response time within gateway timeout (~150s).
-    const attachments = (Array.isArray(result.image_attachments) ? result.image_attachments : []).slice(0, 2);
-    if (attachments.length > 0 && typeof result.process_content === "string") {
-      console.log(`Generating ${attachments.length} medical image(s) in parallel...`);
-      const imageResults = await Promise.all(
-        attachments.map(async (att: any) => {
-          const url = await generateMedicalImage(att.prompt || att.title || "");
-          return { ...att, dataUrl: url };
-        })
-      );
-
-      let content = result.process_content;
-      for (const img of imageResults) {
-        const slug = img.slug;
-        const anchorPatterns = [
-          `[[IMAGE:${slug}]]`,
-          `[[image:${slug}]]`,
-          `[[IMG:${slug}]]`,
-        ];
-        // Validate URL: must be a proper data:image/... URL with non-trivial payload
-        const isValidImage =
-          typeof img.dataUrl === "string" &&
-          /^data:image\/(png|jpe?g|webp);base64,/.test(img.dataUrl) &&
-          img.dataUrl.length > 500;
-
-        const replacement = isValidImage
-          ? `\n\n![${img.title || slug}](${img.dataUrl})\n\n*${img.caption || img.title || ""}*\n\n`
-          : `\n\n> ⚠️ _Imagem de exame não pôde ser gerada (${img.title || slug}). Considere o laudo escrito acima._\n\n`;
-        for (const pat of anchorPatterns) {
-          // Replace all occurrences of the literal anchor
-          content = content.split(pat).join(replacement);
-        }
-      }
-      result.process_content = content;
-    }
+    // Image generation is now decoupled: we return image_attachments metadata
+    // and the client persists rows in mock_trial_case_images, then triggers
+    // generate-mock-trial-image per row asynchronously. This avoids timeouts
+    // and lets the teacher regenerate individual images.
+    const attachments = (Array.isArray(result.image_attachments) ? result.image_attachments : [])
+      .slice(0, 3)
+      .map((a: any) => ({
+        slug: String(a.slug || "").trim() || `img-${Math.random().toString(36).slice(2, 8)}`,
+        anchor: String(a.anchor || `[[IMAGE:${a.slug}]]`),
+        title: String(a.title || ""),
+        caption: String(a.caption || ""),
+        prompt: String(a.prompt || a.title || ""),
+      }));
+    result.image_attachments = attachments;
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

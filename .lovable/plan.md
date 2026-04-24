@@ -1,207 +1,81 @@
-## Plano: Avaliação do Júri Simulado (Jurados + Juiz + Professor)
+## Plano para tornar as imagens do processo confiáveis
 
-### 1. Bug — formulários enviados não aparecem no painel "Resultados"
+### Objetivo
+Fazer com que os processos do Júri Simulado passem a ter imagens geradas de forma mais estável, com salvamento no backend, status de geração e opção de reprocessar quando necessário.
 
-**Causa provável:** o painel `Resultados` (rota do professor em `MockTrials.tsx`/editor) consulta `mock_trial_responses` filtrando por sessão/caso, mas no `MockTrialJudge.tsx` os envios já chegam corretamente em tempo real (`responses-${session.id}`). O painel "Resultados" do professor não está subscrito nem busca por todos os casos do júri.
+### O que será construído
 
-**Correção:**
-- No painel "Resultados" do professor, buscar respostas de TODOS os casos do júri (`session_id IN (sessions do trial)`), não apenas da sessão ativa.
-- Adicionar realtime subscription em `mock_trial_responses` filtrando pelos session_ids do júri.
-- Mostrar agrupado por: Caso → Grupo → Papel (Acusação/Defesa/Júri) → Formulário enviado + nota.
+1. Separar a geração do texto e a geração das imagens
+- O processo será criado primeiro com todo o conteúdo textual e com os anchors `[[IMAGE:slug]]`.
+- As imagens deixarão de ser injetadas como base64 dentro do markdown no mesmo request.
+- Isso evita falhas por timeout, respostas grandes demais e formatos inconsistentes do modelo de imagem.
 
----
+2. Criar um registro próprio para imagens do processo
+- Cada imagem do caso terá seu próprio registro com:
+  - processo vinculado
+  - slug/anchor
+  - título
+  - legenda
+  - prompt visual
+  - status (`pending`, `processing`, `ready`, `failed`)
+  - URL final da imagem
+  - mensagem de erro
+- Assim será possível acompanhar exatamente qual imagem falhou e regenerá-la sem recriar o processo inteiro.
 
-### 2. Modelo de avaliação — três notas
+3. Usar pipeline de geração com upload para storage
+- A geração seguirá o padrão mais confiável já usado no projeto para imagens médicas: gerar, validar retorno, converter e salvar em storage.
+- A URL pública salva no backend será usada no processo, em vez de base64 embutido no texto.
+- Se a primeira tentativa falhar, a função fará nova tentativa com prompt mais simples e controlado.
 
-Cada **grupo participante** (Acusação, Defesa) recebe nota composta:
+4. Melhorar o renderizador do processo
+- O renderer vai substituir `[[IMAGE:slug]]` pela imagem salva correspondente no momento da exibição.
+- Enquanto a imagem estiver sendo gerada, aparecerá um bloco visual premium de “imagem em processamento”.
+- Se falhar, aparecerá um aviso elegante com botão de regenerar, sem quebrar o restante do processo.
 
-```text
-Nota Final (Acusação/Defesa) = (Nota do Juiz + Nota do Professor) / 2
-Nota Final (Jurados) = Nota da IA (avaliação do formulário do júri)
-```
+5. Dar controle ao professor no editor
+- No editor do Júri Simulado, cada processo terá uma área de imagens com:
+  - status de cada imagem
+  - pré-visualização
+  - botão “Gerar novamente”
+  - opção de upload manual como contingência
+- O professor poderá corrigir o fluxo sem precisar gerar um novo processo completo.
 
-**Critérios por avaliador:**
+6. Manter compatibilidade com o banco de processos
+- Ao salvar um processo no banco de processos, também serão salvos os metadados e URLs das imagens.
+- Ao reutilizar um processo em outra atividade, as imagens continuarão disponíveis sem precisar gerar tudo de novo.
+- Se alguma imagem antiga não existir mais, o sistema mostrará status de pendência e permitirá regeneração pontual.
 
-| Avaliador | Quem avalia | Critérios | Origem |
-|---|---|---|---|
-| **IA (jurados)** | Acusação e Defesa | Coerência entre o que os jurados marcaram, o que o grupo argumentou (formulário) e as evidências do processo + literatura científica | Edge function automática ao enviar formulário do júri |
-| **Juiz** | Acusação e Defesa | Postura processual, respeito ao rito, clareza, condução, pertinência das objeções (visão jurídica simplificada) | Formulário curto preenchido pelo juiz no painel |
-| **Professor** | Acusação e Defesa | Critérios técnico-clínicos, qualidade argumentativa, comunicação, uso correto de evidências/diretrizes | Formulário gerado automaticamente, preenchido no painel "Resultados" |
-
-A nota da IA é **editável pelo professor** (revisão humana).
-
----
-
-### 3. Mudanças no banco
-
-**Nova tabela `mock_trial_evaluations`** (uma linha por grupo avaliado, por caso, por avaliador):
-
-```text
-id              uuid PK
-session_id      uuid → mock_trial_sessions
-case_id         uuid → mock_trial_cases
-group_id        uuid → mock_trial_groups (grupo avaliado)
-evaluated_role  text  ('prosecution' | 'defense')
-evaluator_type  text  ('ai_jury' | 'judge' | 'teacher')
-score           numeric(5,2)   -- 0 a 10
-max_score       numeric(5,2)   -- default 10
-criteria_json   jsonb          -- notas por critério
-feedback        text           -- justificativa
-ai_generated    boolean        -- true para ai_jury
-edited_by_teacher boolean      -- marca se professor revisou nota da IA
-created_at, updated_at
-UNIQUE(case_id, group_id, evaluator_type)
-```
-
-RLS: dono do trial faz tudo; anon pode INSERT (juiz) com filtro pelo session_id válido.
-
-**Novo campo em `mock_trial_forms`:** `target_role` já existe (`prosecution`/`defense`/`jury`). Adicionar dois novos valores semânticos:
-- `judge_evaluation` — formulário do juiz avaliando os grupos
-- `teacher_evaluation` — formulário do professor avaliando os grupos
-
-(Ou criar tabela separada `mock_trial_evaluation_forms` — recomendado para não misturar com formulários respondidos pelos alunos.)
-
-**Decisão:** criar tabela separada `mock_trial_evaluation_forms` com colunas: `id, mock_trial_id, evaluator_type ('judge'|'teacher'), title, fields_json, created_at`. Templates padrão são auto-criados ao gerar o júri.
-
----
-
-### 4. Templates padrão dos formulários de avaliação
-
-**Formulário do JUIZ (simplificado, ~5 critérios, escala 0–10):**
-- Respeito ao rito processual
-- Clareza e objetividade da argumentação
-- Postura e conduta da equipe
-- Uso pertinente de testemunhas
-- Cumprimento do tempo
-
-Avaliado **separadamente para Acusação e Defesa** (mesmo formulário, dois preenchimentos).
-
-**Formulário do PROFESSOR (técnico, ~8 critérios, escala 0–10):**
-- Domínio do caso clínico
-- Uso de evidências científicas e diretrizes
-- Raciocínio clínico
-- Qualidade da argumentação técnica
-- Refutação dos argumentos contrários
-- Comunicação verbal
-- Trabalho em equipe
-- Coerência com o prontuário/processo
-
-Também avaliado separadamente para Acusação e Defesa.
-
----
-
-### 5. Avaliação automática pela IA (jurados)
-
-**Trigger:** quando todos os grupos do júri técnico enviam o formulário (ou o juiz finaliza a fase de deliberação).
-
-**Nova edge function:** `grade-mock-trial-jury`
-
-Entrada: `session_id`.
-
-Processo:
-1. Carrega o caso (`process_content`, `characters_json`).
-2. Carrega respostas dos jurados (`mock_trial_responses` onde `target_role='jury'`).
-3. Carrega respostas dos grupos Acusação e Defesa (formulários técnicos respondidos por eles, se houver).
-4. Envia para Lovable AI (`google/gemini-2.5-pro`) com tool calling estruturado.
-5. Prompt instrui a IA a:
-   - Comparar o veredito/críticas dos jurados com a argumentação de cada grupo.
-   - Verificar coerência com as evidências do processo (prontuário, exames, depoimentos).
-   - Validar contra conhecimento clínico/científico (diretrizes).
-   - Atribuir nota 0–10 para Acusação e 0–10 para Defesa, com justificativa.
-6. Insere/upsert em `mock_trial_evaluations` com `evaluator_type='ai_jury'`, `ai_generated=true`.
-
-Output schema (tool):
-```text
-{
-  prosecution: { score: number, criteria: {...}, feedback: string },
-  defense:     { score: number, criteria: {...}, feedback: string }
-}
-```
-
----
-
-### 6. UI — Painel do Juiz (`MockTrialJudge.tsx`)
-
-Nova aba/seção **"Avaliação"** dentro do painel do juiz:
-- Mostrada quando o status da sessão é `verdict` ou `finished`.
-- Dois cards (Acusação / Defesa) com o formulário do juiz renderizado via `FormRenderer`.
-- Botão "Salvar avaliação" → grava em `mock_trial_evaluations` com `evaluator_type='judge'`.
-- Mostra status "✓ Avaliação enviada" quando concluído.
-
----
-
-### 7. UI — Painel "Resultados" do Professor
-
-Reescrita da aba **Resultados** em `MockTrials.tsx`/editor:
-
-Para cada caso:
-1. **Envios de formulários** (corrige bug):
-   - Lista todas as respostas de `mock_trial_responses` agrupadas por papel (Acusação / Defesa / Júri).
-   - Mostra grupo, aluno, data, e botão "Ver respostas".
-2. **Avaliações por grupo** (Acusação e Defesa):
-   - **Card Jurados (IA)** — score + feedback + botão "Editar nota" (abre dialog para professor revisar).
-   - **Card Juiz** — score + critérios.
-   - **Card Professor** — formulário inline para o professor preencher (se ainda não enviou).
-3. **Nota Final consolidada:**
-   - `Acusação: (Juiz + Professor) / 2` — exibido como número grande.
-   - `Defesa:  (Juiz + Professor) / 2`.
-   - `Jurados (IA): score` (separado, é a nota dos próprios jurados como grupo).
-4. Botão "Recalcular avaliação da IA" — re-roda a edge function.
-5. Botão "Exportar resultados" (futuro).
-
-Realtime subscription em `mock_trial_responses` e `mock_trial_evaluations` filtrado pelos casos do trial.
-
----
-
-### 8. Integração com competências
-
-Ao consolidar a nota final de cada grupo, gravar em `competency_scores` para cada aluno do grupo (usando `recordRoomCompetencyScores` em `src/lib/competency-scores.ts`), com `source_type='mock_trial'` e `source_id=case_id`. Permite agregação no Portfolio do aluno.
-
----
-
-### 9. Detalhes técnicos
-
-**Arquivos a criar:**
-- `supabase/migrations/<ts>_mock_trial_evaluations.sql` — tabelas + RLS + realtime.
-- `supabase/functions/grade-mock-trial-jury/index.ts` — IA grading.
-- `src/components/mock-trial/JudgeEvaluationPanel.tsx` — formulário do juiz.
-- `src/components/mock-trial/TeacherEvaluationPanel.tsx` — formulário do professor.
-- `src/components/mock-trial/EvaluationSummaryCard.tsx` — card consolidado.
-- `src/lib/mock-trial-evaluation-templates.ts` — templates de critérios padrão (Juiz e Professor).
-
-**Arquivos a editar:**
-- `src/pages/MockTrialJudge.tsx` — adicionar seção de avaliação na fase final.
-- `src/pages/MockTrials.tsx` (ou editor) — reescrever aba Resultados.
-- `src/integrations/supabase/types.ts` — auto-regenerado.
-- `supabase/config.toml` — registrar a nova edge function.
-
-**Disparo da IA:** chamar `grade-mock-trial-jury` automaticamente quando:
-- O juiz inicia a fase `verdict`, OU
-- Todos os grupos com papel `jury` enviarem o formulário.
-
-Em caso de erro 429/402 da IA, mostrar toast e permitir botão "Tentar novamente".
-
----
-
-### 10. Resumo do fluxo final
+### Fluxo final esperado
 
 ```text
-1. Jurados preenchem formulário (target_role='jury')
-        ↓
-2. IA compara: respostas dos jurados × argumentação dos grupos × processo × evidência
-        ↓
-3. IA gera nota Acusação + nota Defesa  →  mock_trial_evaluations (ai_jury)
-        ↓
-4. Juiz preenche formulário simplificado (Acusação + Defesa) → (judge)
-        ↓
-5. Professor preenche formulário técnico (Acusação + Defesa) → (teacher)
-        ↓
-6. Painel Resultados consolida:
-   • Nota Acusação = (Juiz + Professor) / 2
-   • Nota Defesa   = (Juiz + Professor) / 2
-   • Nota Jurados  = IA (revisável pelo professor)
-        ↓
-7. Notas registradas em competency_scores (portfolio do aluno)
+Gerar processo
+  -> salva texto do processo
+  -> salva lista estruturada de imagens pendentes
+  -> inicia geração das imagens
+  -> envia arquivos para storage
+  -> marca cada imagem como pronta
+  -> renderer troca [[IMAGE:slug]] pela URL final
 ```
 
-Aguardo sua aprovação para implementar.
+### Arquivos/áreas que serão ajustados
+- Backend function de geração do processo
+- Função compartilhada de chamada à IA/imagem
+- Estrutura do banco para imagens do Júri Simulado
+- Página do editor do Júri Simulado
+- Renderizador visual do processo
+- Banco de processos para preservar imagens reutilizáveis
+
+### Detalhes técnicos
+- Em vez de depender da resposta inline do modelo de imagem dentro de `generate-mock-trial`, a geração será persistida e desacoplada.
+- Vou criar uma tabela específica para imagens do processo, em vez de confiar só em `process_content`.
+- Vou reaproveitar a lógica já existente de upload/URL pública usada no gerador de imagem médica, adaptando-a para o Júri Simulado.
+- As políticas de acesso serão alinhadas ao padrão já usado pelos portais do Júri Simulado para que juiz e grupos consigam visualizar as imagens.
+- O renderizador manterá compatibilidade com processos antigos: se o conteúdo já tiver imagem embutida, continua funcionando; se tiver anchor estruturado, passará a resolver pela URL salva.
+
+### Resultado esperado
+- O processo não fica mais “sem imagem” por causa de timeout ou retorno inválido.
+- Cada imagem passa a ter status visível e regeneração isolada.
+- O texto do processo continua acessível mesmo quando a imagem ainda está processando.
+- Os processos salvos no banco continuam reutilizáveis com suas imagens já vinculadas.
+
+Se você aprovar, eu implemento esse pipeline novo de imagens.
