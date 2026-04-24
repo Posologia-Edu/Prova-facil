@@ -1,18 +1,124 @@
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Scale } from "lucide-react";
+import { Scale, Loader2, ImageOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   content: string;
   caseNumber?: string;
   title?: string;
+  caseId?: string;
+}
+
+interface CaseImage {
+  id: string;
+  slug: string;
+  status: string;
+  image_url: string | null;
+  title: string;
+  caption: string;
 }
 
 /**
- * Premium legal-document style renderer for mock trial processes.
- * Mimics an official judicial publication / electronic case file.
+ * Resolves [[IMAGE:slug]] anchors against saved images for the case.
+ * - status "ready" + url → renders <img>
+ * - status "processing" → loader placeholder
+ * - status "failed"/"pending"/missing → discrete warning placeholder
  */
-export function LegalProcessRenderer({ content, caseNumber, title }: Props) {
+function resolveAnchors(content: string, images: CaseImage[]): string {
+  if (!content) return content;
+  return content.replace(/\[\[(?:IMAGE|image|IMG):([^\]]+)\]\]/g, (_, slug) => {
+    const img = images.find((i) => i.slug === slug);
+    if (img && img.status === "ready" && img.image_url) {
+      const cap = img.caption || img.title || "";
+      return `\n\n![${img.title || slug}](${img.image_url})\n\n*${cap}*\n\n`;
+    }
+    if (img && img.status === "processing") {
+      return `\n\n<!--IMAGE_PLACEHOLDER:${slug}:processing-->\n\n`;
+    }
+    return `\n\n<!--IMAGE_PLACEHOLDER:${slug}:missing-->\n\n`;
+  });
+}
+
+function PlaceholderRenderer({ children, images }: { children: string; images: CaseImage[] }) {
+  // Replace HTML-comment placeholders with React components in the markdown stream
+  // Easier: render markdown with placeholders intact, then post-process via dangerouslySetInnerHTML? No—use a simpler approach:
+  // We'll split the content by placeholders and render mixed nodes.
+  const parts = children.split(/<!--IMAGE_PLACEHOLDER:([^:]+):([^-]+)-->/g);
+  // parts pattern: [text, slug, state, text, slug, state, ...]
+  const nodes: React.ReactNode[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 3 === 0) {
+      const md = parts[i];
+      if (md && md.trim()) {
+        nodes.push(
+          <ReactMarkdown key={`md-${i}`} remarkPlugins={[remarkGfm]}>{md}</ReactMarkdown>
+        );
+      }
+    } else if (i % 3 === 1) {
+      const slug = parts[i];
+      const state = parts[i + 1];
+      const img = images.find((x) => x.slug === slug);
+      nodes.push(
+        <div
+          key={`ph-${i}`}
+          className="my-6 mx-auto max-w-xl rounded-lg border-2 border-dashed border-primary/30 bg-muted/40 p-8 text-center font-sans"
+        >
+          {state === "processing" ? (
+            <>
+              <Loader2 className="h-8 w-8 mx-auto text-primary animate-spin mb-3" />
+              <p className="text-sm font-medium text-foreground">Imagem sendo gerada</p>
+              <p className="text-xs text-muted-foreground mt-1">{img?.title || slug}</p>
+            </>
+          ) : (
+            <>
+              <ImageOff className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+              <p className="text-sm font-medium text-foreground">Imagem indisponível</p>
+              <p className="text-xs text-muted-foreground mt-1">{img?.title || slug}</p>
+              <p className="text-[11px] text-muted-foreground mt-2 italic">
+                Considere o laudo escrito acima. O professor pode regenerar a imagem no editor.
+              </p>
+            </>
+          )}
+        </div>
+      );
+      i++; // consumed slug + state
+    }
+  }
+  return <>{nodes}</>;
+}
+
+export function LegalProcessRenderer({ content, caseNumber, title, caseId }: Props) {
+  const [images, setImages] = useState<CaseImage[]>([]);
+
+  useEffect(() => {
+    if (!caseId) return;
+    let active = true;
+    const load = async () => {
+      const { data } = await (supabase as any)
+        .from("mock_trial_case_images")
+        .select("id, slug, status, image_url, title, caption")
+        .eq("case_id", caseId);
+      if (active) setImages(data || []);
+    };
+    load();
+    const ch = supabase
+      .channel(`renderer-images-${caseId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "mock_trial_case_images", filter: `case_id=eq.${caseId}` },
+        () => load(),
+      )
+      .subscribe();
+    return () => {
+      active = false;
+      supabase.removeChannel(ch);
+    };
+  }, [caseId]);
+
+  const resolved = resolveAnchors(content, images);
+
   return (
     <div className="bg-[hsl(var(--background))] rounded-lg border border-border shadow-sm overflow-hidden">
       {/* Letterhead */}
@@ -62,7 +168,7 @@ export function LegalProcessRenderer({ content, caseNumber, title }: Props) {
                    [&_img]:my-6 [&_img]:mx-auto [&_img]:rounded-md [&_img]:shadow-md [&_img]:max-h-[520px] [&_img]:border [&_img]:border-border
                    [&_img+em]:block [&_img+em]:text-center [&_img+em]:text-xs [&_img+em]:text-muted-foreground [&_img+em]:mt-2"
       >
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        <PlaceholderRenderer images={images}>{resolved}</PlaceholderRenderer>
       </article>
 
       {/* Footer seal */}
