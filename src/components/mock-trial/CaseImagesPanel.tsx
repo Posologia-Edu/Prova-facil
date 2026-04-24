@@ -30,10 +30,12 @@ export function CaseImagesPanel({ caseId }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const newFileRef = useRef<HTMLInputElement>(null);
   const [uploadTargetId, setUploadTargetId] = useState<string | null>(null);
   const [newSlug, setNewSlug] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
+  const [creatingFromUpload, setCreatingFromUpload] = useState(false);
 
   const load = async () => {
     setLoading(true);
