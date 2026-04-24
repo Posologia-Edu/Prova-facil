@@ -285,12 +285,23 @@ function buildBlueprintPrompt(objectives: string, caseNumber: string, pdfContent
 
 Você está PLANEJANDO um processo judicial simulado. NÃO escreva o processo agora — apenas planeje sua estrutura completa, em uma única chamada de função estruturada.
 
-OBJETIVOS DE APRENDIZAGEM: ${objectives || "(não especificados)"}
+==== OBJETIVOS DE APRENDIZAGEM (REGRA INVIOLÁVEL) ====
+${objectives || "(não especificados)"}
+==== FIM DOS OBJETIVOS ====
+
+REGRA CRÍTICA #1: O caso clínico DEVE versar EXATAMENTE sobre o conteúdo descrito nos objetivos acima. O quadro clínico da vítima, o medicamento/procedimento envolvido, a especialidade do réu e o erro técnico discutido PRECISAM corresponder literalmente ao tema dos objetivos. PROIBIDO inventar um caso de tema diferente (ex.: se o objetivo fala em "fosfomicina/pielonefrite/diabético", o caso PRECISA ser sobre infecção urinária alta tratada com fosfomicina em paciente diabético — JAMAIS sobre odontologia estética, harmonização orofacial, cirurgia plástica ou qualquer outro tema não citado).
+
+REGRA CRÍTICA #2: O title DEVE conter, em linguagem natural, a doença/medicamento/procedimento citado nos objetivos. Exemplos: "Ação Penal Pública: Falha terapêutica com Fosfomicina em pielonefrite de paciente diabético". NUNCA use títulos genéricos tipo "A aventura de X em ...".
+
+REGRA CRÍTICA #3: A profissão do réu deve ser COMPATÍVEL com o tema. Tema clínico/farmacológico → médico, farmacêutico, enfermeiro. Tema odontológico → dentista. Tema fisioterápico → fisioterapeuta. Etc. NÃO escolha uma profissão aleatória.
+
+REGRA CRÍTICA #4: planned_image_attachments é OBRIGATÓRIO conter EXATAMENTE 2 a 3 imagens médicas pertinentes ao tema (ex.: ultrassom renal, urocultura, tomografia de abdome para pielonefrite). NUNCA retorne array vazio.
+
 NÚMERO DO PROCESSO: ${caseNumber}
 ${pdfContent ? `\nMATERIAL DE REFERÊNCIA (PDF da aula):\n${pdfContent.slice(0, 6000)}` : ""}
 
 Defina:
-- title (título completo do processo, ex.: "Ação Penal Pública: Negligência ...")
+- title (título completo do processo, OBRIGATORIAMENTE alinhado aos objetivos acima — ex.: "Ação Penal Pública: Negligência terapêutica no manejo de pielonefrite com Fosfomicina")
 - university, faculty (Faculdade fictícia mas plausível, com curso correspondente à profissão do réu), city
 - case_summary (5-10 linhas descrevendo o caso clínico-jurídico)
 - defendant: nome completo, profissão, conselho/registro fictício (ex.: CRM 12345), local de trabalho, especialidade
@@ -394,6 +405,7 @@ const BLUEPRINT_TOOL: Tool = {
         },
         planned_image_attachments: {
           type: "array",
+          minItems: 2,
           maxItems: 3,
           items: {
             type: "object",
@@ -422,6 +434,7 @@ const BLUEPRINT_TOOL: Tool = {
         "legal_framework",
         "planned_annexes",
         "planned_witnesses",
+        "planned_image_attachments",
         "easter_eggs",
         "plot_twist",
       ],
@@ -675,23 +688,50 @@ async function runOneStep(jobId: string): Promise<{ done: boolean; failed?: bool
       current_step: "Planejando estrutura do processo",
       progress: 5,
     });
-    const r = await callJson({
-      system: ROOT_RULES,
-      user: buildBlueprintPrompt(job.learning_objectives || "", job.case_number || "001/2026", job.pdf_content || ""),
-      tool: BLUEPRINT_TOOL,
-      maxTokens: 5000,
-      timeoutMs: 120_000,
-    });
-    if (!r.ok) {
+    const objectives = job.learning_objectives || "";
+
+    // Tenta até 2x; se o blueprint não bater com o tema, refaz com instrução reforçada
+    let planned: any = null;
+    let lastErr = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const reinforced = attempt === 0
+        ? ""
+        : `\n\nATENÇÃO: A tentativa anterior gerou um caso fora do tema. RELEIA os objetivos e gere um caso que cite EXPLICITAMENTE os termos clínicos dos objetivos no title, case_summary, comorbidades da vítima e na profissão do réu.`;
+      const r = await callJson({
+        system: ROOT_RULES,
+        user: buildBlueprintPrompt(objectives, job.case_number || "001/2026", job.pdf_content || "") + reinforced,
+        tool: BLUEPRINT_TOOL,
+        model: "google/gemini-2.5-pro",
+        maxTokens: 5000,
+        timeoutMs: 120_000,
+      });
+      if (!r.ok) { lastErr = r.error; continue; }
+
+      // Validação de aderência: pelo menos 1 termo significativo dos objetivos deve aparecer no title+summary
+      const haystack = `${r.data.title || ""} ${r.data.case_summary || ""} ${r.data?.victim?.comorbidities || ""} ${r.data?.defendant?.profession || ""}`.toLowerCase();
+      const stop = new Set(["de","da","do","das","dos","em","no","na","para","com","e","o","a","os","as","um","uma","ao","à","avaliação","tratamento","segurança","efetividade","uso","sobre","pelo","pela"]);
+      const keywords = (objectives.toLowerCase().match(/[a-záéíóúâêôãõç]{4,}/gi) || [])
+        .filter((w: string) => !stop.has(w));
+      const hits = keywords.filter((k: string) => haystack.includes(k));
+      const ratio = keywords.length ? hits.length / keywords.length : 1;
+      if (!objectives || ratio >= 0.25 || hits.length >= 2) {
+        planned = r.data;
+        break;
+      }
+      lastErr = `Blueprint fora do tema (apenas ${hits.length}/${keywords.length} termos: title="${r.data.title}")`;
+      console.log("blueprint mismatch, retrying:", lastErr);
+    }
+
+    if (!planned) {
       await updateJob(jobId, {
         status: "failed",
-        last_error: r.error,
+        last_error: lastErr || "Falha ao planejar processo aderente aos objetivos",
         current_step: "Falha ao planejar processo",
         finished_at: new Date().toISOString(),
       });
       return { done: true, failed: true };
     }
-    const planned = r.data;
+
     const total = 4 /* relato/fund/denuncia/lista */ + (planned.planned_annexes || []).length + 1 /* characters */ + 1 /* assemble */;
     await updateJob(jobId, {
       blueprint_json: planned,
