@@ -1077,43 +1077,19 @@ async function runOneStep(jobId: string): Promise<{ done: boolean; failed?: bool
     }
 
     if (!planned) {
+      planned = buildDeterministicBlueprint(job);
+      const total = 4 + (planned.planned_annexes || []).length + 1 + 1;
       await updateJob(jobId, {
-        status: "planning",
-        current_step: "Planejamento falhou — recuperando com geração completa",
+        blueprint_json: planned,
+        total_steps: total,
+        completed_steps: 1,
+        progress: Math.round((1 / total) * 100),
+        current_step: "Planejamento de contingência aplicado — gerando seções",
+        status: "generating_section",
+        validation_issues: [...(job.validation_issues || []), ...(lastErr ? [lastErr, "Planejamento por IA fora do tema; usando estrutura de contingência ancorada nos objetivos."] : ["Planejamento por IA fora do tema; usando estrutura de contingência ancorada nos objetivos."])],
         last_error: lastErr || null,
-        progress: 10,
       });
-
-      const legacy = await callLegacyFullCaseGenerator(job);
-      if (!legacy.ok) {
-        await updateJob(jobId, {
-          status: "failed",
-          last_error: `${lastErr || "Falha ao planejar processo"} | ${legacy.error}`,
-          current_step: "Falha ao gerar processo",
-          finished_at: new Date().toISOString(),
-        });
-        return { done: true, failed: true };
-      }
-
-      await updateJob(jobId, { status: "assembling", current_step: "Salvando processo completo" });
-      const persisted = await persistGeneratedCase(jobId, job, {
-        title: legacy.data.title || job.case_number || "Processo gerado por IA",
-        processContent: legacy.data.process_content || "",
-        characters: legacy.data.characters || [],
-        imageAttachments: legacy.data.image_attachments || [],
-      });
-
-      if (!persisted.ok) {
-        await updateJob(jobId, {
-          status: "failed",
-          last_error: persisted.error,
-          current_step: "Falha ao salvar processo",
-          finished_at: new Date().toISOString(),
-        });
-        return { done: true, failed: true };
-      }
-
-      return { done: true };
+      return { done: false };
     }
 
     const total = 4 /* relato/fund/denuncia/lista */ + (planned.planned_annexes || []).length + 1 /* characters */ + 1 /* assemble */;
