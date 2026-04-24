@@ -314,9 +314,10 @@ Gere o processo completo, EXTENSO E PROFUNDO, em formato JSON. Lembre-se: depoim
     if (!result) throw new Error("Could not parse AI response");
 
     // Generate medical images and replace anchors in process_content
-    const attachments = Array.isArray(result.image_attachments) ? result.image_attachments : [];
+    // Cap at 2 images to keep total response time within gateway timeout (~150s).
+    const attachments = (Array.isArray(result.image_attachments) ? result.image_attachments : []).slice(0, 2);
     if (attachments.length > 0 && typeof result.process_content === "string") {
-      console.log(`Generating ${attachments.length} medical image(s)...`);
+      console.log(`Generating ${attachments.length} medical image(s) in parallel...`);
       const imageResults = await Promise.all(
         attachments.map(async (att: any) => {
           const url = await generateMedicalImage(att.prompt || att.title || "");
