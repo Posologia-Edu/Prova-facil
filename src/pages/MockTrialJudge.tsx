@@ -516,13 +516,51 @@ export default function MockTrialJudge() {
         </Card>
       )}
 
-      {selectedCase && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Texto do Processo
-            </CardTitle>
+      {/* Avaliação do Juiz - Acusação e Defesa */}
+      {selectedCase && session && (() => {
+        const judgeForm = evaluationForms.find(f => f.evaluator_type === "judge");
+        if (!judgeForm) return null;
+        const caseAssigns = assignments.filter(a => a.case_id === selectedCase.id);
+        const targets = caseAssigns.filter(a => a.role === "prosecution" || a.role === "defense");
+        if (targets.length === 0) return null;
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Gavel className="h-4 w-4" />
+                Avaliação do Juiz
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Avalie cada lado considerando postura processual, clareza, respeito ao rito e cumprimento do tempo.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {targets.map(a => {
+                const group = groups.find(g => g.id === a.group_id);
+                if (!group) return null;
+                const existing = evaluations.find(
+                  e => e.group_id === a.group_id && e.evaluator_type === "judge"
+                );
+                return (
+                  <MockTrialEvaluationForm
+                    key={a.id}
+                    sessionId={session.id}
+                    caseId={selectedCase.id}
+                    groupId={a.group_id}
+                    groupLabel={`Grupo ${group.group_number}${group.name ? ` – ${group.name}` : ""}`}
+                    evaluatedRole={a.role}
+                    evaluatorType="judge"
+                    evaluatorName={judgeName}
+                    fields={judgeForm.fields_json}
+                    existing={existing}
+                  />
+                );
+              })}
+            </CardContent>
+          </Card>
+        );
+      })()}
+
           </CardHeader>
           <CardContent>
             <LegalProcessRenderer
