@@ -73,6 +73,87 @@ async function generateMedicalImage(prompt: string, timeoutMs = 45000): Promise<
   }
 }
 
+function extractExpectedAnnexCount(processContent: string): number {
+  const match = processContent.match(/##\s+Lista de Provas([\s\S]*?)(?:\n---|\n##\s+ANEXO|$)/i);
+  if (!match) return 6;
+
+  const count = (match[1].match(/^\s*\d+\./gm) || []).length;
+  return Math.max(count, 6);
+}
+
+function extractPresentAnnexNumbers(processContent: string): number[] {
+  return [...processContent.matchAll(/^##\s+ANEXO\s+(\d+)/gim)]
+    .map((m) => Number(m[1]))
+    .filter((n) => Number.isFinite(n));
+}
+
+function findPlaceholderTokens(processContent: string): string[] {
+  const sanitized = processContent.replace(/\[\[IMAGE:[^\]]+\]\]/g, "");
+  const patterns = [
+    /\[(?:Nome|Data|Universidade|Curso|Cidade|registro|Registro)[^\]]*\]/gi,
+    /\[(?:Mínimo|Conforme|Use|Narrativa|Tabelas?|Texto completo|descrição)[^\]]*\]/gi,
+    /\.\.\./g,
+  ];
+
+  return patterns.flatMap((pattern) => sanitized.match(pattern) || []).slice(0, 10);
+}
+
+function validateMockTrialResult(result: any): string[] {
+  const issues: string[] = [];
+  const content = typeof result?.process_content === "string" ? result.process_content : "";
+
+  if (!String(result?.title || "").trim()) issues.push("título ausente");
+  if (!content.trim()) issues.push("process_content ausente");
+  if (!content.trim()) return issues;
+
+  const requiredSections = [
+    "Relato dos Fatos",
+    "Fundamentação Jurídica",
+    "Denúncia",
+    "Lista de Provas",
+    "## ANEXO 1",
+    "## ANEXO 2",
+    "## ANEXO 3",
+    "## ANEXO 4",
+    "## ANEXO 5",
+    "## ANEXO 6",
+  ];
+
+  for (const section of requiredSections) {
+    if (!content.toLowerCase().includes(section.toLowerCase())) {
+      issues.push(`seção obrigatória ausente: ${section}`);
+    }
+  }
+
+  const expectedAnnexes = extractExpectedAnnexCount(content);
+  const presentAnnexes = new Set(extractPresentAnnexNumbers(content));
+  for (let annex = 1; annex <= expectedAnnexes; annex += 1) {
+    if (!presentAnnexes.has(annex)) {
+      issues.push(`anexo ${annex} ausente`);
+    }
+  }
+
+  const placeholders = findPlaceholderTokens(content);
+  if (placeholders.length > 0) {
+    issues.push(`placeholders remanescentes: ${placeholders.join(", ")}`);
+  }
+
+  const trimmed = content.trim();
+  if (!/[.!?"”)]$/.test(trimmed)) {
+    issues.push("texto parece truncado no final");
+  }
+
+  const attachments = Array.isArray(result?.image_attachments) ? result.image_attachments : [];
+  for (const attachment of attachments) {
+    const anchor = String(attachment?.anchor || `[[IMAGE:${attachment?.slug || ""}]]`);
+    if (anchor.includes("[[IMAGE:") && !content.includes(anchor)) {
+      issues.push(`âncora ausente no conteúdo: ${anchor}`);
+    }
+  }
+
+  return [...new Set(issues)];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -511,11 +592,11 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
       throw new Error("LOVABLE_API_KEY não configurado");
     }
     const aiPayload: any = {
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
+      model: "google/gemini-2.5-pro",
+      reasoning: {
+        effort: "medium",
+      },
+      max_tokens: 12000,
       tools: [
         {
           type: "function",
@@ -564,54 +645,99 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
       tool_choice: { type: "function", function: { name: "generate_mock_trial_case" } },
     };
 
-    const aiController = new AbortController();
-    const aiTimer = setTimeout(() => aiController.abort(), 140000);
-    let response: Response;
-    try {
-      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        signal: aiController.signal,
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(aiPayload),
-      });
-    } catch (e) {
+    let result: any = null;
+    let lastIssues: string[] = [];
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const attemptPayload = {
+        ...aiPayload,
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: attempt === 1
+              ? userPrompt
+              : `${userPrompt}\n\nCORREÇÃO OBRIGATÓRIA DA TENTATIVA ANTERIOR: o processo veio incompleto. Reescreva o processo INTEIRO, do início ao fim, sem cortar anexos, e corrija especificamente estes problemas: ${lastIssues.join("; ")}. Só finalize quando todos os anexos listados estiverem completos.`,
+          },
+        ],
+      };
+
+      const aiController = new AbortController();
+      const aiTimer = setTimeout(() => aiController.abort(), 220000);
+      let response: Response;
+      try {
+        response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          signal: aiController.signal,
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(attemptPayload),
+        });
+      } catch (e) {
+        clearTimeout(aiTimer);
+        console.error(`AI gateway error (attempt ${attempt}):`, (e as Error).message);
+        if (attempt === 3) {
+          return new Response(
+            JSON.stringify({ error: "A geração demorou demais. Tente novamente." }),
+            { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        continue;
+      }
       clearTimeout(aiTimer);
-      console.error("AI gateway error:", (e as Error).message);
-      return new Response(
-        JSON.stringify({ error: "A geração demorou demais. Tente novamente." }),
-        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    clearTimeout(aiTimer);
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI error:", response.status, errText);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`AI error (attempt ${attempt}):`, response.status, errText);
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        if (attempt === 3) throw new Error("AI generation failed");
+        continue;
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const data = await response.json();
+      let candidate: any = null;
+
+      if (data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments) {
+        const args = data.choices[0].message.tool_calls[0].function.arguments;
+        candidate = typeof args === "string" ? JSON.parse(args) : args;
+      } else if (data.choices?.[0]?.message?.content) {
+        const content = data.choices[0].message.content;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        candidate = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
       }
-      throw new Error("AI generation failed");
+
+      if (!candidate) {
+        lastIssues = ["não foi possível interpretar a resposta estruturada da IA"];
+        if (attempt === 3) throw new Error("Could not parse AI response");
+        continue;
+      }
+
+      const validationIssues = validateMockTrialResult(candidate);
+      if (validationIssues.length === 0) {
+        result = candidate;
+        break;
+      }
+
+      lastIssues = validationIssues;
+      console.error(`Mock trial validation failed (attempt ${attempt}):`, validationIssues);
     }
 
-    const data = await response.json();
-    let result: any;
-
-    if (data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments) {
-      const args = data.choices[0].message.tool_calls[0].function.arguments;
-      result = typeof args === "string" ? JSON.parse(args) : args;
-    } else if (data.choices?.[0]?.message?.content) {
-      const content = data.choices[0].message.content;
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      result = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    if (!result) {
+      return new Response(JSON.stringify({
+        error: "A IA retornou um processo incompleto após novas tentativas.",
+        details: lastIssues,
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-
-    if (!result) throw new Error("Could not parse AI response");
 
     // Image generation is now decoupled: we return image_attachments metadata
     // and the client persists rows in mock_trial_case_images, then triggers
