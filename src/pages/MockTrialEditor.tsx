@@ -119,6 +119,8 @@ export default function MockTrialEditor() {
   const [aiPdfExtracting, setAiPdfExtracting] = useState(false);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
   const [editingCaseContent, setEditingCaseContent] = useState("");
+  const [formDrafts, setFormDrafts] = useState<Record<string, FormField[]>>({});
+  const formSaveTimersRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (trial) {
@@ -127,6 +129,22 @@ export default function MockTrialEditor() {
       setJudgeName(trial.judge_name || "");
     }
   }, [trial]);
+
+  useEffect(() => {
+    setFormDrafts((prev) => {
+      const next: Record<string, FormField[]> = {};
+      for (const form of forms) {
+        next[form.id] = prev[form.id] ?? ((form.fields_json || []) as FormField[]);
+      }
+      return next;
+    });
+  }, [forms]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(formSaveTimersRef.current).forEach((timerId) => window.clearTimeout(timerId));
+    };
+  }, []);
 
   // Auto-save trial metadata
   const saveTrial = useCallback(async (updates: Record<string, any>) => {
@@ -316,9 +334,29 @@ export default function MockTrialEditor() {
     refetchForms();
   };
 
-  const saveFormFields = async (formId: string, fields: FormField[]) => {
-    await supabase.from("mock_trial_forms").update({ fields_json: fields as any }).eq("id", formId);
-    refetchForms();
+  const saveFormFields = (formId: string, fields: FormField[]) => {
+    setFormDrafts((prev) => ({ ...prev, [formId]: fields }));
+
+    const existingTimer = formSaveTimersRef.current[formId];
+    if (existingTimer) window.clearTimeout(existingTimer);
+
+    formSaveTimersRef.current[formId] = window.setTimeout(async () => {
+      const { error } = await supabase
+        .from("mock_trial_forms")
+        .update({ fields_json: fields as any })
+        .eq("id", formId);
+
+      if (error) {
+        toast.error("Erro ao salvar formulário");
+        return;
+      }
+
+      queryClient.setQueryData(["mock-trial-forms", id], (current: any[] | undefined) =>
+        current?.map((form) => (form.id === formId ? { ...form, fields_json: fields } : form)) || []
+      );
+
+      delete formSaveTimersRef.current[formId];
+    }, 500);
   };
 
   const roleLabels: Record<string, string> = { prosecution: "Acusação", defense: "Defesa", jury: "Júri" };
@@ -623,7 +661,7 @@ export default function MockTrialEditor() {
               </CardHeader>
               <CardContent>
                 <FormBuilder
-                  fields={(form.fields_json || []) as FormField[]}
+                  fields={(formDrafts[form.id] ?? form.fields_json ?? []) as FormField[]}
                   onChange={(fields) => saveFormFields(form.id, fields)}
                 />
               </CardContent>
