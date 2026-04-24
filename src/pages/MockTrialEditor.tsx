@@ -389,6 +389,24 @@ export default function MockTrialEditor() {
     refetchStudents();
   };
 
+  const deleteGroup = async (groupId: string) => {
+    const grp = groups.find(g => g.id === groupId);
+    const studentCount = students.filter(s => s.group_id === groupId).length;
+    const confirmMsg = studentCount > 0
+      ? `Excluir "${grp?.name}"? Os ${studentCount} aluno(s) deste grupo também serão removidos e as distribuições do grupo serão apagadas.`
+      : `Excluir "${grp?.name}"? Distribuições associadas serão apagadas.`;
+    if (!window.confirm(confirmMsg)) return;
+    // Cascade manually: students, assignments, then group
+    await supabase.from("mock_trial_students").delete().eq("group_id", groupId);
+    await supabase.from("mock_trial_assignments").delete().eq("group_id", groupId);
+    const { error } = await supabase.from("mock_trial_groups").delete().eq("id", groupId);
+    if (error) { toast.error("Erro ao excluir grupo: " + error.message); return; }
+    toast.success("Grupo excluído");
+    refetchGroups();
+    refetchStudents();
+    refetchAssignments();
+  };
+
   // DISTRIBUTION
   const generateAutoDistribution = async () => {
     if (groups.length < 3 || cases.length === 0) {
