@@ -179,11 +179,15 @@ export default function MockTrialStudent() {
             }
             return [...prev, newRow];
           });
+          // Auto-advance: when a different case becomes active, jump to it
+          if (ACTIVE_STATUSES.has(newRow.status) && newRow.case_id !== selectedCaseId) {
+            setSelectedCaseId(newRow.case_id);
+          }
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [authenticated, cases]);
+  }, [authenticated, cases, selectedCaseId]);
 
   // Get my role for a specific case
   const getMyRole = (caseId: string) => {
