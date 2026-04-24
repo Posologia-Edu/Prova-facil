@@ -822,45 +822,18 @@ export default function MockTrialEditor() {
         </TabsContent>
 
         {/* RESULTADOS TAB */}
-        <TabsContent value="results" className="space-y-4">
-          {responses.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Sem respostas ainda</h3>
-                <p className="text-muted-foreground">As respostas aparecerão aqui após os alunos preencherem os formulários</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {forms.map((form: any) => {
-                const formResponses = responses.filter((r: any) => r.form_id === form.id);
-                return (
-                  <Card key={form.id}>
-                    <CardHeader>
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-base">{form.title}</CardTitle>
-                        <Badge variant="secondary">{formResponses.length} resposta(s)</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {formResponses.map((r: any) => (
-                        <div key={r.id} className="p-3 border rounded mb-2">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm font-medium">{r.student_name || "Anônimo"}</span>
-                            {r.student_email && <span className="text-xs text-muted-foreground">{r.student_email}</span>}
-                          </div>
-                          <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-                            {JSON.stringify(r.response_json, null, 2)}
-                          </pre>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+        <TabsContent value="results" className="space-y-6">
+          <ResultsPanel
+            cases={cases}
+            groups={groups}
+            assignments={assignments}
+            forms={forms}
+            responses={responses}
+            evaluations={evaluations}
+            sessions={sessions}
+            evaluationForms={evaluationForms}
+            onRefresh={() => { refetchEvaluations(); refetchResponses(); }}
+          />
         </TabsContent>
       </Tabs>
     </div>
