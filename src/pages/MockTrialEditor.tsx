@@ -46,7 +46,7 @@ export default function MockTrialEditor() {
   });
 
   // Groups
-  const { data: groups = [], refetch: refetchGroups } = useQuery({
+  const { data: groups = [], refetch: refetchGroups, isFetched: groupsFetched } = useQuery({
     queryKey: ["mock-trial-groups", id],
     queryFn: async () => {
       const { data, error } = await supabase.from("mock_trial_groups").select("*").eq("mock_trial_id", id!).order("group_number");
