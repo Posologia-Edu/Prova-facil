@@ -694,32 +694,26 @@ export default function MockTrialEditor() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex-1 min-w-[260px] space-y-1">
-                    <Input
+                    <InlineEditInput
                       value={c.title || ""}
-                      onChange={(e) => {
-                        const newTitle = e.target.value;
+                      onCommit={async (v) => {
+                        await supabase.from("mock_trial_cases").update({ title: v }).eq("id", c.id);
                         queryClient.setQueryData(["mock-trial-cases", id], (curr: any[] | undefined) =>
-                          curr?.map(x => x.id === c.id ? { ...x, title: newTitle } : x) || []
+                          curr?.map(x => x.id === c.id ? { ...x, title: v } : x) || []
                         );
-                      }}
-                      onBlur={async (e) => {
-                        await supabase.from("mock_trial_cases").update({ title: e.target.value }).eq("id", c.id);
                       }}
                       className="text-base font-semibold border-none px-0 focus-visible:ring-0 h-auto"
                       placeholder="Título do processo"
                     />
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">Processo nº</span>
-                      <Input
+                      <InlineEditInput
                         value={c.case_number || ""}
-                        onChange={(e) => {
-                          const v = e.target.value;
+                        onCommit={async (v) => {
+                          await supabase.from("mock_trial_cases").update({ case_number: v }).eq("id", c.id);
                           queryClient.setQueryData(["mock-trial-cases", id], (curr: any[] | undefined) =>
                             curr?.map(x => x.id === c.id ? { ...x, case_number: v } : x) || []
                           );
-                        }}
-                        onBlur={async (e) => {
-                          await supabase.from("mock_trial_cases").update({ case_number: e.target.value }).eq("id", c.id);
                         }}
                         className="h-7 text-xs w-40"
                         placeholder="000/2026"
