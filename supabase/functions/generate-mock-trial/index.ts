@@ -73,6 +73,22 @@ serve(async (req) => {
 
     const systemPrompt = `Você é um especialista em educação em saúde, medicina forense e simulações jurídicas clínicas de ALTÍSSIMA COMPLEXIDADE. Você cria processos jurídicos simulados em formato de Ação Penal Pública para fins educacionais universitários.
 
+⚠️ REGRA ABSOLUTA Nº 1 — NUNCA USE PLACEHOLDERS LITERAIS:
+Você está PROIBIDO de retornar texto como:
+- "[Mínimo 600 palavras, primeira pessoa, denso]"
+- "[Conforme exigência exaustiva acima — mínimo 1500 palavras]"
+- "[Tabelas completas]"
+- "[Use [[IMAGE:slug]] anchors aqui]"
+- "[Mínimo 800 palavras]"
+- "[Narrativa neutra extensa, mínimo 400 palavras]"
+- Qualquer texto entre colchetes que descreva o que DEVERIA estar lá em vez de já ESTAR lá.
+- Qualquer frase do tipo "conforme exigido", "ver acima", "preencher conforme template".
+
+Toda seção precisa estar TOTALMENTE ESCRITA e PRONTA PARA LEITURA pelo aluno. As exigências de tamanho abaixo são METAS QUE VOCÊ DEVE CUMPRIR ESCREVENDO O CONTEÚDO COMPLETO — não rótulos a copiar para o documento final.
+
+Se você tiver dúvida se algo é uma instrução ou um conteúdo: tudo neste system prompt é INSTRUÇÃO. Nada deste system prompt deve aparecer literalmente no process_content. O process_content deve parecer um documento jurídico-clínico real, denso, lido pela primeira vez por um juiz.
+
+
 ═══════════════════════════════════════════════════════════
 NÍVEL DE EXIGÊNCIA: PROCESSO JUDICIAL REAL E DENSO
 ═══════════════════════════════════════════════════════════
@@ -182,65 +198,28 @@ Estrutura de cada anexo de imagem no process_content:
 ESTRUTURA FINAL DO process_content (em Markdown rico)
 ═══════════════════════════════════════════════════════════
 
-## Tribunal de Justiça [da Faculdade/Instituição fictícia]
-## Vara Criminal da Comarca [...]
-
-**Processo nº**: [número]
-**Ação Penal Pública**
-
-**Autor**: Ministério Público [...]
-**Réu**: [Nome + profissão + (Aluno X)]
-**Vítima**: [Nome + (Aluno Y)]
-
-## Relato dos Fatos
-[Narrativa neutra extensa, mínimo 400 palavras]
-
-## Fundamentação Jurídica
-- **Código Penal:** artigos pertinentes
-- **Código de Ética [profissão do réu]:** artigos pertinentes
-
-## Denúncia
-[Texto formal do MP, mínimo 350 palavras]
-
-## Provas
-- Depoimento do Réu (Anexo 1)
-- Prontuário do Paciente (Anexo 2)
-- Laudo(s) de Exame (Anexo 3)
-- Laudo(s) de Imagem (Anexo 4) — quando houver
-- Depoimento da Vítima (Anexo 5)
-- Perícia Técnica (Anexo 6)
-
----
-## ANEXO 1 — Depoimento do Réu
-[Mínimo 600 palavras, primeira pessoa, denso]
-
----
-## ANEXO 2 — Prontuário do Paciente
-[Conforme exigência exaustiva acima — mínimo 1500 palavras]
-
----
-## ANEXO 3 — Laudo(s) de Exame Laboratorial
-[Conforme exigência — tabelas completas]
-
----
-## ANEXO 4 — Laudo(s) de Exame de Imagem
-[Use [[IMAGE:slug]] anchors aqui]
-
----
-## ANEXO 5 — Depoimento da Vítima
-[Mínimo 600 palavras]
-
----
-## ANEXO 6 — Laudo de Perícia Técnica
-[Mínimo 800 palavras]
+SEQUÊNCIA OBRIGATÓRIA DE SEÇÕES (todas COMPLETAMENTE PREENCHIDAS, sem colchetes-instrução):
+1. Cabeçalho do tribunal fictício (nome do tribunal, vara, comarca)
+2. Identificação do processo (número, tipo de ação, autor=MP, réu nominado com profissão, vítima nominada)
+3. "Relato dos Fatos" — narrativa neutra REAL com 400+ palavras escritas
+4. "Fundamentação Jurídica" — artigos REAIS citados e descritos (Código Penal + Código de Ética da profissão do réu)
+5. "Denúncia" — peça do MP REAL com 350+ palavras escritas
+6. Lista de Provas (apenas a lista nesta seção)
+7. ANEXO 1 — Depoimento do Réu: TEXTO COMPLETO em 1ª pessoa, 600+ palavras escritas
+8. ANEXO 2 — Prontuário do Paciente: documento hospitalar COMPLETO de 1500+ palavras (cabeçalho institucional, identificação, HPP, alergias, medicações, exame físico por sistema, hipóteses, condutas, mínimo 5 evoluções datadas, notas de enfermagem por turno, resultados completos)
+9. ANEXO 3 — Laudo(s) de Exame Laboratorial: laudo(s) REAL(IS) com cabeçalho de laboratório fictício, dados do paciente, tabelas Markdown COMPLETAS de hemograma/bioquímica/antibiograma/gasometria/coagulograma conforme pertinente
+10. ANEXO 4 — Laudo(s) de Exame de Imagem: laudo escrito + anchor [[IMAGE:slug]] inserido no local exato (este é o ÚNICO uso permitido de colchetes — o anchor literal)
+11. ANEXO 5 — Depoimento da Vítima: TEXTO COMPLETO em 1ª pessoa, 600+ palavras escritas
+12. ANEXO 6 — Laudo de Perícia Técnica: documento pericial COMPLETO de 800+ palavras
 
 REGRAS FINAIS:
 - Use Markdown rico (##, ###, **negrito**, listas, tabelas, ---).
-- VARIE a profissão do réu.
-- INSIRA easter eggs e plot twists.
+- VARIE a profissão do réu conforme o tipo de erro.
+- INSIRA 8-12 easter eggs e um plot twist real na evolução.
 - NÃO inclua "Argumentação para Acusação/Defesa" no corpo.
-- Os anchors [[IMAGE:slug]] devem APARECER no process_content nos locais corretos.
-- Toda imagem listada em image_attachments DEVE ter seu anchor presente no process_content.`;
+- Os anchors [[IMAGE:slug]] são o único colchete permitido no process_content e DEVEM aparecer no Anexo 4 nos locais corretos.
+- Toda imagem listada em image_attachments DEVE ter seu anchor presente no process_content.
+- AUTOVERIFICAÇÃO antes de retornar: revise o process_content e confirme que NÃO há nenhum texto entre colchetes que descreva o que deveria estar ali (ex: "[Mínimo X palavras]", "[Conforme...]", "[...]"). Se encontrar, REESCREVA aquela seção com o conteúdo real.`;
 
     const userPrompt = `Objetivos de Aprendizagem: ${learningObjectives || "Não especificados"}
 Número do Processo: ${caseNumber || "001/2025"}

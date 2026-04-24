@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3, Upload, X, Pencil, RefreshCw, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3, Upload, X, Pencil, RefreshCw, CheckCircle2, Library, Save } from "lucide-react";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { generateDistribution } from "@/lib/mock-trial-distribution";
@@ -21,6 +21,7 @@ import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvalua
 import { ensureEvaluationForms, consolidateScores } from "@/lib/mock-trial-evaluations";
 import { ROLE_LABELS as EVAL_ROLE_LABELS } from "@/lib/mock-trial-evaluation-templates";
 import { ResultsPanel } from "@/components/mock-trial/ResultsPanel";
+import { MockTrialCaseBankDialog } from "@/components/mock-trial/MockTrialCaseBankDialog";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
@@ -190,6 +191,34 @@ export default function MockTrialEditor() {
   const [editingCaseContent, setEditingCaseContent] = useState("");
   const [formDrafts, setFormDrafts] = useState<Record<string, FormField[]>>({});
   const formSaveTimersRef = useRef<Record<string, number>>({});
+  const [bankOpen, setBankOpen] = useState(false);
+  const [savingToBankId, setSavingToBankId] = useState<string | null>(null);
+
+  const saveCaseToBank = async (c: any) => {
+    setSavingToBankId(c.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Você precisa estar autenticado");
+        return;
+      }
+      const { error } = await (supabase as any).from("mock_trial_case_bank").insert({
+        user_id: user.id,
+        title: c.title || "Processo sem título",
+        case_number: c.case_number || null,
+        learning_objectives: c.learning_objectives || null,
+        process_content: c.process_content || "",
+        characters_json: c.characters_json || [],
+        source_case_id: c.id,
+      });
+      if (error) throw error;
+      toast.success("Processo salvo no banco — disponível para reuso em outros Júris Simulados");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao salvar no banco");
+    } finally {
+      setSavingToBankId(null);
+    }
+  };
 
   useEffect(() => {
     if (trial) {
@@ -495,22 +524,35 @@ export default function MockTrialEditor() {
 
         {/* PROCESSOS TAB */}
         <TabsContent value="cases" className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button onClick={addCase}><Plus className="h-4 w-4 mr-1" />Adicionar Processo</Button>
             <Button variant="secondary" onClick={() => setAiDialogOpen(true)}><Sparkles className="h-4 w-4 mr-1" />Gerar com IA</Button>
+            <Button variant="outline" onClick={() => setBankOpen(true)}>
+              <Library className="h-4 w-4 mr-1" />Banco de Processos
+            </Button>
           </div>
 
           {cases.map((c: any) => (
             <Card key={c.id}>
               <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
                     <CardTitle className="text-base">{c.title}</CardTitle>
                     <p className="text-xs text-muted-foreground">Processo nº {c.case_number}</p>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap">
                     <Button size="sm" variant="outline" onClick={() => { setEditingCaseId(c.id); setEditingCaseContent(c.process_content || ""); }}>
                       <FileText className="h-3 w-3 mr-1" />Editar Processo
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => saveCaseToBank(c)}
+                      disabled={savingToBankId === c.id || !c.process_content}
+                      title="Salvar este processo no banco para reutilizar em outros Júris Simulados"
+                    >
+                      <Save className="h-3 w-3 mr-1" />
+                      {savingToBankId === c.id ? "Salvando..." : "Salvar no banco"}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => deleteCase(c.id)}><Trash2 className="h-3 w-3" /></Button>
                   </div>
@@ -609,6 +651,15 @@ export default function MockTrialEditor() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Banco de Processos */}
+          <MockTrialCaseBankDialog
+            open={bankOpen}
+            onOpenChange={setBankOpen}
+            mockTrialId={id!}
+            nextPosition={cases.length}
+            onImported={() => refetchCases()}
+          />
         </TabsContent>
 
         {/* GRUPOS TAB */}
