@@ -10,11 +10,15 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 // Generate a medical image (X-ray, CT, ECG, etc.) via Lovable AI image model.
 // Returns a data:image/png;base64,... URL or null on failure.
-async function generateMedicalImage(prompt: string): Promise<string | null> {
+// Has an individual timeout so a slow image never blocks the whole response.
+async function generateMedicalImage(prompt: string, timeoutMs = 45000): Promise<string | null> {
   if (!LOVABLE_API_KEY) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: controller.signal,
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
@@ -38,8 +42,10 @@ async function generateMedicalImage(prompt: string): Promise<string | null> {
     const url = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     return url || null;
   } catch (e) {
-    console.error("generateMedicalImage error:", e);
+    console.error("generateMedicalImage error:", (e as Error).message);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
