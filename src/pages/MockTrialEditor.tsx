@@ -191,6 +191,7 @@ export default function MockTrialEditor() {
   const [aiPdfExtracting, setAiPdfExtracting] = useState(false);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
   const [editingCaseContent, setEditingCaseContent] = useState("");
+  const [regeneratingCaseId, setRegeneratingCaseId] = useState<string | null>(null);
   const [formDrafts, setFormDrafts] = useState<Record<string, FormField[]>>({});
   const formSaveTimersRef = useRef<Record<string, number>>({});
   const [bankOpen, setBankOpen] = useState(false);
