@@ -8,8 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Gavel, Play, Pause, SkipForward, Square, FileText } from "lucide-react";
+import { Gavel, Play, Pause, SkipForward, Square, FileText, Users, CheckCircle2, Clock } from "lucide-react";
 import { LegalProcessRenderer } from "@/components/mock-trial/LegalProcessRenderer";
+
+const ROLE_LABELS: Record<string, string> = {
+  prosecution: "Acusação",
+  defense: "Defesa",
+  jury: "Júri Técnico",
+};
+const ROLE_COLORS: Record<string, string> = {
+  prosecution: "bg-red-500/10 text-red-700 border-red-500/30 dark:text-red-300",
+  defense: "bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-300",
+  jury: "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300",
+};
 
 const PHASES = [
   {
