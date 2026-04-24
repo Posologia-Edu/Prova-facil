@@ -688,23 +688,50 @@ async function runOneStep(jobId: string): Promise<{ done: boolean; failed?: bool
       current_step: "Planejando estrutura do processo",
       progress: 5,
     });
-    const r = await callJson({
-      system: ROOT_RULES,
-      user: buildBlueprintPrompt(job.learning_objectives || "", job.case_number || "001/2026", job.pdf_content || ""),
-      tool: BLUEPRINT_TOOL,
-      maxTokens: 5000,
-      timeoutMs: 120_000,
-    });
-    if (!r.ok) {
+    const objectives = job.learning_objectives || "";
+
+    // Tenta até 2x; se o blueprint não bater com o tema, refaz com instrução reforçada
+    let planned: any = null;
+    let lastErr = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const reinforced = attempt === 0
+        ? ""
+        : `\n\nATENÇÃO: A tentativa anterior gerou um caso fora do tema. RELEIA os objetivos e gere um caso que cite EXPLICITAMENTE os termos clínicos dos objetivos no title, case_summary, comorbidades da vítima e na profissão do réu.`;
+      const r = await callJson({
+        system: ROOT_RULES,
+        user: buildBlueprintPrompt(objectives, job.case_number || "001/2026", job.pdf_content || "") + reinforced,
+        tool: BLUEPRINT_TOOL,
+        model: "google/gemini-2.5-pro",
+        maxTokens: 5000,
+        timeoutMs: 120_000,
+      });
+      if (!r.ok) { lastErr = r.error; continue; }
+
+      // Validação de aderência: pelo menos 1 termo significativo dos objetivos deve aparecer no title+summary
+      const haystack = `${r.data.title || ""} ${r.data.case_summary || ""} ${r.data?.victim?.comorbidities || ""} ${r.data?.defendant?.profession || ""}`.toLowerCase();
+      const stop = new Set(["de","da","do","das","dos","em","no","na","para","com","e","o","a","os","as","um","uma","ao","à","avaliação","tratamento","segurança","efetividade","uso","sobre","pelo","pela"]);
+      const keywords = (objectives.toLowerCase().match(/[a-záéíóúâêôãõç]{4,}/gi) || [])
+        .filter((w) => !stop.has(w));
+      const hits = keywords.filter((k) => haystack.includes(k));
+      const ratio = keywords.length ? hits.length / keywords.length : 1;
+      if (!objectives || ratio >= 0.25 || hits.length >= 2) {
+        planned = r.data;
+        break;
+      }
+      lastErr = `Blueprint fora do tema (apenas ${hits.length}/${keywords.length} termos: title="${r.data.title}")`;
+      console.log("blueprint mismatch, retrying:", lastErr);
+    }
+
+    if (!planned) {
       await updateJob(jobId, {
         status: "failed",
-        last_error: r.error,
+        last_error: lastErr || "Falha ao planejar processo aderente aos objetivos",
         current_step: "Falha ao planejar processo",
         finished_at: new Date().toISOString(),
       });
       return { done: true, failed: true };
     }
-    const planned = r.data;
+
     const total = 4 /* relato/fund/denuncia/lista */ + (planned.planned_annexes || []).length + 1 /* characters */ + 1 /* assemble */;
     await updateJob(jobId, {
       blueprint_json: planned,
