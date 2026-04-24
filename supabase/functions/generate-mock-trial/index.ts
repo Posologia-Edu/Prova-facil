@@ -179,7 +179,7 @@ ANEXO 5 — PERÍCIA TÉCNICA: documento extenso (mínimo 800 palavras), com cab
 IMAGENS MÉDICAS (CAMPO ESPECIAL "image_attachments")
 ═══════════════════════════════════════════════════════════
 
-Identifique 1 a 3 EXAMES DE IMAGEM/GRÁFICOS pertinentes ao caso (radiografia, TC, RM, USG, ECG, lâmina histopatológica, fotografia de lesão, endoscopia). Para cada um, retorne no campo "image_attachments":
+Identifique 1 a 2 EXAMES DE IMAGEM/GRÁFICOS pertinentes ao caso (radiografia, TC, RM, USG, ECG, lâmina histopatológica, fotografia de lesão, endoscopia). Para cada um, retorne no campo "image_attachments":
 - "anchor": texto-âncora exato que aparecerá no markdown do processo, no formato [[IMAGE:slug]] (ex.: [[IMAGE:rx-torax-pa]]). VOCÊ DEVE inserir esse mesmo anchor no process_content, no local apropriado dentro do Anexo de Laudo de Imagem.
 - "slug": identificador curto kebab-case
 - "title": título do exame (ex.: "Radiografia de Tórax PA")
