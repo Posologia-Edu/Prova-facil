@@ -361,6 +361,9 @@ export default function MockTrialJudge() {
             <div>
               <Label>Nome do(a) Juiz(a)</Label>
               <Input value={judgeName} onChange={e => setJudgeName(e.target.value)} placeholder="Seu nome" />
+              <p className="text-xs text-muted-foreground mt-1">
+                O nome deve ser exatamente o mesmo cadastrado pelo professor para este Júri.
+              </p>
             </div>
             <Button onClick={() => authenticateJudge(judgeName)} className="w-full">Entrar como Juiz</Button>
           </CardContent>
