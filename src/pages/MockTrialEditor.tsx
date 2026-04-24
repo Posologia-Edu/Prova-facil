@@ -333,7 +333,8 @@ export default function MockTrialEditor() {
     return () => { cancelled = true; };
   }, [id]);
 
-
+  useEffect(() => {
+    if (!activeJobId) return;
     let cancelled = false;
     const fetchJob = async () => {
       const { data } = await (supabase as any)
