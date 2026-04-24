@@ -331,6 +331,7 @@ export default function MockTrialStudent() {
                 content={selectedCase?.process_content || "Conteúdo do processo não disponível"}
                 caseNumber={selectedCase?.case_number}
                 title={selectedCase?.title}
+                caseId={selectedCase?.id}
               />
             </TabsContent>
 
