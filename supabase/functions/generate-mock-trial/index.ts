@@ -379,7 +379,7 @@ PRIORIZE não-médicos quando os objetivos derem margem. O Código de Ética cit
 PERSONAGENS = TESTEMUNHAS TÉCNICAS (NÃO É O RÉU):
 - "characters" são TESTEMUNHAS TÉCNICAS chamadas por defesa ou acusação para reforçar argumentos.
 - Especialidade DELIBERADAMENTE escolhida para favorecer o lado que a convoca (sem caricatura).
-- Instructions devem orientar o aluno a explorar pontos do prontuário/laudos/perícia que sustentam sua tese, citando diretrizes pertinentes.
+- ⚠️ "instructions" NÃO DEVE ser um roteiro do que a testemunha vai falar. Em vez disso, deve ser uma LISTA DE 5–8 PERGUNTAS SOCRÁTICAS numeradas, em segunda pessoa ("você"), que provoquem o aluno a refletir e construir sozinho a argumentação. As perguntas devem cobrir: (a) o que no prontuário/laudos/perícia sustenta a tese do seu lado; (b) que diretrizes ou evidências da literatura você citaria como reforço; (c) que contradições do lado oposto você exploraria; (d) como você responderia se confrontado com a tese contrária; (e) que raciocínio clínico justifica a conduta. NÃO ESCREVA O QUE A TESTEMUNHA RESPONDERÁ — apenas as perguntas que provocam reflexão. Exemplo de formato: "1. O que no exame de antibiograma do dia 04/07 sustenta a escolha terapêutica? 2. Que diretriz da SBI/IDSA respalda essa decisão em gestantes? 3. Como você rebateria a alegação de que houve atraso no escalonamento? ...".
 
 ═══════════════════════════════════════════════════════════
 EXIGÊNCIAS DE EXTENSÃO E PROFUNDIDADE (REGRA DE OURO)
