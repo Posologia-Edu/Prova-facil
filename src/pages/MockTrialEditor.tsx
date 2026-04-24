@@ -318,10 +318,29 @@ export default function MockTrialEditor() {
       }
 
       const caseNumber = `${String(cases.length + 1).padStart(3, "0")}/${new Date().getFullYear()}`;
-      const { data, error } = await supabase.functions.invoke("generate-mock-trial", {
-        body: { learningObjectives: aiObjectives, caseNumber, pdfBase64 },
-      });
-      if (error) throw error;
+
+      // Auto-retry up to 3 attempts when the edge function returns a partial/incomplete process (422)
+      let data: any = null;
+      let lastError: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        if (attempt > 1) {
+          toast.info(`Processo veio incompleto. Tentando novamente (${attempt}/3)...`);
+        }
+        const resp = await supabase.functions.invoke("generate-mock-trial", {
+          body: { learningObjectives: aiObjectives, caseNumber, pdfBase64 },
+        });
+        if (!resp.error && resp.data && !resp.data.error) {
+          data = resp.data;
+          break;
+        }
+        lastError = resp.error || new Error(resp.data?.error || "Erro desconhecido");
+        const msg = String(lastError?.message || "").toLowerCase();
+        // Don't retry on quota/auth errors
+        if (msg.includes("credits") || msg.includes("rate limit") || msg.includes("402") || msg.includes("429")) {
+          throw lastError;
+        }
+      }
+      if (!data) throw lastError || new Error("Falha ao gerar processo após 3 tentativas");
 
       const { data: inserted, error: insertError } = await supabase.from("mock_trial_cases").insert({
         mock_trial_id: id!,
