@@ -59,10 +59,11 @@ Gere um processo jurídico simulado completo no seguinte formato JSON:
 
 O processo deve:
 - Ser realista e educativo
-- Conter detalhes clínicos suficientes para discussão
+- Conter detalhes clínicos suficientes para discussão (sintomas, exames, condutas, dosagens)
 - Ter fundamentação jurídica baseada no Código Penal e Código de Ética Médica
 - Gerar personagens-testemunha com profissões relacionadas ao caso
-- As instruções dos personagens devem orientar sobre como argumentar na perspectiva da especialidade`;
+- As instruções dos personagens devem orientar sobre como argumentar na perspectiva da especialidade
+- INCLUIR OBRIGATORIAMENTE, ao final do process_content, as seções "ARGUMENTAÇÃO A SER AVALIADA PELO JÚRI" (com sub-seções "Pela Acusação" e "Pela Defesa" em formato de bullets), "REFERÊNCIAS SUGERIDAS AOS JURADOS" e "INSTRUÇÃO AOS PARTICIPANTES", conforme estrutura especificada. Estas seções são essenciais para a condução do júri.`;
 
     const userPrompt = `Objetivos de Aprendizagem: ${learningObjectives || "Não especificados"}
 Número do Processo: ${caseNumber || "001/2025"}
