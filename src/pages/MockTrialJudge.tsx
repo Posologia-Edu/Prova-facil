@@ -131,8 +131,40 @@ export default function MockTrialJudge() {
     setCases(c || []);
     if (c && c.length > 0) setSelectedCaseId(c[0].id);
 
+    const { data: grps } = await supabase.from("mock_trial_groups").select("*").eq("mock_trial_id", t.id).order("group_number");
+    setGroups(grps || []);
+    const groupIds = (grps || []).map(g => g.id);
+    if (groupIds.length > 0) {
+      const { data: studs } = await supabase.from("mock_trial_students").select("*").in("group_id", groupIds);
+      setStudents(studs || []);
+    }
+    const caseIds = (c || []).map(x => x.id);
+    if (caseIds.length > 0) {
+      const { data: assigns } = await supabase.from("mock_trial_assignments").select("*").in("case_id", caseIds);
+      setAssignments(assigns || []);
+    }
+    const { data: frms } = await supabase.from("mock_trial_forms").select("*").eq("mock_trial_id", t.id);
+    setForms(frms || []);
+
     setAuthenticated(true);
   };
+
+  // Load responses for the current session + realtime updates
+  useEffect(() => {
+    if (!session?.id) { setResponses([]); return; }
+    let active = true;
+    (async () => {
+      const { data } = await supabase.from("mock_trial_responses").select("*").eq("session_id", session.id);
+      if (active) setResponses(data || []);
+    })();
+    const channel = supabase
+      .channel(`responses-${session.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mock_trial_responses", filter: `session_id=eq.${session.id}` }, (payload) => {
+        setResponses(prev => [...prev, payload.new]);
+      })
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(channel); };
+  }, [session?.id]);
 
   // Load/create session for selected case
   useEffect(() => {
