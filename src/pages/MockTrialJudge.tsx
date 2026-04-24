@@ -150,6 +150,10 @@ export default function MockTrialJudge() {
     const { data: frms } = await supabase.from("mock_trial_forms").select("*").eq("mock_trial_id", t.id);
     setForms(frms || []);
 
+    // Garantir formulários de avaliação (juiz e professor)
+    const evalForms = await ensureEvaluationForms(t.id);
+    setEvaluationForms(evalForms);
+
     setAuthenticated(true);
   };
 
