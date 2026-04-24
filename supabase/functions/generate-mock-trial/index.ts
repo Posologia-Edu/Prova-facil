@@ -73,6 +73,87 @@ async function generateMedicalImage(prompt: string, timeoutMs = 45000): Promise<
   }
 }
 
+function extractExpectedAnnexCount(processContent: string): number {
+  const match = processContent.match(/##\s+Lista de Provas([\s\S]*?)(?:\n---|\n##\s+ANEXO|$)/i);
+  if (!match) return 6;
+
+  const count = (match[1].match(/^\s*\d+\./gm) || []).length;
+  return Math.max(count, 6);
+}
+
+function extractPresentAnnexNumbers(processContent: string): number[] {
+  return [...processContent.matchAll(/^##\s+ANEXO\s+(\d+)/gim)]
+    .map((m) => Number(m[1]))
+    .filter((n) => Number.isFinite(n));
+}
+
+function findPlaceholderTokens(processContent: string): string[] {
+  const sanitized = processContent.replace(/\[\[IMAGE:[^\]]+\]\]/g, "");
+  const patterns = [
+    /\[(?:Nome|Data|Universidade|Curso|Cidade|registro|Registro)[^\]]*\]/gi,
+    /\[(?:Mínimo|Conforme|Use|Narrativa|Tabelas?|Texto completo|descrição)[^\]]*\]/gi,
+    /\.\.\./g,
+  ];
+
+  return patterns.flatMap((pattern) => sanitized.match(pattern) || []).slice(0, 10);
+}
+
+function validateMockTrialResult(result: any): string[] {
+  const issues: string[] = [];
+  const content = typeof result?.process_content === "string" ? result.process_content : "";
+
+  if (!String(result?.title || "").trim()) issues.push("título ausente");
+  if (!content.trim()) issues.push("process_content ausente");
+  if (!content.trim()) return issues;
+
+  const requiredSections = [
+    "Relato dos Fatos",
+    "Fundamentação Jurídica",
+    "Denúncia",
+    "Lista de Provas",
+    "## ANEXO 1",
+    "## ANEXO 2",
+    "## ANEXO 3",
+    "## ANEXO 4",
+    "## ANEXO 5",
+    "## ANEXO 6",
+  ];
+
+  for (const section of requiredSections) {
+    if (!content.toLowerCase().includes(section.toLowerCase())) {
+      issues.push(`seção obrigatória ausente: ${section}`);
+    }
+  }
+
+  const expectedAnnexes = extractExpectedAnnexCount(content);
+  const presentAnnexes = new Set(extractPresentAnnexNumbers(content));
+  for (let annex = 1; annex <= expectedAnnexes; annex += 1) {
+    if (!presentAnnexes.has(annex)) {
+      issues.push(`anexo ${annex} ausente`);
+    }
+  }
+
+  const placeholders = findPlaceholderTokens(content);
+  if (placeholders.length > 0) {
+    issues.push(`placeholders remanescentes: ${placeholders.join(", ")}`);
+  }
+
+  const trimmed = content.trim();
+  if (!/[.!?"”)]$/.test(trimmed)) {
+    issues.push("texto parece truncado no final");
+  }
+
+  const attachments = Array.isArray(result?.image_attachments) ? result.image_attachments : [];
+  for (const attachment of attachments) {
+    const anchor = String(attachment?.anchor || `[[IMAGE:${attachment?.slug || ""}]]`);
+    if (anchor.includes("[[IMAGE:") && !content.includes(anchor)) {
+      issues.push(`âncora ausente no conteúdo: ${anchor}`);
+    }
+  }
+
+  return [...new Set(issues)];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
