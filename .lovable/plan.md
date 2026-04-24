@@ -1,81 +1,140 @@
-## Plano para tornar as imagens do processo confiáveis
+# Plano para gerar processos completos, com todas as exigências, sem falhas recorrentes
 
-### Objetivo
-Fazer com que os processos do Júri Simulado passem a ter imagens geradas de forma mais estável, com salvamento no backend, status de geração e opção de reprocessar quando necessário.
+## Objetivo
+Transformar a geração e a regeneração do Júri Simulado em um fluxo confiável, assíncrono e validado por etapas, para que os processos saiam completos, consistentes com seus pedidos e sem parar no meio.
 
-### O que será construído
+## Problema atual
+Hoje a geração depende de uma chamada única e muito pesada da IA dentro de uma função com limite de tempo. Isso está causando:
+- abortos por tempo limite;
+- respostas parciais com só 1 ou 2 anexos;
+- retries que repetem a mesma falha;
+- regenerações que ainda quebram;
+- casos antigos incompletos e até duplicados por número.
 
-1. Separar a geração do texto e a geração das imagens
-- O processo será criado primeiro com todo o conteúdo textual e com os anchors `[[IMAGE:slug]]`.
-- As imagens deixarão de ser injetadas como base64 dentro do markdown no mesmo request.
-- Isso evita falhas por timeout, respostas grandes demais e formatos inconsistentes do modelo de imagem.
+## O que será implementado
 
-2. Criar um registro próprio para imagens do processo
-- Cada imagem do caso terá seu próprio registro com:
-  - processo vinculado
-  - slug/anchor
-  - título
-  - legenda
-  - prompt visual
-  - status (`pending`, `processing`, `ready`, `failed`)
-  - URL final da imagem
-  - mensagem de erro
-- Assim será possível acompanhar exatamente qual imagem falhou e regenerá-la sem recriar o processo inteiro.
+### 1) Novo fluxo assíncrono de geração
+A geração deixará de depender de uma única resposta longa.
 
-3. Usar pipeline de geração com upload para storage
-- A geração seguirá o padrão mais confiável já usado no projeto para imagens médicas: gerar, validar retorno, converter e salvar em storage.
-- A URL pública salva no backend será usada no processo, em vez de base64 embutido no texto.
-- Se a primeira tentativa falhar, a função fará nova tentativa com prompt mais simples e controlado.
-
-4. Melhorar o renderizador do processo
-- O renderer vai substituir `[[IMAGE:slug]]` pela imagem salva correspondente no momento da exibição.
-- Enquanto a imagem estiver sendo gerada, aparecerá um bloco visual premium de “imagem em processamento”.
-- Se falhar, aparecerá um aviso elegante com botão de regenerar, sem quebrar o restante do processo.
-
-5. Dar controle ao professor no editor
-- No editor do Júri Simulado, cada processo terá uma área de imagens com:
-  - status de cada imagem
-  - pré-visualização
-  - botão “Gerar novamente”
-  - opção de upload manual como contingência
-- O professor poderá corrigir o fluxo sem precisar gerar um novo processo completo.
-
-6. Manter compatibilidade com o banco de processos
-- Ao salvar um processo no banco de processos, também serão salvos os metadados e URLs das imagens.
-- Ao reutilizar um processo em outra atividade, as imagens continuarão disponíveis sem precisar gerar tudo de novo.
-- Se alguma imagem antiga não existir mais, o sistema mostrará status de pendência e permitirá regeneração pontual.
-
-### Fluxo final esperado
-
+Novo fluxo:
 ```text
-Gerar processo
-  -> salva texto do processo
-  -> salva lista estruturada de imagens pendentes
-  -> inicia geração das imagens
-  -> envia arquivos para storage
-  -> marca cada imagem como pronta
-  -> renderer troca [[IMAGE:slug]] pela URL final
+Professor clica em Gerar/Regerar
+-> backend cria um job de geração
+-> resposta imediata com status "em processamento"
+-> processamento continua em segundo plano
+-> geração acontece por etapas menores
+-> cada etapa é validada
+-> se faltar algo, só a parte com problema é refeita
+-> processo é publicado apenas quando estiver completo
 ```
 
-### Arquivos/áreas que serão ajustados
-- Backend function de geração do processo
-- Função compartilhada de chamada à IA/imagem
-- Estrutura do banco para imagens do Júri Simulado
-- Página do editor do Júri Simulado
-- Renderizador visual do processo
-- Banco de processos para preservar imagens reutilizáveis
+Isso elimina o gargalo principal do timeout.
 
-### Detalhes técnicos
-- Em vez de depender da resposta inline do modelo de imagem dentro de `generate-mock-trial`, a geração será persistida e desacoplada.
-- Vou criar uma tabela específica para imagens do processo, em vez de confiar só em `process_content`.
-- Vou reaproveitar a lógica já existente de upload/URL pública usada no gerador de imagem médica, adaptando-a para o Júri Simulado.
-- As políticas de acesso serão alinhadas ao padrão já usado pelos portais do Júri Simulado para que juiz e grupos consigam visualizar as imagens.
-- O renderizador manterá compatibilidade com processos antigos: se o conteúdo já tiver imagem embutida, continua funcionando; se tiver anchor estruturado, passará a resolver pela URL salva.
+### 2) Geração em blocos, não em documento único
+Em vez de pedir tudo de uma vez, o sistema vai montar o processo em etapas:
+- blueprint do caso;
+- metadados principais do processo;
+- Relato dos Fatos;
+- Fundamentação Jurídica;
+- Denúncia;
+- anexos gerados individualmente;
+- personagens/testemunhas técnicas;
+- conferência final e montagem do `process_content`.
 
-### Resultado esperado
-- O processo não fica mais “sem imagem” por causa de timeout ou retorno inválido.
-- Cada imagem passa a ter status visível e regeneração isolada.
-- O texto do processo continua acessível mesmo quando a imagem ainda está processando.
-- Os processos salvos no banco continuam reutilizáveis com suas imagens já vinculadas.
+Cada anexo será gerado separadamente. Se o Anexo 4 falhar, o sistema refaz só o Anexo 4, sem perder o restante.
 
-Se você aprovar, eu implemento esse pipeline novo de imagens.
+### 3) Validação forte baseada nas suas exigências
+A validação deixará de ser só “tem ou não tem anexo”. Ela vai checar também:
+- quantidade exata de anexos planejados;
+- presença obrigatória de todas as seções;
+- ausência de placeholders e instruções vazadas;
+- tamanho mínimo de depoimentos e perícia;
+- consistência entre profissão do réu, conselho profissional e perito;
+- presença dos anchors de imagem e anexos de imagem;
+- fechamento correto do texto, para detectar truncamento;
+- coerência entre lista de provas e anexos realmente gerados;
+- existência do conteúdo obrigatório que você definiu: easter eggs, plot twist, neutralidade, testemunhas técnicas e profundidade documental.
+
+Se algo falhar, o sistema entra em modo de reparo e tenta corrigir apenas a parte faltante.
+
+### 4) Persistência do progresso no banco
+Vou adicionar estrutura para acompanhar a geração no backend, com campos/tabela para:
+- status do job;
+- etapa atual;
+- progresso;
+- tentativas por etapa;
+- erros detalhados;
+- resultado parcial por seção/anexo;
+- vínculo com o processo original em caso de regeneração.
+
+Isso vai permitir:
+- sair da tela e voltar depois sem perder o processo;
+- continuar uma geração interrompida;
+- mostrar ao professor exatamente em que etapa está;
+- evitar duplicações acidentais.
+
+### 5) UI de acompanhamento no editor
+Na tela do Júri Simulado, a geração vai mostrar:
+- status real: “planejando”, “gerando anexo 1”, “validando”, “corrigindo anexo 3”, “concluído”, “falhou”;
+- barra/progresso por etapas;
+- botão para tentar novamente só a etapa com erro;
+- diferenciação clara entre “Gerar novo processo” e “Regerar este processo”;
+- bloqueio para evitar cliques repetidos que criem duplicidade.
+
+### 6) Reparo dos processos já quebrados
+Vou tratar também os processos já criados e incompletos.
+
+Plano de reparo:
+- identificar casos incompletos pela validação nova;
+- usar os objetivos já salvos para reconstruir o conteúdo;
+- reaproveitar o número do processo e a posição original;
+- substituir apenas quando a nova versão passar em toda a validação;
+- marcar versões antigas problemáticas para revisão, evitando confusão com duplicados.
+
+### 7) Regeneração robusta
+O botão “Regerar com IA” vai usar exatamente o mesmo pipeline robusto do gerador principal.
+
+Ou seja:
+- não será mais uma chamada única frágil;
+- vai virar um job completo com progresso, validação e reparo;
+- só atualiza o caso quando a nova versão estiver realmente pronta.
+
+## Entregáveis
+
+### Backend
+- refatoração da função `generate-mock-trial` para iniciar job assíncrono;
+- criação de estrutura de job/progresso no banco;
+- worker de geração por seções/anexos;
+- pipeline de validação e auto-reparo;
+- rotina de reparo para casos antigos incompletos.
+
+### Frontend
+- atualização do `MockTrialEditor` para iniciar jobs e acompanhar progresso;
+- interface de status para geração e regeneração;
+- prevenção de duplicidade e melhor tratamento de erro;
+- atualização automática quando o processo terminar.
+
+### Qualidade
+- validação antes de publicar qualquer processo;
+- logs mais claros por etapa;
+- mensagens úteis para falha real de crédito/rate-limit vs falha de conteúdo.
+
+## Detalhes técnicos
+- Arquivos principais envolvidos:
+  - `supabase/functions/generate-mock-trial/index.ts`
+  - `src/pages/MockTrialEditor.tsx`
+  - nova migration para job/status da geração
+  - possivelmente uma função auxiliar de worker/status
+- A geração de imagens continuará desacoplada, como já está, para não voltar a causar timeout.
+- O processo só será salvo como concluído quando passar em todas as validações.
+- Vou manter suas regras atuais de profundidade e completude, mas distribuídas em etapas menores para a IA conseguir cumprir sem cortar no meio.
+
+## Resultado esperado
+Depois dessa mudança:
+- gerar e regerar terão o mesmo fluxo robusto;
+- processos longos não dependerão mais de uma resposta única sujeita a timeout;
+- anexos faltantes poderão ser corrigidos sem refazer tudo;
+- processos novos só aparecerão como prontos quando estiverem completos;
+- os processos incompletos atuais poderão ser recuperados com segurança.
+
+Se você aprovar, eu implemento esse pipeline completo e já deixo a geração antiga substituída por essa versão robusta.

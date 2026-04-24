@@ -2217,6 +2217,7 @@ export type Database = {
           case_number: string
           characters_json: Json
           created_at: string
+          generation_status: string
           id: string
           learning_objectives: string | null
           mock_trial_id: string
@@ -2228,6 +2229,7 @@ export type Database = {
           case_number?: string
           characters_json?: Json
           created_at?: string
+          generation_status?: string
           id?: string
           learning_objectives?: string | null
           mock_trial_id: string
@@ -2239,6 +2241,7 @@ export type Database = {
           case_number?: string
           characters_json?: Json
           created_at?: string
+          generation_status?: string
           id?: string
           learning_objectives?: string | null
           mock_trial_id?: string
@@ -2401,6 +2404,103 @@ export type Database = {
             columns: ["mock_trial_id"]
             isOneToOne: false
             referencedRelation: "mock_trials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mock_trial_generation_jobs: {
+        Row: {
+          attempts: number
+          blueprint_json: Json | null
+          case_id: string | null
+          case_number: string | null
+          completed_steps: number
+          created_at: string
+          current_step: string | null
+          finished_at: string | null
+          id: string
+          last_error: string | null
+          learning_objectives: string | null
+          mock_trial_id: string
+          mode: string
+          pdf_content: string | null
+          progress: number
+          result_case_id: string | null
+          sections_json: Json
+          status: string
+          total_steps: number
+          updated_at: string
+          user_id: string
+          validation_issues: Json
+        }
+        Insert: {
+          attempts?: number
+          blueprint_json?: Json | null
+          case_id?: string | null
+          case_number?: string | null
+          completed_steps?: number
+          created_at?: string
+          current_step?: string | null
+          finished_at?: string | null
+          id?: string
+          last_error?: string | null
+          learning_objectives?: string | null
+          mock_trial_id: string
+          mode?: string
+          pdf_content?: string | null
+          progress?: number
+          result_case_id?: string | null
+          sections_json?: Json
+          status?: string
+          total_steps?: number
+          updated_at?: string
+          user_id: string
+          validation_issues?: Json
+        }
+        Update: {
+          attempts?: number
+          blueprint_json?: Json | null
+          case_id?: string | null
+          case_number?: string | null
+          completed_steps?: number
+          created_at?: string
+          current_step?: string | null
+          finished_at?: string | null
+          id?: string
+          last_error?: string | null
+          learning_objectives?: string | null
+          mock_trial_id?: string
+          mode?: string
+          pdf_content?: string | null
+          progress?: number
+          result_case_id?: string | null
+          sections_json?: Json
+          status?: string
+          total_steps?: number
+          updated_at?: string
+          user_id?: string
+          validation_issues?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_generation_jobs_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_trial_generation_jobs_mock_trial_id_fkey"
+            columns: ["mock_trial_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_trial_generation_jobs_result_case_id_fkey"
+            columns: ["result_case_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_cases"
             referencedColumns: ["id"]
           },
         ]
