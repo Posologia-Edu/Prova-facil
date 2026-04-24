@@ -715,6 +715,16 @@ export default function MockTrialEditor() {
                     <Button
                       size="sm"
                       variant="outline"
+                      onClick={() => regenerateCase(c)}
+                      disabled={regeneratingCaseId === c.id || !c.learning_objectives}
+                      title={c.learning_objectives ? "Substituir o conteúdo deste processo por uma nova geração de IA" : "Sem objetivos de aprendizagem salvos para regenerar"}
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      {regeneratingCaseId === c.id ? "Regenerando..." : "Regerar com IA"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => saveCaseToBank(c)}
                       disabled={savingToBankId === c.id || !c.process_content}
                       title="Salvar este processo no banco para reutilizar em outros Júris Simulados"
