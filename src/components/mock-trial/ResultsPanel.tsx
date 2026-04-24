@@ -165,11 +165,16 @@ export function ResultsPanel(props: Props) {
                 <Card key={a.id} className={`border ${ROLE_COLOR[a.role] || ""}`}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline">{ROLE_LABEL[a.role]}</Badge>
                         <CardTitle className="text-sm">
                           {formatGroupLabel(group)}
                         </CardTitle>
+                        <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          {selectedCase.title}
+                          {selectedCase.case_number ? ` · nº ${selectedCase.case_number}` : ""}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         {judgeEval && (
