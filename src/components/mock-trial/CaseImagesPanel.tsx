@@ -167,13 +167,13 @@ export function CaseImagesPanel({ caseId }: Props) {
       // Inserir âncora no conteúdo do processo se ainda não existir
       const { data: caseRow } = await (supabase as any)
         .from("mock_trial_cases")
-        .select("case_content")
+        .select("process_content")
         .eq("id", caseId)
         .single();
-      const content: string = caseRow?.case_content || "";
+      const content: string = caseRow?.process_content || "";
       if (content && !content.includes(`[[IMAGE:${slug}]]`)) {
         const updated = content + `\n\n[[IMAGE:${slug}]]\n\n`;
-        await (supabase as any).from("mock_trial_cases").update({ case_content: updated }).eq("id", caseId);
+        await (supabase as any).from("mock_trial_cases").update({ process_content: updated }).eq("id", caseId);
       }
 
       setNewSlug(""); setNewTitle(""); setNewPrompt("");
