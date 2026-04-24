@@ -593,10 +593,6 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
     }
     const aiPayload: any = {
       model: "google/gemini-2.5-pro",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
       reasoning: {
         effort: "medium",
       },
@@ -649,61 +645,94 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
       tool_choice: { type: "function", function: { name: "generate_mock_trial_case" } },
     };
 
-    const aiController = new AbortController();
-    const aiTimer = setTimeout(() => aiController.abort(), 220000);
-    let response: Response;
-    try {
-      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        signal: aiController.signal,
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(aiPayload),
-      });
-    } catch (e) {
+    let result: any = null;
+    let lastIssues: string[] = [];
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const attemptPayload = {
+        ...aiPayload,
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: attempt === 1
+              ? userPrompt
+              : `${userPrompt}\n\nCORREÇÃO OBRIGATÓRIA DA TENTATIVA ANTERIOR: o processo veio incompleto. Reescreva o processo INTEIRO, do início ao fim, sem cortar anexos, e corrija especificamente estes problemas: ${lastIssues.join("; ")}. Só finalize quando todos os anexos listados estiverem completos.`,
+          },
+        ],
+      };
+
+      const aiController = new AbortController();
+      const aiTimer = setTimeout(() => aiController.abort(), 220000);
+      let response: Response;
+      try {
+        response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          signal: aiController.signal,
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(attemptPayload),
+        });
+      } catch (e) {
+        clearTimeout(aiTimer);
+        console.error(`AI gateway error (attempt ${attempt}):`, (e as Error).message);
+        if (attempt === 3) {
+          return new Response(
+            JSON.stringify({ error: "A geração demorou demais. Tente novamente." }),
+            { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        continue;
+      }
       clearTimeout(aiTimer);
-      console.error("AI gateway error:", (e as Error).message);
-      return new Response(
-        JSON.stringify({ error: "A geração demorou demais. Tente novamente." }),
-        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    clearTimeout(aiTimer);
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI error:", response.status, errText);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`AI error (attempt ${attempt}):`, response.status, errText);
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        if (attempt === 3) throw new Error("AI generation failed");
+        continue;
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const data = await response.json();
+      let candidate: any = null;
+
+      if (data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments) {
+        const args = data.choices[0].message.tool_calls[0].function.arguments;
+        candidate = typeof args === "string" ? JSON.parse(args) : args;
+      } else if (data.choices?.[0]?.message?.content) {
+        const content = data.choices[0].message.content;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        candidate = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
       }
-      throw new Error("AI generation failed");
+
+      if (!candidate) {
+        lastIssues = ["não foi possível interpretar a resposta estruturada da IA"];
+        if (attempt === 3) throw new Error("Could not parse AI response");
+        continue;
+      }
+
+      const validationIssues = validateMockTrialResult(candidate);
+      if (validationIssues.length === 0) {
+        result = candidate;
+        break;
+      }
+
+      lastIssues = validationIssues;
+      console.error(`Mock trial validation failed (attempt ${attempt}):`, validationIssues);
     }
 
-    const data = await response.json();
-    let result: any;
-
-    if (data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments) {
-      const args = data.choices[0].message.tool_calls[0].function.arguments;
-      result = typeof args === "string" ? JSON.parse(args) : args;
-    } else if (data.choices?.[0]?.message?.content) {
-      const content = data.choices[0].message.content;
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      result = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-    }
-
-    if (!result) throw new Error("Could not parse AI response");
-
-    const validationIssues = validateMockTrialResult(result);
-    if (validationIssues.length > 0) {
-      console.error("Mock trial validation failed:", validationIssues);
+    if (!result) {
       return new Response(JSON.stringify({
-        error: "A IA retornou um processo incompleto. Tente novamente.",
-        details: validationIssues,
+        error: "A IA retornou um processo incompleto após novas tentativas.",
+        details: lastIssues,
       }), {
         status: 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
