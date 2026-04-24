@@ -207,6 +207,12 @@ export default function MockTrialEditor() {
         toast.error("Você precisa estar autenticado");
         return;
       }
+      const { data: caseImages, error: imagesError } = await (supabase as any)
+        .from("mock_trial_case_images")
+        .select("slug, anchor, title, caption, prompt, status, image_url, storage_path")
+        .eq("case_id", c.id)
+        .order("created_at");
+      if (imagesError) throw imagesError;
       const { error } = await (supabase as any).from("mock_trial_case_bank").insert({
         user_id: user.id,
         title: c.title || "Processo sem título",
@@ -214,6 +220,7 @@ export default function MockTrialEditor() {
         learning_objectives: c.learning_objectives || null,
         process_content: c.process_content || "",
         characters_json: c.characters_json || [],
+        images_json: caseImages || [],
         source_case_id: c.id,
       });
       if (error) throw error;

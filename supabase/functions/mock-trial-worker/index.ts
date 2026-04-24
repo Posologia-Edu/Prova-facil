@@ -280,7 +280,15 @@ PRINCÍPIOS OBRIGATÓRIOS:
 - Cite literatura real (Mandell, Harrison, Goodman & Gilman, diretrizes SBC/SBI/SBP/SBD, Ministério da Saúde, RDCs ANVISA, CLSI/BrCAST, qSOFA/SIRS/CURB-65/APACHE II quando pertinente).
 `;
 
+function isPdfBase64Like(content?: string | null): boolean {
+  const text = (content || "").trim();
+  if (text.length < 1000) return false;
+  const compact = text.replace(/\s+/g, "");
+  return compact.startsWith("JVBER") && /^[A-Za-z0-9+/=]+$/.test(compact.slice(0, Math.min(compact.length, 5000)));
+}
+
 function buildBlueprintPrompt(objectives: string, caseNumber: string, pdfContent?: string) {
+  const referenceContent = isPdfBase64Like(pdfContent) ? "" : (pdfContent || "");
   return `${ROOT_RULES}
 
 Você está PLANEJANDO um processo judicial simulado. NÃO escreva o processo agora — apenas planeje sua estrutura completa, em uma única chamada de função estruturada.
@@ -298,7 +306,7 @@ REGRA CRÍTICA #3: A profissão do réu deve ser COMPATÍVEL com o tema. Tema cl
 REGRA CRÍTICA #4: planned_image_attachments é OBRIGATÓRIO conter EXATAMENTE 2 a 3 imagens médicas pertinentes ao tema (ex.: ultrassom renal, urocultura, tomografia de abdome para pielonefrite). NUNCA retorne array vazio.
 
 NÚMERO DO PROCESSO: ${caseNumber}
-${pdfContent ? `\nMATERIAL DE REFERÊNCIA (PDF da aula):\n${pdfContent.slice(0, 6000)}` : ""}
+${referenceContent ? `\nMATERIAL DE REFERÊNCIA (PDF da aula):\n${referenceContent.slice(0, 6000)}` : ""}
 
 Defina:
 - title (título completo do processo, OBRIGATORIAMENTE alinhado aos objetivos acima — ex.: "Ação Penal Pública: Negligência terapêutica no manejo de pielonefrite com Fosfomicina")
@@ -647,6 +655,131 @@ function assembleProcessContent(bp: any, sec: any): string {
   return parts.join("\n");
 }
 
+async function callLegacyFullCaseGenerator(job: any): Promise<{ ok: true; data: any } | { ok: false; error: string; status?: number }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 145_000);
+  try {
+    const body: Record<string, any> = {
+      learningObjectives: job.learning_objectives || "",
+      caseNumber: job.case_number || "001/2026",
+    };
+
+    if (job.pdf_content) {
+      if (isPdfBase64Like(job.pdf_content)) body.pdfBase64 = job.pdf_content;
+      else body.pdfContent = job.pdf_content;
+    }
+
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/generate-mock-trial`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    clearTimeout(timer);
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      return { ok: false, status: resp.status, error: `Legacy generator ${resp.status}: ${txt.slice(0, 500)}` };
+    }
+
+    return { ok: true, data: await resp.json() };
+  } catch (e) {
+    clearTimeout(timer);
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+async function persistGeneratedCase(
+  jobId: string,
+  job: any,
+  payload: { title: string; processContent: string; characters: any[]; imageAttachments: any[] },
+): Promise<{ ok: true; caseId: string } | { ok: false; error: string }> {
+  let caseId = job.case_id as string | null;
+
+  if (job.mode === "regenerate" && caseId) {
+    const { error } = await sb.from("mock_trial_cases").update({
+      title: payload.title,
+      process_content: payload.processContent,
+      learning_objectives: job.learning_objectives,
+      characters_json: payload.characters || [],
+      generation_status: "ready",
+    }).eq("id", caseId);
+
+    if (error) return { ok: false, error: error.message };
+
+    const { error: deleteErr } = await sb.from("mock_trial_case_images").delete().eq("case_id", caseId);
+    if (deleteErr) return { ok: false, error: deleteErr.message };
+  } else {
+    const { data: trialCases, error: caseListErr } = await sb
+      .from("mock_trial_cases")
+      .select("id")
+      .eq("mock_trial_id", job.mock_trial_id);
+
+    if (caseListErr) return { ok: false, error: caseListErr.message };
+
+    const position = (trialCases || []).length;
+    const { data: inserted, error: insErr } = await sb.from("mock_trial_cases").insert({
+      mock_trial_id: job.mock_trial_id,
+      position,
+      case_number: job.case_number || `${String(position + 1).padStart(3, "0")}/${new Date().getFullYear()}`,
+      title: payload.title,
+      process_content: payload.processContent,
+      learning_objectives: job.learning_objectives,
+      characters_json: payload.characters || [],
+      generation_status: "ready",
+    }).select().single();
+
+    if (insErr || !inserted) return { ok: false, error: insErr?.message || "Falha ao criar processo" };
+    caseId = inserted.id;
+  }
+
+  const imageAttachments = (payload.imageAttachments || []).slice(0, 3);
+  if (caseId && imageAttachments.length) {
+    const rows = imageAttachments.map((a: any) => ({
+      case_id: caseId,
+      slug: a.slug,
+      anchor: a.anchor || `[[IMAGE:${a.slug}]]`,
+      title: a.title || "",
+      caption: a.caption || "",
+      prompt: a.prompt || a.title || "",
+      status: a.image_url ? "ready" : "pending",
+      image_url: a.image_url || null,
+      storage_path: a.storage_path || null,
+    }));
+
+    const { data: imgRows, error: imgErr } = await sb.from("mock_trial_case_images").insert(rows).select();
+    if (imgErr) return { ok: false, error: imgErr.message };
+
+    for (const r of imgRows || []) {
+      if (r.image_url) continue;
+      fetch(`${SUPABASE_URL}/functions/v1/generate-mock-trial-image`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ imageId: r.id }),
+      }).catch((e) => console.error("image trigger failed:", (e as Error).message));
+    }
+  }
+
+  await updateJob(jobId, {
+    status: "completed",
+    current_step: "Processo concluído",
+    progress: 100,
+    completed_steps: job.total_steps,
+    case_id: caseId,
+    result_case_id: caseId,
+    finished_at: new Date().toISOString(),
+  });
+
+  return { ok: true, caseId: caseId! };
+}
+
 // ---- worker driver -----------------------------------------------------
 
 async function loadJob(jobId: string) {
@@ -724,12 +857,42 @@ async function runOneStep(jobId: string): Promise<{ done: boolean; failed?: bool
 
     if (!planned) {
       await updateJob(jobId, {
-        status: "failed",
-        last_error: lastErr || "Falha ao planejar processo aderente aos objetivos",
-        current_step: "Falha ao planejar processo",
-        finished_at: new Date().toISOString(),
+        status: "planning",
+        current_step: "Planejamento falhou — recuperando com geração completa",
+        last_error: lastErr || null,
+        progress: 10,
       });
-      return { done: true, failed: true };
+
+      const legacy = await callLegacyFullCaseGenerator(job);
+      if (!legacy.ok) {
+        await updateJob(jobId, {
+          status: "failed",
+          last_error: `${lastErr || "Falha ao planejar processo"} | ${legacy.error}`,
+          current_step: "Falha ao gerar processo",
+          finished_at: new Date().toISOString(),
+        });
+        return { done: true, failed: true };
+      }
+
+      await updateJob(jobId, { status: "assembling", current_step: "Salvando processo completo" });
+      const persisted = await persistGeneratedCase(jobId, job, {
+        title: legacy.data.title || job.case_number || "Processo gerado por IA",
+        processContent: legacy.data.process_content || "",
+        characters: legacy.data.characters || [],
+        imageAttachments: legacy.data.image_attachments || [],
+      });
+
+      if (!persisted.ok) {
+        await updateJob(jobId, {
+          status: "failed",
+          last_error: persisted.error,
+          current_step: "Falha ao salvar processo",
+          finished_at: new Date().toISOString(),
+        });
+        return { done: true, failed: true };
+      }
+
+      return { done: true };
     }
 
     const total = 4 /* relato/fund/denuncia/lista */ + (planned.planned_annexes || []).length + 1 /* characters */ + 1 /* assemble */;
@@ -881,72 +1044,23 @@ async function runOneStep(jobId: string): Promise<{ done: boolean; failed?: bool
   // --- Final: assemble + persist case ---
   await updateJob(jobId, { status: "assembling", current_step: "Montando processo final" });
   const processContent = assembleProcessContent(bp, { ...sec, case_number: job.case_number });
-  const imageAttachments = (bp.planned_image_attachments || []).slice(0, 3);
-
-  let caseId = job.case_id as string | null;
-  if (job.mode === "regenerate" && caseId) {
-    await sb.from("mock_trial_cases").update({
-      title: bp.title,
-      process_content: processContent,
-      characters_json: sec.characters || [],
-      generation_status: "ready",
-    }).eq("id", caseId);
-    await sb.from("mock_trial_case_images").delete().eq("case_id", caseId);
-  } else {
-    const { data: trialCases } = await sb
-      .from("mock_trial_cases")
-      .select("id")
-      .eq("mock_trial_id", job.mock_trial_id);
-    const position = (trialCases || []).length;
-    const { data: inserted, error: insErr } = await sb.from("mock_trial_cases").insert({
-      mock_trial_id: job.mock_trial_id,
-      position,
-      case_number: job.case_number || `${String(position + 1).padStart(3, "0")}/${new Date().getFullYear()}`,
-      title: bp.title,
-      process_content: processContent,
-      learning_objectives: job.learning_objectives,
-      characters_json: sec.characters || [],
-      generation_status: "ready",
-    }).select().single();
-    if (insErr) {
-      await updateJob(jobId, { status: "failed", last_error: insErr.message, finished_at: new Date().toISOString() });
-      return { done: true, failed: true };
-    }
-    caseId = inserted.id;
-  }
-
-  if (caseId && imageAttachments.length) {
-    const rows = imageAttachments.map((a: any) => ({
-      case_id: caseId,
-      slug: a.slug,
-      anchor: a.anchor || `[[IMAGE:${a.slug}]]`,
-      title: a.title || "",
-      caption: a.caption || "",
-      prompt: a.prompt || a.title || "",
-      status: "pending",
-    }));
-    const { data: imgRows } = await sb.from("mock_trial_case_images").insert(rows).select();
-    for (const r of imgRows || []) {
-      fetch(`${SUPABASE_URL}/functions/v1/generate-mock-trial-image`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ imageId: r.id }),
-      }).catch((e) => console.error("image trigger failed:", (e as Error).message));
-    }
-  }
-
-  await updateJob(jobId, {
-    status: "completed",
-    current_step: "Processo concluído",
-    progress: 100,
-    completed_steps: job.total_steps,
-    case_id: caseId,
-    result_case_id: caseId,
-    finished_at: new Date().toISOString(),
+  const persisted = await persistGeneratedCase(jobId, job, {
+    title: bp.title,
+    processContent,
+    characters: sec.characters || [],
+    imageAttachments: bp.planned_image_attachments || [],
   });
+
+  if (!persisted.ok) {
+    await updateJob(jobId, {
+      status: "failed",
+      last_error: persisted.error,
+      current_step: "Falha ao salvar processo",
+      finished_at: new Date().toISOString(),
+    });
+    return { done: true, failed: true };
+  }
+
   return { done: true };
 }
 

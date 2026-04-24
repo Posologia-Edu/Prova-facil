@@ -2117,6 +2117,7 @@ export type Database = {
           characters_json: Json
           created_at: string
           id: string
+          images_json: Json
           learning_objectives: string | null
           process_content: string
           source_case_id: string | null
@@ -2130,6 +2131,7 @@ export type Database = {
           characters_json?: Json
           created_at?: string
           id?: string
+          images_json?: Json
           learning_objectives?: string | null
           process_content?: string
           source_case_id?: string | null
@@ -2143,6 +2145,7 @@ export type Database = {
           characters_json?: Json
           created_at?: string
           id?: string
+          images_json?: Json
           learning_objectives?: string | null
           process_content?: string
           source_case_id?: string | null
