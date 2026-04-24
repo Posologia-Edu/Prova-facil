@@ -221,23 +221,25 @@ export default function MockTrialEditor() {
     }
   };
 
-  // GROUPS
+  const initGroupsRanRef = useRef(false);
   const initGroups = async () => {
-    if (!id || groups.length > 0) return;
+    if (!id || initGroupsRanRef.current) return;
+    initGroupsRanRef.current = true;
     const inserts = Array.from({ length: 5 }, (_, i) => ({
       mock_trial_id: id,
       group_number: i + 1,
       name: `Grupo ${i + 1}`,
     }));
-    await supabase.from("mock_trial_groups").insert(inserts);
+    // ON CONFLICT DO NOTHING via unique constraint (mock_trial_id, group_number)
+    await supabase.from("mock_trial_groups").upsert(inserts, { onConflict: "mock_trial_id,group_number", ignoreDuplicates: true });
     refetchGroups();
   };
 
   useEffect(() => {
-    if (id && groups.length === 0 && !isLoading) {
+    if (id && groupsFetched && groups.length === 0 && !initGroupsRanRef.current) {
       initGroups();
     }
-  }, [id, groups.length, isLoading]);
+  }, [id, groupsFetched, groups.length]);
 
   const addStudent = async () => {
     if (!newStudentName.trim() || !selectedGroupForAdd) return;
