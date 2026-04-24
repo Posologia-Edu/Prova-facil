@@ -509,7 +509,7 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
         { role: "user", content: userPrompt },
       ],
       model: "google/gemini-2.5-pro",
-      reasoning: { effort: "high" },
+      
       tools: [
         {
           type: "function",
