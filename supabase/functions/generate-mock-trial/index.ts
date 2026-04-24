@@ -39,39 +39,60 @@ serve(async (req) => {
 PRINCÍPIO FUNDAMENTAL DE NEUTRALIDADE (OBRIGATÓRIO):
 - O processo NÃO PODE tendenciar para a acusação nem para a defesa.
 - Os fatos, depoimentos, prontuário, laudos e perícia devem conter elementos AMBÍGUOS e ARGUMENTOS PARA OS DOIS LADOS de forma equilibrada.
-- A perícia NÃO deve concluir de forma categórica que houve erro: deve listar prós e contras da conduta, contextos em que seria aceitável e contextos em que seria criticável.
-- O depoimento da vítima/autor deve trazer queixas legítimas, mas também reconhecer fatos que possam favorecer a defesa (ex.: melhora inicial, demora em retornar, adesão parcial).
-- O depoimento do réu deve trazer justificativa clínica plausível, mas também reconhecer pontos vulneráveis (ex.: possibilidade de ter agido diferente).
-- O prontuário deve conter dados que ambos os lados possam EXPLORAR ESTRATEGICAMENTE.
-- Vencer o julgamento deve depender da QUALIDADE DA ARGUMENTAÇÃO e do USO ESTRATÉGICO DAS PROVAS, não da obviedade do desfecho.
+- A perícia NÃO deve concluir de forma categórica que houve erro: deve listar prós e contras da conduta.
+- O depoimento da vítima deve trazer queixas legítimas, mas também elementos que favoreçam a defesa.
+- O depoimento do réu deve trazer justificativa clínica plausível, mas também pontos vulneráveis.
+- Vencer o julgamento deve depender da QUALIDADE DA ARGUMENTAÇÃO e do USO ESTRATÉGICO DAS PROVAS.
+
+DIVERSIDADE OBRIGATÓRIA DO RÉU (MULTIPROFISSIONAL):
+- O réu NÃO precisa ser sempre médico. VARIE entre profissões da saúde de acordo com a natureza do erro/conduta:
+  · Erro de prescrição/diagnóstico → médico(a)
+  · Erro de administração de medicamento, troca de paciente, falha de monitoramento, omissão de cuidado, registro inadequado → enfermeiro(a) ou técnico(a) de enfermagem
+  · Erro de dispensação, troca de fármaco, falha de conciliação medicamentosa, manipulação inadequada, ausência de orientação farmacêutica → farmacêutico(a)
+  · Erro técnico em procedimento odontológico → cirurgião(ã)-dentista
+  · Falha em mobilização, manobra ou conduta inadequada em reabilitação → fisioterapeuta
+  · Orientação nutricional inadequada em paciente de risco → nutricionista
+  · Falha em laudo, troca de amostra, erro analítico → biomédico(a) / farmacêutico(a) bioquímico(a)
+- Use os OBJETIVOS DE APRENDIZAGEM e o CONTEÚDO DO PDF para escolher a profissão do réu de forma coerente. Quando os objetivos derem margem, PRIORIZE profissões NÃO-médicas para diversificar — o módulo precisa cobrir toda a equipe de saúde, não apenas o(a) médico(a).
+- O artigo de Código de Ética citado na fundamentação deve ser o da profissão do réu (CFM, COFEN, CFF, CFO, COFFITO, CFN, CFBM etc.).
+- O perito do Anexo 5 deve ser da MESMA profissão do réu (registro profissional compatível).
+
+PERSONAGENS = TESTEMUNHAS TÉCNICAS (NÃO É O RÉU):
+- O campo "characters" representa TESTEMUNHAS TÉCNICAS que serão acionadas pela acusação ou pela defesa para fortalecer a argumentação. NÃO são o réu nem a vítima.
+- Cada testemunha deve ter ESPECIALIDADE/FORMAÇÃO ESTRATEGICAMENTE PERTINENTE ao caso, escolhida para REFORÇAR a tese do lado que a convoca.
+  · Exemplo (ITU em gestante): defesa convoca um(a) OBSTETRA (ênfase em segurança materno-fetal, antibióticos seguros na gestação); acusação convoca um(a) INFECTOLOGISTA (ênfase em potência antimicrobiana, risco de pielonefrite, resistência bacteriana).
+  · Exemplo (erro de dispensação em pediatria): defesa convoca um(a) FARMACÊUTICO(A) CLÍNICO(A) HOSPITALAR (ênfase em sistemas de dupla checagem, sobrecarga de trabalho); acusação convoca um(a) PEDIATRA (ênfase em gravidade do desfecho, estreita janela terapêutica).
+  · Exemplo (erro de administração EV pela enfermagem): defesa convoca um(a) ENFERMEIRO(A) GESTOR(A) (ênfase em protocolos institucionais, condições de trabalho); acusação convoca um(a) FARMACOLOGISTA CLÍNICO(A) (ênfase em incompatibilidades e segurança).
+- A escolha das especialidades deve ser DELIBERADA: a testemunha de cada lado precisa naturalmente trazer argumentos que ajudam aquele lado, mas SEM ser caricata.
+- As "instructions" de cada testemunha devem orientar o aluno a explorar os pontos do prontuário, laudos e perícia que sustentam a tese do seu lado, citando diretrizes/conceitos pertinentes à sua especialidade.
 
 Gere um processo jurídico simulado completo no seguinte formato JSON:
 
 {
   "title": "Título curto do caso (ex.: nome do paciente fictício + condição clínica)",
-  "process_content": "Texto completo do processo em Markdown seguindo EXATAMENTE esta estrutura, nesta ordem, com estes títulos:\n\n**Tribunal de Justiça [da Faculdade/Curso/Instituição fictícia adequada à área]**\n\n**Vara Criminal da Comarca [...]**\n\n**Processo nº**: [número informado]\n\n**Ação Penal Pública**\n\n**Autor**: Ministério Público [...]\n\n**Réu**: [Nome do profissional fictício + identificação acadêmica entre parênteses, ex.: 'Dr. Fulano (Aluno X)']\n\n**Vítima**: [Nome do paciente fictício + identificação acadêmica entre parênteses, ex.: 'Paciente Beltrano (Aluno Y)']\n\n**Relato dos Fatos:**\n[Narrativa neutra do caso clínico — paciente, contexto, conduta adotada, desfecho — SEM julgamentos de valor, apenas fatos. Inclua elementos que podem ser interpretados de formas opostas.]\n\n**Fundamentação Jurídica:**\n- **Código Penal:** (artigos pertinentes, ex.: Art. 132, Art. 121)\n- **Código de Ética [da profissão]:** (artigos pertinentes)\n\n**Denúncia**\n[Texto formal da denúncia do Ministério Público, em parágrafos, narrando a conduta sob a ótica acusatória — mas SEM exageros que tornem a defesa inviável.]\n\n**Provas:**\n- Depoimento do [Réu] (Anexo 1)\n- Prontuário Médico (Anexo 2)\n- Laudo de Exame [específico do caso] (Anexo 3)\n- Depoimento do Paciente/Vítima (Anexo 4)\n- Perícia Médica (Anexo 5)\n\n---\n\n**ANEXO 1 — Depoimento do [Réu]**\n[Depoimento em primeira pessoa, com justificativa clínica plausível para a conduta, reconhecendo limitações mas defendendo a racionalidade da decisão. Deve dar munição REAL para a defesa.]\n\n---\n\n**ANEXO 2 — Prontuário Médico**\n### Identificação do Paciente: (nome, DN, nº prontuário)\n### Histórico Médico: (comorbidades, alergias, medicações em uso)\n### Queixa Principal: (sintomas detalhados)\n### Exame Físico: (sinais vitais, achados)\n### Exames Complementares: (resultados detalhados — laboratoriais, imagem, etc.)\n### Diagnóstico:\n### Conduta: (cronologia datada de prescrições, retornos, decisões — DETALHADA, pois é a principal fonte de provas para os dois lados)\n### Evolução: (desfecho, alta, complicações)\n[Inclua dados ambíguos: ex. melhora inicial seguida de piora, adesão duvidosa, atrasos, sinais que poderiam ou não ter sido valorizados.]\n\n---\n\n**ANEXO 3 — Laudo de Exame [específico]**\n[Laboratório fictício, identificação do paciente, material, datas, resultado COMPLETO com tabela em Markdown quando pertinente (ex.: antibiograma, hemograma, imagem). Interpretação técnica neutra. Recomendação técnica baseada em evidência, sem culpabilizar ninguém.]\n\n---\n\n**ANEXO 4 — Depoimento do Paciente/Vítima**\n[Depoimento em primeira pessoa, com queixas legítimas e sofrimento relatado, MAS também com elementos que a defesa possa explorar — ex.: 'senti melhora inicial', 'demorei a retornar', 'esqueci uma dose', 'não informei tal alergia de imediato', etc.]\n\n---\n\n**ANEXO 5 — Laudo de Perícia [profissional adequado]**\n**Processo nº:** [...]\n**Perito:** [Nome fictício + registro profissional + especialidade]\n**Periciando:** [...]\n**Data da Perícia:** [...]\n**Quesitos:** (3 a 5 perguntas técnicas pertinentes)\n**Exame do Periciando:** (metodologia: análise de prontuário, exames, literatura)\n**Discussão:**\n[Discussão EQUILIBRADA: aponta o que a literatura recomenda, mas também reconhece situações clínicas em que a conduta adotada poderia ser defensável. Cita variáveis que dificultam a tomada de decisão.]\n**Conclusão:**\n[Conclusões PONDERADAS para cada quesito, evitando 'sim categórico' ou 'não categórico'. Use formulações como 'parcialmente em desacordo', 'há elementos que sustentam ambas as interpretações', 'a conduta foge da diretriz padrão, porém pode ser justificada em [contexto X]'. NUNCA conclua de forma a tornar o júri óbvio.]\n**Assinatura do Perito / CRM/CRF/COREN / Data**\n\n---\n\nIMPORTANTE: Use Markdown limpo (negrito com **, títulos com ## quando apropriado, tabelas em Markdown para resultados de exames). NÃO inclua seções de 'Argumentação para Acusação/Defesa', 'Referências aos Jurados' ou 'Instrução aos Participantes' — o objetivo é que os alunos CONSTRUAM essa argumentação a partir das provas.",
+  "process_content": "Texto completo do processo em Markdown RICO (use ## para títulos de seção, ### para subtítulos do prontuário, **negrito**, listas com -, tabelas em Markdown para antibiogramas/hemogramas, --- para separar anexos), seguindo EXATAMENTE esta estrutura e ordem:\n\n## Tribunal de Justiça [da Faculdade/Curso/Instituição fictícia]\n## Vara Criminal da Comarca [...]\n\n**Processo nº**: [número]\n**Ação Penal Pública**\n\n**Autor**: Ministério Público [...]\n**Réu**: [Nome fictício do profissional + profissão + identificação acadêmica entre parênteses, ex.: 'Enf. Fulana (Aluno X)']\n**Vítima**: [Nome do paciente fictício + identificação acadêmica entre parênteses, ex.: 'Paciente Beltrano (Aluno Y)']\n\n## Relato dos Fatos\n[Narrativa neutra do caso clínico — paciente, contexto, conduta adotada por TODOS os profissionais envolvidos, desfecho. Inclua elementos ambíguos.]\n\n## Fundamentação Jurídica\n- **Código Penal:** (artigos pertinentes)\n- **Código de Ética [da profissão do réu]:** (artigos pertinentes — use CFM/COFEN/CFF/CFO/COFFITO/CFN/CFBM conforme o réu)\n\n## Denúncia\n[Texto formal da denúncia do MP, narrando a conduta sob ótica acusatória — sem exageros.]\n\n## Provas\n- Depoimento do Réu (Anexo 1)\n- Prontuário do Paciente (Anexo 2)\n- Laudo de Exame (Anexo 3)\n- Depoimento da Vítima (Anexo 4)\n- Perícia Técnica (Anexo 5)\n\n---\n\n## ANEXO 1 — Depoimento do Réu\n[Em primeira pessoa, justificativa clínica plausível, reconhecendo limitações mas defendendo a racionalidade da conduta. Munição REAL para a defesa.]\n\n---\n\n## ANEXO 2 — Prontuário do Paciente\n### Identificação do Paciente\n(nome, idade, DN, nº prontuário, dados relevantes)\n### Histórico Médico\n(comorbidades, alergias, medicações em uso)\n### Queixa Principal\n### Exame Físico\n(sinais vitais, achados)\n### Exames Complementares\n(resultados detalhados — use tabelas Markdown quando pertinente)\n### Diagnóstico\n### Conduta\n(cronologia datada e horária — prescrições, administrações, dispensações, retornos. PEÇA-CHAVE de provas.)\n### Evolução\n(desfecho, alta, complicações)\n[Inclua dados ambíguos.]\n\n---\n\n## ANEXO 3 — Laudo de Exame\n[Laboratório fictício, identificação, material, datas, resultado COMPLETO com TABELA Markdown quando pertinente (antibiograma, hemograma). Interpretação técnica neutra.]\n\n---\n\n## ANEXO 4 — Depoimento da Vítima\n[Em primeira pessoa, queixas legítimas, MAS com elementos que a defesa possa explorar.]\n\n---\n\n## ANEXO 5 — Laudo de Perícia Técnica\n**Processo nº:** [...]\n**Perito:** [Nome fictício + registro profissional DA MESMA PROFISSÃO DO RÉU + especialidade]\n**Periciando:** [...]\n**Data da Perícia:** [...]\n\n**Quesitos:** (3 a 5 perguntas técnicas)\n\n**Exame do Periciando:** (metodologia)\n\n**Discussão:** [EQUILIBRADA]\n\n**Conclusão:** [PONDERADA — nunca categórica]\n\n**Assinatura do Perito / Registro / Data**",
   "characters": [
     {
       "side": "defense",
       "name": "Nome completo fictício",
-      "profession": "Profissão/Especialidade pertinente ao caso",
-      "instructions": "Instruções para a testemunha de defesa: como se comportar, argumentos clínicos plausíveis a sustentar, pontos do prontuário/laudos/perícia que deve explorar a favor do réu. Deve ser uma defesa TÉCNICA e DEFENSÁVEL, não fantasiosa."
+      "profession": "Especialidade DELIBERADAMENTE escolhida para favorecer a defesa neste caso específico",
+      "instructions": "Instruções para a TESTEMUNHA TÉCNICA da defesa (NÃO é o réu): postura profissional, argumentos clínicos plausíveis baseados na sua especialidade, diretrizes/conceitos a citar, pontos do prontuário/laudos/perícia que deve explorar a favor do réu. Defesa TÉCNICA e DEFENSÁVEL."
     },
     {
       "side": "prosecution",
       "name": "Nome completo fictício",
-      "profession": "Profissão/Especialidade pertinente ao caso",
-      "instructions": "Instruções para a testemunha de acusação: como se comportar, argumentos clínicos a sustentar, pontos do prontuário/laudos/perícia que deve explorar contra o réu. Deve ser uma acusação TÉCNICA e DEFENSÁVEL, não fantasiosa."
+      "profession": "Especialidade DELIBERADAMENTE escolhida para favorecer a acusação neste caso específico",
+      "instructions": "Instruções para a TESTEMUNHA TÉCNICA da acusação (NÃO é o réu nem a vítima): postura profissional, argumentos clínicos plausíveis baseados na sua especialidade, diretrizes/conceitos a citar, pontos do prontuário/laudos/perícia que deve explorar contra o réu. Acusação TÉCNICA e DEFENSÁVEL."
     }
   ]
 }
 
 REGRAS FINAIS:
-- Siga ESTRITAMENTE a estrutura do modelo de referência: Cabeçalho → Autor → Réu → Vítima → Relato dos Fatos → Fundamentação Jurídica → Denúncia → Provas (lista) → Anexo 1 (Depoimento Réu) → Anexo 2 (Prontuário) → Anexo 3 (Laudos/Exames) → Anexo 4 (Depoimento Vítima) → Anexo 5 (Perícia).
-- O Prontuário (Anexo 2) deve ser DETALHADO, com cronologia datada — é a peça-chave de provas.
-- Cada anexo deve ter dados que possam ser EXPLORADOS pelos dois lados.
-- Adapte a profissão do réu, o tipo de laudo e o perito à área indicada nos objetivos de aprendizagem (medicina, farmácia, enfermagem, odontologia, etc.).
-- Se a área não for explícita, infira a partir dos objetivos.`;
+- Siga ESTRITAMENTE a estrutura: Cabeçalho → Autor → Réu → Vítima → Relato dos Fatos → Fundamentação Jurídica → Denúncia → Provas → Anexo 1 → Anexo 2 → Anexo 3 → Anexo 4 → Anexo 5.
+- Use Markdown rico (##, ###, **, listas, tabelas, ---).
+- VARIE a profissão do réu — não escolha médico por padrão.
+- As testemunhas (characters) NÃO são o réu; são especialistas chamados estrategicamente para depor.
+- Não inclua seções de "Argumentação para Acusação/Defesa" no corpo do processo.`;
 
     const userPrompt = `Objetivos de Aprendizagem: ${learningObjectives || "Não especificados"}
 Número do Processo: ${caseNumber || "001/2025"}
