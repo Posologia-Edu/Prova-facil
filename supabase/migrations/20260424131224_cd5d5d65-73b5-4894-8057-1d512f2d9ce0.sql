@@ -1,0 +1,1 @@
+ALTER TABLE public.mock_trial_sessions ADD COLUMN IF NOT EXISTS phase_duration_seconds integer;
