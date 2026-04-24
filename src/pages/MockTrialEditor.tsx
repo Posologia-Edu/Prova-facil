@@ -391,7 +391,79 @@ export default function MockTrialEditor() {
     }
   };
 
-  const initGroupsRanRef = useRef(false);
+  const regenerateCase = async (existingCase: any) => {
+    const objectives = (existingCase.learning_objectives || "").trim();
+    if (!objectives) {
+      toast.error("Este processo não tem objetivos de aprendizagem salvos. Edite-o ou gere um novo.");
+      return;
+    }
+    if (!confirm(`Substituir o conteúdo do processo "${existingCase.title}" por uma nova geração de IA? O conteúdo atual será perdido.`)) {
+      return;
+    }
+    setRegeneratingCaseId(existingCase.id);
+    try {
+      const caseNumber = existingCase.case_number || `${String(cases.length).padStart(3, "0")}/${new Date().getFullYear()}`;
+      let data: any = null;
+      let lastError: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        if (attempt > 1) {
+          toast.info(`Processo veio incompleto. Tentando novamente (${attempt}/3)...`);
+        }
+        const resp = await supabase.functions.invoke("generate-mock-trial", {
+          body: { learningObjectives: objectives, caseNumber },
+        });
+        if (!resp.error && resp.data && !resp.data.error && resp.data.process_content) {
+          data = resp.data;
+          break;
+        }
+        lastError = resp.error || new Error(resp.data?.error || "Erro desconhecido");
+        const msg = String(lastError?.message || "").toLowerCase();
+        if (msg.includes("credits") || msg.includes("rate limit") || msg.includes("402") || msg.includes("429")) {
+          throw lastError;
+        }
+      }
+      if (!data) throw lastError || new Error("Falha após 3 tentativas");
+
+      const { error: updErr } = await supabase
+        .from("mock_trial_cases")
+        .update({
+          title: data.title || existingCase.title,
+          process_content: data.process_content,
+          characters_json: data.characters || existingCase.characters_json || [],
+        })
+        .eq("id", existingCase.id);
+      if (updErr) throw updErr;
+
+      // Reset image attachments: delete old, insert new from result
+      await (supabase as any).from("mock_trial_case_images").delete().eq("case_id", existingCase.id);
+      const attachments = Array.isArray(data.image_attachments) ? data.image_attachments : [];
+      if (attachments.length > 0) {
+        const rows = attachments.map((a: any) => ({
+          case_id: existingCase.id,
+          slug: a.slug,
+          anchor: a.anchor || `[[IMAGE:${a.slug}]]`,
+          title: a.title || "",
+          caption: a.caption || "",
+          prompt: a.prompt || a.title || "",
+          status: "pending",
+        }));
+        const { data: imgRows } = await (supabase as any)
+          .from("mock_trial_case_images")
+          .insert(rows)
+          .select();
+        for (const r of imgRows || []) {
+          supabase.functions.invoke("generate-mock-trial-image", { body: { imageId: r.id } })
+            .catch((err) => console.error("Image trigger failed:", err));
+        }
+      }
+      toast.success("Processo regenerado com sucesso!");
+      refetchCases();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao regenerar processo");
+    } finally {
+      setRegeneratingCaseId(null);
+    }
+  };
   const initGroups = async () => {
     if (!id || initGroupsRanRef.current) return;
     initGroupsRanRef.current = true;
