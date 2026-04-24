@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3, Upload, X, Pencil, RefreshCw, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, FileText, Sparkles, Copy, Shuffle, Gavel, ClipboardList, BarChart3, Upload, X, Pencil, RefreshCw, CheckCircle2, Library, Save } from "lucide-react";
 import FormBuilder from "@/components/forms/FormBuilder";
 import type { FormField } from "@/components/forms/types";
 import { generateDistribution } from "@/lib/mock-trial-distribution";
@@ -21,6 +21,7 @@ import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvalua
 import { ensureEvaluationForms, consolidateScores } from "@/lib/mock-trial-evaluations";
 import { ROLE_LABELS as EVAL_ROLE_LABELS } from "@/lib/mock-trial-evaluation-templates";
 import { ResultsPanel } from "@/components/mock-trial/ResultsPanel";
+import { MockTrialCaseBankDialog } from "@/components/mock-trial/MockTrialCaseBankDialog";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
