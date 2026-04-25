@@ -2227,6 +2227,7 @@ export type Database = {
           position: number
           process_content: string | null
           sections_json: Json
+          teacher_guide: string | null
           title: string
         }
         Insert: {
@@ -2240,6 +2241,7 @@ export type Database = {
           position?: number
           process_content?: string | null
           sections_json?: Json
+          teacher_guide?: string | null
           title?: string
         }
         Update: {
@@ -2253,6 +2255,7 @@ export type Database = {
           position?: number
           process_content?: string | null
           sections_json?: Json
+          teacher_guide?: string | null
           title?: string
         }
         Relationships: [

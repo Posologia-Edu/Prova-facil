@@ -27,6 +27,7 @@ import { CaseImagesPanel } from "@/components/mock-trial/CaseImagesPanel";
 import { WitnessesEditor } from "@/components/mock-trial/WitnessesEditor";
 import { InlineEditInput } from "@/components/mock-trial/InlineEditInput";
 import { MockTrialSectionsBuilder } from "@/components/mock-trial/MockTrialSectionsBuilder";
+import { TeacherGuidePanel } from "@/components/mock-trial/TeacherGuidePanel";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
@@ -842,6 +843,16 @@ export default function MockTrialEditor() {
                 {c.process_content && (!Array.isArray(c.sections_json) || c.sections_json.length === 0) && (
                   <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{c.process_content.substring(0, 200)}...</p>
                 )}
+                <TeacherGuidePanel
+                  caseId={c.id}
+                  teacherGuide={(c as any).teacher_guide || null}
+                  hasContent={!!c.process_content || (Array.isArray(c.sections_json) && c.sections_json.some((s: any) => s?.content && String(s.content).trim()))}
+                  onUpdated={(newGuide) => {
+                    queryClient.setQueryData(["mock-trial-cases", id], (curr: any[] | undefined) =>
+                      curr?.map(x => x.id === c.id ? { ...x, teacher_guide: newGuide } : x) || []
+                    );
+                  }}
+                />
                 <CaseImagesPanel caseId={c.id} />
               </CardContent>
             </Card>
