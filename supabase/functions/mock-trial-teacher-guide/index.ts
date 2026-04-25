@@ -76,49 +76,104 @@ ${processText.slice(0, 25000)}
 
 # O QUE VOCÊ DEVE PRODUZIR
 
-Um roteiro estruturado em Markdown, em português brasileiro, com TODAS as seções abaixo. Use linguagem técnica de docente, direta, com tom de "guia para o professor". Mínimo de **1200 palavras**.
+Um roteiro **DETALHADO, EXPLICATIVO e DIDÁTICO** em Markdown (português brasileiro). NÃO produza apenas listas de tópicos soltos — cada item deve vir COM EXPLICAÇÃO. Mínimo de **2000 palavras**. Use **GitHub Flavored Markdown** (tabelas com pipes, negrito, listas, blockquotes).
+
+---
 
 ## 1. 🎯 Síntese do caso (para o professor)
-Resumo de 1 parágrafo do que aconteceu clinicamente, com o desfecho e o ponto central de discussão.
+Parágrafo único (8-12 linhas) descrevendo: o que o paciente apresentou, qual foi a conduta do réu, qual o desfecho, e qual é **o ponto central de discussão pedagógica** do caso.
 
-## 2. 📌 Pontos críticos a observar (CHECKLIST)
-Lista numerada dos pontos-chave que o professor DEVE garantir que sejam abordados na discussão. Inclua obrigatoriamente:
-- **Conduta farmacológica**: escolha do fármaco, dose, via, posologia, duração, interações, ajustes (renal/hepático/etário), monitorização, alternativas mais adequadas para o caso.
-- **Cuidado com o paciente**: avaliação inicial, reavaliações, comunicação com paciente/família, registros em prontuário, segurança, prevenção de eventos adversos.
-- **Diagnóstico diferencial e raciocínio clínico**: hipóteses que poderiam ter sido consideradas.
-- **Aspectos éticos e legais**: dispositivos legais e do código de ética da profissão do réu (${reuProfissao}) que se aplicam ao caso.
-- **Trabalho em equipe e comunicação interprofissional**.
+---
 
-## 3. ❓ Perguntas-guia para a discussão
-Liste **8 a 12 perguntas socráticas** que o professor pode lançar aos alunos para estimular o raciocínio (não perguntas fechadas; perguntas que abram debate). Organize em subgrupos: Acusação | Defesa | Pontos neutros / aprofundamento.
+## 2. 📌 Pontos críticos a observar
 
-## 4. 🧪 Análise técnica esperada
-Para cada **achado clínico, exame ou conduta relevante** do caso, traga um quadro com:
-- O que foi feito
-- O que era o padrão-ouro / conduta ideal
-- Justificativa científica (cite diretrizes brasileiras quando possível: Ministério da Saúde, SBI, SBN, SBC, SBP, ANVISA, Cofen, CFF, CFM, CFO etc.)
+Para CADA item abaixo, escreva **1 parágrafo explicativo (mínimo 4-6 linhas)** dizendo CONCRETAMENTE o que observar NESTE caso específico — não use frases genéricas. Use o formato:
 
-Use **tabela Markdown**.
+### 2.1 Conduta farmacológica
+[Parágrafo explicando, com base no caso, o que avaliar sobre escolha do fármaco, dose, via, posologia, duração, interações, ajustes (renal/hepático/etário), monitorização e quais alternativas seriam mais adequadas. Cite os fármacos pelo nome usado no processo.]
+
+### 2.2 Cuidado com o paciente
+[Parágrafo sobre avaliação inicial, reavaliações, sinais de alerta perdidos, comunicação com paciente/família, registros em prontuário, segurança e prevenção de eventos adversos NESTE caso.]
+
+### 2.3 Diagnóstico diferencial e raciocínio clínico
+[Parágrafo com hipóteses diagnósticas que poderiam/deveriam ter sido consideradas, e por quê.]
+
+### 2.4 Aspectos éticos e legais
+[Parágrafo citando ARTIGOS específicos do Código de Ética da profissão de ${reuProfissao} (ex: "Art. X do Código de Ética Médica veda..."), Lei nº 8.080/90, Resoluções do Conselho profissional, Código de Defesa do Consumidor quando aplicável, etc.]
+
+### 2.5 Trabalho em equipe e comunicação interprofissional
+[Parágrafo sobre falhas/acertos de comunicação entre profissionais NO caso e como poderiam ter mudado o desfecho.]
+
+---
+
+## 3. ❓ Perguntas-guia para a discussão (com resposta-modelo)
+
+Liste **10 perguntas socráticas**, divididas em 3 subseções (### Acusação, ### Defesa, ### Aprofundamento técnico). Para CADA pergunta, use OBRIGATORIAMENTE este formato:
+
+> **❓ Pergunta:** [pergunta socrática que estimula debate]
+>
+> **💡 Resposta-modelo (para o professor):** [Resposta completa de 4-7 linhas explicando o que o professor espera ouvir, conceitos-chave que devem aparecer, evidências/diretrizes que sustentam, e como redirecionar se os alunos não chegarem lá.]
+
+---
+
+## 4. 🧪 Análise técnica esperada (tabela)
+
+Tabela Markdown bem formatada. **CRÍTICO**: cada linha em uma linha separada, com pipes alinhados. Inclua 5-8 achados/condutas relevantes do caso.
+
+| Achado / Conduta no caso | O que foi feito | Padrão-ouro / conduta ideal | Justificativa científica + diretriz |
+|---|---|---|---|
+| [Achado 1] | [conduta adotada] | [conduta ideal] | [justificativa com diretriz brasileira: MS, SBI, SBN, SBC, SBP, ANVISA, Cofen, CFF, CFM, CFO etc.] |
+| [Achado 2] | ... | ... | ... |
+
+---
 
 ## 5. ⚖️ Argumentos esperados
-- **Pró-acusação (3-5 pontos fortes)**: o que a acusação tem de melhor.
-- **Pró-defesa (3-5 pontos fortes)**: o que a defesa tem de melhor.
-- **"Easter eggs" / armadilhas do caso**: detalhes sutis embutidos no processo que os alunos podem não notar — explique cada um ao professor.
+
+### 5.1 Pró-acusação (4-5 pontos)
+Para cada ponto: **título em negrito** + 2-3 linhas explicando o argumento E a evidência que o sustenta.
+
+### 5.2 Pró-defesa (4-5 pontos)
+Mesma estrutura.
+
+### 5.3 🪤 Armadilhas / "easter eggs" do caso
+Para cada armadilha: **título em negrito** + explicação de 2-3 linhas sobre o detalhe sutil embutido no processo e por que os alunos podem não notar.
+
+---
 
 ## 6. 🧭 Veredito tecnicamente mais defensável
-Sua opinião fundamentada (sem ser dogmática) sobre qual seria o desfecho mais justo do ponto de vista técnico-científico, com a justificativa. Lembre: o objetivo é educacional, não punitivo.
+Parágrafo de 8-12 linhas com sua opinião fundamentada (não dogmática) sobre o desfecho mais justo do ponto de vista técnico-científico, com justificativa baseada em evidência. Lembre: objetivo é educacional.
+
+---
 
 ## 7. 📚 Referências sugeridas
-Liste 4-8 referências REAIS e atuais (diretrizes brasileiras, livros-texto consagrados, artigos seminais) que o professor pode indicar aos alunos para aprofundamento. Formato: Autor/Órgão (ano). Título. Veículo.
+Lista numerada de 5-8 referências REAIS e atuais (diretrizes brasileiras, livros-texto consagrados, artigos seminais). Formato: **Autor/Órgão (ano).** *Título.* Veículo/edição.
+
+---
 
 ## 8. ⏱️ Sugestão de cronograma da discussão (90 min)
-Pequena tabela com blocos de tempo sugeridos (Abertura, Sustentação acusação, Sustentação defesa, Réplica, Tréplica, Veredito do júri, Debriefing técnico do professor).
 
-# REGRAS
-- NÃO repita o conteúdo do processo ipsis litteris — esse roteiro é COMPLEMENTAR.
-- Seja objetivo, com bullets curtos. Evite parágrafos longos exceto onde necessário.
-- Esse documento é confidencial do professor — pode ter "spoilers" e a resposta esperada.
-- Retorne APENAS o Markdown do roteiro, sem meta-comentários.`;
+Tabela Markdown:
+
+| Bloco | Atividade | Duração | Foco do professor |
+|---|---|---|---|
+| 1 | Abertura e contextualização | 10 min | [o que o prof deve fazer/dizer] |
+| 2 | Sustentação da acusação | 15 min | [o que observar] |
+| 3 | Sustentação da defesa | 15 min | [o que observar] |
+| 4 | Réplica e tréplica | 10 min | [como mediar] |
+| 5 | Deliberação do júri | 10 min | [postura do prof] |
+| 6 | Veredito do júri | 5 min | [como acolher] |
+| 7 | **Debriefing técnico (CRÍTICO)** | 25 min | [pontos-chave a fechar com a turma] |
+
+---
+
+# REGRAS OBRIGATÓRIAS
+- ❌ NÃO produza listas com apenas títulos sem explicação. CADA item deve ter parágrafo explicativo.
+- ✅ Tabelas DEVEM usar sintaxe GFM correta (cada linha numa linha, pipes alinhados, separador "|---|---|").
+- ✅ Cite sempre artigos/leis/diretrizes específicas (não "diretrizes em geral").
+- ✅ Use blockquotes (>) para destacar perguntas e respostas-modelo.
+- ❌ NÃO repita o conteúdo do processo ipsis litteris — esse roteiro é COMPLEMENTAR.
+- ✅ Tom: docente experiente conversando com colega professor.
+- ❌ NÃO inclua meta-comentários ("aqui está", "espero ter ajudado"). Retorne APENAS o Markdown.`;
 
     const { response } = await callAiWithFallback(
       {
