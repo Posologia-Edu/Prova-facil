@@ -81,8 +81,16 @@ ${learningObjectives}
 """
 
 REGRAS INVIOLÁVEIS:
-- O caso deve girar 100% em torno do tema dos objetivos. Se o tema é "uso de fosfomicina em pielonefrite em homem diabético", o réu DEVE ser um profissional de saúde envolvido nesse tratamento (médico/farmacêutico clínico) e a vítima DEVE ser um paciente compatível.
-- Profissão do réu coerente com a área clínica do tema (ex: tema odontológico → cirurgião-dentista; tema infectológico → médico).
+- O caso deve girar 100% em torno do tema dos objetivos.
+- O RÉU pode ser QUALQUER profissional de saúde — médico, farmacêutico, enfermeiro, cirurgião-dentista, fisioterapeuta, nutricionista, biomédico, técnico de enfermagem etc. Escolha a profissão MAIS COERENTE com o ato profissional questionado nos objetivos:
+  * Erro de prescrição/conduta clínica médica → Médico (com especialidade adequada)
+  * Erro de dispensação, manipulação, conciliação medicamentosa, farmacotécnica ou farmacovigilância → Farmacêutico
+  * Erro de administração de medicamento, cuidado de enfermagem, punção, sondagem → Enfermeiro
+  * Erro em procedimento odontológico, prescrição odontológica → Cirurgião-dentista
+  * Erro em terapia/reabilitação física → Fisioterapeuta
+  * Erro em conduta nutricional/dietoterápica → Nutricionista
+  * Erro em exame laboratorial/diagnóstico → Biomédico
+- O DESENHO do processo (tipificação penal, conselho de classe citado, código de ética aplicável, lex artis, testemunhas técnicas) DEVE refletir a profissão escolhida. Ex: farmacêutico → CFF/CRF + Código de Ética Farmacêutica; enfermeiro → COFEN/COREN + Código de Ética dos Profissionais de Enfermagem; dentista → CFO/CRO + Código de Ética Odontológica; médico → CFM/CRM + Código de Ética Médica.
 - NÃO use exemplos genéricos, NÃO copie temas anteriores, NÃO use mineração/meio-ambiente a menos que o objetivo cite isso.
 - Cada resumo de seção deve mencionar elementos concretos do tema (medicamentos, exames, achados clínicos relevantes).
 
