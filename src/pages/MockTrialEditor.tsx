@@ -808,7 +808,7 @@ export default function MockTrialEditor() {
                       size="sm"
                       variant="outline"
                       onClick={() => saveCaseToBank(c)}
-                      disabled={savingToBankId === c.id || !c.process_content}
+                      disabled={savingToBankId === c.id || (!c.process_content && !(Array.isArray(c.sections_json) && c.sections_json.some((s: any) => s?.content && String(s.content).trim())))}
                       title="Salvar este processo no banco para reutilizar em outros Júris Simulados"
                     >
                       <Save className="h-3 w-3 mr-1" />
