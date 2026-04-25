@@ -254,25 +254,49 @@ export default function MockTrialStudent() {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Gavel className="h-6 w-6 text-primary" />
-        <div>
+      <div className="flex items-start gap-4">
+        <Gavel className="h-6 w-6 text-primary mt-1" />
+        <div className="flex-1">
           <h1 className="text-xl font-bold">{trial?.title}</h1>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{studentName}</span>
-            <span>•</span>
-            <span>{myGroup?.name}</span>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+            <span className="font-medium text-foreground">{myGroup?.name}</span>
             {myRole && (
-              <>
-                <span>•</span>
-                <Badge variant={myRole === "prosecution" ? "destructive" : myRole === "defense" ? "default" : "secondary"}>
-                  {roleLabels[myRole] || myRole}
-                </Badge>
-              </>
+              <Badge variant={myRole === "prosecution" ? "destructive" : myRole === "defense" ? "default" : "secondary"}>
+                {roleLabels[myRole] || myRole}
+              </Badge>
             )}
           </div>
         </div>
       </div>
+
+      {/* Group members panel — entire group is "in the room" */}
+      {groupMembers.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="py-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">
+                Integrantes do grupo na sala ({groupMembers.length})
+              </span>
+              <span className="text-xs text-muted-foreground">
+                — todos serão pontuados ao enviar as respostas
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {groupMembers.map((m, i) => (
+                <Badge
+                  key={i}
+                  variant="outline"
+                  className="bg-background"
+                  title={m.email}
+                >
+                  {m.name || m.email}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Session Status */}
       {selectedSession && (
