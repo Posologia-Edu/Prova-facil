@@ -90,6 +90,8 @@ export default function MockTrialStudent() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [forms, setForms] = useState<any[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
+  // Set of "sessionId:formId" pairs already submitted by this group
+  const [submittedFormKeys, setSubmittedFormKeys] = useState<Set<string>>(new Set());
 
   // Auto-join from StudentAuth redirect
   useEffect(() => {
