@@ -1,0 +1,1 @@
+ALTER TABLE public.mock_trial_cases ADD COLUMN IF NOT EXISTS teacher_guide TEXT;
