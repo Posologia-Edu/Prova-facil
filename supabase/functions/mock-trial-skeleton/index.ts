@@ -93,6 +93,17 @@ REGRAS INVIOLÁVEIS:
 - O DESENHO do processo (tipificação penal, conselho de classe citado, código de ética aplicável, lex artis, testemunhas técnicas) DEVE refletir a profissão escolhida. Ex: farmacêutico → CFF/CRF + Código de Ética Farmacêutica; enfermeiro → COFEN/COREN + Código de Ética dos Profissionais de Enfermagem; dentista → CFO/CRO + Código de Ética Odontológica; médico → CFM/CRM + Código de Ética Médica.
 - NÃO use exemplos genéricos, NÃO copie temas anteriores, NÃO use mineração/meio-ambiente a menos que o objetivo cite isso.
 - Cada resumo de seção deve mencionar elementos concretos do tema (medicamentos, exames, achados clínicos relevantes).
+- CENÁRIO FÍSICO (obrigatório variar): NÃO ambiente todos os processos em hospital. Escolha o cenário MAIS COERENTE com o ato profissional questionado e com a profissão do réu. Possibilidades incluem (mas não se limitam a):
+  * Farmácia comunitária / drogaria
+  * Farmácia hospitalar / central de manipulação
+  * Unidade Básica de Saúde (UBS) / ESF
+  * Unidade de Pronto Atendimento (UPA)
+  * Ambulatório de especialidades
+  * Pronto-socorro hospitalar / enfermaria / UTI (apenas quando o caso realmente exigir internação)
+  * Home care / atenção domiciliar
+  * Consultório odontológico, clínica de fisioterapia, consultório nutricional, laboratório de análises clínicas
+  * Drogaria de hospital-dia, farmácia magistral, dispensário SUS
+  Ex.: erro de dispensação por farmacêutico → Farmácia comunitária ou Farmácia hospitalar; conduta de enfermeiro em sala de vacina → UBS; orientação nutricional → ambulatório; conciliação medicamentosa em alta → enfermaria/farmácia clínica. Reflita esse cenário no relato dos fatos, no laudo, no prontuário (cabeçalho da unidade) e nas testemunhas (colegas do mesmo serviço).
 
 Gere via tool call os seguintes campos:
 - title: título do processo (curto, ex: "Ação Penal Pública: Suposta imperícia no tratamento de pielonefrite com Fosfomicina")
@@ -117,6 +128,7 @@ ${STANDARD_SECTIONS.map((s, i) => `${i + 1}. key="${s.key}" — ${s.title}`).joi
           properties: {
             title: { type: "string" },
             premise: { type: "string" },
+            setting: { type: "string", description: "Cenário físico onde se passa o caso (ex: 'Farmácia comunitária do bairro X', 'UBS Vila Y', 'UPA Z', 'Enfermaria de clínica médica do Hospital W'). Coerente com a profissão do réu." },
             defendant_name: { type: "string" },
             defendant_role: { type: "string" },
             victim_name: { type: "string" },
@@ -135,7 +147,7 @@ ${STANDARD_SECTIONS.map((s, i) => `${i + 1}. key="${s.key}" — ${s.title}`).joi
               },
             },
           },
-          required: ["title", "premise", "defendant_name", "defendant_role", "victim_name", "sections"],
+          required: ["title", "premise", "setting", "defendant_name", "defendant_role", "victim_name", "sections"],
           additionalProperties: false,
         },
       },
@@ -196,6 +208,7 @@ ${STANDARD_SECTIONS.map((s, i) => `${i + 1}. key="${s.key}" — ${s.title}`).joi
         sections_json: sections,
         process_content: "", // will be assembled from sections later
         characters_json: [
+          { role: "Cenário", name: parsed.setting || "A definir", profession: "Local físico onde o caso se desenrola" },
           { role: "Réu", name: parsed.defendant_name || "Dr(a). Réu", profession: parsed.defendant_role || "Profissional de saúde" },
           { role: "Vítima", name: parsed.victim_name || "Paciente" },
         ],

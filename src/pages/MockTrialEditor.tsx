@@ -607,7 +607,48 @@ export default function MockTrialEditor() {
     }
   };
 
-  // FORMS
+  // Manually change a single group's role on a single case (or remove)
+  const updateAssignment = async (caseId: string, groupId: string, newRole: string) => {
+    // newRole: "prosecution" | "defense" | "jury" | "none"
+    if (newRole === "none") {
+      const { error } = await supabase
+        .from("mock_trial_assignments")
+        .delete()
+        .eq("case_id", caseId)
+        .eq("group_id", groupId);
+      if (error) toast.error("Erro ao remover atribuição");
+      else {
+        toast.success("Grupo removido deste processo");
+        refetchAssignments();
+      }
+      return;
+    }
+
+    // Prevent two groups holding the same role on the same case: remove any other group with same role
+    const conflict = (assignments as any[]).find(
+      (a) => a.case_id === caseId && a.role === newRole && a.group_id !== groupId,
+    );
+    if (conflict) {
+      await supabase.from("mock_trial_assignments").delete().eq("id", conflict.id);
+    }
+
+    // Upsert: delete previous row of this group on this case, then insert
+    await supabase
+      .from("mock_trial_assignments")
+      .delete()
+      .eq("case_id", caseId)
+      .eq("group_id", groupId);
+
+    const { error } = await supabase
+      .from("mock_trial_assignments")
+      .insert({ case_id: caseId, group_id: groupId, role: newRole });
+
+    if (error) toast.error("Erro ao atualizar atribuição");
+    else {
+      toast.success("Atribuição atualizada");
+      refetchAssignments();
+    }
+  };
   const addForm = async (targetRole: string) => {
     if (!id) return;
     const roleLabels: Record<string, string> = { prosecution: "Acusação", defense: "Defesa", jury: "Júri" };
@@ -1063,18 +1104,23 @@ export default function MockTrialEditor() {
                         <td className="p-2 font-medium">{g.name}</td>
                         {cases.map((c: any) => {
                           const assignment = assignments.find((a: any) => a.case_id === c.id && a.group_id === g.id);
+                          const currentRole = assignment ? (assignment as any).role : "none";
                           return (
                             <td key={c.id} className="text-center p-2">
-                              {assignment ? (
-                                <Badge variant={
-                                  (assignment as any).role === "prosecution" ? "destructive" : 
-                                  (assignment as any).role === "defense" ? "default" : "secondary"
-                                }>
-                                  {roleLabels[(assignment as any).role] || (assignment as any).role}
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
+                              <Select
+                                value={currentRole}
+                                onValueChange={(v) => updateAssignment(c.id, g.id, v)}
+                              >
+                                <SelectTrigger className="h-8 w-32 mx-auto text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">— Não participa</SelectItem>
+                                  <SelectItem value="prosecution">Acusação</SelectItem>
+                                  <SelectItem value="defense">Defesa</SelectItem>
+                                  <SelectItem value="jury">Júri</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </td>
                           );
                         })}
