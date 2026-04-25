@@ -208,6 +208,7 @@ ${STANDARD_SECTIONS.map((s, i) => `${i + 1}. key="${s.key}" — ${s.title}`).joi
         sections_json: sections,
         process_content: "", // will be assembled from sections later
         characters_json: [
+          { role: "Cenário", name: parsed.setting || "A definir", profession: "Local físico onde o caso se desenrola" },
           { role: "Réu", name: parsed.defendant_name || "Dr(a). Réu", profession: parsed.defendant_role || "Profissional de saúde" },
           { role: "Vítima", name: parsed.victim_name || "Paciente" },
         ],
