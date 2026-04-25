@@ -487,20 +487,41 @@ export default function MockTrialStudent() {
 }
 
 
-function MockTrialFormCard({ form, onSubmit }: { form: any; onSubmit: (answers: Record<string, any>) => void }) {
+function MockTrialFormCard({
+  form,
+  onSubmit,
+  alreadySubmitted = false,
+}: {
+  form: any;
+  onSubmit: (answers: Record<string, any>) => Promise<boolean> | void;
+  alreadySubmitted?: boolean;
+}) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSubmit = () => {
-    onSubmit(answers);
+  const handleSubmit = async () => {
+    if (submitted || alreadySubmitted || sending) return;
+    setSending(true);
+    const result = await onSubmit(answers);
+    setSending(false);
+    // If onSubmit returns boolean, only mark submitted on success.
+    // If it returns void, assume success (back-compat).
+    if (result === false) return;
     setSubmitted(true);
   };
 
-  if (submitted) {
+  if (submitted || alreadySubmitted) {
     return (
       <Card className="mb-4">
+        <CardHeader>
+          <CardTitle className="text-base">{form.title}</CardTitle>
+        </CardHeader>
         <CardContent className="py-8 text-center">
           <p className="text-primary font-medium">✓ Resposta enviada com sucesso!</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Este formulário já foi enviado pelo seu grupo e não pode ser enviado novamente.
+          </p>
         </CardContent>
       </Card>
     );
@@ -517,7 +538,9 @@ function MockTrialFormCard({ form, onSubmit }: { form: any; onSubmit: (answers: 
           answers={answers}
           onChange={setAnswers}
         />
-        <Button onClick={handleSubmit} className="w-full">Enviar Resposta</Button>
+        <Button onClick={handleSubmit} className="w-full" disabled={sending}>
+          {sending ? "Enviando..." : "Enviar Resposta"}
+        </Button>
       </CardContent>
     </Card>
   );
