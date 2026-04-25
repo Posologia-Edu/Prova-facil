@@ -220,16 +220,26 @@ export default function MockTrialStudent() {
 
   const submitResponse = async (formId: string, answers: Record<string, any>) => {
     if (!selectedSession || !myGroup) return;
+    // Embed the full member list inside response_json so the teacher
+    // sees every component of the group that participated. Scoring is
+    // attributed to group_id, so all members are automatically pontuados.
+    const membersInRoom = groupMembers.length > 0
+      ? groupMembers
+      : [{ email: myStudent?.student_email || studentEmail, name: myStudent?.student_name || studentName }];
+    const enrichedAnswers = {
+      ...answers,
+      __group_members__: membersInRoom,
+    };
     const { error } = await supabase.from("mock_trial_responses").insert({
       form_id: formId,
       session_id: selectedSession.id,
       group_id: myGroup.id,
       student_email: myStudent?.student_email || studentEmail,
       student_name: myStudent?.student_name || studentName,
-      response_json: answers,
+      response_json: enrichedAnswers,
     });
     if (error) toast.error("Erro ao enviar resposta");
-    else toast.success("Resposta enviada!");
+    else toast.success(`Resposta enviada — ${membersInRoom.length} integrante(s) do grupo pontuados`);
   };
 
   if (!authenticated) {
