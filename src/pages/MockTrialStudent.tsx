@@ -473,6 +473,7 @@ export default function MockTrialStudent() {
                   <MockTrialFormCard
                     key={form.id}
                     form={form}
+                    alreadySubmitted={submittedFormKeys.has(`${selectedSession?.id}:${form.id}`)}
                     onSubmit={(answers) => submitResponse(form.id, answers)}
                   />
                 ))}
