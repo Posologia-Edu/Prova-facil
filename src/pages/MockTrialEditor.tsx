@@ -1104,18 +1104,23 @@ export default function MockTrialEditor() {
                         <td className="p-2 font-medium">{g.name}</td>
                         {cases.map((c: any) => {
                           const assignment = assignments.find((a: any) => a.case_id === c.id && a.group_id === g.id);
+                          const currentRole = assignment ? (assignment as any).role : "none";
                           return (
                             <td key={c.id} className="text-center p-2">
-                              {assignment ? (
-                                <Badge variant={
-                                  (assignment as any).role === "prosecution" ? "destructive" : 
-                                  (assignment as any).role === "defense" ? "default" : "secondary"
-                                }>
-                                  {roleLabels[(assignment as any).role] || (assignment as any).role}
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
+                              <Select
+                                value={currentRole}
+                                onValueChange={(v) => updateAssignment(c.id, g.id, v)}
+                              >
+                                <SelectTrigger className="h-8 w-32 mx-auto text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">— Não participa</SelectItem>
+                                  <SelectItem value="prosecution">Acusação</SelectItem>
+                                  <SelectItem value="defense">Defesa</SelectItem>
+                                  <SelectItem value="jury">Júri</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </td>
                           );
                         })}
