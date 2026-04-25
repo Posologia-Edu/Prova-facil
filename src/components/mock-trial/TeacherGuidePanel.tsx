@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { GraduationCap, Loader2, RefreshCw, Eye, Sparkles, Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Props {
   caseId: string;
@@ -93,8 +94,23 @@ export function TeacherGuidePanel({ caseId, teacherGuide, hasContent, onUpdated 
               Material confidencial para apoiar sua condução da discussão pós-Júri Simulado.
             </DialogDescription>
           </DialogHeader>
-          <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto pr-2">
-            {teacherGuide ? <ReactMarkdown>{teacherGuide}</ReactMarkdown> : <p className="text-muted-foreground">Nenhum roteiro gerado ainda.</p>}
+          <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto pr-2
+                          prose-headings:scroll-mt-4 prose-headings:font-semibold
+                          prose-h1:text-xl prose-h1:mt-6 prose-h1:mb-3 prose-h1:pb-2 prose-h1:border-b
+                          prose-h2:text-lg prose-h2:mt-6 prose-h2:mb-2 prose-h2:text-amber-700 dark:prose-h2:text-amber-400
+                          prose-h3:text-base prose-h3:mt-4 prose-h3:mb-1
+                          prose-p:my-2 prose-li:my-0.5
+                          prose-strong:text-foreground
+                          [&_table]:w-full [&_table]:my-3 [&_table]:text-[12.5px] [&_table]:border-collapse [&_table]:block [&_table]:overflow-x-auto
+                          [&_th]:bg-muted [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:border [&_th]:border-border [&_th]:font-semibold
+                          [&_td]:px-2 [&_td]:py-1.5 [&_td]:border [&_td]:border-border [&_td]:align-top
+                          [&_blockquote]:border-l-4 [&_blockquote]:border-amber-500/40 [&_blockquote]:bg-amber-500/5 [&_blockquote]:px-3 [&_blockquote]:py-1 [&_blockquote]:rounded-r [&_blockquote]:not-italic
+                          [&_hr]:my-4 [&_hr]:border-border">
+            {teacherGuide ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{teacherGuide}</ReactMarkdown>
+            ) : (
+              <p className="text-muted-foreground">Nenhum roteiro gerado ainda.</p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
