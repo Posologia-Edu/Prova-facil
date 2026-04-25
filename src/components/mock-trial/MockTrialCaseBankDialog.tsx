@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Library, Search, Trash2, FileDown } from "lucide-react";
+import { Library, Search, Trash2, FileDown, Clock } from "lucide-react";
 
 interface BankCase {
   id: string;
@@ -174,8 +174,18 @@ export function MockTrialCaseBankDialog({
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(item.created_at).toLocaleString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
                         <span className="text-[10px] text-muted-foreground">
-                          {(item.process_content || "").length.toLocaleString("pt-BR")} caracteres
+                          • {(item.process_content || "").length.toLocaleString("pt-BR")} caracteres
                         </span>
                         {Array.isArray(item.characters_json) && item.characters_json.length > 0 && (
                           <span className="text-[10px] text-muted-foreground">
