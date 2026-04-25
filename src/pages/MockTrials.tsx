@@ -133,23 +133,68 @@ export default function MockTrials() {
         .single();
       if (trialErr || !newTrial) throw trialErr || new Error("Falha ao criar");
 
-      // 2. Duplicate cases
+      // 2. Duplicate cases (preserve sections + teacher guide) and remember id mapping
       const { data: cases } = await supabase
         .from("mock_trial_cases")
         .select("*")
         .eq("mock_trial_id", trial.id);
+      const caseIdMap = new Map<string, string>();
       if (cases && cases.length > 0) {
-        await supabase.from("mock_trial_cases").insert(
-          cases.map((c: any) => ({
-            mock_trial_id: newTrial.id,
-            position: c.position,
-            case_number: c.case_number,
-            title: c.title,
-            process_content: c.process_content,
-            learning_objectives: c.learning_objectives,
-            characters_json: c.characters_json,
-          }))
-        );
+        const { data: insertedCases } = await supabase
+          .from("mock_trial_cases")
+          .insert(
+            cases.map((c: any) => ({
+              mock_trial_id: newTrial.id,
+              position: c.position,
+              case_number: c.case_number,
+              title: c.title,
+              process_content: c.process_content,
+              learning_objectives: c.learning_objectives,
+              characters_json: c.characters_json,
+              sections_json: c.sections_json ?? [],
+              generation_status: c.generation_status ?? "ready",
+              teacher_guide: c.teacher_guide ?? null,
+            }))
+          )
+          .select("id, position, case_number, title");
+        // Map old → new by (position + case_number + title)
+        for (const oldC of cases) {
+          const match = (insertedCases || []).find(
+            (n: any) =>
+              n.position === oldC.position &&
+              n.case_number === oldC.case_number &&
+              n.title === oldC.title
+          );
+          if (match) caseIdMap.set(oldC.id, match.id);
+        }
+
+        // 2b. Duplicate case images (already-generated assets stay available in the copy)
+        const oldCaseIds = cases.map((c: any) => c.id);
+        const { data: oldImages } = await (supabase as any)
+          .from("mock_trial_case_images")
+          .select("*")
+          .in("case_id", oldCaseIds);
+        if (oldImages && oldImages.length > 0) {
+          const newImageRows = oldImages
+            .map((img: any) => {
+              const newCaseId = caseIdMap.get(img.case_id);
+              if (!newCaseId) return null;
+              return {
+                case_id: newCaseId,
+                slug: img.slug,
+                anchor: img.anchor,
+                title: img.title,
+                caption: img.caption,
+                prompt: img.prompt,
+                image_url: img.image_url,
+                status: img.status,
+              };
+            })
+            .filter(Boolean);
+          if (newImageRows.length > 0) {
+            await (supabase as any).from("mock_trial_case_images").insert(newImageRows);
+          }
+        }
       }
 
       // 3. Duplicate groups
