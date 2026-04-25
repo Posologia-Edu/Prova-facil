@@ -120,7 +120,7 @@ export function LegalProcessRenderer({ content, caseNumber, title, caseId }: Pro
   const resolved = resolveAnchors(content, images);
 
   return (
-    <div className="bg-[hsl(var(--background))] rounded-lg border border-border shadow-sm overflow-hidden">
+    <div className="bg-[hsl(var(--background))] rounded-lg border border-border shadow-sm overflow-hidden mx-auto max-w-3xl">
       {/* Letterhead */}
       <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border px-8 py-5">
         <div className="flex items-center gap-3">
