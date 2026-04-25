@@ -85,6 +85,7 @@ export default function MockTrialStudent() {
   const [groups, setGroups] = useState<any[]>([]);
   const [myStudent, setMyStudent] = useState<any>(null);
   const [myGroup, setMyGroup] = useState<any>(null);
+  const [groupMembers, setGroupMembers] = useState<{ email: string; name: string }[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [forms, setForms] = useState<any[]>([]);
