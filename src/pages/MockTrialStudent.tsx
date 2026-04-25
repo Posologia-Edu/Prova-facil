@@ -138,6 +138,15 @@ export default function MockTrialStudent() {
     const group = grps.find(g => g.id === found.group_id);
     setMyGroup(group);
 
+    // Load ALL members of the same group so the room shows the entire team
+    const allGroupStudents = (studs || []).filter(s => s.group_id === found.group_id);
+    setGroupMembers(
+      allGroupStudents.map(s => ({
+        email: s.student_email || "",
+        name: s.student_name || "",
+      })),
+    );
+
     // Load cases, assignments, sessions, forms
     const { data: cs } = await supabase.from("mock_trial_cases").select("*").eq("mock_trial_id", trialData.id).order("position");
     setCases(cs || []);
