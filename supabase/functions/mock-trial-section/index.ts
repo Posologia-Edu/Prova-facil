@@ -17,33 +17,65 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 // Per-section length and style instructions
 const SECTION_INSTRUCTIONS: Record<string, { minWords: number; instructions: string }> = {
   capa: {
-    minWords: 120,
-    instructions: `CAPA do processo. Inclua: nome completo do tribunal, comarca, vara competente, número do processo, classe ("Ação Penal Pública"), órgão julgador (Tribunal do Júri), partes (Autor: Ministério Público; Réu: nome e qualificação), data de distribuição, juiz responsável (nome fictício), e o objeto da ação em uma linha. Use formatação em bloco profissional.`,
+    minWords: 350,
+    instructions: `CAPA do processo em formato profissional. Estrutura obrigatória:
+
+1) **Cabeçalho do tribunal**: nome completo do tribunal, comarca, vara competente, número do processo, classe ("Ação Penal Pública"), órgão julgador (Tribunal do Júri).
+2) **Partes**: Autor (Ministério Público do Estado de XXX) e Réu (nome completo, qualificação, profissão, registro no conselho de classe correspondente — CRM/CRF/COREN/CRO/CREFITO/CRN/CRBM conforme a profissão do réu).
+3) **Vítima**: nome e qualificação.
+4) **Data de distribuição** e **juiz responsável** (nome fictício).
+5) **Objeto da ação** em uma linha.
+6) **FUNDAMENTAÇÃO JURÍDICA** (seção OBRIGATÓRIA e DETALHADA) — liste os dispositivos legais aplicáveis ao caso específico, com o texto resumido de cada artigo, agrupados em subtítulos. Sempre inclua quando aplicável:
+   - **Código Penal**: artigos pertinentes (ex: art. 121 — Matar alguém; art. 121 §3º — homicídio culposo; art. 132 — perigo para a vida ou saúde de outrem; art. 129 — lesão corporal; art. 18 II — crime culposo). Cite SOMENTE os que se aplicam ao desfecho do caso.
+   - **Código de Ética da profissão do réu** (escolha o correto):
+     * Médico → Código de Ética Médica (Resolução CFM 2.217/2018) — arts. 1º, 2º, 11, 32, 33 etc.
+     * Farmacêutico → Código de Ética da Profissão Farmacêutica (Resolução CFF 711/2021).
+     * Enfermeiro → Código de Ética dos Profissionais de Enfermagem (Resolução COFEN 564/2017).
+     * Cirurgião-Dentista → Código de Ética Odontológica (Resolução CFO 118/2012).
+     * Fisioterapeuta → Código de Ética e Deontologia da Fisioterapia (Resolução COFFITO 424/2013).
+     * Nutricionista → Código de Ética e Conduta do Nutricionista (Resolução CFN 599/2018).
+     * Biomédico → Código de Ética do Profissional Biomédico (Resolução CFBM 198/2011).
+   - **Lei do exercício profissional** correspondente (ex: Lei 12.842/2013 — Ato Médico; Lei 13.021/2014 — Farmácia; Lei 7.498/1986 — Enfermagem; Lei 5.081/1966 — Odontologia etc.).
+   - **Legislação sanitária/clínica específica** quando pertinente (ex: RDC ANVISA sobre antimicrobianos, Portarias do MS, Diretrizes da SBI/SBU/SBN/SBD etc.).
+   Para cada artigo, traga uma frase com o teor resumido contextualizado ao caso (NÃO apenas o número). Exemplo: "Art. 11 do CEM — O médico tem o dever de usar todos os meios disponíveis de diagnóstico e tratamento cientificamente reconhecidos em favor do paciente, dispositivo invocado pela acusação ao questionar a escolha de fosfomicina como monoterapia em pielonefrite complicada."`,
   },
   relato_fatos: {
     minWords: 350,
-    instructions: `RELATO DOS FATOS detalhado e cronológico. Narre data por data o que aconteceu clinicamente: início dos sintomas, busca por atendimento, internação, conduta médica adotada (medicamentos com doses exatas, vias, posologia), evolução, complicações e desfecho. Inclua nomes das instituições (fictícios), CRM/CRO/CRF do réu, e contextos sociais relevantes. Esconda 2 EASTER EGGS sutis (detalhes que mais tarde se revelam importantes para a discussão).`,
+    instructions: `RELATO DOS FATOS detalhado e cronológico. Narre data por data o que aconteceu clinicamente: início dos sintomas, busca por atendimento, internação, conduta profissional adotada (medicamentos com doses exatas, vias, posologia, ou procedimento técnico realizado), evolução, complicações e desfecho. Inclua nomes das instituições (fictícios), registro do conselho de classe do réu (CRM/CRF/COREN/CRO conforme profissão), e contextos sociais relevantes. Esconda 2 EASTER EGGS sutis (detalhes que mais tarde se revelam importantes para a discussão).`,
   },
   denuncia: {
     minWords: 400,
-    instructions: `DENÚNCIA do Ministério Público em linguagem jurídica formal. Estrutura: cabeçalho com referência ao IP/inquérito, qualificação do denunciado, descrição típica dos fatos com tipificação penal (artigos do Código Penal), pedido de recebimento da denúncia, rol de testemunhas (3-5 nomes), pedido final. Use juridiquês correto e cite artigos específicos (ex: art. 121 §3º CP - homicídio culposo; art. 18 II CP, etc.).`,
+    instructions: `DENÚNCIA do Ministério Público em linguagem jurídica formal. Estrutura: cabeçalho com referência ao IP/inquérito, qualificação do denunciado (incluindo registro no conselho de classe correto), descrição típica dos fatos com tipificação penal (artigos do Código Penal), pedido de recebimento da denúncia, rol de testemunhas (3-5 nomes), pedido final. Use juridiquês correto e cite artigos específicos.`,
   },
   laudo_iml: {
     minWords: 350,
     instructions: `LAUDO IML/NECROPSIA OU PERÍCIA TÉCNICA. Cabeçalho com perito responsável e nº do laudo. Identificação do periciado, descrição externa (se aplicável), descrição interna por sistemas (cardiovascular, respiratório, digestivo, urinário, neurológico), achados macroscópicos e microscópicos, exames complementares solicitados pelo perito (toxicologia, histopatologia), CONCLUSÃO técnica com causa mortis ou natureza das lesões. Use terminologia médico-legal precisa. Adicione um POLO TWIST: um achado inesperado que abre margem para interpretação alternativa.`,
   },
   prontuario: {
-    minWords: 500,
-    instructions: `PRONTUÁRIO MÉDICO COMPLETO em formato hospitalar. Inclua TODAS as evoluções diárias da internação (data/hora, profissional, sinais vitais, queixas, conduta, prescrição), prescrições médicas com horários, evoluções de enfermagem, intercorrências, anotações de plantão. Cada evolução deve ser realista (10-20 linhas cada). Inclua pelo menos 5 dias de evolução. Mostre dados clínicos COMPATÍVEIS com o tema dos objetivos (ex: para pielonefrite — leucocitose, febre, EAS alterado, urocultura, função renal). Esconda detalhes que serão importantes para a defesa E para a acusação.`,
+    minWords: 600,
+    instructions: `PRONTUÁRIO MÉDICO COMPLETO em formato hospitalar. Inclua TODAS as evoluções diárias da internação (data/hora, profissional, sinais vitais, queixas, conduta, prescrição), prescrições com horários, evoluções de enfermagem, intercorrências, anotações de plantão. Cada evolução deve ser realista (10-20 linhas cada). Inclua pelo menos 5 dias de evolução.
+
+**OBRIGATÓRIO — Use TABELAS Markdown completas para TODOS os dados quantitativos:**
+- **Sinais vitais seriados**: tabela com colunas Data/Hora | PA | FC | FR | Temp | SatO2 | Diurese — uma linha por aferição.
+- **Prescrição médica/profissional**: tabela com Medicamento | Dose | Via | Posologia | Início | Suspensão.
+- **Balanço hídrico diário**: tabela com Data | Entrada (mL) | Saída (mL) | Balanço.
+- **Escalas aplicadas** (Glasgow, qSOFA, NEWS, dor, Braden): tabela com Data/Hora | Escore.
+
+Mostre dados clínicos COMPATÍVEIS com o tema dos objetivos. Esconda detalhes importantes para a defesa E para a acusação.`,
   },
   exames: {
-    minWords: 400,
-    instructions: `EXAMES COMPLEMENTARES laboratoriais e de imagem. Apresente cada exame em formato de laudo real:
-- Hemogramas seriados com valores numéricos e referências
-- Bioquímica (função renal, hepática, eletrólitos, PCR, lactato)
-- Urocultura/hemocultura com antibiograma detalhado
-- Gasometria se aplicável
-- Laudos de imagem (USG, TC, RX) com técnica, descrição e impressão diagnóstica
+    minWords: 500,
+    instructions: `EXAMES COMPLEMENTARES laboratoriais e de imagem. **TODOS** os resultados quantitativos DEVEM ser apresentados em **TABELAS Markdown completas**, jamais em texto corrido:
+
+- **Hemograma** (todos os dias colhidos): tabela com Parâmetro | Valor D1 | Valor D2 | ... | Referência. Inclua TODAS as linhas: Hemácias, Hb, Ht, VCM, HCM, CHCM, RDW, Leucócitos totais, Bastões, Segmentados, Linfócitos, Monócitos, Eosinófilos, Basófilos, Plaquetas.
+- **Bioquímica completa**: tabela com Ureia, Creatinina, TFG estimada, Sódio, Potássio, Cloro, Cálcio, Magnésio, Fósforo, Glicemia, AST, ALT, FA, GGT, BT/BD/BI, Albumina, PCR, Procalcitonina, Lactato — Valor | Referência por dia.
+- **Gasometria** (se aplicável): pH, pCO2, pO2, HCO3, BE, SatO2, Lactato.
+- **EAS / Urina tipo I**: Aspecto, Densidade, pH, Proteínas, Glicose, Cetonas, Hemoglobina, Nitrito, Esterase leucocitária, Leucócitos/campo, Hemácias/campo, Cilindros, Cristais, Bactérias.
+- **Urocultura/Hemocultura com ANTIBIOGRAMA**: tabela com Antibiótico testado | MIC (µg/mL) | Interpretação (S/I/R) — liste ao menos 12 antibióticos relevantes ao germe identificado (ex: Ampicilina, Amoxicilina-clavulanato, Cefalexina, Cefuroxima, Ceftriaxona, Cefepime, Ciprofloxacino, Levofloxacino, Nitrofurantoína, Fosfomicina, Sulfametoxazol-trimetoprim, Gentamicina, Amicacina, Meropenem, Ertapenem, Piperacilina-tazobactam).
+- **Coagulograma**: TAP, INR, TTPA, Fibrinogênio, D-dímero.
+- **Marcadores específicos** ao tema (ex: HbA1c, troponina, BNP, amilase, lipase, TSH conforme caso).
+
+Para **laudos de imagem** (USG, TC, RX, RM): cabeçalho com técnica, descrição detalhada e impressão diagnóstica.
 
 INCLUA NO TEXTO 2-3 ÂNCORAS DE IMAGEM no formato exato [[IMAGE:slug]] (slugs sugeridos: us-rins, tc-abdome, rx-torax) — essas âncoras serão substituídas por imagens médicas geradas separadamente. Posicione cada âncora logo abaixo do laudo correspondente.`,
   },
