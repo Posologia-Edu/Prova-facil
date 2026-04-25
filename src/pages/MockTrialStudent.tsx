@@ -164,6 +164,17 @@ export default function MockTrialStudent() {
     const { data: frms } = await supabase.from("mock_trial_forms").select("*").eq("mock_trial_id", trialData.id);
     setForms(frms || []);
 
+    // Load existing responses from this group to block re-submission
+    if (group?.id) {
+      const { data: resps } = await supabase
+        .from("mock_trial_responses")
+        .select("form_id, session_id, group_id")
+        .eq("group_id", group.id);
+      setSubmittedFormKeys(
+        new Set((resps || []).map((r: any) => `${r.session_id}:${r.form_id}`)),
+      );
+    }
+
     setAuthenticated(true);
   };
 
