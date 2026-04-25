@@ -75,9 +75,29 @@ Mostre dados clínicos COMPATÍVEIS com o tema dos objetivos. Esconda detalhes i
 - **Coagulograma**: TAP, INR, TTPA, Fibrinogênio, D-dímero.
 - **Marcadores específicos** ao tema (ex: HbA1c, troponina, BNP, amilase, lipase, TSH conforme caso).
 
-Para **laudos de imagem** (USG, TC, RX, RM): cabeçalho com técnica, descrição detalhada e impressão diagnóstica.
+Para **laudos de imagem** (USG, TC, RX, RM, ECG, endoscopia, microscopia, fundoscopia, dermatoscopia, anatomia patológica, etc.): cabeçalho com técnica, descrição detalhada e impressão diagnóstica.
 
-INCLUA NO TEXTO 2-3 ÂNCORAS DE IMAGEM no formato exato [[IMAGE:slug]] (slugs sugeridos: us-rins, tc-abdome, rx-torax) — essas âncoras serão substituídas por imagens médicas geradas separadamente. Posicione cada âncora logo abaixo do laudo correspondente.`,
+REGRAS DE IMAGENS COMPLEMENTARES (CRÍTICO):
+- Inclua **APENAS as imagens estritamente necessárias** para o entendimento do caso. Pode ser **0, 1, 2, 3 ou 4** imagens — nunca acrescente exames que não fazem sentido clínico.
+- As imagens devem ser **totalmente contextualizadas** ao caso (região anatômica correta, modalidade adequada à hipótese diagnóstica, achado específico da patologia em questão). NÃO use por padrão "us-rins", "tc-abdome" ou "rx-torax" — escolha a modalidade e a região conforme o caso (ex.: para AVC isquêmico use "tc-cranio-sem-contraste"; para apendicite use "us-fid" ou "tc-abdome-com-contraste"; para fratura de fêmur "rx-femur-ap-perfil"; para endocardite "ecocardiograma-transesofagico"; para leucemia "esfregaço-sangue-periférico"; para melanoma "dermatoscopia"; etc.).
+- Para CADA imagem incluída, faça DUAS coisas:
+  1) Posicione no texto a âncora exata \`[[IMAGE:slug-kebab-case]]\` logo abaixo do laudo correspondente.
+  2) Ao FINAL do conteúdo da seção, adicione um bloco JSON único delimitado assim:
+
+\`\`\`image-manifest
+[
+  {
+    "slug": "tc-cranio-sem-contraste",
+    "title": "TC de crânio sem contraste",
+    "caption": "Corte axial demonstrando hipodensidade em território da ACM esquerda",
+    "prompt": "Realistic non-contrast axial CT scan of the brain showing a hypodense area in the left middle cerebral artery territory consistent with acute ischemic stroke, grayscale, hospital diagnostic quality, anatomical orientation markers, no text overlay"
+  }
+]
+\`\`\`
+
+- Os \`slug\` no JSON devem bater EXATAMENTE com os usados nas âncoras \`[[IMAGE:...]]\`.
+- O \`prompt\` deve ser em inglês, descritivo, específico do achado patológico do caso, pronto para um modelo de imagem médica realista.
+- Se o caso NÃO precisar de imagens (ex.: caso puramente farmacológico/laboratorial/ético), NÃO insira âncoras nem o bloco JSON.`,
   },
   depoimento_reu: {
     minWords: 600,
@@ -219,49 +239,69 @@ ${cfg.instructions}
     }
 
     const data = await response.json();
-    const content = (data?.choices?.[0]?.message?.content || "").trim();
-    if (!content) throw new Error("Conteúdo vazio retornado pela IA");
+    const rawContent = (data?.choices?.[0]?.message?.content || "").trim();
+    if (!rawContent) throw new Error("Conteúdo vazio retornado pela IA");
+
+    // Extract image-manifest JSON block (if any) and strip it from saved content
+    let imageManifest: Array<{ slug: string; title?: string; caption?: string; prompt?: string }> = [];
+    const manifestMatch = rawContent.match(/```image-manifest\s*([\s\S]*?)```/i);
+    if (manifestMatch) {
+      try {
+        const parsed = JSON.parse(manifestMatch[1].trim());
+        if (Array.isArray(parsed)) imageManifest = parsed.filter((x) => x && typeof x.slug === "string");
+      } catch (e) {
+        console.warn("Failed to parse image-manifest JSON:", (e as Error).message);
+      }
+    }
+    const content = rawContent.replace(/```image-manifest[\s\S]*?```/gi, "").trim();
 
     sections[targetIdx] = { ...target, status: "ready", content, error: null };
-
-    // Reassemble process_content from all ready sections
-    const assembled = sections
-      .filter((s) => s.status === "ready" && s.content)
-      .map((s) => `## ${s.title}\n\n${s.content}`)
+    const reassembled = sections
+      .filter((s: any) => s.status === "ready" && s.content)
+      .map((s: any) => `## ${s.title}\n\n${s.content}`)
       .join("\n\n---\n\n");
 
     await admin
       .from("mock_trial_cases")
-      .update({ sections_json: sections, process_content: assembled })
+      .update({ sections_json: sections, process_content: reassembled })
       .eq("id", caseId);
 
-    // If this is the "exames" section and no images exist yet, queue image generation
-    if (sectionKey === "exames") {
-      const slugMatches = Array.from(content.matchAll(/\[\[IMAGE:([a-z0-9-]+)\]\]/gi)).map((m: any) => m[1]);
-      if (slugMatches.length > 0) {
-        const { data: existing } = await admin.from("mock_trial_case_images").select("slug").eq("case_id", caseId);
-        const existingSlugs = new Set((existing || []).map((x: any) => x.slug));
-        const toInsert = slugMatches
-          .filter((s) => !existingSlugs.has(s))
-          .map((slug) => ({
+    // Queue contextualized image generation only if anchors are present (0 = no images)
+    const slugMatches = Array.from(content.matchAll(/\[\[IMAGE:([a-z0-9-]+)\]\]/gi)).map((m: any) => m[1]);
+    const uniqueSlugs = Array.from(new Set(slugMatches));
+    if (uniqueSlugs.length > 0) {
+      const { data: existing } = await admin.from("mock_trial_case_images").select("slug").eq("case_id", caseId);
+      const existingSlugs = new Set((existing || []).map((x: any) => x.slug));
+      const manifestBySlug = new Map(imageManifest.map((m) => [m.slug, m]));
+      const objectives = (caseRow.learning_objectives || "").slice(0, 300);
+      const toInsert = uniqueSlugs
+        .filter((s) => !existingSlugs.has(s))
+        .map((slug) => {
+          const meta = manifestBySlug.get(slug);
+          const fallbackTitle = slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+          return {
             case_id: caseId,
             slug,
             anchor: `[[IMAGE:${slug}]]`,
-            title: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-            caption: "",
-            prompt: `Realistic medical imaging exam (${slug}) compatible with the clinical case described in the learning objectives: ${caseRow.learning_objectives.slice(0, 200)}`,
+            title: meta?.title || fallbackTitle,
+            caption: meta?.caption || "",
+            prompt:
+              meta?.prompt ||
+              `Realistic medical imaging exam (${fallbackTitle}) strictly contextualized to this clinical case. Show the specific pathological finding consistent with the case. Hospital diagnostic quality, proper modality conventions, anatomical orientation markers, no text overlay. Case context: ${objectives}`,
             status: "pending",
-          }));
-        if (toInsert.length > 0) {
-          await admin.from("mock_trial_case_images").insert(toInsert);
-          // Trigger generation in background (fire-and-forget)
-          for (const img of toInsert) {
-            fetch(`${SUPABASE_URL}/functions/v1/generate-mock-trial-image`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-              body: JSON.stringify({ slug: img.slug, caseId }),
-            }).catch(() => {});
-          }
+          };
+        });
+      if (toInsert.length > 0) {
+        const { data: inserted } = await admin
+          .from("mock_trial_case_images")
+          .insert(toInsert)
+          .select("id");
+        for (const row of inserted || []) {
+          fetch(`${SUPABASE_URL}/functions/v1/generate-mock-trial-image`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+            body: JSON.stringify({ imageId: (row as any).id }),
+          }).catch(() => {});
         }
       }
     }
