@@ -90,6 +90,8 @@ export default function MockTrialStudent() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [forms, setForms] = useState<any[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
+  // Set of "sessionId:formId" pairs already submitted by this group
+  const [submittedFormKeys, setSubmittedFormKeys] = useState<Set<string>>(new Set());
 
   // Auto-join from StudentAuth redirect
   useEffect(() => {
@@ -164,6 +166,17 @@ export default function MockTrialStudent() {
     const { data: frms } = await supabase.from("mock_trial_forms").select("*").eq("mock_trial_id", trialData.id);
     setForms(frms || []);
 
+    // Load existing responses from this group to block re-submission
+    if (group?.id) {
+      const { data: resps } = await supabase
+        .from("mock_trial_responses")
+        .select("form_id, session_id, group_id")
+        .eq("group_id", group.id);
+      setSubmittedFormKeys(
+        new Set((resps || []).map((r: any) => `${r.session_id}:${r.form_id}`)),
+      );
+    }
+
     setAuthenticated(true);
   };
 
@@ -218,11 +231,27 @@ export default function MockTrialStudent() {
     ? (selectedCase.characters_json as any[]).filter((ch: any) => ch.side === myRole)
     : [];
 
-  const submitResponse = async (formId: string, answers: Record<string, any>) => {
-    if (!selectedSession || !myGroup) return;
-    // Embed the full member list inside response_json so the teacher
-    // sees every component of the group that participated. Scoring is
-    // attributed to group_id, so all members are automatically pontuados.
+  const submitResponse = async (formId: string, answers: Record<string, any>): Promise<boolean> => {
+    if (!selectedSession || !myGroup) return false;
+    const key = `${selectedSession.id}:${formId}`;
+    if (submittedFormKeys.has(key)) {
+      toast.error("Este formulário já foi enviado pelo seu grupo");
+      return false;
+    }
+    // Double-check on the server in case another member submitted
+    const { data: existing } = await supabase
+      .from("mock_trial_responses")
+      .select("id")
+      .eq("group_id", myGroup.id)
+      .eq("session_id", selectedSession.id)
+      .eq("form_id", formId)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      setSubmittedFormKeys(prev => new Set(prev).add(key));
+      toast.error("Este formulário já foi enviado pelo seu grupo");
+      return false;
+    }
+
     const membersInRoom = groupMembers.length > 0
       ? groupMembers
       : [{ email: myStudent?.student_email || studentEmail, name: myStudent?.student_name || studentName }];
@@ -238,8 +267,13 @@ export default function MockTrialStudent() {
       student_name: myStudent?.student_name || studentName,
       response_json: enrichedAnswers,
     });
-    if (error) toast.error("Erro ao enviar resposta");
-    else toast.success(`Resposta enviada — ${membersInRoom.length} integrante(s) do grupo pontuados`);
+    if (error) {
+      toast.error("Erro ao enviar resposta");
+      return false;
+    }
+    setSubmittedFormKeys(prev => new Set(prev).add(key));
+    toast.success(`Resposta enviada — ${membersInRoom.length} integrante(s) do grupo pontuados`);
+    return true;
   };
 
   if (!authenticated) {
@@ -439,6 +473,7 @@ export default function MockTrialStudent() {
                   <MockTrialFormCard
                     key={form.id}
                     form={form}
+                    alreadySubmitted={submittedFormKeys.has(`${selectedSession?.id}:${form.id}`)}
                     onSubmit={(answers) => submitResponse(form.id, answers)}
                   />
                 ))}
@@ -452,20 +487,41 @@ export default function MockTrialStudent() {
 }
 
 
-function MockTrialFormCard({ form, onSubmit }: { form: any; onSubmit: (answers: Record<string, any>) => void }) {
+function MockTrialFormCard({
+  form,
+  onSubmit,
+  alreadySubmitted = false,
+}: {
+  form: any;
+  onSubmit: (answers: Record<string, any>) => Promise<boolean> | void;
+  alreadySubmitted?: boolean;
+}) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSubmit = () => {
-    onSubmit(answers);
+  const handleSubmit = async () => {
+    if (submitted || alreadySubmitted || sending) return;
+    setSending(true);
+    const result = await onSubmit(answers);
+    setSending(false);
+    // If onSubmit returns boolean, only mark submitted on success.
+    // If it returns void, assume success (back-compat).
+    if (result === false) return;
     setSubmitted(true);
   };
 
-  if (submitted) {
+  if (submitted || alreadySubmitted) {
     return (
       <Card className="mb-4">
+        <CardHeader>
+          <CardTitle className="text-base">{form.title}</CardTitle>
+        </CardHeader>
         <CardContent className="py-8 text-center">
           <p className="text-primary font-medium">✓ Resposta enviada com sucesso!</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Este formulário já foi enviado pelo seu grupo e não pode ser enviado novamente.
+          </p>
         </CardContent>
       </Card>
     );
@@ -482,7 +538,9 @@ function MockTrialFormCard({ form, onSubmit }: { form: any; onSubmit: (answers: 
           answers={answers}
           onChange={setAnswers}
         />
-        <Button onClick={handleSubmit} className="w-full">Enviar Resposta</Button>
+        <Button onClick={handleSubmit} className="w-full" disabled={sending}>
+          {sending ? "Enviando..." : "Enviar Resposta"}
+        </Button>
       </CardContent>
     </Card>
   );
