@@ -147,7 +147,7 @@ ${STANDARD_SECTIONS.map((s, i) => `${i + 1}. key="${s.key}" — ${s.title}`).joi
               },
             },
           },
-          required: ["title", "premise", "defendant_name", "defendant_role", "victim_name", "sections"],
+          required: ["title", "premise", "setting", "defendant_name", "defendant_role", "victim_name", "sections"],
           additionalProperties: false,
         },
       },
