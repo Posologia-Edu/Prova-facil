@@ -85,6 +85,7 @@ export default function MockTrialStudent() {
   const [groups, setGroups] = useState<any[]>([]);
   const [myStudent, setMyStudent] = useState<any>(null);
   const [myGroup, setMyGroup] = useState<any>(null);
+  const [groupMembers, setGroupMembers] = useState<{ email: string; name: string }[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [forms, setForms] = useState<any[]>([]);
@@ -136,6 +137,15 @@ export default function MockTrialStudent() {
     setStudentName(found.student_name);
     const group = grps.find(g => g.id === found.group_id);
     setMyGroup(group);
+
+    // Load ALL members of the same group so the room shows the entire team
+    const allGroupStudents = (studs || []).filter(s => s.group_id === found.group_id);
+    setGroupMembers(
+      allGroupStudents.map(s => ({
+        email: s.student_email || "",
+        name: s.student_name || "",
+      })),
+    );
 
     // Load cases, assignments, sessions, forms
     const { data: cs } = await supabase.from("mock_trial_cases").select("*").eq("mock_trial_id", trialData.id).order("position");
@@ -210,16 +220,26 @@ export default function MockTrialStudent() {
 
   const submitResponse = async (formId: string, answers: Record<string, any>) => {
     if (!selectedSession || !myGroup) return;
+    // Embed the full member list inside response_json so the teacher
+    // sees every component of the group that participated. Scoring is
+    // attributed to group_id, so all members are automatically pontuados.
+    const membersInRoom = groupMembers.length > 0
+      ? groupMembers
+      : [{ email: myStudent?.student_email || studentEmail, name: myStudent?.student_name || studentName }];
+    const enrichedAnswers = {
+      ...answers,
+      __group_members__: membersInRoom,
+    };
     const { error } = await supabase.from("mock_trial_responses").insert({
       form_id: formId,
       session_id: selectedSession.id,
       group_id: myGroup.id,
       student_email: myStudent?.student_email || studentEmail,
       student_name: myStudent?.student_name || studentName,
-      response_json: answers,
+      response_json: enrichedAnswers,
     });
     if (error) toast.error("Erro ao enviar resposta");
-    else toast.success("Resposta enviada!");
+    else toast.success(`Resposta enviada — ${membersInRoom.length} integrante(s) do grupo pontuados`);
   };
 
   if (!authenticated) {
@@ -244,25 +264,49 @@ export default function MockTrialStudent() {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Gavel className="h-6 w-6 text-primary" />
-        <div>
+      <div className="flex items-start gap-4">
+        <Gavel className="h-6 w-6 text-primary mt-1" />
+        <div className="flex-1">
           <h1 className="text-xl font-bold">{trial?.title}</h1>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{studentName}</span>
-            <span>•</span>
-            <span>{myGroup?.name}</span>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+            <span className="font-medium text-foreground">{myGroup?.name}</span>
             {myRole && (
-              <>
-                <span>•</span>
-                <Badge variant={myRole === "prosecution" ? "destructive" : myRole === "defense" ? "default" : "secondary"}>
-                  {roleLabels[myRole] || myRole}
-                </Badge>
-              </>
+              <Badge variant={myRole === "prosecution" ? "destructive" : myRole === "defense" ? "default" : "secondary"}>
+                {roleLabels[myRole] || myRole}
+              </Badge>
             )}
           </div>
         </div>
       </div>
+
+      {/* Group members panel — entire group is "in the room" */}
+      {groupMembers.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="py-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">
+                Integrantes do grupo na sala ({groupMembers.length})
+              </span>
+              <span className="text-xs text-muted-foreground">
+                — todos serão pontuados ao enviar as respostas
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {groupMembers.map((m, i) => (
+                <Badge
+                  key={i}
+                  variant="outline"
+                  className="bg-background"
+                  title={m.email}
+                >
+                  {m.name || m.email}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Session Status */}
       {selectedSession && (
