@@ -120,7 +120,7 @@ export function LegalProcessRenderer({ content, caseNumber, title, caseId }: Pro
   const resolved = resolveAnchors(content, images);
 
   return (
-    <div className="bg-[hsl(var(--background))] rounded-lg border border-border shadow-sm overflow-hidden">
+    <div className="bg-[hsl(var(--background))] rounded-lg border border-border shadow-sm overflow-hidden mx-auto max-w-3xl">
       {/* Letterhead */}
       <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border px-8 py-5">
         <div className="flex items-center gap-3">
@@ -144,7 +144,7 @@ export function LegalProcessRenderer({ content, caseNumber, title, caseId }: Pro
 
       {/* Document body — serif typography mimicking judicial publications */}
       <article
-        className="px-8 md:px-14 py-12 max-w-none font-serif text-[15.5px] leading-[1.95] text-foreground
+        className="px-6 md:px-10 py-10 max-w-none font-serif text-[14.5px] leading-[1.85] text-foreground
                    [&_h1]:text-center [&_h1]:font-bold [&_h1]:text-2xl [&_h1]:uppercase [&_h1]:tracking-[0.15em] [&_h1]:mt-10 [&_h1]:mb-6 [&_h1]:text-primary
                    [&_h2]:text-center [&_h2]:font-bold [&_h2]:text-lg [&_h2]:uppercase [&_h2]:tracking-[0.12em] [&_h2]:mt-12 [&_h2]:mb-5 [&_h2]:pb-3 [&_h2]:border-b-2 [&_h2]:border-primary/30 [&_h2]:text-primary
                    [&_h3]:font-semibold [&_h3]:text-base [&_h3]:uppercase [&_h3]:tracking-wider [&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-foreground/90 [&_h3]:border-l-4 [&_h3]:border-primary/60 [&_h3]:pl-3
@@ -157,10 +157,10 @@ export function LegalProcessRenderer({ content, caseNumber, title, caseId }: Pro
                    [&_li]:text-justify [&_li]:pl-2
                    [&_li>p]:indent-0 [&_li>p]:mb-2
                    [&_hr]:my-12 [&_hr]:border-0 [&_hr]:h-px [&_hr]:bg-gradient-to-r [&_hr]:from-transparent [&_hr]:via-primary/40 [&_hr]:to-transparent
-                   [&_table]:w-full [&_table]:my-8 [&_table]:border-collapse [&_table]:text-[13px] [&_table]:font-sans [&_table]:shadow-sm [&_table]:rounded-md [&_table]:overflow-hidden
+                   [&_table]:w-full [&_table]:my-6 [&_table]:border-collapse [&_table]:text-[12px] [&_table]:font-sans [&_table]:shadow-sm [&_table]:rounded-md [&_table]:overflow-hidden [&_table]:block [&_table]:overflow-x-auto md:[&_table]:table
                    [&_thead]:bg-primary/10
-                   [&_th]:bg-primary/10 [&_th]:border [&_th]:border-primary/20 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-semibold [&_th]:text-primary [&_th]:uppercase [&_th]:text-[11px] [&_th]:tracking-wider
-                   [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2.5 [&_td]:align-top
+                   [&_th]:bg-primary/10 [&_th]:border [&_th]:border-primary/20 [&_th]:px-2 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-primary [&_th]:uppercase [&_th]:text-[10.5px] [&_th]:tracking-wider [&_th]:whitespace-nowrap
+                   [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-2 [&_td]:align-top
                    [&_tbody_tr:nth-child(even)]:bg-muted/30
                    [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-5 [&_blockquote]:py-2 [&_blockquote]:my-6 [&_blockquote]:bg-muted/30 [&_blockquote]:italic [&_blockquote]:text-foreground/85 [&_blockquote]:rounded-r-md
                    [&_blockquote_p]:indent-0
