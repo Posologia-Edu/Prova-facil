@@ -128,6 +128,7 @@ ${STANDARD_SECTIONS.map((s, i) => `${i + 1}. key="${s.key}" — ${s.title}`).joi
           properties: {
             title: { type: "string" },
             premise: { type: "string" },
+            setting: { type: "string", description: "Cenário físico onde se passa o caso (ex: 'Farmácia comunitária do bairro X', 'UBS Vila Y', 'UPA Z', 'Enfermaria de clínica médica do Hospital W'). Coerente com a profissão do réu." },
             defendant_name: { type: "string" },
             defendant_role: { type: "string" },
             victim_name: { type: "string" },
