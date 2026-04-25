@@ -202,6 +202,15 @@ export default function MockTrialEditor() {
   const [bankOpen, setBankOpen] = useState(false);
   const [savingToBankId, setSavingToBankId] = useState<string | null>(null);
 
+  const buildContentFromSections = (c: any): string => {
+    if (c.process_content && c.process_content.trim()) return c.process_content;
+    const sections = Array.isArray(c.sections_json) ? c.sections_json : [];
+    return sections
+      .filter((s: any) => s?.content && String(s.content).trim())
+      .map((s: any) => `## ${s.title || s.id}\n\n${s.content}`)
+      .join("\n\n---\n\n");
+  };
+
   const saveCaseToBank = async (c: any) => {
     setSavingToBankId(c.id);
     try {
@@ -216,12 +225,17 @@ export default function MockTrialEditor() {
         .eq("case_id", c.id)
         .order("created_at");
       if (imagesError) throw imagesError;
+      const consolidated = buildContentFromSections(c);
+      if (!consolidated.trim()) {
+        toast.error("Gere ao menos uma parte do processo antes de salvar no banco");
+        return;
+      }
       const { error } = await (supabase as any).from("mock_trial_case_bank").insert({
         user_id: user.id,
         title: c.title || "Processo sem título",
         case_number: c.case_number || null,
         learning_objectives: c.learning_objectives || null,
-        process_content: c.process_content || "",
+        process_content: consolidated,
         characters_json: c.characters_json || [],
         images_json: caseImages || [],
         source_case_id: c.id,
