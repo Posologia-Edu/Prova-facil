@@ -144,7 +144,7 @@ export function LegalProcessRenderer({ content, caseNumber, title, caseId }: Pro
 
       {/* Document body — serif typography mimicking judicial publications */}
       <article
-        className="px-8 md:px-14 py-12 max-w-none font-serif text-[15.5px] leading-[1.95] text-foreground
+        className="px-6 md:px-10 py-10 max-w-none font-serif text-[14.5px] leading-[1.85] text-foreground
                    [&_h1]:text-center [&_h1]:font-bold [&_h1]:text-2xl [&_h1]:uppercase [&_h1]:tracking-[0.15em] [&_h1]:mt-10 [&_h1]:mb-6 [&_h1]:text-primary
                    [&_h2]:text-center [&_h2]:font-bold [&_h2]:text-lg [&_h2]:uppercase [&_h2]:tracking-[0.12em] [&_h2]:mt-12 [&_h2]:mb-5 [&_h2]:pb-3 [&_h2]:border-b-2 [&_h2]:border-primary/30 [&_h2]:text-primary
                    [&_h3]:font-semibold [&_h3]:text-base [&_h3]:uppercase [&_h3]:tracking-wider [&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-foreground/90 [&_h3]:border-l-4 [&_h3]:border-primary/60 [&_h3]:pl-3
