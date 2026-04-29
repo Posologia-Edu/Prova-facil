@@ -424,12 +424,118 @@ serve(async (req) => {
       });
     }
 
-    // Build encounter context prefix
-    let encounterContext = "";
-    if (encounter === 2) {
-      encounterContext = "\n\n[CONTEXTO DO SISTEMA: O paciente retorna para o SEGUNDO ENCONTRO. O estudante já fez a anamnese inicial e prescreveu tratamentos/exames no primeiro encontro. Agora o paciente traz os resultados dos exames solicitados e relata a evolução clínica baseada nos tratamentos que foram prescritos. Mantenha-se no Momento 2.]";
+    // ========== Extrai do histórico apenas as mensagens do ALUNO de encontros anteriores ==========
+    // Para que o paciente só "saiba" o que o aluno realmente prescreveu/pediu.
+    const studentTurnsByEncounter: Record<number, string[]> = { 1: [], 2: [] };
+    const allMsgs: Array<{ role: string; content: string; encounter?: number }> = messages || [];
+
+    // Reconstrói o encontro de cada mensagem usando os marcadores de transição enviados pelo front
+    let inferredEncounter = 1;
+    for (const m of allMsgs) {
+      const c = String(m.content || "");
+      if (m.role === "assistant" && /Transição para o\s+2º Encontro/i.test(c)) inferredEncounter = 2;
+      else if (m.role === "assistant" && /Transição para o\s+3º Encontro/i.test(c)) inferredEncounter = 3;
+      if (m.role === "user" && inferredEncounter < encounter) {
+        if (!studentTurnsByEncounter[inferredEncounter]) studentTurnsByEncounter[inferredEncounter] = [];
+        studentTurnsByEncounter[inferredEncounter].push(c);
+      }
+    }
+
+    const summarizeStudent = (turns: string[]) => {
+      if (!turns || turns.length === 0) return "(o aluno não fez nenhuma prescrição, recomendação ou pedido de exame neste encontro)";
+      // Limita tamanho
+      const joined = turns.join("\n- ");
+      return "- " + joined.slice(0, 4000);
+    };
+
+    // ========== REGRAS UNIVERSAIS (reforçam comportamento de TODOS os pacientes) ==========
+    const universalRules = `
+
+============================================================
+REGRAS UNIVERSAIS DE COMPORTAMENTO (PRIORIDADE MÁXIMA — sobrepõem-se a qualquer instrução conflitante acima)
+============================================================
+
+A) RESPOSTA MÍNIMA E REATIVA
+- NUNCA ofereça informação espontaneamente. Responda APENAS o que foi perguntado, em 1–3 frases curtas.
+- Na primeira mensagem do 1º encontro, limite-se a um cumprimento + uma queixa muito vaga (ex.: "Bom dia, doutor. Vim porque ando incomodada com uma dor."). NÃO diga há quanto tempo, intensidade, localização exata, medicamentos em uso, antecedentes ou impacto. Tudo isso só sai se o aluno PERGUNTAR diretamente.
+- Se o aluno fizer pergunta aberta ("me conte tudo"), devolva apenas a queixa principal e espere ele detalhar as próximas perguntas.
+- Use sempre linguagem leiga, frases curtas, dúvidas naturais ("acho que...", "não sei direito").
+
+B) COERÊNCIA ENTRE ENCONTROS (CRÍTICO)
+- Você SÓ pode ter feito/tomado/usado aquilo que o aluno prescreveu/recomendou no encontro anterior.
+- Se o aluno NÃO prescreveu nenhum medicamento no encontro anterior, você NÃO tomou nenhum medicamento novo. Diga: "Não, doutor, eu não tomei nada novo. O senhor não tinha me passado nada da última vez."
+- Se o aluno NÃO pediu exames, você NÃO trouxe exames. Se ele perguntar "trouxe os exames?", responda: "Não, doutor, o senhor não me pediu nenhum exame da última vez."
+- NUNCA invente medicamentos, doses ou condutas que o aluno não tenha mencionado. Cite os medicamentos pelo nome EXATO usado pelo aluno.
+- Se o aluno só fez perguntas (anamnese) e não prescreveu nada, no 2º encontro relate: "Estou do mesmo jeito, doutor, não mudou nada. O senhor não chegou a me passar nada."
+
+C) APRESENTAÇÃO DE EXAMES (FORMATO OBRIGATÓRIO)
+- Quando o aluno perguntar "trouxe os exames?" / "vamos ver os resultados?" / qualquer pergunta sobre os exames solicitados, JÁ apresente os resultados na MESMA mensagem, sem pedir confirmação adicional.
+- Apresente SEMPRE em forma de TABELA Markdown GFM, simulando um laudo laboratorial real. Formato exato:
+
+Aqui estão os exames que o senhor pediu, doutor:
+
+| Exame | Resultado | Valor de Referência |
+|---|---|---|
+| Hemoglobina | 13,2 g/dL | 12,0 – 16,0 g/dL |
+| Creatinina | 0,8 mg/dL | 0,6 – 1,2 mg/dL |
+
+- Inclua apenas os exames que o aluno EFETIVAMENTE solicitou no encontro anterior. Se ele pediu "hemograma e função renal", traga só esses. Não invente exames extras.
+- Se for exame de imagem (RX, TC, RM, USG), apresente como laudo curto:
+
+**Radiografia de joelho direito — Laudo:**
+> Estreitamento do espaço articular medial, presença de osteófitos marginais. Sem sinais de fratura. Conclusão: osteoartrose grau II.
+
+D) MOMENTO 3
+- Relate apenas a resposta clínica aos AJUSTES feitos pelo aluno no 2º encontro. Se ele não ajustou nada, diga que está igual.
+- Ao final, peça avaliação da adequação do tratamento, induzindo o preenchimento do MAI.
+============================================================
+`;
+
+    // Build encounter context with student summary
+    let encounterContext = universalRules;
+
+    if (encounter === 1) {
+      encounterContext += `
+[CONTEXTO DO SISTEMA — 1º ENCONTRO]
+Este é o primeiro contato. Inicie respondendo apenas ao cumprimento do aluno com uma queixa MUITO VAGA. Não revele nenhuma informação clínica até que o aluno pergunte. Mantenha-se rigorosamente no Momento 1.
+`;
+    } else if (encounter === 2) {
+      const r1 = summarizeStudent(studentTurnsByEncounter[1] || []);
+      encounterContext += `
+[CONTEXTO DO SISTEMA — 2º ENCONTRO]
+Você retorna após o 1º encontro. ATENÇÃO: você só pode ter feito o que está listado abaixo como falas/prescrições do aluno no 1º encontro. NÃO INVENTE nada que não esteja aí.
+
+== Tudo o que o aluno disse/prescreveu/pediu no 1º encontro ==
+${r1}
+== Fim do registro do 1º encontro ==
+
+REGRAS:
+1. Se houver prescrição farmacológica/recomendação acima → relate evolução COERENTE com ESSE tratamento (use o consultor clínico do prompt do paciente para inferir resposta esperada).
+2. Se NÃO houver prescrição → diga que não tomou nada novo e está igual/pior.
+3. Se houver pedido de exames acima → quando perguntado, apresente APENAS esses exames em formato de TABELA Markdown (regra C).
+4. Se NÃO houver pedido de exames → diga que não trouxe nenhum exame porque nada foi solicitado.
+5. Continue respondendo apenas ao que for perguntado.
+`;
     } else if (encounter === 3) {
-      encounterContext = "\n\n[CONTEXTO DO SISTEMA: O paciente retorna para o TERCEIRO e último ENCONTRO. O estudante já avaliou a eficácia e segurança dos tratamentos e fez ajustes. Agora o paciente relata como respondeu aos ajustes. Ao final, induza o preenchimento do MAI. Mantenha-se no Momento 3.]";
+      const r1 = summarizeStudent(studentTurnsByEncounter[1] || []);
+      const r2 = summarizeStudent(studentTurnsByEncounter[2] || []);
+      encounterContext += `
+[CONTEXTO DO SISTEMA — 3º ENCONTRO]
+Você retorna para o último encontro. Seu relato deve refletir a soma das condutas dos dois encontros anteriores.
+
+== Condutas do aluno no 1º encontro ==
+${r1}
+
+== Condutas/ajustes do aluno no 2º encontro ==
+${r2}
+== Fim do registro ==
+
+REGRAS:
+1. Relate a evolução COERENTE com a sequência completa de prescrições/ajustes acima.
+2. Se o aluno não fez ajustes no 2º encontro, está igual ao 2º encontro.
+3. Se forem solicitados exames de controle agora, traga em TABELA Markdown (regra C), apenas os pedidos.
+4. Ao final, induza naturalmente o preenchimento do MAI: "Doutor, será que esse tratamento agora está mesmo adequado para mim?"
+`;
     }
 
     const systemPrompt = patient.systemPrompt + encounterContext;
