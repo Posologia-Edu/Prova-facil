@@ -94,8 +94,7 @@ export default function VirtualPatients() {
           <strong>Modo exploração:</strong> as conversas aqui são efêmeras e não ficam salvas. Use este espaço para testar o comportamento dos pacientes. Para o fluxo real de atendimento com alunos, utilize as <strong>Salas Virtuais</strong>.
         </AlertDescription>
       </Alert>
-
-
+      <Tabs defaultValue="pain">
         <TabsList>
           <TabsTrigger value="pain">
             <Zap className="h-4 w-4 mr-1" /> Dor
