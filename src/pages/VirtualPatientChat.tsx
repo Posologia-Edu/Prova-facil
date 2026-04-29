@@ -35,6 +35,7 @@ export default function VirtualPatientChat() {
   const { patientId } = useParams<{ patientId: string }>();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session") || "";
+  const isEphemeral = !sessionId; // sem session => modo exploração (admin/teste)
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState<Message[]>([]);
