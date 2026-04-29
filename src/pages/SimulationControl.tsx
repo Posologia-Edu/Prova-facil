@@ -221,18 +221,13 @@ export default function SimulationControl() {
     if (!room) return;
     // Close the open session, if any
     const openSession = sessions.find((s: any) => !s.ended_at);
-    const ops: Promise<any>[] = [
-      supabase.from("simulation_rooms").update({ status: "paused" }).eq("id", room.id),
-    ];
+    await supabase.from("simulation_rooms").update({ status: "paused" }).eq("id", room.id);
     if (openSession) {
-      ops.push(
-        supabase
-          .from("simulation_sessions" as any)
-          .update({ ended_at: new Date().toISOString() })
-          .eq("id", openSession.id)
-      );
+      await supabase
+        .from("simulation_sessions" as any)
+        .update({ ended_at: new Date().toISOString() })
+        .eq("id", openSession.id);
     }
-    await Promise.all(ops);
     queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
     queryClient.invalidateQueries({ queryKey: ["simulation-sessions", roomId] });
     setPauseDialogOpen(false);
