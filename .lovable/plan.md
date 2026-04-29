@@ -1,140 +1,140 @@
-# Plano para gerar processos completos, com todas as exigências, sem falhas recorrentes
+# Anamnese em Múltiplos Dias — Pausar e Retomar
 
-## Objetivo
-Transformar a geração e a regeneração do Júri Simulado em um fluxo confiável, assíncrono e validado por etapas, para que os processos saiam completos, consistentes com seus pedidos e sem parar no meio.
+## Boa notícia: a fundação já existe
 
-## Problema atual
-Hoje a geração depende de uma chamada única e muito pesada da IA dentro de uma função com limite de tempo. Isso está causando:
-- abortos por tempo limite;
-- respostas parciais com só 1 ou 2 anexos;
-- retries que repetem a mesma falha;
-- regenerações que ainda quebram;
-- casos antigos incompletos e até duplicados por número.
+A sala de simulação atual já é, na prática, multi-sessão por desenho:
 
-## O que será implementado
+- Cada rodada (`simulation_rounds`) tem status independente: `pending`, `active`, `completed`.
+- Quando uma rodada é finalizada, ela vira `completed` com `finished_at` registrado — e **nunca mais é refeita**.
+- O agregador de notas (`SimulationAggregator`) já consome **somente rodadas com `status = 'completed'`**, somando as notas dos alunos por participante, independentemente de quando foram finalizadas.
+- O SOAP, na próxima etapa, lê as respostas de anamnese pela `participant_id` correspondente — também é agnóstico ao dia em que a rodada aconteceu.
 
-### 1) Novo fluxo assíncrono de geração
-A geração deixará de depender de uma única resposta longa.
+Ou seja: hoje você já poderia simplesmente fechar a sala no fim do dia 1 e reabrir no dia 2 que tudo se preservaria. O problema é que **não há um controle elegante e explícito disso** — o professor fica inseguro se pode encerrar, não tem visão clara do que falta, e nada comunica aos alunos "essa sala continua amanhã".
 
-Novo fluxo:
+Esta proposta adiciona uma camada de **gestão de sessões** (Dia 1, Dia 2, …) por cima dessa fundação, sem mudar como anamnese alimenta SOAP nem como notas chegam ao agregador.
+
+## O que muda para o usuário
+
+### 1. Botão "Pausar simulação" no painel do professor
+
+Quando há rodadas concluídas e ainda há rodadas `pending`, aparece no `SimulationControl` um novo botão **"Pausar e continuar em outro dia"**, ao lado de "Avançar/Finalizar rodada".
+
+Ao pausar:
+- A sala muda para `status = 'paused'` (novo valor).
+- Nenhuma rodada `pending` é alterada — elas ficam intactas, prontas para retomar.
+- Se houver uma rodada `active` no momento (ninguém apertou para encerrar ainda), o professor é avisado e tem 2 opções: **finalizar a rodada atual antes** (recomendado) ou **descartá-la** (ela volta para `pending` e quem já respondeu mantém a resposta — opcional, pode ficar para uma v2).
+
+### 2. Painel "Progresso da turma" sempre visível
+
+Um card resumo no topo do `SimulationControl` mostra:
+
 ```text
-Professor clica em Gerar/Regerar
--> backend cria um job de geração
--> resposta imediata com status "em processamento"
--> processamento continua em segundo plano
--> geração acontece por etapas menores
--> cada etapa é validada
--> se faltar algo, só a parte com problema é refeita
--> processo é publicado apenas quando estiver completo
+Progresso da anamnese
+███████████░░░░░░░░  11 de 18 rodadas (61%)
+Dia 1 — 22/05: rodadas 1–11 concluídas (15 alunos avaliados)
+Próxima sessão: rodadas 12–18 pendentes (8 alunos restantes)
 ```
 
-Isso elimina o gargalo principal do timeout.
+Lista os alunos que **já participaram como profissional** (têm resposta) e os que **ainda faltam**, separando claramente. Isso dá ao professor a confiança de pausar sabendo exatamente o que retomar.
 
-### 2) Geração em blocos, não em documento único
-Em vez de pedir tudo de uma vez, o sistema vai montar o processo em etapas:
-- blueprint do caso;
-- metadados principais do processo;
-- Relato dos Fatos;
-- Fundamentação Jurídica;
-- Denúncia;
-- anexos gerados individualmente;
-- personagens/testemunhas técnicas;
-- conferência final e montagem do `process_content`.
+### 3. Tela de "Sala pausada" para os alunos
 
-Cada anexo será gerado separadamente. Se o Anexo 4 falhar, o sistema refaz só o Anexo 4, sem perder o restante.
+Quando o aluno entra na `SimulationJoin` e a sala está `paused`:
+- Vê uma tela elegante com a mensagem: "Esta simulação está pausada. O professor retomará em outra sessão. Suas respostas até aqui foram salvas."
+- Mostra o que ele já fez (rodadas em que participou + nota se já houver) e o que ainda falta para ele.
+- Não consegue submeter nada nem entrar em rodada.
 
-### 3) Validação forte baseada nas suas exigências
-A validação deixará de ser só “tem ou não tem anexo”. Ela vai checar também:
-- quantidade exata de anexos planejados;
-- presença obrigatória de todas as seções;
-- ausência de placeholders e instruções vazadas;
-- tamanho mínimo de depoimentos e perícia;
-- consistência entre profissão do réu, conselho profissional e perito;
-- presença dos anchors de imagem e anexos de imagem;
-- fechamento correto do texto, para detectar truncamento;
-- coerência entre lista de provas e anexos realmente gerados;
-- existência do conteúdo obrigatório que você definiu: easter eggs, plot twist, neutralidade, testemunhas técnicas e profundidade documental.
+### 4. Botão "Retomar simulação" no dia seguinte
 
-Se algo falhar, o sistema entra em modo de reparo e tenta corrigir apenas a parte faltante.
+No `SimulationControl`, quando `status = 'paused'`, o botão principal vira **"Retomar simulação"**. Ao clicar:
+- Sala volta para `status = 'active'`.
+- A próxima rodada `pending` fica disponível para ser iniciada normalmente.
+- Alunos que entrarem caem no fluxo padrão.
 
-### 4) Persistência do progresso no banco
-Vou adicionar estrutura para acompanhar a geração no backend, com campos/tabela para:
-- status do job;
-- etapa atual;
-- progresso;
-- tentativas por etapa;
-- erros detalhados;
-- resultado parcial por seção/anexo;
-- vínculo com o processo original em caso de regeneração.
+Não há perda de estado: pares, papéis (A/B), rotação de observador, distribuição de casos — tudo já está materializado em `simulation_rounds` e `simulation_round_assignments` desde a criação da sala.
 
-Isso vai permitir:
-- sair da tela e voltar depois sem perder o processo;
-- continuar uma geração interrompida;
-- mostrar ao professor exatamente em que etapa está;
-- evitar duplicações acidentais.
+### 5. Marcação de "sessões" (opcional, melhora a leitura)
 
-### 5) UI de acompanhamento no editor
-Na tela do Júri Simulado, a geração vai mostrar:
-- status real: “planejando”, “gerando anexo 1”, “validando”, “corrigindo anexo 3”, “concluído”, “falhou”;
-- barra/progresso por etapas;
-- botão para tentar novamente só a etapa com erro;
-- diferenciação clara entre “Gerar novo processo” e “Regerar este processo”;
-- bloqueio para evitar cliques repetidos que criem duplicidade.
+Cada vez que o professor pausa e retoma, registramos o intervalo como uma **sessão**. O painel passa a mostrar:
 
-### 6) Reparo dos processos já quebrados
-Vou tratar também os processos já criados e incompletos.
+```text
+Sessão 1 — 22/05, 14h–17h: rodadas 1–11
+Sessão 2 — 23/05, 14h–em andamento: rodada 12 ativa
+```
 
-Plano de reparo:
-- identificar casos incompletos pela validação nova;
-- usar os objetivos já salvos para reconstruir o conteúdo;
-- reaproveitar o número do processo e a posição original;
-- substituir apenas quando a nova versão passar em toda a validação;
-- marcar versões antigas problemáticas para revisão, evitando confusão com duplicados.
+Isso é puramente informativo (não muda a lógica) e dá uma sensação de organização profissional ao histórico.
 
-### 7) Regeneração robusta
-O botão “Regerar com IA” vai usar exatamente o mesmo pipeline robusto do gerador principal.
+## Por que isso preserva SOAP e o agregador
 
-Ou seja:
-- não será mais uma chamada única frágil;
-- vai virar um job completo com progresso, validação e reparo;
-- só atualiza o caso quando a nova versão estiver realmente pronta.
+- **SOAP**: continua lendo `simulation_responses` por `participant_id`. Cada aluno que fez anamnese no Dia 1 tem sua resposta salva e disponível imediatamente para a etapa seguinte — não precisa esperar a anamnese da turma toda terminar.
+- **Agregador**: já filtra por `simulation_rounds.status = 'completed'` e soma as notas de todas as rodadas concluídas da sala, independentemente do dia. Os 11 alunos avaliados no Dia 1 já aparecem somados no agregador antes mesmo do Dia 2 começar; depois do Dia 2, os 7 restantes simplesmente se somam.
 
-## Entregáveis
-
-### Backend
-- refatoração da função `generate-mock-trial` para iniciar job assíncrono;
-- criação de estrutura de job/progresso no banco;
-- worker de geração por seções/anexos;
-- pipeline de validação e auto-reparo;
-- rotina de reparo para casos antigos incompletos.
-
-### Frontend
-- atualização do `MockTrialEditor` para iniciar jobs e acompanhar progresso;
-- interface de status para geração e regeneração;
-- prevenção de duplicidade e melhor tratamento de erro;
-- atualização automática quando o processo terminar.
-
-### Qualidade
-- validação antes de publicar qualquer processo;
-- logs mais claros por etapa;
-- mensagens úteis para falha real de crédito/rate-limit vs falha de conteúdo.
+Nada na cadeia anamnese → SOAP → agregador precisa ser tocado.
 
 ## Detalhes técnicos
-- Arquivos principais envolvidos:
-  - `supabase/functions/generate-mock-trial/index.ts`
-  - `src/pages/MockTrialEditor.tsx`
-  - nova migration para job/status da geração
-  - possivelmente uma função auxiliar de worker/status
-- A geração de imagens continuará desacoplada, como já está, para não voltar a causar timeout.
-- O processo só será salvo como concluído quando passar em todas as validações.
-- Vou manter suas regras atuais de profundidade e completude, mas distribuídas em etapas menores para a IA conseguir cumprir sem cortar no meio.
 
-## Resultado esperado
-Depois dessa mudança:
-- gerar e regerar terão o mesmo fluxo robusto;
-- processos longos não dependerão mais de uma resposta única sujeita a timeout;
-- anexos faltantes poderão ser corrigidos sem refazer tudo;
-- processos novos só aparecerão como prontos quando estiverem completos;
-- os processos incompletos atuais poderão ser recuperados com segurança.
+### Banco de dados
 
-Se você aprovar, eu implemento esse pipeline completo e já deixo a geração antiga substituída por essa versão robusta.
+Migration mínima:
+
+- Aceitar `'paused'` como valor válido em `simulation_rooms.status` (hoje é texto livre, então não há CHECK constraint a alterar — basta documentar). Caso exista um trigger de validação, atualizá-lo.
+- (Opcional, recomendado) Nova tabela `simulation_sessions`:
+  - `id uuid pk`
+  - `room_id uuid fk simulation_rooms on delete cascade`
+  - `session_number int`
+  - `started_at timestamptz`
+  - `ended_at timestamptz null`
+  - `notes text null`
+  - RLS: dono da sala faz tudo; participantes veem por `room_id`.
+
+Quando o professor inicia/retoma a sala, criamos uma linha aberta. Quando pausa, fechamos `ended_at`. As rodadas continuam ligadas só a `room_id` — ligamos rodada↔sessão *implicitamente* pelo intervalo `started_at` da rodada vs. janela da sessão (suficiente para o painel; sem FK adicional).
+
+### Frontend
+
+Arquivos editados:
+
+- `src/pages/SimulationControl.tsx`
+  - Adiciona card "Progresso da turma" (lista alunos avaliados / pendentes a partir de `simulation_responses` × `simulation_participants`).
+  - Adiciona botão **Pausar** (visível quando `status='active'` e há rodadas `pending`) e **Retomar** (visível quando `status='paused'`).
+  - Trata o caso "tem rodada active no momento da pausa": modal de confirmação com opção de finalizar antes.
+  - Renderiza linha do tempo de sessões (a partir de `simulation_sessions`).
+
+- `src/pages/SimulationJoin.tsx`
+  - Novo branch de UI: se `room.status === 'paused'`, renderiza `<SimulationPausedView />` com resumo pessoal do aluno (rodadas em que participou e papel).
+  - Bloqueia ações de submit/entrada em rodada enquanto pausada.
+
+- `src/pages/SimulationAggregator.tsx`
+  - Sem mudança funcional. Apenas adicionar um badge "Pausada" no `statusLabel`/`statusVariant` para o novo valor.
+
+- (Novo) `src/components/simulation/SimulationProgressPanel.tsx`
+  - Componente reutilizável do card de progresso (alunos avaliados vs. pendentes, barra de %, lista de sessões).
+
+- (Novo) `src/components/simulation/SimulationPausedView.tsx`
+  - Tela do aluno quando a sala está pausada.
+
+### i18n
+
+Novas chaves em `src/i18n/translations.ts` (pt/en/es): `sim_pause`, `sim_resume`, `sim_status_paused`, `sim_paused_student_message`, `sim_progress_title`, `sim_session_label`, `sim_students_evaluated`, `sim_students_pending`.
+
+### Fluxo de transições de status (sala)
+
+```text
+draft ──start──▶ active ──pause──▶ paused ──resume──▶ active ──finish──▶ completed
+                   ▲                                          │
+                   └──────────────  resume  ───────────────────┘
+```
+
+Pausar só é permitido a partir de `active`. Retomar só de `paused`. Finalizar só quando todas as rodadas estão `completed` (já é a regra de hoje).
+
+### Edge cases tratados
+
+- Aluno tenta entrar com PIN durante pausa → tela "Pausada", nada quebra.
+- Professor pausa com rodada ativa → modal pergunta se quer finalizar antes (preserva nota) ou cancelar a pausa.
+- Aluno que faltou no Dia 1 mas aparece no Dia 2 → já está em `simulation_participants` como `waiting`; quando a rodada dele virar a próxima `pending`, ele entra normalmente. Se o professor adicionou alunos novos depois, basta inserir em `simulation_participants` e regenerar rodadas faltantes (botão já existente "Regenerar rodadas pendentes" — pode ser tema de uma v2 se ainda não estiver lá).
+- Sala completa todas as rodadas → vai direto para `completed`, sem passar por `paused`.
+
+## Fora do escopo
+
+- Não mexer em SOAP, Reconciliação, Documentação ou no agregador além do badge de status.
+- Não alterar lógica de distribuição de pares/papéis (`generateRounds`).
+- Não criar agendamento automático de "Dia 2" — a retomada é manual pelo professor (mais simples e flexível).
