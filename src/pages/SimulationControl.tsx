@@ -482,6 +482,8 @@ export default function SimulationControl() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Tabs defaultValue="monitoring">
         <TabsList>
           <TabsTrigger value="monitoring"><Users className="h-4 w-4 mr-1" />{t("sim_round")}</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1" />{t("sim_tab_analytics")}</TabsTrigger>
