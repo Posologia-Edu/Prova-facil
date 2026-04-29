@@ -237,12 +237,10 @@ export default function SimulationControl() {
   const resumeSimulation = async () => {
     if (!room) return;
     const nextNumber = (sessions.length || 0) + 1;
-    await Promise.all([
-      supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id),
-      supabase
-        .from("simulation_sessions" as any)
-        .insert({ room_id: room.id, session_number: nextNumber, started_at: new Date().toISOString() }),
-    ]);
+    await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
+    await supabase
+      .from("simulation_sessions" as any)
+      .insert({ room_id: room.id, session_number: nextNumber, started_at: new Date().toISOString() });
     queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
     queryClient.invalidateQueries({ queryKey: ["simulation-sessions", roomId] });
     toast({ title: `Sessão ${nextNumber} iniciada`, description: "Os alunos pendentes podem entrar normalmente com o PIN." });
