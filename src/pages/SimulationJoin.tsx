@@ -29,6 +29,7 @@ import {
   getPendingRoundsSorted,
   getStudyRole,
 } from "@/lib/simulation-materials";
+import SimulationPausedView from "@/components/simulation/SimulationPausedView";
 
 // FormField type imported from @/components/forms/types
 
