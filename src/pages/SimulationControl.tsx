@@ -106,6 +106,23 @@ export default function SimulationControl() {
     enabled: !!roomId,
   });
 
+  const { data: sessions = [] } = useQuery({
+    queryKey: ["simulation-sessions", roomId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("simulation_sessions" as any)
+        .select("*")
+        .eq("room_id", roomId!)
+        .order("session_number", { ascending: true });
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: !!roomId,
+    refetchInterval: 10000,
+  });
+
+  const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
+
   const professor = participants.find((participant: any) => participant.participant_role === "professor");
   const students = participants.filter((participant: any) => participant.participant_role === "student");
   const readyStudentsCount = students.filter((participant: any) => participant.status === "ready").length;
