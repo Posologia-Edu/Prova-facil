@@ -355,6 +355,7 @@ export default function SimulationAggregator() {
     switch (status) {
       case "draft": return "Rascunho";
       case "active": return "Ativa";
+      case "paused": return "Pausada";
       case "completed": return "Concluída";
       default: return status;
     }

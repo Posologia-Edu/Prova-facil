@@ -8,10 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap, Play, BookOpen, Square } from "lucide-react";
+import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap, Play, BookOpen, Square, PauseCircle, PlayCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SimulationReportGenerator, type PairReport, type ReportSection } from "@/components/SimulationReportGenerator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SimulationProgressPanel } from "@/components/simulation/SimulationProgressPanel";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function SimulationControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -103,6 +105,23 @@ export default function SimulationControl() {
     },
     enabled: !!roomId,
   });
+
+  const { data: sessions = [] } = useQuery({
+    queryKey: ["simulation-sessions", roomId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("simulation_sessions" as any)
+        .select("*")
+        .eq("room_id", roomId!)
+        .order("session_number", { ascending: true });
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: !!roomId,
+    refetchInterval: 10000,
+  });
+
+  const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
 
   const professor = participants.find((participant: any) => participant.participant_role === "professor");
   const students = participants.filter((participant: any) => participant.participant_role === "student");
@@ -198,7 +217,51 @@ export default function SimulationControl() {
     toast({ title: `Rodada ${activeRound.round_number} encerrada!` });
   };
 
-  // Timer
+  const pauseSimulation = async () => {
+    if (!room) return;
+    // Close the open session, if any
+    const openSession = sessions.find((s: any) => !s.ended_at);
+    await supabase.from("simulation_rooms").update({ status: "paused" }).eq("id", room.id);
+    if (openSession) {
+      await supabase
+        .from("simulation_sessions" as any)
+        .update({ ended_at: new Date().toISOString() })
+        .eq("id", openSession.id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-sessions", roomId] });
+    setPauseDialogOpen(false);
+    toast({ title: "Simulação pausada", description: "Os alunos verão uma tela informando que a sessão continuará em outro dia." });
+  };
+
+  const resumeSimulation = async () => {
+    if (!room) return;
+    const nextNumber = (sessions.length || 0) + 1;
+    await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
+    await supabase
+      .from("simulation_sessions" as any)
+      .insert({ room_id: room.id, session_number: nextNumber, started_at: new Date().toISOString() });
+    queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-sessions", roomId] });
+    toast({ title: `Sessão ${nextNumber} iniciada`, description: "Os alunos pendentes podem entrar normalmente com o PIN." });
+  };
+
+  // Auto-create the first session when first round becomes active and no session exists yet
+  useEffect(() => {
+    if (!room || !roomId) return;
+    if (room.status !== "active") return;
+    if (sessions.length > 0) return;
+    if (!rounds.some((r: any) => r.status === "active" || r.status === "completed")) return;
+    supabase
+      .from("simulation_sessions" as any)
+      .insert({ room_id: roomId, session_number: 1, started_at: new Date().toISOString() })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["simulation-sessions", roomId] }));
+  }, [room?.status, sessions.length, rounds, roomId, queryClient]);
+
+  const isPaused = room?.status === "paused";
+  const hasPendingRounds = rounds.some((r: any) => r.status === "pending");
+  const canPause = !isPaused && hasPendingRounds && rounds.some((r: any) => r.status === "completed");
+
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -392,6 +455,34 @@ export default function SimulationControl() {
         )}
       </div>
 
+      {rounds.length > 0 && (
+        <SimulationProgressPanel
+          rounds={rounds as any}
+          assignments={assignments as any}
+          participants={participants as any}
+          sessions={sessions as any}
+          roomStatus={room?.status}
+        />
+      )}
+
+      <AlertDialog open={pauseDialogOpen} onOpenChange={setPauseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pausar e continuar em outro dia?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {activeRound
+                ? `Há uma rodada ativa (Rodada ${activeRound.round_number}). Encerre-a antes de pausar para preservar as notas. Você pode também pausar agora — a rodada ativa continuará disponível para retomar.`
+                : "As rodadas concluídas e suas notas ficarão salvas. As rodadas pendentes permanecerão prontas para retomar em outra sessão."}
+              {" "}Os alunos verão uma tela informando que a simulação continuará em outro dia.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={pauseSimulation}>Pausar simulação</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Tabs defaultValue="monitoring">
         <TabsList>
           <TabsTrigger value="monitoring"><Users className="h-4 w-4 mr-1" />{t("sim_round")}</TabsTrigger>
@@ -451,6 +542,24 @@ export default function SimulationControl() {
                     <Button onClick={releaseMaterials} className="gap-2">
                       <BookOpen className="h-4 w-4" />
                       Liberar Materiais — Ciclo {nextPendingRound.cycle}
+                    </Button>
+                  )}
+
+                  {/* Pause / Resume controls for multi-day execution */}
+                  {isPaused && (
+                    <Button onClick={resumeSimulation} className="gap-2 ml-auto bg-green-600 hover:bg-green-700">
+                      <PlayCircle className="h-4 w-4" />
+                      Retomar simulação
+                    </Button>
+                  )}
+                  {canPause && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setPauseDialogOpen(true)}
+                      className="gap-2 ml-auto border-amber-400/60 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                    >
+                      <PauseCircle className="h-4 w-4" />
+                      Pausar e continuar em outro dia
                     </Button>
                   )}
                 </div>
