@@ -477,23 +477,87 @@ export default function VPAnalytics() {
   // Filtered CVP options for select
   const filteredCvpOptions = selectedClass === "all" ? cvps : cvps.filter(c => c.class_id === selectedClass);
 
+  const currentClass = classes.find(c => c.id === selectedClass);
+
+  // ===== CLASS OVERVIEW (no class selected) =====
+  if (selectedClass === "all") {
+    return (
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Análises – Pacientes Virtuais</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Selecione uma turma para ver os resultados dos seus alunos.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : classes.length === 0 ? (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+              <p className="text-muted-foreground">Nenhuma turma encontrada.</p>
+              <p className="text-muted-foreground text-sm mt-1">
+                Crie turmas e vincule pacientes virtuais para começar.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {classes.map(cls => {
+              const cvpCount = cvps.filter(c => c.class_id === cls.id).length;
+              return (
+                <Card
+                  key={cls.id}
+                  className="cursor-pointer hover:shadow-md hover:border-primary/40 transition-all group"
+                  onClick={() => setSelectedClass(cls.id)}
+                >
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="rounded-lg bg-primary/10 p-3">
+                        <GraduationCap className="h-6 w-6 text-primary" />
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                    <div className="mt-4">
+                      <h3 className="font-semibold text-base line-clamp-2">{cls.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {cvpCount} {cvpCount === 1 ? "paciente virtual" : "pacientes virtuais"} vinculados
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ===== CLASS DETAIL VIEW =====
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Análises – Pacientes Virtuais</h1>
-          <p className="text-muted-foreground text-sm mt-1">Resultados e métricas das interações com pacientes virtuais.</p>
+        <div className="flex items-start gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setSelectedClass("all"); setSelectedCvp("all"); }}
+            className="mt-1 -ml-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" /> Turmas
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{currentClass?.name || "Turma"}</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Resultados dos alunos desta turma nas interações com pacientes virtuais.
+            </p>
+          </div>
         </div>
         <div className="flex gap-3 flex-wrap">
-          <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setSelectedCvp("all"); }}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Todas as turmas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as turmas</SelectItem>
-              {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
           <Select value={selectedCvp} onValueChange={setSelectedCvp}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Todos os pacientes" />
