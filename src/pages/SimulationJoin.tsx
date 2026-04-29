@@ -791,7 +791,19 @@ export default function SimulationJoin() {
     );
   }
 
-  // Material release stage check
+  // Paused room state — show informative screen for students (professor still has access to control)
+  if (room?.status === "paused" && !isProfessor) {
+    return (
+      <SimulationPausedView
+        roomTitle={room?.title || ""}
+        studentName={participant?.student_name || ""}
+        participantId={participant?.id || ""}
+        rounds={allRounds as any}
+        assignments={allAssignments as any}
+      />
+    );
+  }
+
   const isMaterialStage = isActive && activeRound && !activeRound.started_at && activeRound.materials_released;
   // Actually, we need a different approach: materials_released=true but round status is still "pending" means material stage
   // When professor clicks "start simulation" it becomes "active"
