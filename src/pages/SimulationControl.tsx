@@ -544,6 +544,24 @@ export default function SimulationControl() {
                       Liberar Materiais — Ciclo {nextPendingRound.cycle}
                     </Button>
                   )}
+
+                  {/* Pause / Resume controls for multi-day execution */}
+                  {isPaused && (
+                    <Button onClick={resumeSimulation} className="gap-2 ml-auto bg-green-600 hover:bg-green-700">
+                      <PlayCircle className="h-4 w-4" />
+                      Retomar simulação
+                    </Button>
+                  )}
+                  {canPause && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setPauseDialogOpen(true)}
+                      className="gap-2 ml-auto border-amber-400/60 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                    >
+                      <PauseCircle className="h-4 w-4" />
+                      Pausar e continuar em outro dia
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
