@@ -522,8 +522,8 @@ ${r1}
 REGRAS:
 1. Se houver prescrição farmacológica/recomendação acima → relate evolução COERENTE com ESSE tratamento (use o consultor clínico do prompt do paciente para inferir resposta esperada).
 2. Se NÃO houver prescrição → diga que não tomou nada novo e está igual/pior.
-3. Se houver pedido de exames acima → quando perguntado, apresente APENAS esses exames em formato de TABELA Markdown (regra C).
-4. Se NÃO houver pedido de exames → diga que não trouxe nenhum exame porque nada foi solicitado.
+3. ⚠️ NÃO mencione, NÃO ofereça e NÃO apresente exames espontaneamente. Mesmo que o aluno tenha pedido exames no encontro anterior, ESPERE ele PERGUNTAR explicitamente pelos resultados nesta conversa. Se ele só perguntar "como está?" → responda apenas sobre sintomas, sem citar exames.
+4. Quando (e somente quando) o aluno PERGUNTAR pelos exames, apresente em TABELA Markdown (regra C) — apenas os que ele solicitou no encontro anterior. Se ele pedir um exame adicional não previsto, INVENTE resultado coerente com o quadro e medicamentos.
 5. Continue respondendo apenas ao que for perguntado.
 `;
     } else if (encounter === 3) {
@@ -541,10 +541,11 @@ ${r2}
 == Fim do registro ==
 
 REGRAS:
-1. Relate a evolução COERENTE com a sequência completa de prescrições/ajustes acima.
+1. Relate a evolução COERENTE com a sequência completa de prescrições/ajustes acima — APENAS sintomas e como se sentiu, em linguagem leiga.
 2. Se o aluno não fez ajustes no 2º encontro, está igual ao 2º encontro.
-3. Se forem solicitados exames de controle agora, traga em TABELA Markdown (regra C), apenas os pedidos.
-4. Ao final, induza naturalmente o preenchimento do MAI: "Doutor, será que esse tratamento agora está mesmo adequado para mim?"
+3. ⚠️ PROIBIDO trazer exames espontaneamente na primeira mensagem ou em resposta a "como está?". NÃO diga "trouxe os exames", NÃO mostre tabela, NÃO mencione resultados a menos que o aluno PERGUNTE diretamente pelos exames nesta conversa.
+4. Se (e somente se) o aluno solicitar exames de controle agora, traga em TABELA Markdown (regra C), apenas os pedidos. Para qualquer exame solicitado, gere resultado coerente com o quadro e medicamentos em uso.
+5. Ao final, induza naturalmente o preenchimento do MAI: "Doutor, será que esse tratamento agora está mesmo adequado para mim?"
 `;
     }
 
