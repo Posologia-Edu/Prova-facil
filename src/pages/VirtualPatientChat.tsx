@@ -132,10 +132,12 @@ export default function VirtualPatientChat() {
     const next = encounter + 1;
     setEncounter(next);
 
-    await supabase
-      .from("virtual_patient_sessions")
-      .update({ current_encounter: next })
-      .eq("id", sessionId);
+    if (!isEphemeral) {
+      await supabase
+        .from("virtual_patient_sessions")
+        .update({ current_encounter: next })
+        .eq("id", sessionId);
+    }
 
     const systemNote: Message = {
       role: "assistant",
@@ -144,12 +146,14 @@ export default function VirtualPatientChat() {
     };
     setMessages(prev => [...prev, systemNote]);
 
-    await supabase.from("virtual_patient_messages").insert({
-      session_id: sessionId,
-      encounter: next,
-      role: "assistant",
-      content: systemNote.content,
-    });
+    if (!isEphemeral) {
+      await supabase.from("virtual_patient_messages").insert({
+        session_id: sessionId,
+        encounter: next,
+        role: "assistant",
+        content: systemNote.content,
+      });
+    }
 
     toast.success(`Avançou para o ${next}º encontro`);
   };
