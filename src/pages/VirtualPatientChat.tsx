@@ -85,13 +85,15 @@ export default function VirtualPatientChat() {
     setInput("");
     setLoading(true);
 
-    // Save user message
-    await supabase.from("virtual_patient_messages").insert({
-      session_id: sessionId,
-      encounter,
-      role: "user",
-      content: userMsg.content,
-    });
+    // Persistir somente quando há sessão real (fluxo das salas virtuais)
+    if (!isEphemeral) {
+      await supabase.from("virtual_patient_messages").insert({
+        session_id: sessionId,
+        encounter,
+        role: "user",
+        content: userMsg.content,
+      });
+    }
 
     try {
       // Build messages for AI (full history)
