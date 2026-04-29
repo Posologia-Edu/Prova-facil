@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+
 import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Zap, User, Play, RotateCw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Flame, Zap, User, MessageCircle, Info } from "lucide-react";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PatientInfo {
   id: string;
@@ -35,52 +35,14 @@ const PATIENTS: PatientInfo[] = [
 
 export default function VirtualPatients() {
   const navigate = useNavigate();
-  const [activeSessions, setActiveSessions] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    fetchActiveSessions();
-  }, []);
-
-  const fetchActiveSessions = async () => {
-    const { data } = await supabase
-      .from("virtual_patient_sessions")
-      .select("id, patient_id")
-      .eq("status", "in_progress");
-    if (data) {
-      const map: Record<string, string> = {};
-      data.forEach((s: any) => { map[s.patient_id] = s.id; });
-      setActiveSessions(map);
-    }
-  };
-
-  const startSession = async (patient: PatientInfo) => {
-    if (activeSessions[patient.id]) {
-      navigate(`/virtual-patients/chat/${patient.id}?session=${activeSessions[patient.id]}`);
-      return;
-    }
-
-    const { data: userData } = await supabase.auth.getUser();
-
-    const { data, error } = await supabase
-      .from("virtual_patient_sessions")
-      .insert({
-        patient_id: patient.id,
-        module: patient.module,
-        user_id: userData?.user?.id || null,
-      })
-      .select("id")
-      .single();
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    navigate(`/virtual-patients/chat/${patient.id}?session=${data.id}`);
+  const startSession = (patient: PatientInfo) => {
+    // Modo de teste/exploração: efêmero, sem persistir sessão ou mensagens.
+    // O fluxo real de atendimento ocorre nas Salas Virtuais (alunos).
+    navigate(`/virtual-patients/chat/${patient.id}?ephemeral=1`);
   };
 
   const renderPatientCard = (patient: PatientInfo) => {
-    const hasSession = !!activeSessions[patient.id];
     return (
       <Card key={patient.id} className="hover:shadow-md transition-shadow">
         <CardHeader className="pb-3">
@@ -99,18 +61,13 @@ export default function VirtualPatients() {
         <CardContent>
           <Badge variant="outline" className="mb-3">{patient.description}</Badge>
           <p className="text-xs text-muted-foreground mb-4">
-            Simulação com 3 encontros clínicos: anamnese inicial, avaliação de eficácia/segurança e ajustes finais + MAI.
+            Converse livremente com o paciente para testar o comportamento. As mensagens não são salvas — o atendimento real ocorre nas Salas Virtuais.
           </p>
           <Button
             className="w-full"
-            variant={hasSession ? "outline" : "default"}
             onClick={() => startSession(patient)}
           >
-            {hasSession ? (
-              <><RotateCw className="h-4 w-4 mr-2" />Continuar Atendimento</>
-            ) : (
-              <><Play className="h-4 w-4 mr-2" />Iniciar Atendimento</>
-            )}
+            <MessageCircle className="h-4 w-4 mr-2" />Conversar com Paciente
           </Button>
         </CardContent>
       </Card>
@@ -126,11 +83,17 @@ export default function VirtualPatients() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Pacientes Virtuais</h1>
-          <p className="text-muted-foreground">Simule atendimentos clínicos com pacientes virtuais de IA em 3 encontros progressivos.</p>
+          <p className="text-muted-foreground">Converse com os pacientes virtuais para testá-los. O atendimento real (com persistência e avaliação) acontece nas Salas Virtuais com os alunos.</p>
         </div>
         <SystemPromptViewer toolKey="virtual-patients" />
       </div>
 
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Modo exploração:</strong> as conversas aqui são efêmeras e não ficam salvas. Use este espaço para testar o comportamento dos pacientes. Para o fluxo real de atendimento com alunos, utilize as <strong>Salas Virtuais</strong>.
+        </AlertDescription>
+      </Alert>
       <Tabs defaultValue="pain">
         <TabsList>
           <TabsTrigger value="pain">

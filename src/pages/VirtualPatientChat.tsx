@@ -35,6 +35,7 @@ export default function VirtualPatientChat() {
   const { patientId } = useParams<{ patientId: string }>();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session") || "";
+  const isEphemeral = !sessionId; // sem session => modo exploração (admin/teste)
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -84,13 +85,15 @@ export default function VirtualPatientChat() {
     setInput("");
     setLoading(true);
 
-    // Save user message
-    await supabase.from("virtual_patient_messages").insert({
-      session_id: sessionId,
-      encounter,
-      role: "user",
-      content: userMsg.content,
-    });
+    // Persistir somente quando há sessão real (fluxo das salas virtuais)
+    if (!isEphemeral) {
+      await supabase.from("virtual_patient_messages").insert({
+        session_id: sessionId,
+        encounter,
+        role: "user",
+        content: userMsg.content,
+      });
+    }
 
     try {
       // Build messages for AI (full history)
@@ -108,12 +111,14 @@ export default function VirtualPatientChat() {
       const assistantMsg: Message = { role: "assistant", content: reply, encounter };
       setMessages(prev => [...prev, assistantMsg]);
 
-      await supabase.from("virtual_patient_messages").insert({
-        session_id: sessionId,
-        encounter,
-        role: "assistant",
-        content: reply,
-      });
+      if (!isEphemeral) {
+        await supabase.from("virtual_patient_messages").insert({
+          session_id: sessionId,
+          encounter,
+          role: "assistant",
+          content: reply,
+        });
+      }
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Erro ao comunicar com o paciente virtual.");
@@ -127,10 +132,12 @@ export default function VirtualPatientChat() {
     const next = encounter + 1;
     setEncounter(next);
 
-    await supabase
-      .from("virtual_patient_sessions")
-      .update({ current_encounter: next })
-      .eq("id", sessionId);
+    if (!isEphemeral) {
+      await supabase
+        .from("virtual_patient_sessions")
+        .update({ current_encounter: next })
+        .eq("id", sessionId);
+    }
 
     const systemNote: Message = {
       role: "assistant",
@@ -139,12 +146,14 @@ export default function VirtualPatientChat() {
     };
     setMessages(prev => [...prev, systemNote]);
 
-    await supabase.from("virtual_patient_messages").insert({
-      session_id: sessionId,
-      encounter: next,
-      role: "assistant",
-      content: systemNote.content,
-    });
+    if (!isEphemeral) {
+      await supabase.from("virtual_patient_messages").insert({
+        session_id: sessionId,
+        encounter: next,
+        role: "assistant",
+        content: systemNote.content,
+      });
+    }
 
     toast.success(`Avançou para o ${next}º encontro`);
   };
@@ -177,9 +186,14 @@ export default function VirtualPatientChat() {
           </Button>
           <div>
             <h2 className="font-semibold">{patient.name}, {patient.age} anos</h2>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline" className="text-xs">{patient.module}</Badge>
               <Badge variant="secondary" className="text-xs">{ENCOUNTER_LABELS[encounter - 1]}</Badge>
+              {isEphemeral && (
+                <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-700 dark:text-amber-300">
+                  Modo exploração — não salvo
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -190,7 +204,7 @@ export default function VirtualPatientChat() {
               Avançar Encontro <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           )}
-          {encounter === 3 && !sessionCompleted && (
+          {encounter === 3 && !sessionCompleted && !isEphemeral && (
             <Button size="sm" onClick={() => setShowMAI(true)}>
               <ClipboardCheck className="h-4 w-4 mr-1" /> Preencher MAI
             </Button>
