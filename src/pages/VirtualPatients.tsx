@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Zap, User, Play, RotateCw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Flame, Zap, User, MessageCircle, Info } from "lucide-react";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PatientInfo {
   id: string;
