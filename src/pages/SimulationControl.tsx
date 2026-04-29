@@ -217,7 +217,58 @@ export default function SimulationControl() {
     toast({ title: `Rodada ${activeRound.round_number} encerrada!` });
   };
 
-  // Timer
+  const pauseSimulation = async () => {
+    if (!room) return;
+    // Close the open session, if any
+    const openSession = sessions.find((s: any) => !s.ended_at);
+    const ops: Promise<any>[] = [
+      supabase.from("simulation_rooms").update({ status: "paused" }).eq("id", room.id),
+    ];
+    if (openSession) {
+      ops.push(
+        supabase
+          .from("simulation_sessions" as any)
+          .update({ ended_at: new Date().toISOString() })
+          .eq("id", openSession.id)
+      );
+    }
+    await Promise.all(ops);
+    queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-sessions", roomId] });
+    setPauseDialogOpen(false);
+    toast({ title: "Simulação pausada", description: "Os alunos verão uma tela informando que a sessão continuará em outro dia." });
+  };
+
+  const resumeSimulation = async () => {
+    if (!room) return;
+    const nextNumber = (sessions.length || 0) + 1;
+    await Promise.all([
+      supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id),
+      supabase
+        .from("simulation_sessions" as any)
+        .insert({ room_id: room.id, session_number: nextNumber, started_at: new Date().toISOString() }),
+    ]);
+    queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-sessions", roomId] });
+    toast({ title: `Sessão ${nextNumber} iniciada`, description: "Os alunos pendentes podem entrar normalmente com o PIN." });
+  };
+
+  // Auto-create the first session when first round becomes active and no session exists yet
+  useEffect(() => {
+    if (!room || !roomId) return;
+    if (room.status !== "active") return;
+    if (sessions.length > 0) return;
+    if (!rounds.some((r: any) => r.status === "active" || r.status === "completed")) return;
+    supabase
+      .from("simulation_sessions" as any)
+      .insert({ room_id: roomId, session_number: 1, started_at: new Date().toISOString() })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["simulation-sessions", roomId] }));
+  }, [room?.status, sessions.length, rounds, roomId, queryClient]);
+
+  const isPaused = room?.status === "paused";
+  const hasPendingRounds = rounds.some((r: any) => r.status === "pending");
+  const canPause = !isPaused && hasPendingRounds && rounds.some((r: any) => r.status === "completed");
+
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
