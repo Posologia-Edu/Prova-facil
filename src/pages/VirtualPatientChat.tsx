@@ -111,12 +111,14 @@ export default function VirtualPatientChat() {
       const assistantMsg: Message = { role: "assistant", content: reply, encounter };
       setMessages(prev => [...prev, assistantMsg]);
 
-      await supabase.from("virtual_patient_messages").insert({
-        session_id: sessionId,
-        encounter,
-        role: "assistant",
-        content: reply,
-      });
+      if (!isEphemeral) {
+        await supabase.from("virtual_patient_messages").insert({
+          session_id: sessionId,
+          encounter,
+          role: "assistant",
+          content: reply,
+        });
+      }
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Erro ao comunicar com o paciente virtual.");
