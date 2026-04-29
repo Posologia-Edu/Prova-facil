@@ -4934,6 +4934,44 @@ export type Database = {
           },
         ]
       }
+      simulation_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          notes: string | null
+          room_id: string
+          session_number: number
+          started_at: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          room_id: string
+          session_number: number
+          started_at?: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          room_id?: string
+          session_number?: number
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "simulation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sjt_answers: {
         Row: {
           created_at: string
