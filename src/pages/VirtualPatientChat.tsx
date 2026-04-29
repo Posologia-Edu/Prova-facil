@@ -186,9 +186,14 @@ export default function VirtualPatientChat() {
           </Button>
           <div>
             <h2 className="font-semibold">{patient.name}, {patient.age} anos</h2>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline" className="text-xs">{patient.module}</Badge>
               <Badge variant="secondary" className="text-xs">{ENCOUNTER_LABELS[encounter - 1]}</Badge>
+              {isEphemeral && (
+                <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-700 dark:text-amber-300">
+                  Modo exploração — não salvo
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -199,7 +204,7 @@ export default function VirtualPatientChat() {
               Avançar Encontro <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           )}
-          {encounter === 3 && !sessionCompleted && (
+          {encounter === 3 && !sessionCompleted && !isEphemeral && (
             <Button size="sm" onClick={() => setShowMAI(true)}>
               <ClipboardCheck className="h-4 w-4 mr-1" /> Preencher MAI
             </Button>
