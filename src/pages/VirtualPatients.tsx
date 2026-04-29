@@ -83,7 +83,7 @@ export default function VirtualPatients() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Pacientes Virtuais</h1>
-          <p className="text-muted-foreground">Simule atendimentos clínicos com pacientes virtuais de IA em 3 encontros progressivos.</p>
+          <p className="text-muted-foreground">Converse com os pacientes virtuais para testá-los. O atendimento real (com persistência e avaliação) acontece nas Salas Virtuais com os alunos.</p>
         </div>
         <SystemPromptViewer toolKey="virtual-patients" />
       </div>
