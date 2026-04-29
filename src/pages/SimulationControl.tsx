@@ -455,7 +455,33 @@ export default function SimulationControl() {
         )}
       </div>
 
-      <Tabs defaultValue="monitoring">
+      {rounds.length > 0 && (
+        <SimulationProgressPanel
+          rounds={rounds as any}
+          assignments={assignments as any}
+          participants={participants as any}
+          sessions={sessions as any}
+          roomStatus={room?.status}
+        />
+      )}
+
+      <AlertDialog open={pauseDialogOpen} onOpenChange={setPauseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pausar e continuar em outro dia?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {activeRound
+                ? `Há uma rodada ativa (Rodada ${activeRound.round_number}). Encerre-a antes de pausar para preservar as notas. Você pode também pausar agora — a rodada ativa continuará disponível para retomar.`
+                : "As rodadas concluídas e suas notas ficarão salvas. As rodadas pendentes permanecerão prontas para retomar em outra sessão."}
+              {" "}Os alunos verão uma tela informando que a simulação continuará em outro dia.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={pauseSimulation}>Pausar simulação</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
         <TabsList>
           <TabsTrigger value="monitoring"><Users className="h-4 w-4 mr-1" />{t("sim_round")}</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1" />{t("sim_tab_analytics")}</TabsTrigger>
