@@ -914,6 +914,74 @@ export default function ClassesPage() {
                           </div>
                         </div>
 
+                        {/* Group label (editable) */}
+                        <div className="mt-3 flex items-center gap-2">
+                          <Tag className="h-3.5 w-3.5 text-primary shrink-0" />
+                          {editingLabelVPId === vp.id ? (
+                            <>
+                              <Input
+                                autoFocus
+                                value={labelDraft}
+                                onChange={(e) => setLabelDraft(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    updateVPGroupLabel(vp.id, labelDraft);
+                                    setEditingLabelVPId(null);
+                                  } else if (e.key === "Escape") {
+                                    setEditingLabelVPId(null);
+                                  }
+                                }}
+                                placeholder="Ex: Grupo A, Equipe Vermelha…"
+                                maxLength={40}
+                                className="h-7 text-xs"
+                              />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => {
+                                  updateVPGroupLabel(vp.id, labelDraft);
+                                  setEditingLabelVPId(null);
+                                }}
+                                title="Salvar"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => setEditingLabelVPId(null)}
+                                title="Cancelar"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              {vp.group_label ? (
+                                <Badge variant="secondary" className="text-[11px] font-semibold">
+                                  {vp.group_label}
+                                </Badge>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground italic">Sem rótulo de grupo</span>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-[11px] ml-auto"
+                                onClick={() => {
+                                  setLabelDraft(vp.group_label || "");
+                                  setEditingLabelVPId(vp.id);
+                                }}
+                              >
+                                <Pencil className="h-3 w-3 mr-1" />
+                                {vp.group_label ? "Editar rótulo" : "Adicionar rótulo"}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+
                         {/* Assigned students summary */}
                         <div className="mt-3 p-2 rounded-md bg-muted/40 border border-dashed">
                           <div className="flex items-center justify-between gap-2">
