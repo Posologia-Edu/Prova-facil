@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import {
   GraduationCap, Plus, Users, MoreHorizontal, BookOpen, Pencil, Copy, Trash2,
   UserCog, ArrowLeft, Loader2, UserPlus, X, FileText, Upload, HeartPulse,
-  KeyRound, ToggleLeft, ToggleRight, BarChart3,
+  KeyRound, ToggleLeft, ToggleRight, BarChart3, UsersRound, Check,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
