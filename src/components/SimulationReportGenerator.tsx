@@ -407,7 +407,7 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
   const [sending, setSending] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generatedPdfs, setGeneratedPdfs] = useState<Map<number, { blob: Blob; base64: string }>>(new Map());
-  const [sendResults, setSendResults] = useState<{ email: string; success: boolean }[]>([]);
+  const [sendResults, setSendResults] = useState<{ email: string; success: boolean; error?: string }[]>([]);
 
   const handleGenerateAll = async () => {
     setGenerating(true);
