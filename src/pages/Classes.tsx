@@ -448,6 +448,85 @@ export default function ClassesPage() {
 
   const getVPInfo = (patientId: string) => VP_CATALOG.find(p => p.id === patientId);
 
+  // VP Assignments helpers
+  const loadVPAssignments = async (classId: string) => {
+    const { data } = await supabase
+      .from("class_vp_assignments" as any)
+      .select("id, class_virtual_patient_id, class_student_id, student_email, student_name")
+      .eq("class_id", classId);
+    setVpAssignments(((data as any) || []) as VPAssignment[]);
+  };
+
+  const openAssignDialog = (vp: ClassVirtualPatient) => {
+    setAssigningVP(vp);
+    const currentIds = vpAssignments
+      .filter(a => a.class_virtual_patient_id === vp.id)
+      .map(a => a.class_student_id);
+    setAssignSelectedIds(new Set(currentIds));
+    setAssignDialogOpen(true);
+  };
+
+  const toggleAssignStudent = (studentId: string) => {
+    setAssignSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(studentId)) next.delete(studentId);
+      else next.add(studentId);
+      return next;
+    });
+  };
+
+  const saveAssignments = async () => {
+    if (!assigningVP || !selectedClass) return;
+    setAssignSaving(true);
+
+    const targetIds = Array.from(assignSelectedIds);
+    const currentForVP = vpAssignments.filter(a => a.class_virtual_patient_id === assigningVP.id);
+    const currentIds = new Set(currentForVP.map(a => a.class_student_id));
+
+    const toRemove = currentForVP.filter(a => !assignSelectedIds.has(a.class_student_id)).map(a => a.id);
+    const toAddIds = targetIds.filter(id => !currentIds.has(id));
+
+    // Remove deselected
+    if (toRemove.length > 0) {
+      await supabase.from("class_vp_assignments" as any).delete().in("id", toRemove);
+    }
+
+    // Insert new ones (only students with email)
+    const inserts = toAddIds
+      .map(sid => students.find(s => s.id === sid))
+      .filter((s): s is StudentItem => !!s && !!s.student_email)
+      .map(s => ({
+        class_virtual_patient_id: assigningVP.id,
+        class_id: selectedClass.id,
+        class_student_id: s.id,
+        student_email: (s.student_email || "").trim().toLowerCase(),
+        student_name: s.student_name,
+      }));
+
+    if (inserts.length > 0) {
+      const { error } = await supabase.from("class_vp_assignments" as any).insert(inserts);
+      if (error) {
+        if (error.code === "23505") {
+          toast.error("Um ou mais alunos já estão atribuídos a outro paciente desta turma.");
+        } else {
+          toast.error("Erro ao salvar atribuições.");
+        }
+        setAssignSaving(false);
+        return;
+      }
+    }
+
+    await loadVPAssignments(selectedClass.id);
+    setAssignSaving(false);
+    setAssignDialogOpen(false);
+    const mode = targetIds.length > 1 ? "grupo" : targetIds.length === 1 ? "individual" : "sem alunos";
+    toast.success(`Atribuições salvas (${mode}).`);
+  };
+
+  const getVPAssignedStudents = (vpId: string) =>
+    vpAssignments.filter(a => a.class_virtual_patient_id === vpId);
+
+
   // Handle assessment mode change
   const handleAssessmentModeChange = async (mode: "exam" | "vp") => {
     if (!selectedClass) return;
