@@ -498,11 +498,19 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
             studentNames: pair.students.map(s => s.name),
           },
         });
-        if (!error && data?.results) {
-          const results = data.results.map((r: any) => ({ email: r.email, success: r.success }));
+        if (error) {
+          const failed = emails.map(email => ({ email, success: false, error: error.message || "erro desconhecido" }));
+          setSendResults(prev => [...prev, ...failed]);
+          continue;
+        }
+        if (data?.results) {
+          const results = data.results.map((r: any) => ({ email: r.email, success: r.success, error: r.error }));
           setSendResults(prev => [...prev, ...results]);
         }
-      } catch { /* continue */ }
+      } catch (err: any) {
+        const failed = emails.map(email => ({ email, success: false, error: err?.message || "erro desconhecido" }));
+        setSendResults(prev => [...prev, ...failed]);
+      }
     }
     setSending(false);
     toast.success("Envio concluido!");

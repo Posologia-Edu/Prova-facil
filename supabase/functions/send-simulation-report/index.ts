@@ -1,21 +1,31 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { Resend } from "https://esm.sh/resend@4.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+const FROM_EMAIL = "ProvaFácil <noreply@tbl.posologia.app>";
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
-      throw new Error("Missing API keys");
+    if (!RESEND_API_KEY) {
+      throw new Error("Serviço de email não configurado");
     }
+    const resend = new Resend(RESEND_API_KEY);
 
     const { emails, pdfBase64, fileName, roomTitle, stageName, studentNames } = await req.json();
 
@@ -31,8 +41,10 @@ serve(async (req) => {
       });
     }
 
-    const namesText = studentNames?.join(" e ") || "Aluno(a)";
-    const subject = `Relatório ${stageName} — ${roomTitle}`;
+    const namesText = Array.isArray(studentNames) && studentNames.length > 0 ? studentNames.join(" e ") : "Aluno(a)";
+    const safeStageName = escapeHtml(stageName || "Simulação");
+    const safeRoomTitle = escapeHtml(roomTitle || "Sala");
+    const subject = `Relatório ${stageName || "Simulação"} — ${roomTitle || "Sala"}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background-color: #2563eb; padding: 20px; border-radius: 8px 8px 0 0;">
@@ -40,8 +52,8 @@ serve(async (req) => {
           <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0;">ProvaFácil</p>
         </div>
         <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
-          <p>Olá, <strong>${namesText}</strong>,</p>
-          <p>Segue em anexo o relatório detalhado da etapa <strong>${stageName}</strong> da sala <strong>${roomTitle}</strong>.</p>
+          <p>Olá, <strong>${escapeHtml(namesText)}</strong>,</p>
+          <p>Segue em anexo o relatório detalhado da etapa <strong>${safeStageName}</strong> da sala <strong>${safeRoomTitle}</strong>.</p>
           <p>O relatório inclui suas notas, feedback do professor e feedback da IA (quando disponível).</p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
           <p style="font-size: 12px; color: #6b7280;">Este email foi enviado automaticamente pelo ProvaFácil.</p>
@@ -52,34 +64,23 @@ serve(async (req) => {
     const results = [];
     for (const email of emails) {
       try {
-        const response = await fetch(`${GATEWAY_URL}/emails`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "X-Connection-Api-Key": RESEND_API_KEY,
-          },
-          body: JSON.stringify({
-            from: "ProvaFácil <noreply@provafacil.com.br>",
-            to: [email],
-            subject,
-            html,
-            attachments: [
-              {
-                filename: fileName || `relatorio-${stageName.toLowerCase()}.pdf`,
-                content: pdfBase64,
-              },
-            ],
-          }),
+        const { data, error } = await resend.emails.send({
+          from: FROM_EMAIL,
+          to: [email],
+          subject,
+          html,
+          attachments: [
+            {
+              filename: fileName || `relatorio-${String(stageName || "simulacao").toLowerCase()}.pdf`,
+              content: pdfBase64,
+            },
+          ],
         });
-        const data = await response.json();
-        if (!response.ok) {
-          console.error("Resend error for", email, "status:", response.status, "body:", data);
+        if (error) {
+          console.error("Email send error for", email, error);
         }
-        const errorMsg = !response.ok
-          ? (data?.message || data?.error?.message || data?.name || `HTTP ${response.status}`)
-          : undefined;
-        results.push({ email, success: response.ok, data, error: errorMsg });
+        const errorMsg = error ? (error.message || JSON.stringify(error)) : undefined;
+        results.push({ email, success: !error, data, error: errorMsg });
       } catch (err) {
         console.error("Fetch error for", email, err);
         results.push({ email, success: false, error: String(err) });
