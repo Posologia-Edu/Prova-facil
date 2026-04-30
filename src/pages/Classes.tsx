@@ -125,6 +125,13 @@ export default function ClassesPage() {
   const [classVPs, setClassVPs] = useState<ClassVirtualPatient[]>([]);
   const [linkVPOpen, setLinkVPOpen] = useState(false);
   const [linkExamOpen, setLinkExamOpen] = useState(false);
+
+  // VP student assignments
+  const [vpAssignments, setVpAssignments] = useState<VPAssignment[]>([]);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assigningVP, setAssigningVP] = useState<ClassVirtualPatient | null>(null);
+  const [assignSelectedIds, setAssignSelectedIds] = useState<Set<string>>(new Set());
+  const [assignSaving, setAssignSaving] = useState(false);
   const [availableExams, setAvailableExams] = useState<ExamItem[]>([]);
 
   // Assessment mode: "exam" or "vp"
