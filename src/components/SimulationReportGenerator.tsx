@@ -531,35 +531,64 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
 
           <div className="space-y-3">
             {pairs.map(pair => {
-              const hasEmails = pair.students.some(s => !!s.email);
+              const studentsWithEmail = pair.students.filter(s => !!s.email);
               const sentEmails = sendResults.filter(r => pair.students.some(s => s.email === r.email));
               return (
                 <div key={pair.pairIndex} className="border rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
                       <p className="font-medium text-sm">{pair.students.map(s => s.name).join(" & ")}</p>
                       <p className="text-xs text-muted-foreground">
                         Nota: {pair.score.toFixed(1)}/{pair.maxScore.toFixed(1)}
-                        {pair.students.map(s => s.email).filter(Boolean).length > 0 && (
-                          <> - {pair.students.map(s => s.email).filter(Boolean).join(", ")}</>
-                        )}
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => downloadPdf(pair)}>
-                        <FileDown className="h-3.5 w-3.5 mr-1" />PDF
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => sendEmail(pair)} disabled={!hasEmails || sending}>
-                        <Mail className="h-3.5 w-3.5 mr-1" />Email
-                      </Button>
-                    </div>
+                    <Button size="sm" variant="outline" onClick={() => downloadPdf(pair)}>
+                      <FileDown className="h-3.5 w-3.5 mr-1" />PDF
+                    </Button>
                   </div>
+
+                  {/* Per-student email actions */}
+                  <div className="space-y-1.5">
+                    {pair.students.map((s, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-muted-foreground truncate">
+                          {s.name}{s.email ? ` — ${s.email}` : " — sem email"}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => sendEmail(pair, s.email, s.name)}
+                          disabled={!s.email || sending}
+                        >
+                          <Mail className="h-3.5 w-3.5 mr-1" />Enviar
+                        </Button>
+                      </div>
+                    ))}
+                    {studentsWithEmail.length > 1 && (
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => sendEmail(pair)}
+                          disabled={sending}
+                        >
+                          <Mail className="h-3.5 w-3.5 mr-1" />Enviar para a dupla
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
                   {sentEmails.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {sentEmails.map((r, i) => (
-                        <Badge key={i} variant={r.success ? "default" : "destructive"} className="text-xs">
+                        <Badge
+                          key={i}
+                          variant={r.success ? "default" : "destructive"}
+                          className="text-xs"
+                          title={r.error || ""}
+                        >
                           {r.success ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
-                          {r.email}
+                          {r.email}{!r.success && r.error ? `: ${r.error}` : ""}
                         </Badge>
                       ))}
                     </div>
