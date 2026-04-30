@@ -144,8 +144,49 @@ export default function StudentAuth() {
           return;
         }
 
+        // Load class info (name) for messages
+        const { data: classInfo } = await supabase
+          .from("classes")
+          .select("id, name")
+          .eq("id", vpRoom.class_id)
+          .maybeSingle();
+        const className = classInfo?.name || "esta turma";
+
+        // Load all assignments for this class to detect cross-VP conflicts
+        const { data: classAssignmentsRaw } = await supabase
+          .from("class_vp_assignments" as any)
+          .select("class_virtual_patient_id, student_email, student_name, class_student_id")
+          .eq("class_id", vpRoom.class_id);
+        const classAssignments = ((classAssignmentsRaw || []) as unknown) as Array<{
+          class_virtual_patient_id: string;
+          student_email: string;
+          student_name: string;
+          class_student_id: string;
+        }>;
+
+        // Assignment for THIS VP
+        const vpAssignmentList = classAssignments.filter(a => a.class_virtual_patient_id === vpRoom.id);
+        const hasAssignments = vpAssignmentList.length > 0;
+        const isAssignedGroup = vpAssignmentList.length > 1;
+
+        const findInVPAssignment = (em: string) =>
+          vpAssignmentList.find(a => a.student_email.trim().toLowerCase() === em);
+        const findInOtherVP = (em: string) =>
+          classAssignments.find(a => a.student_email.trim().toLowerCase() === em && a.class_virtual_patient_id !== vpRoom.id);
+
+        // Helper: detect if user already has an active session in this VP under a DIFFERENT mode
+        const fetchExistingSessionFor = async (em: string) => {
+          const { data } = await supabase
+            .from("virtual_patient_sessions")
+            .select("id, group_id")
+            .eq("class_virtual_patient_id", vpRoom.id)
+            .eq("student_email", em)
+            .maybeSingle();
+          return data as { id: string; group_id: string | null } | null;
+        };
+
         if (assessmentType === "group") {
-          // Validate ALL group emails against the class
+          // Validate group members are all in the class
           const { data: classStudents } = await supabase
             .from("class_students")
             .select("id, student_name, student_email")
@@ -158,33 +199,75 @@ export default function StudentAuth() {
 
           const validatedMembers: { email: string; name: string }[] = [];
           const invalidEmails: string[] = [];
-
           for (const ge of validGroupEmails) {
             const match = normalizedClassEmails.find(s => s.normalized === ge);
-            if (match) {
-              validatedMembers.push({ email: ge, name: match.student_name });
-            } else {
-              invalidEmails.push(ge);
-            }
+            if (match) validatedMembers.push({ email: ge, name: match.student_name });
+            else invalidEmails.push(ge);
           }
 
           if (invalidEmails.length > 0) {
-            toast({
-              title: "E-mails não cadastrados",
-              description: `Os seguintes e-mails não estão na turma: ${invalidEmails.join(", ")}`,
-              variant: "destructive",
-            });
+            toast({ title: "E-mails não cadastrados", description: `Os seguintes e-mails não estão na turma: ${invalidEmails.join(", ")}`, variant: "destructive" });
             setLoading(false);
             return;
           }
-
           if (validatedMembers.length === 0) {
             toast({ title: "Erro", description: "Nenhum e-mail válido do grupo.", variant: "destructive" });
             setLoading(false);
             return;
           }
 
-          // Store group info and navigate
+          // If teacher set assignments, validate against them
+          if (hasAssignments) {
+            // 1) Each member must be assigned to THIS VP (not another)
+            for (const m of validatedMembers) {
+              const other = findInOtherVP(m.email);
+              if (other) {
+                toast({
+                  title: "Aluno em outro paciente",
+                  description: `${m.name} já está atribuído a outro paciente virtual na turma "${className}". Não pode entrar nesta sala.`,
+                  variant: "destructive",
+                });
+                setLoading(false);
+                return;
+              }
+              const here = findInVPAssignment(m.email);
+              if (!here) {
+                toast({
+                  title: "Aluno não atribuído",
+                  description: `${m.name} não foi atribuído a este paciente virtual pelo professor.`,
+                  variant: "destructive",
+                });
+                setLoading(false);
+                return;
+              }
+            }
+
+            // 2) The teacher's assignment is INDIVIDUAL (1 student) but tried group → block
+            if (!isAssignedGroup) {
+              toast({
+                title: "Atendimento individual",
+                description: `Este paciente está configurado como atendimento individual na turma "${className}". Acesse no modo Individual.`,
+                variant: "destructive",
+              });
+              setLoading(false);
+              return;
+            }
+          }
+
+          // 3) Block double-access: if any member already has a session as INDIVIDUAL (group_id null)
+          for (const m of validatedMembers) {
+            const existing = await fetchExistingSessionFor(m.email);
+            if (existing && !existing.group_id && validatedMembers.length > 1) {
+              toast({
+                title: "Acesso já registrado",
+                description: `${m.name} já entrou nesta sala individualmente na turma "${className}". Não é possível entrar agora como grupo.`,
+                variant: "destructive",
+              });
+              setLoading(false);
+              return;
+            }
+          }
+
           sessionStorage.setItem("vp_email", validatedMembers[0].email);
           sessionStorage.setItem("vp_student_name", validatedMembers.map(m => m.name).join(", "));
           sessionStorage.setItem("vp_group_emails", JSON.stringify(validatedMembers.map(m => m.email)));
@@ -207,9 +290,75 @@ export default function StudentAuth() {
             return;
           }
 
+          if (hasAssignments) {
+            const other = findInOtherVP(primaryEmail);
+            if (other) {
+              toast({
+                title: "Aluno em outro paciente",
+                description: `Você já está atribuído a outro paciente virtual na turma "${className}". Não pode acessar esta sala.`,
+                variant: "destructive",
+              });
+              setLoading(false);
+              return;
+            }
+            const here = findInVPAssignment(primaryEmail);
+            if (!here) {
+              toast({
+                title: "Não atribuído",
+                description: `Você não foi atribuído a este paciente virtual na turma "${className}".`,
+                variant: "destructive",
+              });
+              setLoading(false);
+              return;
+            }
+            // If teacher set this as a GROUP assignment, block individual entry and redirect
+            if (isAssignedGroup) {
+              const teammateNames = vpAssignmentList
+                .filter(a => a.student_email.trim().toLowerCase() !== primaryEmail)
+                .map(a => a.student_name)
+                .join(", ");
+              toast({
+                title: "Você está em um grupo",
+                description: `Você já está nesta sala como parte de um grupo na turma "${className}" (com: ${teammateNames}). Entrando como grupo...`,
+              });
+              // Auto-redirect: set session as group with all assigned members
+              const allMembers = vpAssignmentList.map(a => ({
+                email: a.student_email.trim().toLowerCase(),
+                name: a.student_name,
+              }));
+              sessionStorage.setItem("vp_email", primaryEmail);
+              sessionStorage.setItem("vp_student_name", allMembers.map(m => m.name).join(", "));
+              sessionStorage.setItem("vp_group_emails", JSON.stringify(allMembers.map(m => m.email)));
+              sessionStorage.setItem("vp_group_names", JSON.stringify(allMembers.map(m => m.name)));
+              navigate(`/virtual-patients/room/${vpRoom.id}`);
+              return;
+            }
+          }
+
+          // Block: already in a group session for this VP and trying individual
+          const existing = await fetchExistingSessionFor(primaryEmail);
+          if (existing && existing.group_id) {
+            toast({
+              title: "Você já está em um grupo",
+              description: `Você já está participando desta sala como parte de um grupo na turma "${className}". Redirecionando...`,
+            });
+            // Reconstruct group from existing siblings
+            const { data: siblings } = await supabase
+              .from("virtual_patient_sessions")
+              .select("student_email, student_name")
+              .eq("class_virtual_patient_id", vpRoom.id)
+              .eq("group_id", existing.group_id);
+            const sibs = (siblings || []) as Array<{ student_email: string; student_name: string }>;
+            sessionStorage.setItem("vp_email", primaryEmail);
+            sessionStorage.setItem("vp_student_name", sibs.map(s => s.student_name).join(", "));
+            sessionStorage.setItem("vp_group_emails", JSON.stringify(sibs.map(s => (s.student_email || "").trim().toLowerCase())));
+            sessionStorage.setItem("vp_group_names", JSON.stringify(sibs.map(s => s.student_name)));
+            navigate(`/virtual-patients/room/${vpRoom.id}`);
+            return;
+          }
+
           sessionStorage.setItem("vp_email", primaryEmail);
           sessionStorage.setItem("vp_student_name", studentInClass.student_name || "");
-          // Clear group data
           sessionStorage.removeItem("vp_group_emails");
           sessionStorage.removeItem("vp_group_names");
           navigate(`/virtual-patients/room/${vpRoom.id}`);

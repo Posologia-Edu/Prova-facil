@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import {
   GraduationCap, Plus, Users, MoreHorizontal, BookOpen, Pencil, Copy, Trash2,
   UserCog, ArrowLeft, Loader2, UserPlus, X, FileText, Upload, HeartPulse,
-  KeyRound, ToggleLeft, ToggleRight, BarChart3,
+  KeyRound, ToggleLeft, ToggleRight, BarChart3, UsersRound, Check,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +87,14 @@ interface ClassVirtualPatient {
   status: string;
 }
 
+interface VPAssignment {
+  id: string;
+  class_virtual_patient_id: string;
+  class_student_id: string;
+  student_email: string;
+  student_name: string;
+}
+
 const VP_CATALOG = [
   { id: "pain_helena", name: "Dona Helena, 67 anos", module: "Dor", desc: "Dor neuropática pós-herpética" },
   { id: "pain_luciana", name: "Luciana, 42 anos", module: "Dor", desc: "Fibromialgia" },
@@ -116,6 +125,13 @@ export default function ClassesPage() {
   const [classVPs, setClassVPs] = useState<ClassVirtualPatient[]>([]);
   const [linkVPOpen, setLinkVPOpen] = useState(false);
   const [linkExamOpen, setLinkExamOpen] = useState(false);
+
+  // VP student assignments
+  const [vpAssignments, setVpAssignments] = useState<VPAssignment[]>([]);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assigningVP, setAssigningVP] = useState<ClassVirtualPatient | null>(null);
+  const [assignSelectedIds, setAssignSelectedIds] = useState<Set<string>>(new Set());
+  const [assignSaving, setAssignSaving] = useState(false);
   const [availableExams, setAvailableExams] = useState<ExamItem[]>([]);
 
   // Assessment mode: "exam" or "vp"
@@ -323,6 +339,7 @@ export default function ClassesPage() {
     setStudents(studentsRes.data || []);
     const vps = (vpsRes.data as ClassVirtualPatient[]) || [];
     setClassVPs(vps);
+    await loadVPAssignments(cls.id);
 
     // Determine mode based on existing data
     if (vps.length > 0) {
@@ -430,6 +447,85 @@ export default function ClassesPage() {
   };
 
   const getVPInfo = (patientId: string) => VP_CATALOG.find(p => p.id === patientId);
+
+  // VP Assignments helpers
+  const loadVPAssignments = async (classId: string) => {
+    const { data } = await supabase
+      .from("class_vp_assignments" as any)
+      .select("id, class_virtual_patient_id, class_student_id, student_email, student_name")
+      .eq("class_id", classId);
+    setVpAssignments(((data as any) || []) as VPAssignment[]);
+  };
+
+  const openAssignDialog = (vp: ClassVirtualPatient) => {
+    setAssigningVP(vp);
+    const currentIds = vpAssignments
+      .filter(a => a.class_virtual_patient_id === vp.id)
+      .map(a => a.class_student_id);
+    setAssignSelectedIds(new Set(currentIds));
+    setAssignDialogOpen(true);
+  };
+
+  const toggleAssignStudent = (studentId: string) => {
+    setAssignSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(studentId)) next.delete(studentId);
+      else next.add(studentId);
+      return next;
+    });
+  };
+
+  const saveAssignments = async () => {
+    if (!assigningVP || !selectedClass) return;
+    setAssignSaving(true);
+
+    const targetIds = Array.from(assignSelectedIds);
+    const currentForVP = vpAssignments.filter(a => a.class_virtual_patient_id === assigningVP.id);
+    const currentIds = new Set(currentForVP.map(a => a.class_student_id));
+
+    const toRemove = currentForVP.filter(a => !assignSelectedIds.has(a.class_student_id)).map(a => a.id);
+    const toAddIds = targetIds.filter(id => !currentIds.has(id));
+
+    // Remove deselected
+    if (toRemove.length > 0) {
+      await supabase.from("class_vp_assignments" as any).delete().in("id", toRemove);
+    }
+
+    // Insert new ones (only students with email)
+    const inserts = toAddIds
+      .map(sid => students.find(s => s.id === sid))
+      .filter((s): s is StudentItem => !!s && !!s.student_email)
+      .map(s => ({
+        class_virtual_patient_id: assigningVP.id,
+        class_id: selectedClass.id,
+        class_student_id: s.id,
+        student_email: (s.student_email || "").trim().toLowerCase(),
+        student_name: s.student_name,
+      }));
+
+    if (inserts.length > 0) {
+      const { error } = await supabase.from("class_vp_assignments" as any).insert(inserts);
+      if (error) {
+        if (error.code === "23505") {
+          toast.error("Um ou mais alunos já estão atribuídos a outro paciente desta turma.");
+        } else {
+          toast.error("Erro ao salvar atribuições.");
+        }
+        setAssignSaving(false);
+        return;
+      }
+    }
+
+    await loadVPAssignments(selectedClass.id);
+    setAssignSaving(false);
+    setAssignDialogOpen(false);
+    const mode = targetIds.length > 1 ? "grupo" : targetIds.length === 1 ? "individual" : "sem alunos";
+    toast.success(`Atribuições salvas (${mode}).`);
+  };
+
+  const getVPAssignedStudents = (vpId: string) =>
+    vpAssignments.filter(a => a.class_virtual_patient_id === vpId);
+
 
   // Handle assessment mode change
   const handleAssessmentModeChange = async (mode: "exam" | "vp") => {
@@ -783,6 +879,8 @@ export default function ClassesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {classVPs.map((vp) => {
                     const info = getVPInfo(vp.patient_id);
+                    const assigned = getVPAssignedStudents(vp.id);
+                    const mode = assigned.length > 1 ? "Grupo" : assigned.length === 1 ? "Individual" : null;
                     return (
                       <Card key={vp.id} className="p-4">
                         <div className="flex items-start justify-between">
@@ -800,6 +898,34 @@ export default function ClassesPage() {
                             </Badge>
                           </div>
                         </div>
+
+                        {/* Assigned students summary */}
+                        <div className="mt-3 p-2 rounded-md bg-muted/40 border border-dashed">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <UsersRound className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <span className="text-xs font-medium">
+                                {assigned.length === 0
+                                  ? "Nenhum aluno atribuído"
+                                  : `${assigned.length} aluno(s) atribuído(s)`}
+                              </span>
+                              {mode && (
+                                <Badge variant="outline" className="text-[9px] ml-1">
+                                  {mode}
+                                </Badge>
+                              )}
+                            </div>
+                            <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => openAssignDialog(vp)}>
+                              <UserCog className="h-3 w-3 mr-1" /> Atribuir
+                            </Button>
+                          </div>
+                          {assigned.length > 0 && (
+                            <p className="text-[11px] text-muted-foreground mt-1 truncate">
+                              {assigned.map(a => a.student_name).join(", ")}
+                            </p>
+                          )}
+                        </div>
+
                         <div className="mt-3 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <KeyRound className="h-3 w-3 text-muted-foreground" />
@@ -852,6 +978,77 @@ export default function ClassesPage() {
                 <p className="text-sm text-muted-foreground text-center py-4">Todos os pacientes já estão vinculados.</p>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Assign Students to VP Dialog */}
+        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Atribuir Alunos ao Paciente Virtual</DialogTitle>
+            </DialogHeader>
+            {assigningVP && (
+              <p className="text-sm text-muted-foreground mb-3">
+                <strong>{getVPInfo(assigningVP.patient_id)?.name || assigningVP.patient_id}</strong>.
+                Selecione 1 aluno para atendimento <strong>individual</strong> ou 2+ alunos para atendimento <strong>em grupo</strong>.
+                Cada aluno só pode ser atribuído a um único paciente nesta turma.
+              </p>
+            )}
+            <div className="space-y-1 border rounded-md p-2 max-h-[50vh] overflow-y-auto">
+              {students.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno cadastrado nesta turma.</p>
+              )}
+              {students.map(s => {
+                const otherAssignment = vpAssignments.find(
+                  a => a.class_student_id === s.id && a.class_virtual_patient_id !== assigningVP?.id
+                );
+                const otherVP = otherAssignment
+                  ? classVPs.find(v => v.id === otherAssignment.class_virtual_patient_id)
+                  : null;
+                const otherVPName = otherVP ? getVPInfo(otherVP.patient_id)?.name : null;
+                const noEmail = !s.student_email;
+                const disabled = !!otherAssignment || noEmail;
+                const checked = assignSelectedIds.has(s.id);
+                return (
+                  <div
+                    key={s.id}
+                    className={`flex items-center justify-between gap-2 p-2 rounded-md ${disabled ? "opacity-60" : "hover:bg-muted/50 cursor-pointer"}`}
+                    onClick={() => !disabled && toggleAssignStudent(s.id)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Checkbox checked={checked} disabled={disabled} onCheckedChange={() => !disabled && toggleAssignStudent(s.id)} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{s.student_name}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {s.student_email || <span className="italic">sem e-mail (não pode ser atribuído)</span>}
+                        </p>
+                      </div>
+                    </div>
+                    {otherAssignment && (
+                      <Badge variant="outline" className="text-[9px] shrink-0">
+                        Em: {otherVPName || "outro paciente"}
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <DialogFooter className="mt-3">
+              <div className="flex w-full items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {assignSelectedIds.size === 0 && "Nenhum selecionado"}
+                  {assignSelectedIds.size === 1 && "1 aluno → atendimento individual"}
+                  {assignSelectedIds.size > 1 && `${assignSelectedIds.size} alunos → atendimento em grupo`}
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setAssignDialogOpen(false)} disabled={assignSaving}>Cancelar</Button>
+                  <Button onClick={saveAssignments} disabled={assignSaving}>
+                    {assignSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
+                    Salvar
+                  </Button>
+                </div>
+              </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
