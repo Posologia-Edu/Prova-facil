@@ -87,6 +87,14 @@ interface ClassVirtualPatient {
   status: string;
 }
 
+interface VPAssignment {
+  id: string;
+  class_virtual_patient_id: string;
+  class_student_id: string;
+  student_email: string;
+  student_name: string;
+}
+
 const VP_CATALOG = [
   { id: "pain_helena", name: "Dona Helena, 67 anos", module: "Dor", desc: "Dor neuropática pós-herpética" },
   { id: "pain_luciana", name: "Luciana, 42 anos", module: "Dor", desc: "Fibromialgia" },
