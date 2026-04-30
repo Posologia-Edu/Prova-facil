@@ -538,10 +538,13 @@ export default function VirtualPatientRoom() {
           </div>
         ))}
 
-        {loading && (
+        {(loading || remoteTyping) && (
           <div className="flex justify-start">
-            <Card className="p-3 bg-muted">
+            <Card className="p-3 bg-muted flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
+              {remoteTyping && !loading && (
+                <span className="text-xs text-muted-foreground">Outro integrante do grupo está conversando…</span>
+              )}
             </Card>
           </div>
         )}
