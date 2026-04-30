@@ -305,30 +305,30 @@ export default function VirtualPatientRoom() {
     if (!input.trim() || loading || !sessionId) return;
 
     const userMsg: Message = { role: "user", content: input.trim(), encounter };
+    const userKey = `user|${encounter}|${userMsg.content}`;
+    seenMsgKeysRef.current.add(userKey);
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
 
-    // Save message to primary session
+    // Notify other group members someone is typing/awaiting AI
+    if (isGroupSession) {
+      try {
+        await supabase.channel(`vp-room-${sessionId}`).send({
+          type: "broadcast",
+          event: "typing",
+          payload: { from: studentEmail },
+        });
+      } catch {}
+    }
+
+    // Save user message ONLY to the shared primary session (other devices receive it via realtime)
     await supabase.from("virtual_patient_messages").insert({
       session_id: sessionId,
       encounter,
       role: "user",
       content: userMsg.content,
     });
-
-    // For group sessions, also save to all other sessions
-    if (isGroupSession && groupSessionIds.length > 1) {
-      const otherIds = groupSessionIds.filter(id => id !== sessionId);
-      await Promise.all(otherIds.map(id =>
-        supabase.from("virtual_patient_messages").insert({
-          session_id: id,
-          encounter,
-          role: "user",
-          content: userMsg.content,
-        })
-      ));
-    }
 
     try {
       const aiMessages = messages.concat(userMsg).map((m) => ({ role: m.role, content: m.content }));
@@ -340,29 +340,18 @@ export default function VirtualPatientRoom() {
       if (response.error) throw new Error(response.error.message);
 
       const reply = response.data?.reply || "Desculpe, não consegui responder.";
+      const assistantKey = `assistant|${encounter}|${reply}`;
+      seenMsgKeysRef.current.add(assistantKey);
       const assistantMsg: Message = { role: "assistant", content: reply, encounter };
       setMessages((prev) => [...prev, assistantMsg]);
 
-      // Save assistant message to primary session
+      // Save assistant message ONLY to primary session — realtime fans out to other devices
       await supabase.from("virtual_patient_messages").insert({
         session_id: sessionId,
         encounter,
         role: "assistant",
         content: reply,
       });
-
-      // For group sessions, also save to all other sessions
-      if (isGroupSession && groupSessionIds.length > 1) {
-        const otherIds = groupSessionIds.filter(id => id !== sessionId);
-        await Promise.all(otherIds.map(id =>
-          supabase.from("virtual_patient_messages").insert({
-            session_id: id,
-            encounter,
-            role: "assistant",
-            content: reply,
-          })
-        ));
-      }
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Erro ao comunicar com o paciente virtual.");
@@ -376,28 +365,26 @@ export default function VirtualPatientRoom() {
     const next = encounter + 1;
     setEncounter(next);
 
-    // Update all sessions (group or individual)
+    // Update primary session — realtime propagates to other devices.
+    // Also update all sibling sessions so per-student grading sees the right encounter.
     const allIds = isGroupSession ? groupSessionIds : [sessionId];
     await Promise.all(allIds.map(id =>
       supabase.from("virtual_patient_sessions").update({ current_encounter: next }).eq("id", id)
     ));
 
-    const systemNote: Message = {
-      role: "assistant",
-      content: `---\n\n**📋 Transição para o ${ENCOUNTER_LABELS[next - 1]}**\n\nO paciente retorna para uma nova consulta. Continue a conversa.\n\n---`,
-      encounter: next,
-    };
+    const noteContent = `---\n\n**📋 Transição para o ${ENCOUNTER_LABELS[next - 1]}**\n\nO paciente retorna para uma nova consulta. Continue a conversa.\n\n---`;
+    const noteKey = `assistant|${next}|${noteContent}`;
+    seenMsgKeysRef.current.add(noteKey);
+    const systemNote: Message = { role: "assistant", content: noteContent, encounter: next };
     setMessages((prev) => [...prev, systemNote]);
 
-    // Save system note to all sessions
-    await Promise.all(allIds.map(id =>
-      supabase.from("virtual_patient_messages").insert({
-        session_id: id,
-        encounter: next,
-        role: "assistant",
-        content: systemNote.content,
-      })
-    ));
+    // Save note ONLY to primary session
+    await supabase.from("virtual_patient_messages").insert({
+      session_id: sessionId,
+      encounter: next,
+      role: "assistant",
+      content: systemNote.content,
+    });
 
     toast.success(`Avançou para o ${next}º encontro`);
   };
