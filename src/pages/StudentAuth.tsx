@@ -157,7 +157,7 @@ export default function StudentAuth() {
           .from("class_vp_assignments" as any)
           .select("class_virtual_patient_id, student_email, student_name, class_student_id")
           .eq("class_id", vpRoom.class_id);
-        const classAssignments = (classAssignmentsRaw || []) as Array<{
+        const classAssignments = ((classAssignmentsRaw || []) as unknown) as Array<{
           class_virtual_patient_id: string;
           student_email: string;
           student_name: string;
