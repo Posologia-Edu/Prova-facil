@@ -981,6 +981,77 @@ export default function ClassesPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Assign Students to VP Dialog */}
+        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Atribuir Alunos ao Paciente Virtual</DialogTitle>
+            </DialogHeader>
+            {assigningVP && (
+              <p className="text-sm text-muted-foreground mb-3">
+                <strong>{getVPInfo(assigningVP.patient_id)?.name || assigningVP.patient_id}</strong>.
+                Selecione 1 aluno para atendimento <strong>individual</strong> ou 2+ alunos para atendimento <strong>em grupo</strong>.
+                Cada aluno só pode ser atribuído a um único paciente nesta turma.
+              </p>
+            )}
+            <div className="space-y-1 border rounded-md p-2 max-h-[50vh] overflow-y-auto">
+              {students.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno cadastrado nesta turma.</p>
+              )}
+              {students.map(s => {
+                const otherAssignment = vpAssignments.find(
+                  a => a.class_student_id === s.id && a.class_virtual_patient_id !== assigningVP?.id
+                );
+                const otherVP = otherAssignment
+                  ? classVPs.find(v => v.id === otherAssignment.class_virtual_patient_id)
+                  : null;
+                const otherVPName = otherVP ? getVPInfo(otherVP.patient_id)?.name : null;
+                const noEmail = !s.student_email;
+                const disabled = !!otherAssignment || noEmail;
+                const checked = assignSelectedIds.has(s.id);
+                return (
+                  <div
+                    key={s.id}
+                    className={`flex items-center justify-between gap-2 p-2 rounded-md ${disabled ? "opacity-60" : "hover:bg-muted/50 cursor-pointer"}`}
+                    onClick={() => !disabled && toggleAssignStudent(s.id)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Checkbox checked={checked} disabled={disabled} onCheckedChange={() => !disabled && toggleAssignStudent(s.id)} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{s.student_name}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {s.student_email || <span className="italic">sem e-mail (não pode ser atribuído)</span>}
+                        </p>
+                      </div>
+                    </div>
+                    {otherAssignment && (
+                      <Badge variant="outline" className="text-[9px] shrink-0">
+                        Em: {otherVPName || "outro paciente"}
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <DialogFooter className="mt-3">
+              <div className="flex w-full items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {assignSelectedIds.size === 0 && "Nenhum selecionado"}
+                  {assignSelectedIds.size === 1 && "1 aluno → atendimento individual"}
+                  {assignSelectedIds.size > 1 && `${assignSelectedIds.size} alunos → atendimento em grupo`}
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setAssignDialogOpen(false)} disabled={assignSaving}>Cancelar</Button>
+                  <Button onClick={saveAssignments} disabled={assignSaving}>
+                    {assignSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
+                    Salvar
+                  </Button>
+                </div>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Link Exam Dialog */}
         <Dialog open={linkExamOpen} onOpenChange={setLinkExamOpen}>
           <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
