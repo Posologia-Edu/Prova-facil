@@ -445,6 +445,7 @@ export type Database = {
           access_code: string
           class_id: string
           created_at: string
+          group_label: string | null
           id: string
           patient_id: string
           status: string
@@ -453,6 +454,7 @@ export type Database = {
           access_code?: string
           class_id: string
           created_at?: string
+          group_label?: string | null
           id?: string
           patient_id: string
           status?: string
@@ -461,6 +463,7 @@ export type Database = {
           access_code?: string
           class_id?: string
           created_at?: string
+          group_label?: string | null
           id?: string
           patient_id?: string
           status?: string

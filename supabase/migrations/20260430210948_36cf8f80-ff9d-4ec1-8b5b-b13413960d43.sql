@@ -1,0 +1,1 @@
+ALTER TABLE public.class_virtual_patients ADD COLUMN IF NOT EXISTS group_label text;
