@@ -5730,6 +5730,7 @@ export type Database = {
           class_virtual_patient_id: string | null
           created_at: string
           current_encounter: number
+          group_id: string | null
           id: string
           mai_answers_json: Json | null
           module: string
@@ -5744,6 +5745,7 @@ export type Database = {
           class_virtual_patient_id?: string | null
           created_at?: string
           current_encounter?: number
+          group_id?: string | null
           id?: string
           mai_answers_json?: Json | null
           module?: string
@@ -5758,6 +5760,7 @@ export type Database = {
           class_virtual_patient_id?: string | null
           created_at?: string
           current_encounter?: number
+          group_id?: string | null
           id?: string
           mai_answers_json?: Json | null
           module?: string
