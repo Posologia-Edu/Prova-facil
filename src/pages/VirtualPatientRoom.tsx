@@ -46,7 +46,7 @@ export default function VirtualPatientRoom() {
   const [encounter, setEncounter] = useState(1);
   const [showMAI, setShowMAI] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(false);
-  const [sessionId, setSessionId] = useState("");
+  const [sessionId, setSessionId] = useState(""); // primary (shared) session id
   const [patientId, setPatientId] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
   const [studentName, setStudentName] = useState("");
@@ -54,7 +54,14 @@ export default function VirtualPatientRoom() {
   const [groupEmails, setGroupEmails] = useState<string[]>([]);
   const [groupNames, setGroupNames] = useState<string[]>([]);
   const [groupSessionIds, setGroupSessionIds] = useState<string[]>([]);
+  const [remoteTyping, setRemoteTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const sessionIdRef = useRef<string>("");
+  const encounterRef = useRef<number>(1);
+  const seenMsgKeysRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
+  useEffect(() => { encounterRef.current = encounter; }, [encounter]);
 
   const patient = PATIENT_NAMES[patientId] || null;
 
