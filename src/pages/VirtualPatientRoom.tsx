@@ -46,7 +46,7 @@ export default function VirtualPatientRoom() {
   const [encounter, setEncounter] = useState(1);
   const [showMAI, setShowMAI] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(false);
-  const [sessionId, setSessionId] = useState("");
+  const [sessionId, setSessionId] = useState(""); // primary (shared) session id
   const [patientId, setPatientId] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
   const [studentName, setStudentName] = useState("");
@@ -54,7 +54,14 @@ export default function VirtualPatientRoom() {
   const [groupEmails, setGroupEmails] = useState<string[]>([]);
   const [groupNames, setGroupNames] = useState<string[]>([]);
   const [groupSessionIds, setGroupSessionIds] = useState<string[]>([]);
+  const [remoteTyping, setRemoteTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const sessionIdRef = useRef<string>("");
+  const encounterRef = useRef<number>(1);
+  const seenMsgKeysRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
+  useEffect(() => { encounterRef.current = encounter; }, [encounter]);
 
   const patient = PATIENT_NAMES[patientId] || null;
 
@@ -65,6 +72,60 @@ export default function VirtualPatientRoom() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Realtime sync for group sessions: subscribe to messages + session updates on
+  // the shared primary session so every device in the group sees the same chat.
+  useEffect(() => {
+    if (!sessionId || !isGroupSession) return;
+
+    const channel = supabase
+      .channel(`vp-room-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "virtual_patient_messages",
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload: any) => {
+          const m = payload.new;
+          const key = `${m.role}|${m.encounter}|${m.content}`;
+          if (seenMsgKeysRef.current.has(key)) return;
+          seenMsgKeysRef.current.add(key);
+          setMessages((prev) => [
+            ...prev,
+            { role: m.role, content: m.content, encounter: m.encounter },
+          ]);
+          if (m.role === "assistant") setRemoteTyping(false);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "virtual_patient_sessions",
+          filter: `id=eq.${sessionId}`,
+        },
+        (payload: any) => {
+          const s = payload.new;
+          if (typeof s.current_encounter === "number") setEncounter(s.current_encounter);
+          if (s.status === "completed") setSessionCompleted(true);
+        },
+      )
+      .on("broadcast", { event: "typing" }, (payload: any) => {
+        if (payload?.payload?.from && payload.payload.from !== studentEmail) {
+          setRemoteTyping(true);
+          setTimeout(() => setRemoteTyping(false), 15000);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId, isGroupSession, studentEmail]);
 
   const initRoom = async () => {
     if (!cvpId) return;
@@ -108,48 +169,40 @@ export default function VirtualPatientRoom() {
     setPatientId(cvp.patient_id);
 
     if (isGroup) {
-      // Group mode: create/find sessions for ALL group members, sharing the same chat
-      // Use the first email's session as the "primary" session for messages
-      const sessionIds: string[] = [];
-      let primarySessionId = "";
-      let currentEncounter = 1;
-      let isCompleted = false;
+      // Group mode: ensure every member has a session row (for grading), but use ONE
+      // shared "primary" session as the single source of truth for chat messages.
+      // Primary = oldest session row (deterministic across devices) so every device
+      // reads/writes to the same session_id and stays in sync via realtime.
       let sharedGroupId: string | null = null;
 
-      // First pass: detect any existing group_id reused by previous member sessions
       const { data: existingForGroup } = await supabase
         .from("virtual_patient_sessions")
-        .select("group_id, student_email")
+        .select("id, group_id, student_email, current_encounter, status, created_at")
         .eq("class_virtual_patient_id", cvpId)
-        .in("student_email", parsedGroupEmails);
+        .in("student_email", parsedGroupEmails)
+        .order("created_at", { ascending: true });
+
       const found = (existingForGroup || []).find((s: any) => s.group_id);
       sharedGroupId = found?.group_id || crypto.randomUUID();
+
+      const existingByEmail = new Map<string, any>();
+      (existingForGroup || []).forEach((s: any) => existingByEmail.set(s.student_email, s));
+
+      const sessionRows: { id: string; created_at: string; current_encounter: number; status: string }[] = [];
 
       for (let i = 0; i < parsedGroupEmails.length; i++) {
         const memberEmail = parsedGroupEmails[i];
         const memberName = parsedGroupNames[i] || "";
-
-        const { data: existingSession } = await supabase
-          .from("virtual_patient_sessions")
-          .select("id, current_encounter, status, group_id")
-          .eq("class_virtual_patient_id", cvpId)
-          .eq("student_email", memberEmail)
-          .maybeSingle();
+        const existingSession = existingByEmail.get(memberEmail);
 
         if (existingSession) {
-          sessionIds.push(existingSession.id);
-          // Backfill group_id if missing
           if (!existingSession.group_id) {
             await supabase
               .from("virtual_patient_sessions")
               .update({ group_id: sharedGroupId })
               .eq("id", existingSession.id);
           }
-          if (i === 0) {
-            primarySessionId = existingSession.id;
-            currentEncounter = existingSession.current_encounter;
-            if (existingSession.status === "completed") isCompleted = true;
-          }
+          sessionRows.push(existingSession);
         } else {
           const { data: newSession, error: insertError } = await supabase
             .from("virtual_patient_sessions")
@@ -161,31 +214,41 @@ export default function VirtualPatientRoom() {
               student_name: memberName,
               group_id: sharedGroupId,
             })
-            .select("id")
+            .select("id, created_at, current_encounter, status")
             .single();
 
           if (insertError || !newSession) {
             console.error("Error creating session for", memberEmail, insertError);
             continue;
           }
-          sessionIds.push(newSession.id);
-          if (i === 0) primarySessionId = newSession.id;
+          sessionRows.push(newSession as any);
         }
       }
 
+      // Pick the OLDEST session as primary — deterministic across devices
+      sessionRows.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      const primary = sessionRows[0];
+      const sessionIds = sessionRows.map((s) => s.id);
+
       setGroupSessionIds(sessionIds);
-      setSessionId(primarySessionId);
-      setEncounter(currentEncounter);
-      if (isCompleted) setSessionCompleted(true);
+      setSessionId(primary?.id || "");
+      setEncounter(primary?.current_encounter || 1);
+      if (primary?.status === "completed") setSessionCompleted(true);
 
       // Load messages from primary session
-      if (primarySessionId) {
+      if (primary?.id) {
         const { data: msgs } = await supabase
           .from("virtual_patient_messages")
-          .select("role, content, encounter")
-          .eq("session_id", primarySessionId)
+          .select("role, content, encounter, created_at")
+          .eq("session_id", primary.id)
           .order("created_at", { ascending: true });
-        if (msgs) setMessages(msgs as Message[]);
+        if (msgs) {
+          setMessages(msgs as Message[]);
+          // Track to dedupe with realtime inserts
+          msgs.forEach((m: any) => {
+            seenMsgKeysRef.current.add(`${m.role}|${m.encounter}|${m.content}`);
+          });
+        }
       }
     } else {
       // Individual mode (original logic)
@@ -242,30 +305,30 @@ export default function VirtualPatientRoom() {
     if (!input.trim() || loading || !sessionId) return;
 
     const userMsg: Message = { role: "user", content: input.trim(), encounter };
+    const userKey = `user|${encounter}|${userMsg.content}`;
+    seenMsgKeysRef.current.add(userKey);
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
 
-    // Save message to primary session
+    // Notify other group members someone is typing/awaiting AI
+    if (isGroupSession) {
+      try {
+        await supabase.channel(`vp-room-${sessionId}`).send({
+          type: "broadcast",
+          event: "typing",
+          payload: { from: studentEmail },
+        });
+      } catch {}
+    }
+
+    // Save user message ONLY to the shared primary session (other devices receive it via realtime)
     await supabase.from("virtual_patient_messages").insert({
       session_id: sessionId,
       encounter,
       role: "user",
       content: userMsg.content,
     });
-
-    // For group sessions, also save to all other sessions
-    if (isGroupSession && groupSessionIds.length > 1) {
-      const otherIds = groupSessionIds.filter(id => id !== sessionId);
-      await Promise.all(otherIds.map(id =>
-        supabase.from("virtual_patient_messages").insert({
-          session_id: id,
-          encounter,
-          role: "user",
-          content: userMsg.content,
-        })
-      ));
-    }
 
     try {
       const aiMessages = messages.concat(userMsg).map((m) => ({ role: m.role, content: m.content }));
@@ -277,29 +340,18 @@ export default function VirtualPatientRoom() {
       if (response.error) throw new Error(response.error.message);
 
       const reply = response.data?.reply || "Desculpe, não consegui responder.";
+      const assistantKey = `assistant|${encounter}|${reply}`;
+      seenMsgKeysRef.current.add(assistantKey);
       const assistantMsg: Message = { role: "assistant", content: reply, encounter };
       setMessages((prev) => [...prev, assistantMsg]);
 
-      // Save assistant message to primary session
+      // Save assistant message ONLY to primary session — realtime fans out to other devices
       await supabase.from("virtual_patient_messages").insert({
         session_id: sessionId,
         encounter,
         role: "assistant",
         content: reply,
       });
-
-      // For group sessions, also save to all other sessions
-      if (isGroupSession && groupSessionIds.length > 1) {
-        const otherIds = groupSessionIds.filter(id => id !== sessionId);
-        await Promise.all(otherIds.map(id =>
-          supabase.from("virtual_patient_messages").insert({
-            session_id: id,
-            encounter,
-            role: "assistant",
-            content: reply,
-          })
-        ));
-      }
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Erro ao comunicar com o paciente virtual.");
@@ -313,28 +365,26 @@ export default function VirtualPatientRoom() {
     const next = encounter + 1;
     setEncounter(next);
 
-    // Update all sessions (group or individual)
+    // Update primary session — realtime propagates to other devices.
+    // Also update all sibling sessions so per-student grading sees the right encounter.
     const allIds = isGroupSession ? groupSessionIds : [sessionId];
     await Promise.all(allIds.map(id =>
       supabase.from("virtual_patient_sessions").update({ current_encounter: next }).eq("id", id)
     ));
 
-    const systemNote: Message = {
-      role: "assistant",
-      content: `---\n\n**📋 Transição para o ${ENCOUNTER_LABELS[next - 1]}**\n\nO paciente retorna para uma nova consulta. Continue a conversa.\n\n---`,
-      encounter: next,
-    };
+    const noteContent = `---\n\n**📋 Transição para o ${ENCOUNTER_LABELS[next - 1]}**\n\nO paciente retorna para uma nova consulta. Continue a conversa.\n\n---`;
+    const noteKey = `assistant|${next}|${noteContent}`;
+    seenMsgKeysRef.current.add(noteKey);
+    const systemNote: Message = { role: "assistant", content: noteContent, encounter: next };
     setMessages((prev) => [...prev, systemNote]);
 
-    // Save system note to all sessions
-    await Promise.all(allIds.map(id =>
-      supabase.from("virtual_patient_messages").insert({
-        session_id: id,
-        encounter: next,
-        role: "assistant",
-        content: systemNote.content,
-      })
-    ));
+    // Save note ONLY to primary session
+    await supabase.from("virtual_patient_messages").insert({
+      session_id: sessionId,
+      encounter: next,
+      role: "assistant",
+      content: systemNote.content,
+    });
 
     toast.success(`Avançou para o ${next}º encontro`);
   };
@@ -488,10 +538,13 @@ export default function VirtualPatientRoom() {
           </div>
         ))}
 
-        {loading && (
+        {(loading || remoteTyping) && (
           <div className="flex justify-start">
-            <Card className="p-3 bg-muted">
+            <Card className="p-3 bg-muted flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
+              {remoteTyping && !loading && (
+                <span className="text-xs text-muted-foreground">Outro integrante do grupo está conversando…</span>
+              )}
             </Card>
           </div>
         )}
