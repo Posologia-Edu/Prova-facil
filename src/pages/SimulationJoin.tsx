@@ -734,6 +734,10 @@ export default function SimulationJoin() {
   const canFill = isActive && !submitted && assignment?.assigned_role !== "patient";
   const completedRoundsList = allRounds.filter((r: any) => r.status === "completed");
   const allRoundsCompleted = allRounds.length > 0 && allRounds.every((round: any) => round.status === "completed");
+  const isPaused = room?.status === "paused";
+  const hasCompletedRound = allRounds.some((r: any) => r.status === "completed");
+  const hasPendingRound = allRounds.some((r: any) => r.status !== "completed");
+  const canPause = isProfessor && !isPaused && hasCompletedRound && hasPendingRound;
 
   // Check if student participates in active round
   const participatesInActiveRound = isActive && !!assignment;
