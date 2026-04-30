@@ -475,6 +475,58 @@ export type Database = {
           },
         ]
       }
+      class_vp_assignments: {
+        Row: {
+          class_id: string
+          class_student_id: string
+          class_virtual_patient_id: string
+          created_at: string
+          id: string
+          student_email: string
+          student_name: string
+        }
+        Insert: {
+          class_id: string
+          class_student_id: string
+          class_virtual_patient_id: string
+          created_at?: string
+          id?: string
+          student_email: string
+          student_name: string
+        }
+        Update: {
+          class_id?: string
+          class_student_id?: string
+          class_virtual_patient_id?: string
+          created_at?: string
+          id?: string
+          student_email?: string
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_vp_assignments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_vp_assignments_class_student_id_fkey"
+            columns: ["class_student_id"]
+            isOneToOne: false
+            referencedRelation: "class_students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_vp_assignments_class_virtual_patient_id_fkey"
+            columns: ["class_virtual_patient_id"]
+            isOneToOne: false
+            referencedRelation: "class_virtual_patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           created_at: string
