@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   GraduationCap, Plus, Users, MoreHorizontal, BookOpen, Pencil, Copy, Trash2,
   UserCog, ArrowLeft, Loader2, UserPlus, X, FileText, Upload, HeartPulse,
-  KeyRound, ToggleLeft, ToggleRight, BarChart3, UsersRound, Check,
+  KeyRound, ToggleLeft, ToggleRight, BarChart3, UsersRound, Check, Tag,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -85,6 +85,7 @@ interface ClassVirtualPatient {
   patient_id: string;
   access_code: string;
   status: string;
+  group_label?: string | null;
 }
 
 interface VPAssignment {
@@ -132,6 +133,8 @@ export default function ClassesPage() {
   const [assigningVP, setAssigningVP] = useState<ClassVirtualPatient | null>(null);
   const [assignSelectedIds, setAssignSelectedIds] = useState<Set<string>>(new Set());
   const [assignSaving, setAssignSaving] = useState(false);
+  const [editingLabelVPId, setEditingLabelVPId] = useState<string | null>(null);
+  const [labelDraft, setLabelDraft] = useState("");
   const [availableExams, setAvailableExams] = useState<ExamItem[]>([]);
 
   // Assessment mode: "exam" or "vp"
@@ -333,7 +336,7 @@ export default function ClassesPage() {
     const [studentsRes, examsData, vpsRes] = await Promise.all([
       supabase.from("class_students").select("*").eq("class_id", cls.id).order("student_name"),
       loadClassExams(cls.id),
-      supabase.from("class_virtual_patients").select("id, patient_id, access_code, status").eq("class_id", cls.id).order("created_at"),
+      supabase.from("class_virtual_patients").select("id, patient_id, access_code, status, group_label").eq("class_id", cls.id).order("created_at"),
     ]);
 
     setStudents(studentsRes.data || []);
@@ -429,7 +432,7 @@ export default function ClassesPage() {
     }
     toast.success("Paciente virtual vinculado!");
     setLinkVPOpen(false);
-    const { data } = await supabase.from("class_virtual_patients").select("id, patient_id, access_code, status").eq("class_id", selectedClass.id).order("created_at");
+    const { data } = await supabase.from("class_virtual_patients").select("id, patient_id, access_code, status, group_label").eq("class_id", selectedClass.id).order("created_at");
     setClassVPs((data as ClassVirtualPatient[]) || []);
   };
 
@@ -444,6 +447,18 @@ export default function ClassesPage() {
     await supabase.from("class_virtual_patients").delete().eq("id", vpId);
     setClassVPs(prev => prev.filter(v => v.id !== vpId));
     toast.success("Paciente virtual removido da turma.");
+  };
+
+  const updateVPGroupLabel = async (vpId: string, label: string) => {
+    const trimmed = label.trim();
+    const value = trimmed.length > 0 ? trimmed : null;
+    setClassVPs(prev => prev.map(v => v.id === vpId ? { ...v, group_label: value } : v));
+    const { error } = await supabase.from("class_virtual_patients").update({ group_label: value }).eq("id", vpId);
+    if (error) {
+      toast.error("Erro ao salvar rótulo do grupo.");
+      return;
+    }
+    toast.success(value ? "Rótulo do grupo salvo!" : "Rótulo do grupo removido.");
   };
 
   const getVPInfo = (patientId: string) => VP_CATALOG.find(p => p.id === patientId);
@@ -897,6 +912,74 @@ export default function ClassesPage() {
                               {vp.status === "active" ? "Ativo" : "Rascunho"}
                             </Badge>
                           </div>
+                        </div>
+
+                        {/* Group label (editable) */}
+                        <div className="mt-3 flex items-center gap-2">
+                          <Tag className="h-3.5 w-3.5 text-primary shrink-0" />
+                          {editingLabelVPId === vp.id ? (
+                            <>
+                              <Input
+                                autoFocus
+                                value={labelDraft}
+                                onChange={(e) => setLabelDraft(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    updateVPGroupLabel(vp.id, labelDraft);
+                                    setEditingLabelVPId(null);
+                                  } else if (e.key === "Escape") {
+                                    setEditingLabelVPId(null);
+                                  }
+                                }}
+                                placeholder="Ex: Grupo A, Equipe Vermelha…"
+                                maxLength={40}
+                                className="h-7 text-xs"
+                              />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => {
+                                  updateVPGroupLabel(vp.id, labelDraft);
+                                  setEditingLabelVPId(null);
+                                }}
+                                title="Salvar"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => setEditingLabelVPId(null)}
+                                title="Cancelar"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              {vp.group_label ? (
+                                <Badge variant="secondary" className="text-[11px] font-semibold">
+                                  {vp.group_label}
+                                </Badge>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground italic">Sem rótulo de grupo</span>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-[11px] ml-auto"
+                                onClick={() => {
+                                  setLabelDraft(vp.group_label || "");
+                                  setEditingLabelVPId(vp.id);
+                                }}
+                              >
+                                <Pencil className="h-3 w-3 mr-1" />
+                                {vp.group_label ? "Editar rótulo" : "Adicionar rótulo"}
+                              </Button>
+                            </>
+                          )}
                         </div>
 
                         {/* Assigned students summary */}
