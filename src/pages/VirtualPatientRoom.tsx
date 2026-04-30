@@ -73,6 +73,60 @@ export default function VirtualPatientRoom() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Realtime sync for group sessions: subscribe to messages + session updates on
+  // the shared primary session so every device in the group sees the same chat.
+  useEffect(() => {
+    if (!sessionId || !isGroupSession) return;
+
+    const channel = supabase
+      .channel(`vp-room-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "virtual_patient_messages",
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload: any) => {
+          const m = payload.new;
+          const key = `${m.role}|${m.encounter}|${m.content}`;
+          if (seenMsgKeysRef.current.has(key)) return;
+          seenMsgKeysRef.current.add(key);
+          setMessages((prev) => [
+            ...prev,
+            { role: m.role, content: m.content, encounter: m.encounter },
+          ]);
+          if (m.role === "assistant") setRemoteTyping(false);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "virtual_patient_sessions",
+          filter: `id=eq.${sessionId}`,
+        },
+        (payload: any) => {
+          const s = payload.new;
+          if (typeof s.current_encounter === "number") setEncounter(s.current_encounter);
+          if (s.status === "completed") setSessionCompleted(true);
+        },
+      )
+      .on("broadcast", { event: "typing" }, (payload: any) => {
+        if (payload?.payload?.from && payload.payload.from !== studentEmail) {
+          setRemoteTyping(true);
+          setTimeout(() => setRemoteTyping(false), 15000);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId, isGroupSession, studentEmail]);
+
   const initRoom = async () => {
     if (!cvpId) return;
     setInitialLoading(true);
