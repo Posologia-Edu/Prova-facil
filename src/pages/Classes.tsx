@@ -447,6 +447,18 @@ export default function ClassesPage() {
     toast.success("Paciente virtual removido da turma.");
   };
 
+  const updateVPGroupLabel = async (vpId: string, label: string) => {
+    const trimmed = label.trim();
+    const value = trimmed.length > 0 ? trimmed : null;
+    setClassVPs(prev => prev.map(v => v.id === vpId ? { ...v, group_label: value } : v));
+    const { error } = await supabase.from("class_virtual_patients").update({ group_label: value }).eq("id", vpId);
+    if (error) {
+      toast.error("Erro ao salvar rótulo do grupo.");
+      return;
+    }
+    toast.success(value ? "Rótulo do grupo salvo!" : "Rótulo do grupo removido.");
+  };
+
   const getVPInfo = (patientId: string) => VP_CATALOG.find(p => p.id === patientId);
 
   // VP Assignments helpers
