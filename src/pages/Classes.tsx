@@ -430,7 +430,7 @@ export default function ClassesPage() {
     }
     toast.success("Paciente virtual vinculado!");
     setLinkVPOpen(false);
-    const { data } = await supabase.from("class_virtual_patients").select("id, patient_id, access_code, status").eq("class_id", selectedClass.id).order("created_at");
+    const { data } = await supabase.from("class_virtual_patients").select("id, patient_id, access_code, status, group_label").eq("class_id", selectedClass.id).order("created_at");
     setClassVPs((data as ClassVirtualPatient[]) || []);
   };
 
