@@ -1541,6 +1541,22 @@ export default function SimulationJoin() {
           </CardContent>
         </Card>
       )}
+      <AlertDialog open={pauseDialogOpen} onOpenChange={setPauseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pausar e continuar em outro dia?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isActive
+                ? `Há uma rodada ativa (Rodada ${activeRound?.round_number}). Recomendamos encerrá-la antes de pausar para preservar as notas. Você pode pausar agora e a rodada ativa continuará disponível para retomar.`
+                : "Os alunos verão uma tela informando que a sessão continuará em outro dia. As respostas das rodadas concluídas ficam salvas e seguem normalmente para o SOAP e o agregador de notas."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={pauseSimulation}>Pausar simulação</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
