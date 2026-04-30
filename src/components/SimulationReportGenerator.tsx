@@ -438,14 +438,18 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
     URL.revokeObjectURL(url);
   };
 
-  const sendEmail = async (pair: PairReport) => {
+  const sendEmail = async (pair: PairReport, specificEmail?: string, specificName?: string) => {
     const pdf = generatedPdfs.get(pair.pairIndex);
     if (!pdf) return;
-    const emails = pair.students.map(s => s.email).filter((e): e is string => !!e);
+    const allEmails = pair.students.map(s => s.email).filter((e): e is string => !!e);
+    const emails = specificEmail ? [specificEmail] : allEmails;
     if (emails.length === 0) {
-      toast.error("Nenhum email cadastrado para esta dupla.");
+      toast.error("Nenhum email cadastrado.");
       return;
     }
+    const studentNames = specificName
+      ? [specificName]
+      : pair.students.map(s => s.name);
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-simulation-report", {
@@ -455,20 +459,21 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
           fileName: `relatorio-${stageType}-${pair.pairIndex + 1}.pdf`,
           roomTitle,
           stageName: stageLabels[stageType],
-          studentNames: pair.students.map(s => s.name),
+          studentNames,
         },
       });
       if (error) throw error;
       const results = data?.results || [];
-      const newSendResults = results.map((r: any) => ({ email: r.email, success: r.success }));
-      setSendResults(prev => [...prev, ...newSendResults]);
+      const newSendResults = results.map((r: any) => ({ email: r.email, success: r.success, error: r.error }));
+      setSendResults(prev => [...prev.filter(p => !newSendResults.find((n: any) => n.email === p.email)), ...newSendResults]);
       if (newSendResults.every((r: any) => r.success)) {
         toast.success(`Relatorio enviado para ${emails.join(", ")}`);
       } else {
-        toast.error("Alguns emails falharam.");
+        const failed = newSendResults.filter((r: any) => !r.success);
+        toast.error(`Falha ao enviar: ${failed.map((f: any) => `${f.email} (${f.error || "erro desconhecido"})`).join("; ")}`);
       }
-    } catch (err) {
-      toast.error("Erro ao enviar email");
+    } catch (err: any) {
+      toast.error(`Erro ao enviar email: ${err?.message || err}`);
       console.error(err);
     }
     setSending(false);
