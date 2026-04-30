@@ -72,6 +72,7 @@ export default function SimulationJoin() {
       toast({ title: "Erro ao pausar", description: error.message, variant: "destructive" });
       return;
     }
+    setRoom((prev: any) => prev ? { ...prev, status: "paused" } : prev);
     toast({ title: "Simulação pausada", description: "Os alunos verão uma tela informando que a sessão continuará em outro dia." });
   };
 
@@ -82,6 +83,7 @@ export default function SimulationJoin() {
       toast({ title: "Erro ao retomar", description: error.message, variant: "destructive" });
       return;
     }
+    setRoom((prev: any) => prev ? { ...prev, status: "active" } : prev);
     toast({ title: "Simulação retomada", description: "Você pode continuar a partir da próxima rodada pendente." });
   };
 
