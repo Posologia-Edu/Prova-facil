@@ -960,6 +960,11 @@ export default function SimulationJoin() {
                 </p>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Waiting state for students */}
       {!isProfessor && !canSeeCycleMaterials && !participatesInActiveRound && !allRoundsCompleted && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
