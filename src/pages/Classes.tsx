@@ -879,6 +879,8 @@ export default function ClassesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {classVPs.map((vp) => {
                     const info = getVPInfo(vp.patient_id);
+                    const assigned = getVPAssignedStudents(vp.id);
+                    const mode = assigned.length > 1 ? "Grupo" : assigned.length === 1 ? "Individual" : null;
                     return (
                       <Card key={vp.id} className="p-4">
                         <div className="flex items-start justify-between">
@@ -896,6 +898,34 @@ export default function ClassesPage() {
                             </Badge>
                           </div>
                         </div>
+
+                        {/* Assigned students summary */}
+                        <div className="mt-3 p-2 rounded-md bg-muted/40 border border-dashed">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <UsersRound className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <span className="text-xs font-medium">
+                                {assigned.length === 0
+                                  ? "Nenhum aluno atribuído"
+                                  : `${assigned.length} aluno(s) atribuído(s)`}
+                              </span>
+                              {mode && (
+                                <Badge variant="outline" className="text-[9px] ml-1">
+                                  {mode}
+                                </Badge>
+                              )}
+                            </div>
+                            <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => openAssignDialog(vp)}>
+                              <UserCog className="h-3 w-3 mr-1" /> Atribuir
+                            </Button>
+                          </div>
+                          {assigned.length > 0 && (
+                            <p className="text-[11px] text-muted-foreground mt-1 truncate">
+                              {assigned.map(a => a.student_name).join(", ")}
+                            </p>
+                          )}
+                        </div>
+
                         <div className="mt-3 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <KeyRound className="h-3 w-3 text-muted-foreground" />
