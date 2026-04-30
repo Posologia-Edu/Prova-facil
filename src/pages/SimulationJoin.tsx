@@ -62,6 +62,28 @@ export default function SimulationJoin() {
   const [materialsReady, setMaterialsReady] = useState(false);
   const [studentsReady, setStudentsReady] = useState<string[]>([]);
   const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
+  const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
+
+  const pauseSimulation = async () => {
+    if (!room?.id) return;
+    const { error } = await supabase.from("simulation_rooms").update({ status: "paused" }).eq("id", room.id);
+    setPauseDialogOpen(false);
+    if (error) {
+      toast({ title: "Erro ao pausar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Simulação pausada", description: "Os alunos verão uma tela informando que a sessão continuará em outro dia." });
+  };
+
+  const resumeSimulation = async () => {
+    if (!room?.id) return;
+    const { error } = await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
+    if (error) {
+      toast({ title: "Erro ao retomar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Simulação retomada", description: "Você pode continuar a partir da próxima rodada pendente." });
+  };
 
   const syncJoinedPresence = async (
     participantRecord: any,
