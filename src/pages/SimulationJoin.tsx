@@ -936,11 +936,30 @@ export default function SimulationJoin() {
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />Redistribuir
               </Button>
             )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Waiting state for students: no active round and no materials released for cycle */}
+            {/* Pause / Resume — multi-day execution */}
+            {(canPause || isPaused) && (
+              <div className="pt-2 border-t">
+                {isPaused ? (
+                  <Button onClick={resumeSimulation} className="w-full gap-2 bg-green-600 hover:bg-green-700">
+                    <PlayCircle className="h-4 w-4" />
+                    Retomar simulação
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => setPauseDialogOpen(true)}
+                    className="w-full gap-2 border-amber-400/60 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                  >
+                    <PauseCircle className="h-4 w-4" />
+                    Pausar e continuar em outro dia
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  As respostas das rodadas concluídas ficam salvas e seguem para SOAP e agregador de notas.
+                </p>
+              </div>
+            )}
       {!isProfessor && !canSeeCycleMaterials && !participatesInActiveRound && !allRoundsCompleted && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
