@@ -350,20 +350,57 @@ export default function VirtualPatientRoom() {
     setShowMAI(false);
     setSessionCompleted(true);
 
-    // Trigger grading for ALL sessions (group or individual)
-    const allIds = isGroupSession ? groupSessionIds : [sessionId];
-
     try {
-      const results = await Promise.all(allIds.map(id =>
-        supabase.functions.invoke("grade-virtual-patient", {
-          body: { session_id: id, class_virtual_patient_id: cvpId },
-        })
-      ));
-      const failed = results.find((result) => result.error);
-      if (failed?.error) {
-        throw failed.error;
+      if (isGroupSession && groupSessionIds.length > 1) {
+        // Group activity → grade ONCE on primary session, then mirror the same grade
+        // (and MAI answers) to every group member so all receive the SAME correction.
+        const primaryId = sessionId || groupSessionIds[0];
+        const { error: gradeErr } = await supabase.functions.invoke("grade-virtual-patient", {
+          body: { session_id: primaryId, class_virtual_patient_id: cvpId },
+        });
+        if (gradeErr) throw gradeErr;
+
+        // Fetch the freshly produced grade for the primary session
+        const { data: primaryGrade } = await supabase
+          .from("virtual_patient_grades")
+          .select("subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id")
+          .eq("session_id", primaryId)
+          .maybeSingle();
+
+        if (primaryGrade) {
+          const otherIds = groupSessionIds.filter((id) => id !== primaryId);
+          for (const otherId of otherIds) {
+            const { data: existing } = await supabase
+              .from("virtual_patient_grades")
+              .select("id")
+              .eq("session_id", otherId)
+              .maybeSingle();
+            const payload = {
+              session_id: otherId,
+              class_virtual_patient_id: primaryGrade.class_virtual_patient_id,
+              subscores: primaryGrade.subscores,
+              bonus_penalidades: primaryGrade.bonus_penalidades,
+              nota_final: primaryGrade.nota_final,
+              nota_microlearning: primaryGrade.nota_microlearning,
+              feedback_resumido: primaryGrade.feedback_resumido,
+              orientacoes_melhoria: primaryGrade.orientacoes_melhoria,
+              flags_seguranca: primaryGrade.flags_seguranca,
+            };
+            if (existing?.id) {
+              await supabase.from("virtual_patient_grades").update(payload).eq("id", existing.id);
+            } else {
+              await supabase.from("virtual_patient_grades").insert(payload);
+            }
+          }
+        }
+        toast.success("Correção em grupo gerada — todos os integrantes receberão a mesma avaliação.");
+      } else {
+        const { error: gradeErr } = await supabase.functions.invoke("grade-virtual-patient", {
+          body: { session_id: sessionId, class_virtual_patient_id: cvpId },
+        });
+        if (gradeErr) throw gradeErr;
+        toast.success("Correção e feedback gerados com sucesso.");
       }
-      toast.success("Correção e feedback gerados com sucesso.");
     } catch (err) {
       console.warn("Auto-grading failed:", err);
       toast.error("Atendimento concluído, mas a correção automática não foi gerada agora. Tente em 'Análise VP' > 'Corrigir Turma'.");
