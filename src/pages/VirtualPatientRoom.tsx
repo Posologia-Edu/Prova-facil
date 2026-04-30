@@ -114,6 +114,16 @@ export default function VirtualPatientRoom() {
       let primarySessionId = "";
       let currentEncounter = 1;
       let isCompleted = false;
+      let sharedGroupId: string | null = null;
+
+      // First pass: detect any existing group_id reused by previous member sessions
+      const { data: existingForGroup } = await supabase
+        .from("virtual_patient_sessions")
+        .select("group_id, student_email")
+        .eq("class_virtual_patient_id", cvpId)
+        .in("student_email", parsedGroupEmails);
+      const found = (existingForGroup || []).find((s: any) => s.group_id);
+      sharedGroupId = found?.group_id || crypto.randomUUID();
 
       for (let i = 0; i < parsedGroupEmails.length; i++) {
         const memberEmail = parsedGroupEmails[i];
@@ -121,13 +131,20 @@ export default function VirtualPatientRoom() {
 
         const { data: existingSession } = await supabase
           .from("virtual_patient_sessions")
-          .select("id, current_encounter, status")
+          .select("id, current_encounter, status, group_id")
           .eq("class_virtual_patient_id", cvpId)
           .eq("student_email", memberEmail)
           .maybeSingle();
 
         if (existingSession) {
           sessionIds.push(existingSession.id);
+          // Backfill group_id if missing
+          if (!existingSession.group_id) {
+            await supabase
+              .from("virtual_patient_sessions")
+              .update({ group_id: sharedGroupId })
+              .eq("id", existingSession.id);
+          }
           if (i === 0) {
             primarySessionId = existingSession.id;
             currentEncounter = existingSession.current_encounter;
@@ -142,6 +159,7 @@ export default function VirtualPatientRoom() {
               class_virtual_patient_id: cvpId,
               student_email: memberEmail,
               student_name: memberName,
+              group_id: sharedGroupId,
             })
             .select("id")
             .single();
