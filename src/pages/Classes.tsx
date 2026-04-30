@@ -334,7 +334,7 @@ export default function ClassesPage() {
     const [studentsRes, examsData, vpsRes] = await Promise.all([
       supabase.from("class_students").select("*").eq("class_id", cls.id).order("student_name"),
       loadClassExams(cls.id),
-      supabase.from("class_virtual_patients").select("id, patient_id, access_code, status").eq("class_id", cls.id).order("created_at"),
+      supabase.from("class_virtual_patients").select("id, patient_id, access_code, status, group_label").eq("class_id", cls.id).order("created_at"),
     ]);
 
     setStudents(studentsRes.data || []);
