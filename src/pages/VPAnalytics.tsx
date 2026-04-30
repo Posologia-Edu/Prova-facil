@@ -338,7 +338,7 @@ export default function VPAnalytics() {
     // Get ALL sessions (any status) for selected filters — sessions with any meaningful interaction can be graded
     const { data: sessions } = await supabase
       .from("virtual_patient_sessions")
-      .select("id, class_virtual_patient_id, status")
+      .select("id, class_virtual_patient_id, status, group_id")
       .in("class_virtual_patient_id", filteredCvpIds);
 
     if (!sessions || sessions.length === 0) {
@@ -377,18 +377,64 @@ export default function VPAnalytics() {
       return;
     }
 
-    // Always re-grade everything when teacher clicks "Corrigir Turma" so updated rubric applies
-    const toGrade = eligible;
+    // Group sessions by group_id so each group is graded ONCE and mirrored to all members.
+    // Sessions without group_id are treated individually.
+    const groupBuckets = new Map<string, typeof eligible>();
+    const individuals: typeof eligible = [];
+    for (const s of eligible) {
+      if ((s as any).group_id) {
+        const arr = groupBuckets.get((s as any).group_id) || [];
+        arr.push(s);
+        groupBuckets.set((s as any).group_id, arr);
+      } else {
+        individuals.push(s);
+      }
+    }
 
-    toast.info(`Corrigindo ${toGrade.length} sessão(ões)...`);
+    const totalUnits = groupBuckets.size + individuals.length;
+    toast.info(`Corrigindo ${totalUnits} avaliação(ões) (${groupBuckets.size} em grupo, ${individuals.length} individual(is))...`);
 
     let success = 0;
     const failures: string[] = [];
-    for (const session of toGrade) {
+
+    const mirrorGradeToSiblings = async (primaryId: string, siblingIds: string[]) => {
+      if (siblingIds.length === 0) return;
+      const { data: primaryGrade } = await supabase
+        .from("virtual_patient_grades")
+        .select("subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id")
+        .eq("session_id", primaryId)
+        .maybeSingle();
+      if (!primaryGrade) return;
+      for (const otherId of siblingIds) {
+        const { data: existing } = await supabase
+          .from("virtual_patient_grades")
+          .select("id")
+          .eq("session_id", otherId)
+          .maybeSingle();
+        const payload = {
+          session_id: otherId,
+          class_virtual_patient_id: primaryGrade.class_virtual_patient_id,
+          subscores: primaryGrade.subscores,
+          bonus_penalidades: primaryGrade.bonus_penalidades,
+          nota_final: primaryGrade.nota_final,
+          nota_microlearning: primaryGrade.nota_microlearning,
+          feedback_resumido: primaryGrade.feedback_resumido,
+          orientacoes_melhoria: primaryGrade.orientacoes_melhoria,
+          flags_seguranca: primaryGrade.flags_seguranca,
+        };
+        if (existing?.id) {
+          await supabase.from("virtual_patient_grades").update(payload).eq("id", existing.id);
+        } else {
+          await supabase.from("virtual_patient_grades").insert(payload);
+        }
+      }
+    };
+
+    // Grade individual sessions
+    for (const session of individuals) {
       const { error } = await supabase.functions.invoke("grade-virtual-patient", {
         body: { session_id: session.id, class_virtual_patient_id: session.class_virtual_patient_id },
       });
-
       if (error) {
         failures.push(await getFunctionErrorMessage(error));
       } else {
@@ -396,8 +442,23 @@ export default function VPAnalytics() {
       }
     }
 
+    // Grade group sessions: ONE call per group, then mirror to siblings
+    for (const [, members] of groupBuckets) {
+      const primary = members[0];
+      const siblings = members.slice(1).map(m => m.id);
+      const { error } = await supabase.functions.invoke("grade-virtual-patient", {
+        body: { session_id: primary.id, class_virtual_patient_id: primary.class_virtual_patient_id },
+      });
+      if (error) {
+        failures.push(await getFunctionErrorMessage(error));
+      } else {
+        await mirrorGradeToSiblings(primary.id, siblings);
+        success++;
+      }
+    }
+
     if (success > 0) {
-      toast.success(`${success}/${toGrade.length} sessão(ões) corrigida(s) com sucesso.`);
+      toast.success(`${success}/${totalUnits} avaliação(ões) corrigida(s) com sucesso.`);
     }
     if (failures.length > 0) {
       toast.error(failures[0]);
