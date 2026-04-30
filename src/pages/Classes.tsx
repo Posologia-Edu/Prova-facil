@@ -339,6 +339,7 @@ export default function ClassesPage() {
     setStudents(studentsRes.data || []);
     const vps = (vpsRes.data as ClassVirtualPatient[]) || [];
     setClassVPs(vps);
+    await loadVPAssignments(cls.id);
 
     // Determine mode based on existing data
     if (vps.length > 0) {
