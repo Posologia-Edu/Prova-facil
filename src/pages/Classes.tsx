@@ -85,6 +85,7 @@ interface ClassVirtualPatient {
   patient_id: string;
   access_code: string;
   status: string;
+  group_label?: string | null;
 }
 
 interface VPAssignment {
