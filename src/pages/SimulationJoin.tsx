@@ -17,7 +17,8 @@ import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle, Trash2, UserRound } from "lucide-react";
+import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle, Trash2, UserRound, PauseCircle, PlayCircle } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { generateRounds } from "@/lib/simulation-distribution";
 import {
@@ -61,6 +62,28 @@ export default function SimulationJoin() {
   const [materialsReady, setMaterialsReady] = useState(false);
   const [studentsReady, setStudentsReady] = useState<string[]>([]);
   const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
+  const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
+
+  const pauseSimulation = async () => {
+    if (!room?.id) return;
+    const { error } = await supabase.from("simulation_rooms").update({ status: "paused" }).eq("id", room.id);
+    setPauseDialogOpen(false);
+    if (error) {
+      toast({ title: "Erro ao pausar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Simulação pausada", description: "Os alunos verão uma tela informando que a sessão continuará em outro dia." });
+  };
+
+  const resumeSimulation = async () => {
+    if (!room?.id) return;
+    const { error } = await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
+    if (error) {
+      toast({ title: "Erro ao retomar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Simulação retomada", description: "Você pode continuar a partir da próxima rodada pendente." });
+  };
 
   const syncJoinedPresence = async (
     participantRecord: any,
@@ -733,6 +756,10 @@ export default function SimulationJoin() {
   const canFill = isActive && !submitted && assignment?.assigned_role !== "patient";
   const completedRoundsList = allRounds.filter((r: any) => r.status === "completed");
   const allRoundsCompleted = allRounds.length > 0 && allRounds.every((round: any) => round.status === "completed");
+  const isPaused = room?.status === "paused";
+  const hasCompletedRound = allRounds.some((r: any) => r.status === "completed");
+  const hasPendingRound = allRounds.some((r: any) => r.status !== "completed");
+  const canPause = isProfessor && !isPaused && hasCompletedRound && hasPendingRound;
 
   // Check if student participates in active round
   const participatesInActiveRound = isActive && !!assignment;
@@ -909,11 +936,35 @@ export default function SimulationJoin() {
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />Redistribuir
               </Button>
             )}
+
+            {/* Pause / Resume — multi-day execution */}
+            {(canPause || isPaused) && (
+              <div className="pt-2 border-t">
+                {isPaused ? (
+                  <Button onClick={resumeSimulation} className="w-full gap-2 bg-green-600 hover:bg-green-700">
+                    <PlayCircle className="h-4 w-4" />
+                    Retomar simulação
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => setPauseDialogOpen(true)}
+                    className="w-full gap-2 border-amber-400/60 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                  >
+                    <PauseCircle className="h-4 w-4" />
+                    Pausar e continuar em outro dia
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  As respostas das rodadas concluídas ficam salvas e seguem para SOAP e agregador de notas.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Waiting state for students: no active round and no materials released for cycle */}
+      {/* Waiting state for students */}
       {!isProfessor && !canSeeCycleMaterials && !participatesInActiveRound && !allRoundsCompleted && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -1490,6 +1541,22 @@ export default function SimulationJoin() {
           </CardContent>
         </Card>
       )}
+      <AlertDialog open={pauseDialogOpen} onOpenChange={setPauseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pausar e continuar em outro dia?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isActive
+                ? `Há uma rodada ativa (Rodada ${activeRound?.round_number}). Recomendamos encerrá-la antes de pausar para preservar as notas. Você pode pausar agora e a rodada ativa continuará disponível para retomar.`
+                : "Os alunos verão uma tela informando que a sessão continuará em outro dia. As respostas das rodadas concluídas ficam salvas e seguem normalmente para o SOAP e o agregador de notas."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={pauseSimulation}>Pausar simulação</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
