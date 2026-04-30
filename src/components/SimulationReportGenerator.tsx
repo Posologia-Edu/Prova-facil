@@ -407,7 +407,7 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
   const [sending, setSending] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generatedPdfs, setGeneratedPdfs] = useState<Map<number, { blob: Blob; base64: string }>>(new Map());
-  const [sendResults, setSendResults] = useState<{ email: string; success: boolean }[]>([]);
+  const [sendResults, setSendResults] = useState<{ email: string; success: boolean; error?: string }[]>([]);
 
   const handleGenerateAll = async () => {
     setGenerating(true);
@@ -438,14 +438,18 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
     URL.revokeObjectURL(url);
   };
 
-  const sendEmail = async (pair: PairReport) => {
+  const sendEmail = async (pair: PairReport, specificEmail?: string, specificName?: string) => {
     const pdf = generatedPdfs.get(pair.pairIndex);
     if (!pdf) return;
-    const emails = pair.students.map(s => s.email).filter((e): e is string => !!e);
+    const allEmails = pair.students.map(s => s.email).filter((e): e is string => !!e);
+    const emails = specificEmail ? [specificEmail] : allEmails;
     if (emails.length === 0) {
-      toast.error("Nenhum email cadastrado para esta dupla.");
+      toast.error("Nenhum email cadastrado.");
       return;
     }
+    const studentNames = specificName
+      ? [specificName]
+      : pair.students.map(s => s.name);
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-simulation-report", {
@@ -455,20 +459,21 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
           fileName: `relatorio-${stageType}-${pair.pairIndex + 1}.pdf`,
           roomTitle,
           stageName: stageLabels[stageType],
-          studentNames: pair.students.map(s => s.name),
+          studentNames,
         },
       });
       if (error) throw error;
       const results = data?.results || [];
-      const newSendResults = results.map((r: any) => ({ email: r.email, success: r.success }));
-      setSendResults(prev => [...prev, ...newSendResults]);
+      const newSendResults = results.map((r: any) => ({ email: r.email, success: r.success, error: r.error }));
+      setSendResults(prev => [...prev.filter(p => !newSendResults.find((n: any) => n.email === p.email)), ...newSendResults]);
       if (newSendResults.every((r: any) => r.success)) {
         toast.success(`Relatorio enviado para ${emails.join(", ")}`);
       } else {
-        toast.error("Alguns emails falharam.");
+        const failed = newSendResults.filter((r: any) => !r.success);
+        toast.error(`Falha ao enviar: ${failed.map((f: any) => `${f.email} (${f.error || "erro desconhecido"})`).join("; ")}`);
       }
-    } catch (err) {
-      toast.error("Erro ao enviar email");
+    } catch (err: any) {
+      toast.error(`Erro ao enviar email: ${err?.message || err}`);
       console.error(err);
     }
     setSending(false);
@@ -526,35 +531,64 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
 
           <div className="space-y-3">
             {pairs.map(pair => {
-              const hasEmails = pair.students.some(s => !!s.email);
+              const studentsWithEmail = pair.students.filter(s => !!s.email);
               const sentEmails = sendResults.filter(r => pair.students.some(s => s.email === r.email));
               return (
                 <div key={pair.pairIndex} className="border rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
                       <p className="font-medium text-sm">{pair.students.map(s => s.name).join(" & ")}</p>
                       <p className="text-xs text-muted-foreground">
                         Nota: {pair.score.toFixed(1)}/{pair.maxScore.toFixed(1)}
-                        {pair.students.map(s => s.email).filter(Boolean).length > 0 && (
-                          <> - {pair.students.map(s => s.email).filter(Boolean).join(", ")}</>
-                        )}
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => downloadPdf(pair)}>
-                        <FileDown className="h-3.5 w-3.5 mr-1" />PDF
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => sendEmail(pair)} disabled={!hasEmails || sending}>
-                        <Mail className="h-3.5 w-3.5 mr-1" />Email
-                      </Button>
-                    </div>
+                    <Button size="sm" variant="outline" onClick={() => downloadPdf(pair)}>
+                      <FileDown className="h-3.5 w-3.5 mr-1" />PDF
+                    </Button>
                   </div>
+
+                  {/* Per-student email actions */}
+                  <div className="space-y-1.5">
+                    {pair.students.map((s, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-muted-foreground truncate">
+                          {s.name}{s.email ? ` — ${s.email}` : " — sem email"}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => sendEmail(pair, s.email, s.name)}
+                          disabled={!s.email || sending}
+                        >
+                          <Mail className="h-3.5 w-3.5 mr-1" />Enviar
+                        </Button>
+                      </div>
+                    ))}
+                    {studentsWithEmail.length > 1 && (
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => sendEmail(pair)}
+                          disabled={sending}
+                        >
+                          <Mail className="h-3.5 w-3.5 mr-1" />Enviar para a dupla
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
                   {sentEmails.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {sentEmails.map((r, i) => (
-                        <Badge key={i} variant={r.success ? "default" : "destructive"} className="text-xs">
+                        <Badge
+                          key={i}
+                          variant={r.success ? "default" : "destructive"}
+                          className="text-xs"
+                          title={r.error || ""}
+                        >
                           {r.success ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
-                          {r.email}
+                          {r.email}{!r.success && r.error ? `: ${r.error}` : ""}
                         </Badge>
                       ))}
                     </div>

@@ -73,8 +73,15 @@ serve(async (req) => {
           }),
         });
         const data = await response.json();
-        results.push({ email, success: response.ok, data });
+        if (!response.ok) {
+          console.error("Resend error for", email, "status:", response.status, "body:", data);
+        }
+        const errorMsg = !response.ok
+          ? (data?.message || data?.error?.message || data?.name || `HTTP ${response.status}`)
+          : undefined;
+        results.push({ email, success: response.ok, data, error: errorMsg });
       } catch (err) {
+        console.error("Fetch error for", email, err);
         results.push({ email, success: false, error: String(err) });
       }
     }
