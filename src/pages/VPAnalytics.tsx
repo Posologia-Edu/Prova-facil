@@ -1071,6 +1071,80 @@ export default function VPAnalytics() {
 
                 <Separator />
 
+                {/* MAI submitted */}
+                {detailGrade.mai_json && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                      <Pill className="h-4 w-4" /> MAI Enviado pelo {detailGrade.group_id ? "Grupo" : "Aluno"}
+                    </h4>
+                    {(() => {
+                      const mai = detailGrade.mai_json as any;
+                      const meds = Object.keys(mai)
+                        .filter((k) => !k.startsWith("_"))
+                        .map((k) => mai[k]);
+                      const totalScore = mai._total_score ?? meds.reduce((s: number, m: any) => s + (m?.score || 0), 0);
+                      const optionLabels: Record<string, { label: string; cls: string }> = {
+                        appropriate: { label: "Apropriado", cls: "bg-green-500/15 text-green-700 dark:text-green-400" },
+                        marginally: { label: "Marginalmente Apropriado", cls: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400" },
+                        inappropriate: { label: "Inapropriado", cls: "bg-destructive/15 text-destructive" },
+                      };
+                      const criteriaLabels: Record<string, string> = {
+                        indication: "Indicação",
+                        effectiveness: "Efetividade",
+                        dosage: "Dosagem",
+                        correct_directions: "Técnica de administração",
+                        practical_directions: "Comodidade terapêutica",
+                        drug_drug: "Interação medicamento-medicamento",
+                        drug_disease: "Interação medicamento-doença",
+                        duplication: "Duplicidade",
+                        duration: "Duração",
+                        cost: "Custo",
+                      };
+                      if (meds.length === 0) {
+                        return <p className="text-sm text-muted-foreground italic">MAI vazio.</p>;
+                      }
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span>{meds.length} medicamento(s)</span>
+                            <span>•</span>
+                            <span>Score total: <strong className="text-foreground">{totalScore}</strong></span>
+                          </div>
+                          {meds.map((med: any, idx: number) => (
+                            <div key={idx} className="border rounded-lg overflow-hidden">
+                              <div className="bg-muted/40 px-3 py-2 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Pill className="h-3.5 w-3.5 text-primary" />
+                                  <span className="font-medium text-sm">{med.medication_name || `Medicamento ${idx + 1}`}</span>
+                                </div>
+                                <Badge variant="outline" className="text-xs">Score: {med.score ?? 0}</Badge>
+                              </div>
+                              <div className="divide-y">
+                                {Object.entries(criteriaLabels).map(([key, label]) => {
+                                  const ans = med.answers?.[key];
+                                  const opt = ans ? optionLabels[ans] : null;
+                                  return (
+                                    <div key={key} className="flex items-center justify-between gap-3 px-3 py-1.5 text-sm">
+                                      <span className="text-muted-foreground">{label}</span>
+                                      {opt ? (
+                                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${opt.cls}`}>{opt.label}</span>
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground italic">—</span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                <Separator />
+
                 {/* Transcript */}
                 <div>
                   <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
