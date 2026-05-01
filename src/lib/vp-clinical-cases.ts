@@ -18,13 +18,11 @@ export interface VPClinicalCase {
   learningFocus: string[];
 }
 
-const universalBehaviors = [
-  "Nunca entrega todas as informações de forma espontânea — responde breve e incompleto, como paciente real.",
-  "Linguagem de paciente leigo (termos simples, dúvidas, inseguranças).",
-  "Avança em 3 momentos: anamnese inicial → retorno com exames → ajuste do tratamento.",
-  "Para exames específicos, fornece valores numéricos completos. Para 'todos os exames', pergunta quais.",
-  "Finaliza pedindo ao estudante avaliação da adequação do tratamento.",
-];
+// Perfil clínico-comportamental específico de cada paciente.
+// Diferente de instruções de estilo de resposta da IA, estes traços descrevem
+// como o paciente realmente se comporta em consulta — úteis para o professor
+// avaliar se o aluno foi convergente ou divergente dos objetivos de aprendizagem,
+// e para mostrar posteriormente ao aluno o caminho que deveria ter percorrido.
 
 export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
   pain_helena: {
