@@ -879,8 +879,8 @@ export default function VPAnalytics() {
                       {list.map((b) => {
                         if (b.isGroup) {
                           return (
-                            <>
-                              <TableRow key={`${b.key}-h`} className="bg-muted/40 hover:bg-muted/40">
+                            <Fragment key={b.key}>
+                              <TableRow className="bg-muted/40 hover:bg-muted/40">
                                 <TableCell colSpan={7} className="py-2">
                                   <div className="flex items-center gap-2">
                                     <Badge variant="default" className="text-xs">{b.label}</Badge>
@@ -891,10 +891,10 @@ export default function VPAnalytics() {
                                 </TableCell>
                               </TableRow>
                               {b.rows.map(renderRow)}
-                            </>
+                            </Fragment>
                           );
                         }
-                        return b.rows.map(renderRow);
+                        return <Fragment key={b.key}>{b.rows.map(renderRow)}</Fragment>;
                       })}
                     </TableBody>
                   </Table>
