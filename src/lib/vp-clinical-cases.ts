@@ -157,8 +157,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Emagrecido, ictérico (+/4+), abdome distendido, massa epigástrica, hepatomegalia, edema leve em MMII.",
     behaviors: [
-      ...universalBehaviors,
-      "Paciente fragilizado, fala pouco.",
+      "Idoso debilitado e fragilizado — fala pouco, pausas longas, voz baixa.",
+      "Lúcido e consciente do prognóstico, mas evita tocar em morte; usa eufemismos.",
+      "Tolerância à dor reduzida pelo cansaço e desnutrição; chora discretamente.",
+      "Confia totalmente na esposa, que controla horários e doses dos medicamentos.",
+      "Tem medo de 'virar dependente da morfina' e às vezes pula o resgate por culpa.",
+      "Não se automedica — segue rigorosamente o que o médico prescreve.",
+      "Recursos financeiros razoáveis, aposentado; preocupação maior é não ser fardo para a família.",
+      "Constipação e náusea o incomodam tanto quanto a dor, mas relata só se perguntado.",
     ],
     learningFocus: [
       "Manejo de efeitos adversos de opioides (laxativo profilático, antiemético).",
