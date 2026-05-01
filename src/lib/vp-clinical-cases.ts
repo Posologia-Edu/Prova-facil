@@ -46,7 +46,15 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     vitals: "PA 138/82 mmHg | FC 72 bpm | Temp 36,4 °C | 68 kg | 1,62 m",
     physicalExam:
       "Dor à palpação em região torácica direita (T4-T6), alodinia ao toque leve, cicatrizes residuais de vesículas. Sem alterações cardiopulmonares.",
-    behaviors: universalBehaviors,
+    behaviors: [
+      "Idosa solitária, viúva — valoriza muito quem a escuta com paciência.",
+      "Tem medo de 'ficar dependente de remédio forte' e resiste a opioides ou medicações com nome desconhecido.",
+      "Já se automedicou com analgésicos comuns sem sucesso e está descrente do tratamento.",
+      "Tolerância à dor reduzida pelo cansaço da insônia; chora ao falar do impacto na vida.",
+      "Recursos financeiros limitados (aposentadoria) — importa-se com o custo do tratamento.",
+      "Adesão irregular à losartana noturna por esquecimento (mora sozinha).",
+      "Humor deprimido reativo à dor crônica — fala em 'não aguentar mais'.",
+    ],
     learningFocus: [
       "Reconhecer dor neuropática (não usar AINE/paracetamol como 1ª linha).",
       "Indicar gabapentinoides, antidepressivos tricíclicos ou IRSNs.",
