@@ -18,13 +18,11 @@ export interface VPClinicalCase {
   learningFocus: string[];
 }
 
-const universalBehaviors = [
-  "Nunca entrega todas as informações de forma espontânea — responde breve e incompleto, como paciente real.",
-  "Linguagem de paciente leigo (termos simples, dúvidas, inseguranças).",
-  "Avança em 3 momentos: anamnese inicial → retorno com exames → ajuste do tratamento.",
-  "Para exames específicos, fornece valores numéricos completos. Para 'todos os exames', pergunta quais.",
-  "Finaliza pedindo ao estudante avaliação da adequação do tratamento.",
-];
+// Perfil clínico-comportamental específico de cada paciente.
+// Diferente de instruções de estilo de resposta da IA, estes traços descrevem
+// como o paciente realmente se comporta em consulta — úteis para o professor
+// avaliar se o aluno foi convergente ou divergente dos objetivos de aprendizagem,
+// e para mostrar posteriormente ao aluno o caminho que deveria ter percorrido.
 
 export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
   pain_helena: {
@@ -48,7 +46,15 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     vitals: "PA 138/82 mmHg | FC 72 bpm | Temp 36,4 °C | 68 kg | 1,62 m",
     physicalExam:
       "Dor à palpação em região torácica direita (T4-T6), alodinia ao toque leve, cicatrizes residuais de vesículas. Sem alterações cardiopulmonares.",
-    behaviors: universalBehaviors,
+    behaviors: [
+      "Idosa solitária, viúva — valoriza muito quem a escuta com paciência.",
+      "Tem medo de 'ficar dependente de remédio forte' e resiste a opioides ou medicações com nome desconhecido.",
+      "Já se automedicou com analgésicos comuns sem sucesso e está descrente do tratamento.",
+      "Tolerância à dor reduzida pelo cansaço da insônia; chora ao falar do impacto na vida.",
+      "Recursos financeiros limitados (aposentadoria) — importa-se com o custo do tratamento.",
+      "Adesão irregular à losartana noturna por esquecimento (mora sozinha).",
+      "Humor deprimido reativo à dor crônica — fala em 'não aguentar mais'.",
+    ],
     learningFocus: [
       "Reconhecer dor neuropática (não usar AINE/paracetamol como 1ª linha).",
       "Indicar gabapentinoides, antidepressivos tricíclicos ou IRSNs.",
@@ -76,7 +82,15 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     vitals: "PA 118/72 mmHg | FC 78 bpm | Temp 36,3 °C | 62 kg | 1,65 m",
     physicalExam:
       "11/18 tender points positivos, sem edema articular, sem déficit neurológico. Trapézios tensos bilateralmente.",
-    behaviors: universalBehaviors,
+    behaviors: [
+      "Profissional sobrecarregada, perfeccionista — sente-se culpada por 'não dar conta'.",
+      "Ansiosa, fala rápido e troca de assunto; tem dificuldade de descrever sintomas com clareza.",
+      "Cética com tratamentos novos: 'já tomei tudo e nada funciona'.",
+      "Tem tendência à automedicação com analgésicos comuns e suplementos comprados em farmácia.",
+      "Dorme mal e relaciona piora da dor ao estresse no trabalho, mas resiste a discutir saúde mental.",
+      "Recursos financeiros estáveis, mas reluta a pagar por exercício/fisioterapia regular.",
+      "Tolerância à dor variável — alguns dias 'aguenta tudo', outros 'não consegue levantar da cama'.",
+    ],
     learningFocus: [
       "Fibromialgia: AINEs/analgésicos comuns são pouco eficazes.",
       "Avaliar otimização de duloxetina, pregabalina, amitriptilina.",
@@ -104,7 +118,16 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     vitals: "PA 148/92 mmHg | FC 80 bpm | Temp 36,5 °C | 108 kg | 1,73 m (IMC 36)",
     physicalExam:
       "Dor à palpação paravertebral lombar bilateral, limitação de flexão, Lasègue negativo, sem déficit motor/sensitivo.",
-    behaviors: universalBehaviors,
+    behaviors: [
+      "Trabalhador braçal preocupado em perder o emprego — minimiza a dor para não ser afastado.",
+      "Pouca consciência de saúde: trata sintoma, não causa. Acha que 'remédio resolve tudo'.",
+      "Alta tendência a automedicação (dipirona, anti-inflamatórios na farmácia, 'remédio do colega').",
+      "Baixa adesão à hidroclorotiazida nos fins de semana ('não combina com cerveja').",
+      "Tolerância à dor altíssima por orgulho profissional, mas dor já interfere no trabalho.",
+      "Recursos financeiros apertados — sustenta família, valoriza tratamento barato.",
+      "Resiste a perder peso ('comida é o prazer da semana') e a fisioterapia ('não tenho tempo').",
+      "Ex-tabagista, etilista social — pode subestimar consumo de álcool.",
+    ],
     learningFocus: [
       "AINE oral apresenta risco gástrico e piora a PA — preferir AINE tópico.",
       "Perda de peso e fisioterapia como pilares do tratamento.",
@@ -134,8 +157,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Emagrecido, ictérico (+/4+), abdome distendido, massa epigástrica, hepatomegalia, edema leve em MMII.",
     behaviors: [
-      ...universalBehaviors,
-      "Paciente fragilizado, fala pouco.",
+      "Idoso debilitado e fragilizado — fala pouco, pausas longas, voz baixa.",
+      "Lúcido e consciente do prognóstico, mas evita tocar em morte; usa eufemismos.",
+      "Tolerância à dor reduzida pelo cansaço e desnutrição; chora discretamente.",
+      "Confia totalmente na esposa, que controla horários e doses dos medicamentos.",
+      "Tem medo de 'virar dependente da morfina' e às vezes pula o resgate por culpa.",
+      "Não se automedica — segue rigorosamente o que o médico prescreve.",
+      "Recursos financeiros razoáveis, aposentado; preocupação maior é não ser fardo para a família.",
+      "Constipação e náusea o incomodam tanto quanto a dor, mas relata só se perguntado.",
     ],
     learningFocus: [
       "Manejo de efeitos adversos de opioides (laxativo profilático, antiemético).",
@@ -165,8 +194,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Sem sinais focais, tensão muscular cervical e temporal bilateral, sem papiledema. Pontos occipitais dolorosos.",
     behaviors: [
-      ...universalBehaviors,
-      "Ansiosa, fala rápido.",
+      "Profissional jovem, ambiciosa — relativiza sintomas para 'não parecer fraca'.",
+      "Ansiosa, fala rápido e atropela as próprias frases; pergunta muito ao mesmo tempo.",
+      "Forte tendência à automedicação: tem caixinha de analgésicos na bolsa, na mesa e no carro.",
+      "Tolerância à dor baixa quando interfere no trabalho; alta para problemas pessoais.",
+      "Recursos financeiros ótimos, mas falta tempo — quer 'solução rápida que possa tomar e seguir trabalhando'.",
+      "Dorme 5–6 h, toma muito café, não pratica atividade física.",
+      "Resiste a discutir estresse e ansiedade; vê isso como 'frescura'.",
+      "Mãe com enxaqueca — acha que herdou e que 'não tem jeito'.",
     ],
     learningFocus: [
       "Identificar cefaleia por abuso de medicação (≥15 dias/mês).",
@@ -198,8 +233,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Joelho D: crepitação, leve edema, dor na interlinha medial, flexão 100°, marcha antálgica.",
     behaviors: [
-      ...universalBehaviors,
-      "Fala pausada e simpática.",
+      "Idosa simpática, fala pausada e gosta de contar histórias antes de chegar ao sintoma.",
+      "Valoriza muito a saúde — segue orientações médicas com seriedade, mas esquece doses (mora sozinha).",
+      "Recursos financeiros limitados (aposentadoria mínima) — pergunta sempre o preço do remédio.",
+      "Tolerância à dor moderada — aguentou anos calada antes de procurar ajuda.",
+      "Tem receio de remédio 'forte' e medo de 'mexer com o estômago' (já tem refluxo).",
+      "Pouca tendência à automedicação; prefere chá, compressas e remédios caseiros.",
+      "Sedentária, mas aceita orientações se forem viáveis ('não consigo subir escada para fisioterapia').",
+      "Solitária — valoriza a consulta como espaço de escuta.",
     ],
     learningFocus: [
       "AINE oral com proteção gástrica (IBP) ou preferir AINE tópico.",
@@ -231,8 +272,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Marcha claudicante com bengala à esquerda, dor à rotação interna do quadril D, abdução limitada, encurtamento funcional.",
     behaviors: [
-      ...universalBehaviors,
-      "Linguagem simples de trabalhador rural.",
+      "Trabalhador rural, linguagem simples — descreve sintomas comparando com o trabalho ('não consigo segurar a enxada').",
+      "Tolerância à dor altíssima por orgulho de homem do campo — 'só veio porque a mulher mandou'.",
+      "Forte tendência à automedicação com chás, garrafadas e medicações de balcão.",
+      "Adesão irregular à glibenclamida noturna por esquecimento e por jantar tarde.",
+      "Recursos financeiros muito limitados — usa SUS, prioriza remédio do diabetes sobre o da dor.",
+      "Pouca consciência sobre relação entre obesidade, DM e dor articular.",
+      "Etilista social aos fins de semana ('só uma cachacinha') — pode subestimar consumo.",
+      "Resiste a parar de trabalhar e a fisioterapia ('isso é coisa de gente da cidade').",
     ],
     learningFocus: [
       "AINE oral piora glicemia e função renal — preferir AINE tópico.",
@@ -260,8 +307,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Edema/calor em IFP (2º-4º dedos bilaterais), MCF edemaciadas, rigidez matinal >1h. Sem deformidades fixas.",
     behaviors: [
-      ...universalBehaviors,
-      "Preocupada e ansiosa com o trabalho.",
+      "Mãe e profissional autônoma — preocupada principalmente em perder a renda do salão.",
+      "Ansiosa, faz muitas perguntas sobre prognóstico ('vou ficar com mão torta?').",
+      "Tolerância à dor reduzida — depende das mãos para trabalhar e cada dor assusta.",
+      "Tendência moderada à automedicação (ibuprofeno frequente, comprado sem receita).",
+      "Recursos financeiros instáveis — autônoma, sem direito a afastamento.",
+      "Valoriza a saúde, mas posterga consultas por falta de tempo e dinheiro.",
+      "Tem histórico familiar de doença autoimune (tia com lúpus) — vive com medo disso.",
+      "Aceita bem orientações se forem práticas e couberem na rotina.",
     ],
     learningFocus: [
       "Reconhecer AR inicial: anti-CCP+, VHS/PCR elevados, erosões iniciais.",
@@ -291,8 +344,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Desvio ulnar bilateral, edema em punhos e joelhos, nódulos em cotovelos, força de preensão muito diminuída.",
     behaviors: [
-      ...universalBehaviors,
-      "Linguagem simples de agricultor.",
+      "Agricultor estoico, fala pouco e descreve sintomas com objetividade rural.",
+      "Tolerância à dor altíssima — só procurou ajuda quando perdeu autonomia para o trabalho.",
+      "Recursos financeiros muito limitados — usa SUS, sem acesso fácil a biológicos.",
+      "Pouca consciência sobre AR ('é da idade, é do trabalho pesado').",
+      "Tendência média à automedicação — usa diclofenaco e dipirona da farmácia popular.",
+      "Adesão à sulfassalazina foi boa, mas está desanimado por não ter melhorado.",
+      "Mora longe da cidade — dificuldade logística para retornos e exames frequentes.",
+      "Receio de tomar medicamento 'do hospital' (biológicos, injetáveis) por desconhecimento.",
     ],
     learningFocus: [
       "Falha à monoterapia com sulfassalazina → escalar para metotrexato ou biológico.",
@@ -321,8 +380,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Fácies cushingoide, obesidade central, estrias violáceas, pele fina com equimoses, edema articular discreto em mãos.",
     behaviors: [
-      ...universalBehaviors,
-      "Preocupado e questionador.",
+      "Profissional liberal informado — chega com perguntas técnicas, já leu sobre corticoide na internet.",
+      "Questionador e desconfiado — quer entender cada passo do tratamento antes de aceitar.",
+      "Tem medo intenso da dor voltar — adesão alta à prednisona por receio, mesmo conhecendo efeitos.",
+      "Valoriza muito a saúde, mas tende a focar nos efeitos cosméticos (ganho de peso, fácies).",
+      "Recursos financeiros bons — tem plano de saúde e acesso a especialistas.",
+      "Pouca tendência à automedicação, mas ajusta doses por conta própria ('hoje a dor está pior, tomei 20 mg').",
+      "Ansiedade alta sobre desmame do corticoide — precisa de muita explicação e suporte.",
+      "Tolerância à dor moderada; teme retomar o quadro original ao reduzir dose.",
     ],
     learningFocus: [
       "Reduzir corticoide com cuidado (insuficiência adrenal — cortisol suprimido).",
