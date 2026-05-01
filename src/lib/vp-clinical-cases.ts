@@ -307,8 +307,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Edema/calor em IFP (2º-4º dedos bilaterais), MCF edemaciadas, rigidez matinal >1h. Sem deformidades fixas.",
     behaviors: [
-      ...universalBehaviors,
-      "Preocupada e ansiosa com o trabalho.",
+      "Mãe e profissional autônoma — preocupada principalmente em perder a renda do salão.",
+      "Ansiosa, faz muitas perguntas sobre prognóstico ('vou ficar com mão torta?').",
+      "Tolerância à dor reduzida — depende das mãos para trabalhar e cada dor assusta.",
+      "Tendência moderada à automedicação (ibuprofeno frequente, comprado sem receita).",
+      "Recursos financeiros instáveis — autônoma, sem direito a afastamento.",
+      "Valoriza a saúde, mas posterga consultas por falta de tempo e dinheiro.",
+      "Tem histórico familiar de doença autoimune (tia com lúpus) — vive com medo disso.",
+      "Aceita bem orientações se forem práticas e couberem na rotina.",
     ],
     learningFocus: [
       "Reconhecer AR inicial: anti-CCP+, VHS/PCR elevados, erosões iniciais.",
