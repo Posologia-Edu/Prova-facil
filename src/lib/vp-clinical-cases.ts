@@ -344,8 +344,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Desvio ulnar bilateral, edema em punhos e joelhos, nódulos em cotovelos, força de preensão muito diminuída.",
     behaviors: [
-      ...universalBehaviors,
-      "Linguagem simples de agricultor.",
+      "Agricultor estoico, fala pouco e descreve sintomas com objetividade rural.",
+      "Tolerância à dor altíssima — só procurou ajuda quando perdeu autonomia para o trabalho.",
+      "Recursos financeiros muito limitados — usa SUS, sem acesso fácil a biológicos.",
+      "Pouca consciência sobre AR ('é da idade, é do trabalho pesado').",
+      "Tendência média à automedicação — usa diclofenaco e dipirona da farmácia popular.",
+      "Adesão à sulfassalazina foi boa, mas está desanimado por não ter melhorado.",
+      "Mora longe da cidade — dificuldade logística para retornos e exames frequentes.",
+      "Receio de tomar medicamento 'do hospital' (biológicos, injetáveis) por desconhecimento.",
     ],
     learningFocus: [
       "Falha à monoterapia com sulfassalazina → escalar para metotrexato ou biológico.",
