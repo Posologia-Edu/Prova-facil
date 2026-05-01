@@ -380,8 +380,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Fácies cushingoide, obesidade central, estrias violáceas, pele fina com equimoses, edema articular discreto em mãos.",
     behaviors: [
-      ...universalBehaviors,
-      "Preocupado e questionador.",
+      "Profissional liberal informado — chega com perguntas técnicas, já leu sobre corticoide na internet.",
+      "Questionador e desconfiado — quer entender cada passo do tratamento antes de aceitar.",
+      "Tem medo intenso da dor voltar — adesão alta à prednisona por receio, mesmo conhecendo efeitos.",
+      "Valoriza muito a saúde, mas tende a focar nos efeitos cosméticos (ganho de peso, fácies).",
+      "Recursos financeiros bons — tem plano de saúde e acesso a especialistas.",
+      "Pouca tendência à automedicação, mas ajusta doses por conta própria ('hoje a dor está pior, tomei 20 mg').",
+      "Ansiedade alta sobre desmame do corticoide — precisa de muita explicação e suporte.",
+      "Tolerância à dor moderada; teme retomar o quadro original ao reduzir dose.",
     ],
     learningFocus: [
       "Reduzir corticoide com cuidado (insuficiência adrenal — cortisol suprimido).",
