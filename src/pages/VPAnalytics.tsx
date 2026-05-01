@@ -215,9 +215,23 @@ export default function VPAnalytics() {
       (session.group_id && eligibleGroupIds.has(session.group_id))
     ));
 
+    // For groups, fall back to the group's primary session for grade/MAI when
+    // a sibling session has none of its own (group members share a primary
+    // session for messages and the MAI form).
+    const groupGradeFallback = new Map<string, any>();
+    const groupMaiFallback = new Map<string, any>();
+    sessionsData.forEach((s: any) => {
+      if (!s.group_id) return;
+      const g = gradeMap.get(s.id);
+      if (g && !groupGradeFallback.has(s.group_id)) groupGradeFallback.set(s.group_id, g);
+      const m = maiMap.get(s.id);
+      if (m && !groupMaiFallback.has(s.group_id)) groupMaiFallback.set(s.group_id, m);
+    });
+
     const enriched: GradeRow[] = eligibleSessions
       .map((session: any) => {
-        const grade = gradeMap.get(session.id);
+        const grade = gradeMap.get(session.id) || (session.group_id ? groupGradeFallback.get(session.group_id) : null);
+        const mai = maiMap.get(session.id) || (session.group_id ? groupMaiFallback.get(session.group_id) : null);
         return {
           id: grade?.id || session.id,
           session_id: session.id,
@@ -225,7 +239,7 @@ export default function VPAnalytics() {
           correction_status: (grade ? "graded" : "pending") as GradeRow["correction_status"],
           session_status: session.status || "in_progress",
           message_count: msgCountMap[session.id] || 0,
-          has_mai: hasMai.has(session.id),
+          has_mai: hasMai.has(session.id) || !!(session.group_id && groupMaiFallback.has(session.group_id)),
           subscores: grade?.subscores || {},
           bonus_penalidades: grade?.bonus_penalidades || {},
           nota_final: grade?.nota_final ?? null,
@@ -237,7 +251,7 @@ export default function VPAnalytics() {
           student_name: session.student_name || "",
           group_id: session.group_id || null,
           group_label: cvpLabelMap.get(session.class_virtual_patient_id) || null,
-          mai_json: maiMap.get(session.id) || null,
+          mai_json: mai || null,
         };
       })
       .sort((a, b) => {
