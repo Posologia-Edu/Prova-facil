@@ -929,15 +929,22 @@ export default function VPAnalytics() {
                     </TableHeader>
                     <TableBody>
                       {list.map((b) => {
+                        const cvp = cvps.find((c) => c.id === b.cvpId);
+                        const patientName = cvp ? (VP_CATALOG[cvp.patient_id]?.name || cvp.patient_id) : "—";
                         if (b.isGroup) {
                           return (
                             <Fragment key={b.key}>
                               <TableRow className="bg-muted/40 hover:bg-muted/40">
                                 <TableCell colSpan={7} className="py-2">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <Badge variant="default" className="text-xs">{b.label}</Badge>
                                     <span className="text-xs text-muted-foreground">
                                       {b.rows.length} integrante{b.rows.length > 1 ? "s" : ""}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">•</span>
+                                    <span className="text-xs font-medium text-foreground inline-flex items-center gap-1">
+                                      <Stethoscope className="h-3 w-3 text-primary" />
+                                      {patientName}
                                     </span>
                                   </div>
                                 </TableCell>
@@ -946,7 +953,27 @@ export default function VPAnalytics() {
                             </Fragment>
                           );
                         }
-                        return <Fragment key={b.key}>{b.rows.map(renderRow)}</Fragment>;
+                        // Individual: show a thin header with the teacher's label (if any) and the patient name
+                        return (
+                          <Fragment key={b.key}>
+                            <TableRow className="bg-muted/20 hover:bg-muted/20">
+                              <TableCell colSpan={7} className="py-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="outline" className="text-xs">
+                                    {b.rows[0]?.group_label || "Individual"}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">1 aluno</span>
+                                  <span className="text-xs text-muted-foreground">•</span>
+                                  <span className="text-xs font-medium text-foreground inline-flex items-center gap-1">
+                                    <Stethoscope className="h-3 w-3 text-primary" />
+                                    {patientName}
+                                  </span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                            {b.rows.map(renderRow)}
+                          </Fragment>
+                        );
                       })}
                     </TableBody>
                   </Table>
