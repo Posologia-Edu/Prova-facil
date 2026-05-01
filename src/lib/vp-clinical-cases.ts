@@ -194,8 +194,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Sem sinais focais, tensão muscular cervical e temporal bilateral, sem papiledema. Pontos occipitais dolorosos.",
     behaviors: [
-      ...universalBehaviors,
-      "Ansiosa, fala rápido.",
+      "Profissional jovem, ambiciosa — relativiza sintomas para 'não parecer fraca'.",
+      "Ansiosa, fala rápido e atropela as próprias frases; pergunta muito ao mesmo tempo.",
+      "Forte tendência à automedicação: tem caixinha de analgésicos na bolsa, na mesa e no carro.",
+      "Tolerância à dor baixa quando interfere no trabalho; alta para problemas pessoais.",
+      "Recursos financeiros ótimos, mas falta tempo — quer 'solução rápida que possa tomar e seguir trabalhando'.",
+      "Dorme 5–6 h, toma muito café, não pratica atividade física.",
+      "Resiste a discutir estresse e ansiedade; vê isso como 'frescura'.",
+      "Mãe com enxaqueca — acha que herdou e que 'não tem jeito'.",
     ],
     learningFocus: [
       "Identificar cefaleia por abuso de medicação (≥15 dias/mês).",
