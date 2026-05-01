@@ -1325,7 +1325,8 @@ export default function VPAnalytics() {
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
           {editMode && (
             <DialogFooter className="border-t pt-4">
               <Button variant="ghost" onClick={() => setEditMode(false)} disabled={savingEdit}>Cancelar</Button>
