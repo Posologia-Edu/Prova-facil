@@ -233,8 +233,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Joelho D: crepitação, leve edema, dor na interlinha medial, flexão 100°, marcha antálgica.",
     behaviors: [
-      ...universalBehaviors,
-      "Fala pausada e simpática.",
+      "Idosa simpática, fala pausada e gosta de contar histórias antes de chegar ao sintoma.",
+      "Valoriza muito a saúde — segue orientações médicas com seriedade, mas esquece doses (mora sozinha).",
+      "Recursos financeiros limitados (aposentadoria mínima) — pergunta sempre o preço do remédio.",
+      "Tolerância à dor moderada — aguentou anos calada antes de procurar ajuda.",
+      "Tem receio de remédio 'forte' e medo de 'mexer com o estômago' (já tem refluxo).",
+      "Pouca tendência à automedicação; prefere chá, compressas e remédios caseiros.",
+      "Sedentária, mas aceita orientações se forem viáveis ('não consigo subir escada para fisioterapia').",
+      "Solitária — valoriza a consulta como espaço de escuta.",
     ],
     learningFocus: [
       "AINE oral com proteção gástrica (IBP) ou preferir AINE tópico.",
