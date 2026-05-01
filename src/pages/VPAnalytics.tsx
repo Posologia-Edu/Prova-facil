@@ -38,7 +38,7 @@ const VP_CATALOG: Record<string, { name: string; module: string }> = {
 };
 
 interface ClassOption { id: string; name: string; }
-interface CVPOption { id: string; patient_id: string; class_id: string; }
+interface CVPOption { id: string; patient_id: string; class_id: string; group_label?: string | null; }
 interface GradeRow {
   id: string;
   session_id: string;
@@ -56,6 +56,9 @@ interface GradeRow {
   flags_seguranca: any;
   student_email?: string;
   student_name?: string;
+  group_id?: string | null;
+  group_label?: string | null;
+  mai_json?: any;
 }
 interface TranscriptMsg { role: string; content: string; encounter: number; }
 
