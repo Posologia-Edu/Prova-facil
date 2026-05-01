@@ -118,7 +118,16 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     vitals: "PA 148/92 mmHg | FC 80 bpm | Temp 36,5 °C | 108 kg | 1,73 m (IMC 36)",
     physicalExam:
       "Dor à palpação paravertebral lombar bilateral, limitação de flexão, Lasègue negativo, sem déficit motor/sensitivo.",
-    behaviors: universalBehaviors,
+    behaviors: [
+      "Trabalhador braçal preocupado em perder o emprego — minimiza a dor para não ser afastado.",
+      "Pouca consciência de saúde: trata sintoma, não causa. Acha que 'remédio resolve tudo'.",
+      "Alta tendência a automedicação (dipirona, anti-inflamatórios na farmácia, 'remédio do colega').",
+      "Baixa adesão à hidroclorotiazida nos fins de semana ('não combina com cerveja').",
+      "Tolerância à dor altíssima por orgulho profissional, mas dor já interfere no trabalho.",
+      "Recursos financeiros apertados — sustenta família, valoriza tratamento barato.",
+      "Resiste a perder peso ('comida é o prazer da semana') e a fisioterapia ('não tenho tempo').",
+      "Ex-tabagista, etilista social — pode subestimar consumo de álcool.",
+    ],
     learningFocus: [
       "AINE oral apresenta risco gástrico e piora a PA — preferir AINE tópico.",
       "Perda de peso e fisioterapia como pilares do tratamento.",
