@@ -98,7 +98,7 @@ export default function VPAnalytics() {
       supabase.from("classes").select("id, name").eq("user_id", user.id).is("deleted_at", null).order("name"),
       supabase
         .from("class_virtual_patients")
-        .select("id, patient_id, class_id, classes!inner(user_id)")
+        .select("id, patient_id, class_id, group_label, classes!inner(user_id)")
         .eq("classes.user_id", user.id),
     ]);
     setClasses(classesRes.data || []);
