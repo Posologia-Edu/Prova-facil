@@ -196,10 +196,23 @@ export default function VPAnalytics() {
     const cvpLabelMap = new Map<string, string | null>();
     (myCvps || []).forEach((c: any) => cvpLabelMap.set(c.id, c.group_label || null));
 
-    const eligibleSessions = sessionsData.filter((session) => (
-      session.status === "completed" ||
-      hasMai.has(session.id) ||
-      (msgCountMap[session.id] || 0) >= 2
+    // Eligibility is group-aware: a session is eligible if itself meets the
+    // threshold OR if any sibling in the same group_id does. Group members
+    // share a primary chat session, so individual sessions can look "empty"
+    // even though the group has fully interacted.
+    const isSelfEligible = (s: any) =>
+      s.status === "completed" ||
+      hasMai.has(s.id) ||
+      (msgCountMap[s.id] || 0) >= 2;
+
+    const eligibleGroupIds = new Set<string>();
+    sessionsData.forEach((s: any) => {
+      if (s.group_id && isSelfEligible(s)) eligibleGroupIds.add(s.group_id);
+    });
+
+    const eligibleSessions = sessionsData.filter((session: any) => (
+      isSelfEligible(session) ||
+      (session.group_id && eligibleGroupIds.has(session.group_id))
     ));
 
     const enriched: GradeRow[] = eligibleSessions
