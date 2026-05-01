@@ -134,7 +134,7 @@ export default function VPAnalytics() {
     // Get CVPs owned by this teacher
     let cvpQuery = supabase
       .from("class_virtual_patients")
-      .select("id, patient_id, class_id, classes!inner(user_id)")
+      .select("id, patient_id, class_id, group_label, classes!inner(user_id)")
       .eq("classes.user_id", user.id);
 
     const { data: myCvps } = await cvpQuery;
