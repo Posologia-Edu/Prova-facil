@@ -152,7 +152,7 @@ export default function VPAnalytics() {
 
     const { data: sessionsData } = await supabase
       .from("virtual_patient_sessions")
-      .select("id, class_virtual_patient_id, status, student_email, student_name")
+      .select("id, class_virtual_patient_id, status, student_email, student_name, group_id")
       .in("class_virtual_patient_id", filteredCvpIds);
 
     if (!sessionsData || sessionsData.length === 0) {
@@ -170,7 +170,7 @@ export default function VPAnalytics() {
         .eq("role", "user"),
       supabase
         .from("virtual_patient_mai_scores")
-        .select("session_id")
+        .select("session_id, mai_json")
         .in("session_id", sessionIds),
       supabase
         .from("virtual_patient_grades")
@@ -183,8 +183,16 @@ export default function VPAnalytics() {
       msgCountMap[msg.session_id] = (msgCountMap[msg.session_id] || 0) + 1;
     });
 
-    const hasMai = new Set((maiList || []).map((item: any) => item.session_id));
+    const maiMap = new Map<string, any>();
+    (maiList || []).forEach((item: any) => {
+      maiMap.set(item.session_id, item.mai_json);
+    });
+    const hasMai = new Set(maiMap.keys());
     const gradeMap = new Map((gradesData || []).map((grade: any) => [grade.session_id, grade]));
+
+    // Build CVP -> group_label map
+    const cvpLabelMap = new Map<string, string | null>();
+    (myCvps || []).forEach((c: any) => cvpLabelMap.set(c.id, c.group_label || null));
 
     const eligibleSessions = sessionsData.filter((session) => (
       session.status === "completed" ||
@@ -212,6 +220,9 @@ export default function VPAnalytics() {
           flags_seguranca: grade?.flags_seguranca || [],
           student_email: session.student_email || "",
           student_name: session.student_name || "",
+          group_id: session.group_id || null,
+          group_label: cvpLabelMap.get(session.class_virtual_patient_id) || null,
+          mai_json: maiMap.get(session.id) || null,
         };
       })
       .sort((a, b) => {
