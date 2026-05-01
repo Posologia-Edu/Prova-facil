@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import {
   BarChart3, Users, Award, AlertTriangle, Loader2, ArrowLeft,
   ChevronDown, Eye, MessageSquare, ShieldAlert, TrendingUp, BookOpen,
-  GraduationCap, ChevronRight,
+  GraduationCap, ChevronRight, Pill,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +38,7 @@ const VP_CATALOG: Record<string, { name: string; module: string }> = {
 };
 
 interface ClassOption { id: string; name: string; }
-interface CVPOption { id: string; patient_id: string; class_id: string; }
+interface CVPOption { id: string; patient_id: string; class_id: string; group_label?: string | null; }
 interface GradeRow {
   id: string;
   session_id: string;
@@ -56,6 +56,9 @@ interface GradeRow {
   flags_seguranca: any;
   student_email?: string;
   student_name?: string;
+  group_id?: string | null;
+  group_label?: string | null;
+  mai_json?: any;
 }
 interface TranscriptMsg { role: string; content: string; encounter: number; }
 
@@ -95,7 +98,7 @@ export default function VPAnalytics() {
       supabase.from("classes").select("id, name").eq("user_id", user.id).is("deleted_at", null).order("name"),
       supabase
         .from("class_virtual_patients")
-        .select("id, patient_id, class_id, classes!inner(user_id)")
+        .select("id, patient_id, class_id, group_label, classes!inner(user_id)")
         .eq("classes.user_id", user.id),
     ]);
     setClasses(classesRes.data || []);
@@ -131,7 +134,7 @@ export default function VPAnalytics() {
     // Get CVPs owned by this teacher
     let cvpQuery = supabase
       .from("class_virtual_patients")
-      .select("id, patient_id, class_id, classes!inner(user_id)")
+      .select("id, patient_id, class_id, group_label, classes!inner(user_id)")
       .eq("classes.user_id", user.id);
 
     const { data: myCvps } = await cvpQuery;
@@ -149,7 +152,7 @@ export default function VPAnalytics() {
 
     const { data: sessionsData } = await supabase
       .from("virtual_patient_sessions")
-      .select("id, class_virtual_patient_id, status, student_email, student_name")
+      .select("id, class_virtual_patient_id, status, student_email, student_name, group_id")
       .in("class_virtual_patient_id", filteredCvpIds);
 
     if (!sessionsData || sessionsData.length === 0) {
@@ -167,7 +170,7 @@ export default function VPAnalytics() {
         .eq("role", "user"),
       supabase
         .from("virtual_patient_mai_scores")
-        .select("session_id")
+        .select("session_id, mai_json")
         .in("session_id", sessionIds),
       supabase
         .from("virtual_patient_grades")
@@ -180,8 +183,16 @@ export default function VPAnalytics() {
       msgCountMap[msg.session_id] = (msgCountMap[msg.session_id] || 0) + 1;
     });
 
-    const hasMai = new Set((maiList || []).map((item: any) => item.session_id));
+    const maiMap = new Map<string, any>();
+    (maiList || []).forEach((item: any) => {
+      maiMap.set(item.session_id, item.mai_json);
+    });
+    const hasMai = new Set(maiMap.keys());
     const gradeMap = new Map((gradesData || []).map((grade: any) => [grade.session_id, grade]));
+
+    // Build CVP -> group_label map
+    const cvpLabelMap = new Map<string, string | null>();
+    (myCvps || []).forEach((c: any) => cvpLabelMap.set(c.id, c.group_label || null));
 
     const eligibleSessions = sessionsData.filter((session) => (
       session.status === "completed" ||
@@ -209,6 +220,9 @@ export default function VPAnalytics() {
           flags_seguranca: grade?.flags_seguranca || [],
           student_email: session.student_email || "",
           student_name: session.student_name || "",
+          group_id: session.group_id || null,
+          group_label: cvpLabelMap.get(session.class_virtual_patient_id) || null,
+          mai_json: maiMap.get(session.id) || null,
         };
       })
       .sort((a, b) => {
@@ -767,65 +781,125 @@ export default function VPAnalytics() {
           {/* Student Table */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Resultados Individuais</CardTitle>
+              <CardTitle className="text-base">Resultados</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Aluno</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center">Nota (0-10)</TableHead>
-                    <TableHead className="text-center">Microlearning</TableHead>
-                    <TableHead className="text-center">Flags</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {grades.map(g => {
-                    const flags = Array.isArray(g.flags_seguranca) ? g.flags_seguranca : [];
-                    return (
-                      <TableRow key={g.id}>
-                        <TableCell className="font-medium">{g.student_name || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{g.student_email || "—"}</TableCell>
-                        <TableCell className="text-center">
-                          {g.correction_status === "graded" ? (
-                            <Badge variant="default">Corrigido</Badge>
-                          ) : (
-                            <Badge variant="secondary">Pendente</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {g.correction_status === "graded" ? (
-                            <Badge variant={(g.nota_final || 0) >= 6 ? "default" : "destructive"}>
-                              {(g.nota_final || 0).toFixed(1)}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">Aguardando</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {g.correction_status === "graded" ? (g.nota_microlearning || 0).toFixed(1) : "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {flags.length > 0 ? (
-                            <Badge variant="destructive" className="text-xs">{flags.length}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
-                            <Eye className="h-3.5 w-3.5 mr-1" />
-                            {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
-                          </Button>
-                        </TableCell>
+              {(() => {
+                // Build groups: by group_id (group sessions) or per session (individual)
+                type Bucket = {
+                  key: string;
+                  isGroup: boolean;
+                  label: string;
+                  cvpId: string;
+                  rows: GradeRow[];
+                };
+                const buckets = new Map<string, Bucket>();
+                grades.forEach((g) => {
+                  if (g.group_id) {
+                    const k = `g:${g.group_id}`;
+                    if (!buckets.has(k)) {
+                      buckets.set(k, {
+                        key: k,
+                        isGroup: true,
+                        label: g.group_label || "Grupo",
+                        cvpId: g.class_virtual_patient_id,
+                        rows: [],
+                      });
+                    }
+                    buckets.get(k)!.rows.push(g);
+                  } else {
+                    const k = `i:${g.session_id}`;
+                    buckets.set(k, {
+                      key: k,
+                      isGroup: false,
+                      label: g.group_label || "Individual",
+                      cvpId: g.class_virtual_patient_id,
+                      rows: [g],
+                    });
+                  }
+                });
+                const list = Array.from(buckets.values());
+
+                const renderRow = (g: GradeRow) => {
+                  const flags = Array.isArray(g.flags_seguranca) ? g.flags_seguranca : [];
+                  return (
+                    <TableRow key={g.id}>
+                      <TableCell className="font-medium">{g.student_name || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{g.student_email || "—"}</TableCell>
+                      <TableCell className="text-center">
+                        {g.correction_status === "graded" ? (
+                          <Badge variant="default">Corrigido</Badge>
+                        ) : (
+                          <Badge variant="secondary">Pendente</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {g.correction_status === "graded" ? (
+                          <Badge variant={(g.nota_final || 0) >= 6 ? "default" : "destructive"}>
+                            {(g.nota_final || 0).toFixed(1)}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Aguardando</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {g.correction_status === "graded" ? (g.nota_microlearning || 0).toFixed(1) : "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {flags.length > 0 ? (
+                          <Badge variant="destructive" className="text-xs">{flags.length}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                };
+
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Aluno</TableHead>
+                        <TableHead>E-mail</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-center">Nota (0-10)</TableHead>
+                        <TableHead className="text-center">Microlearning</TableHead>
+                        <TableHead className="text-center">Flags</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {list.map((b) => {
+                        if (b.isGroup) {
+                          return (
+                            <Fragment key={b.key}>
+                              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                                <TableCell colSpan={7} className="py-2">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="default" className="text-xs">{b.label}</Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {b.rows.length} integrante{b.rows.length > 1 ? "s" : ""}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                              {b.rows.map(renderRow)}
+                            </Fragment>
+                          );
+                        }
+                        return <Fragment key={b.key}>{b.rows.map(renderRow)}</Fragment>;
+                      })}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
             </CardContent>
           </Card>
         </>
@@ -994,6 +1068,80 @@ export default function VPAnalytics() {
                     </ul>
                   ) : <p className="text-sm text-muted-foreground italic">Nenhuma flag.</p>}
                 </div>
+
+                <Separator />
+
+                {/* MAI submitted */}
+                {detailGrade.mai_json && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                      <Pill className="h-4 w-4" /> MAI Enviado pelo {detailGrade.group_id ? "Grupo" : "Aluno"}
+                    </h4>
+                    {(() => {
+                      const mai = detailGrade.mai_json as any;
+                      const meds = Object.keys(mai)
+                        .filter((k) => !k.startsWith("_"))
+                        .map((k) => mai[k]);
+                      const totalScore = mai._total_score ?? meds.reduce((s: number, m: any) => s + (m?.score || 0), 0);
+                      const optionLabels: Record<string, { label: string; cls: string }> = {
+                        appropriate: { label: "Apropriado", cls: "bg-green-500/15 text-green-700 dark:text-green-400" },
+                        marginally: { label: "Marginalmente Apropriado", cls: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400" },
+                        inappropriate: { label: "Inapropriado", cls: "bg-destructive/15 text-destructive" },
+                      };
+                      const criteriaLabels: Record<string, string> = {
+                        indication: "Indicação",
+                        effectiveness: "Efetividade",
+                        dosage: "Dosagem",
+                        correct_directions: "Técnica de administração",
+                        practical_directions: "Comodidade terapêutica",
+                        drug_drug: "Interação medicamento-medicamento",
+                        drug_disease: "Interação medicamento-doença",
+                        duplication: "Duplicidade",
+                        duration: "Duração",
+                        cost: "Custo",
+                      };
+                      if (meds.length === 0) {
+                        return <p className="text-sm text-muted-foreground italic">MAI vazio.</p>;
+                      }
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span>{meds.length} medicamento(s)</span>
+                            <span>•</span>
+                            <span>Score total: <strong className="text-foreground">{totalScore}</strong></span>
+                          </div>
+                          {meds.map((med: any, idx: number) => (
+                            <div key={idx} className="border rounded-lg overflow-hidden">
+                              <div className="bg-muted/40 px-3 py-2 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Pill className="h-3.5 w-3.5 text-primary" />
+                                  <span className="font-medium text-sm">{med.medication_name || `Medicamento ${idx + 1}`}</span>
+                                </div>
+                                <Badge variant="outline" className="text-xs">Score: {med.score ?? 0}</Badge>
+                              </div>
+                              <div className="divide-y">
+                                {Object.entries(criteriaLabels).map(([key, label]) => {
+                                  const ans = med.answers?.[key];
+                                  const opt = ans ? optionLabels[ans] : null;
+                                  return (
+                                    <div key={key} className="flex items-center justify-between gap-3 px-3 py-1.5 text-sm">
+                                      <span className="text-muted-foreground">{label}</span>
+                                      {opt ? (
+                                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${opt.cls}`}>{opt.label}</span>
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground italic">—</span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
 
                 <Separator />
 
