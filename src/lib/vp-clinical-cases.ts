@@ -272,8 +272,14 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     physicalExam:
       "Marcha claudicante com bengala à esquerda, dor à rotação interna do quadril D, abdução limitada, encurtamento funcional.",
     behaviors: [
-      ...universalBehaviors,
-      "Linguagem simples de trabalhador rural.",
+      "Trabalhador rural, linguagem simples — descreve sintomas comparando com o trabalho ('não consigo segurar a enxada').",
+      "Tolerância à dor altíssima por orgulho de homem do campo — 'só veio porque a mulher mandou'.",
+      "Forte tendência à automedicação com chás, garrafadas e medicações de balcão.",
+      "Adesão irregular à glibenclamida noturna por esquecimento e por jantar tarde.",
+      "Recursos financeiros muito limitados — usa SUS, prioriza remédio do diabetes sobre o da dor.",
+      "Pouca consciência sobre relação entre obesidade, DM e dor articular.",
+      "Etilista social aos fins de semana ('só uma cachacinha') — pode subestimar consumo.",
+      "Resiste a parar de trabalhar e a fisioterapia ('isso é coisa de gente da cidade').",
     ],
     learningFocus: [
       "AINE oral piora glicemia e função renal — preferir AINE tópico.",
