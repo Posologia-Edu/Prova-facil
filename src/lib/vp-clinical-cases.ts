@@ -82,7 +82,15 @@ export const VP_CLINICAL_CASES: Record<string, VPClinicalCase> = {
     vitals: "PA 118/72 mmHg | FC 78 bpm | Temp 36,3 °C | 62 kg | 1,65 m",
     physicalExam:
       "11/18 tender points positivos, sem edema articular, sem déficit neurológico. Trapézios tensos bilateralmente.",
-    behaviors: universalBehaviors,
+    behaviors: [
+      "Profissional sobrecarregada, perfeccionista — sente-se culpada por 'não dar conta'.",
+      "Ansiosa, fala rápido e troca de assunto; tem dificuldade de descrever sintomas com clareza.",
+      "Cética com tratamentos novos: 'já tomei tudo e nada funciona'.",
+      "Tem tendência à automedicação com analgésicos comuns e suplementos comprados em farmácia.",
+      "Dorme mal e relaciona piora da dor ao estresse no trabalho, mas resiste a discutir saúde mental.",
+      "Recursos financeiros estáveis, mas reluta a pagar por exercício/fisioterapia regular.",
+      "Tolerância à dor variável — alguns dias 'aguenta tudo', outros 'não consegue levantar da cama'.",
+    ],
     learningFocus: [
       "Fibromialgia: AINEs/analgésicos comuns são pouco eficazes.",
       "Avaliar otimização de duloxetina, pregabalina, amitriptilina.",
