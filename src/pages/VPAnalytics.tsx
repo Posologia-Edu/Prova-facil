@@ -997,9 +997,83 @@ export default function VPAnalytics() {
               )}
             </DialogTitle>
           </DialogHeader>
-          {detailGrade && editForm && (
+          {detailGrade && editForm && (() => {
+            const cvp = cvps.find((c) => c.id === detailGrade.class_virtual_patient_id);
+            const patientId = cvp?.patient_id || "";
+            const clinicalCase = VP_CLINICAL_CASES[patientId];
+            const patientName = cvp ? (VP_CATALOG[cvp.patient_id]?.name || cvp.patient_id) : "";
+            return (
             <div className="flex-1 overflow-y-auto pr-4 -mr-2">
               <div className="space-y-6 pb-4">
+                {/* Patient context — clinical case summary for the teacher */}
+                {clinicalCase && (
+                  <div className="rounded-lg border bg-primary/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Stethoscope className="h-4 w-4 text-primary" />
+                      <span className="font-semibold text-sm">
+                        {clinicalCase.name}, {clinicalCase.age} anos
+                      </span>
+                      <Badge variant="outline" className="text-[10px]">{clinicalCase.module}</Badge>
+                      <Badge variant="secondary" className="text-[10px]">{clinicalCase.description}</Badge>
+                      {detailGrade.group_label && (
+                        <Badge variant="default" className="text-[10px]">{detailGrade.group_label}</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground italic">
+                      "{clinicalCase.expectation}"
+                    </p>
+                    <p className="text-xs text-muted-foreground">{clinicalCase.vitals}</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <h5 className="text-xs font-semibold mb-1.5 flex items-center gap-1">
+                          <ClipboardList className="h-3 w-3" /> História clínica
+                        </h5>
+                        <ul className="list-disc list-inside text-xs space-y-0.5 text-muted-foreground">
+                          {clinicalCase.history.map((h, i) => <li key={i}>{h}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-semibold mb-1.5 flex items-center gap-1">
+                          <Pill className="h-3 w-3" /> Medicamentos em uso
+                        </h5>
+                        <ul className="list-disc list-inside text-xs space-y-0.5 text-muted-foreground">
+                          {clinicalCase.medications.map((m, i) => <li key={i}>{m}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h5 className="text-xs font-semibold mb-1.5">Exame físico</h5>
+                      <p className="text-xs text-muted-foreground">{clinicalCase.physicalExam}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <h5 className="text-xs font-semibold mb-1.5">Comportamentos do paciente (no prompt)</h5>
+                        <ul className="list-disc list-inside text-xs space-y-0.5 text-muted-foreground">
+                          {clinicalCase.behaviors.map((b, i) => <li key={i}>{b}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-semibold mb-1.5 flex items-center gap-1">
+                          <Target className="h-3 w-3" /> Objetivos de aprendizagem
+                        </h5>
+                        <ul className="list-disc list-inside text-xs space-y-0.5 text-muted-foreground">
+                          {clinicalCase.learningFocus.map((b, i) => <li key={i}>{b}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {!clinicalCase && patientName && (
+                  <div className="rounded-lg border bg-muted/30 p-3 flex items-center gap-2 text-sm">
+                    <Stethoscope className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Paciente:</span>
+                    <span>{patientName}</span>
+                  </div>
+                )}
+
                 {/* Subscores — Anamnese */}
                 <div>
                   <h4 className="text-sm font-semibold mb-3">Anamnese (0–6)</h4>
