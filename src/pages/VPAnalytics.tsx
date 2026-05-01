@@ -23,6 +23,8 @@ import { OsceRadarChart } from "@/components/osce/OsceRadarChart";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
+import { VP_CLINICAL_CASES } from "@/lib/vp-clinical-cases";
+import { Stethoscope, ClipboardList, Target } from "lucide-react";
 
 const VP_CATALOG: Record<string, { name: string; module: string }> = {
   pain_helena: { name: "Dona Helena, 67 anos", module: "Dor" },
@@ -194,15 +196,42 @@ export default function VPAnalytics() {
     const cvpLabelMap = new Map<string, string | null>();
     (myCvps || []).forEach((c: any) => cvpLabelMap.set(c.id, c.group_label || null));
 
-    const eligibleSessions = sessionsData.filter((session) => (
-      session.status === "completed" ||
-      hasMai.has(session.id) ||
-      (msgCountMap[session.id] || 0) >= 2
+    // Eligibility is group-aware: a session is eligible if itself meets the
+    // threshold OR if any sibling in the same group_id does. Group members
+    // share a primary chat session, so individual sessions can look "empty"
+    // even though the group has fully interacted.
+    const isSelfEligible = (s: any) =>
+      s.status === "completed" ||
+      hasMai.has(s.id) ||
+      (msgCountMap[s.id] || 0) >= 2;
+
+    const eligibleGroupIds = new Set<string>();
+    sessionsData.forEach((s: any) => {
+      if (s.group_id && isSelfEligible(s)) eligibleGroupIds.add(s.group_id);
+    });
+
+    const eligibleSessions = sessionsData.filter((session: any) => (
+      isSelfEligible(session) ||
+      (session.group_id && eligibleGroupIds.has(session.group_id))
     ));
+
+    // For groups, fall back to the group's primary session for grade/MAI when
+    // a sibling session has none of its own (group members share a primary
+    // session for messages and the MAI form).
+    const groupGradeFallback = new Map<string, any>();
+    const groupMaiFallback = new Map<string, any>();
+    sessionsData.forEach((s: any) => {
+      if (!s.group_id) return;
+      const g = gradeMap.get(s.id);
+      if (g && !groupGradeFallback.has(s.group_id)) groupGradeFallback.set(s.group_id, g);
+      const m = maiMap.get(s.id);
+      if (m && !groupMaiFallback.has(s.group_id)) groupMaiFallback.set(s.group_id, m);
+    });
 
     const enriched: GradeRow[] = eligibleSessions
       .map((session: any) => {
-        const grade = gradeMap.get(session.id);
+        const grade = gradeMap.get(session.id) || (session.group_id ? groupGradeFallback.get(session.group_id) : null);
+        const mai = maiMap.get(session.id) || (session.group_id ? groupMaiFallback.get(session.group_id) : null);
         return {
           id: grade?.id || session.id,
           session_id: session.id,
@@ -210,7 +239,7 @@ export default function VPAnalytics() {
           correction_status: (grade ? "graded" : "pending") as GradeRow["correction_status"],
           session_status: session.status || "in_progress",
           message_count: msgCountMap[session.id] || 0,
-          has_mai: hasMai.has(session.id),
+          has_mai: hasMai.has(session.id) || !!(session.group_id && groupMaiFallback.has(session.group_id)),
           subscores: grade?.subscores || {},
           bonus_penalidades: grade?.bonus_penalidades || {},
           nota_final: grade?.nota_final ?? null,
@@ -222,7 +251,7 @@ export default function VPAnalytics() {
           student_name: session.student_name || "",
           group_id: session.group_id || null,
           group_label: cvpLabelMap.get(session.class_virtual_patient_id) || null,
-          mai_json: maiMap.get(session.id) || null,
+          mai_json: mai || null,
         };
       })
       .sort((a, b) => {
@@ -270,10 +299,33 @@ export default function VPAnalytics() {
       flags_seguranca: flagsArr.join("\n"),
     });
     setTranscriptLoading(true);
+    // For groups, all members share the primary session's messages.
+    // If this row's own session has no messages but it's part of a group,
+    // fetch messages from any sibling that does.
+    let sourceSessionId = grade.session_id;
+    if (grade.group_id) {
+      const { data: siblings } = await supabase
+        .from("virtual_patient_sessions")
+        .select("id, created_at")
+        .eq("group_id", grade.group_id)
+        .order("created_at", { ascending: true });
+      if (siblings && siblings.length > 0) {
+        // Find the first sibling that actually has messages
+        const ids = siblings.map((s: any) => s.id);
+        const { data: counts } = await supabase
+          .from("virtual_patient_messages")
+          .select("session_id")
+          .in("session_id", ids);
+        const cnt = new Map<string, number>();
+        (counts || []).forEach((m: any) => cnt.set(m.session_id, (cnt.get(m.session_id) || 0) + 1));
+        const primaryWithMsgs = siblings.find((s: any) => (cnt.get(s.id) || 0) > 0);
+        if (primaryWithMsgs) sourceSessionId = primaryWithMsgs.id;
+      }
+    }
     const { data } = await supabase
       .from("virtual_patient_messages")
       .select("role, content, encounter")
-      .eq("session_id", grade.session_id)
+      .eq("session_id", sourceSessionId)
       .order("created_at", { ascending: true });
     setTranscript((data as TranscriptMsg[]) || []);
     setTranscriptLoading(false);
@@ -877,15 +929,22 @@ export default function VPAnalytics() {
                     </TableHeader>
                     <TableBody>
                       {list.map((b) => {
+                        const cvp = cvps.find((c) => c.id === b.cvpId);
+                        const patientName = cvp ? (VP_CATALOG[cvp.patient_id]?.name || cvp.patient_id) : "—";
                         if (b.isGroup) {
                           return (
                             <Fragment key={b.key}>
                               <TableRow className="bg-muted/40 hover:bg-muted/40">
                                 <TableCell colSpan={7} className="py-2">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <Badge variant="default" className="text-xs">{b.label}</Badge>
                                     <span className="text-xs text-muted-foreground">
                                       {b.rows.length} integrante{b.rows.length > 1 ? "s" : ""}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">•</span>
+                                    <span className="text-xs font-medium text-foreground inline-flex items-center gap-1">
+                                      <Stethoscope className="h-3 w-3 text-primary" />
+                                      {patientName}
                                     </span>
                                   </div>
                                 </TableCell>
@@ -894,7 +953,27 @@ export default function VPAnalytics() {
                             </Fragment>
                           );
                         }
-                        return <Fragment key={b.key}>{b.rows.map(renderRow)}</Fragment>;
+                        // Individual: show a thin header with the teacher's label (if any) and the patient name
+                        return (
+                          <Fragment key={b.key}>
+                            <TableRow className="bg-muted/20 hover:bg-muted/20">
+                              <TableCell colSpan={7} className="py-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="outline" className="text-xs">
+                                    {b.rows[0]?.group_label || "Individual"}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">1 aluno</span>
+                                  <span className="text-xs text-muted-foreground">•</span>
+                                  <span className="text-xs font-medium text-foreground inline-flex items-center gap-1">
+                                    <Stethoscope className="h-3 w-3 text-primary" />
+                                    {patientName}
+                                  </span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                            {b.rows.map(renderRow)}
+                          </Fragment>
+                        );
                       })}
                     </TableBody>
                   </Table>
@@ -918,9 +997,83 @@ export default function VPAnalytics() {
               )}
             </DialogTitle>
           </DialogHeader>
-          {detailGrade && editForm && (
+          {detailGrade && editForm && (() => {
+            const cvp = cvps.find((c) => c.id === detailGrade.class_virtual_patient_id);
+            const patientId = cvp?.patient_id || "";
+            const clinicalCase = VP_CLINICAL_CASES[patientId];
+            const patientName = cvp ? (VP_CATALOG[cvp.patient_id]?.name || cvp.patient_id) : "";
+            return (
             <div className="flex-1 overflow-y-auto pr-4 -mr-2">
               <div className="space-y-6 pb-4">
+                {/* Patient context — clinical case summary for the teacher */}
+                {clinicalCase && (
+                  <div className="rounded-lg border bg-primary/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Stethoscope className="h-4 w-4 text-primary" />
+                      <span className="font-semibold text-sm">
+                        {clinicalCase.name}, {clinicalCase.age} anos
+                      </span>
+                      <Badge variant="outline" className="text-[10px]">{clinicalCase.module}</Badge>
+                      <Badge variant="secondary" className="text-[10px]">{clinicalCase.description}</Badge>
+                      {detailGrade.group_label && (
+                        <Badge variant="default" className="text-[10px]">{detailGrade.group_label}</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground italic">
+                      "{clinicalCase.expectation}"
+                    </p>
+                    <p className="text-xs text-muted-foreground">{clinicalCase.vitals}</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <h5 className="text-xs font-semibold mb-1.5 flex items-center gap-1">
+                          <ClipboardList className="h-3 w-3" /> História clínica
+                        </h5>
+                        <ul className="list-disc list-inside text-xs space-y-0.5 text-muted-foreground">
+                          {clinicalCase.history.map((h, i) => <li key={i}>{h}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-semibold mb-1.5 flex items-center gap-1">
+                          <Pill className="h-3 w-3" /> Medicamentos em uso
+                        </h5>
+                        <ul className="list-disc list-inside text-xs space-y-0.5 text-muted-foreground">
+                          {clinicalCase.medications.map((m, i) => <li key={i}>{m}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h5 className="text-xs font-semibold mb-1.5">Exame físico</h5>
+                      <p className="text-xs text-muted-foreground">{clinicalCase.physicalExam}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <h5 className="text-xs font-semibold mb-1.5">Comportamentos do paciente (no prompt)</h5>
+                        <ul className="list-disc list-inside text-xs space-y-0.5 text-muted-foreground">
+                          {clinicalCase.behaviors.map((b, i) => <li key={i}>{b}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-semibold mb-1.5 flex items-center gap-1">
+                          <Target className="h-3 w-3" /> Objetivos de aprendizagem
+                        </h5>
+                        <ul className="list-disc list-inside text-xs space-y-0.5 text-muted-foreground">
+                          {clinicalCase.learningFocus.map((b, i) => <li key={i}>{b}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {!clinicalCase && patientName && (
+                  <div className="rounded-lg border bg-muted/30 p-3 flex items-center gap-2 text-sm">
+                    <Stethoscope className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Paciente:</span>
+                    <span>{patientName}</span>
+                  </div>
+                )}
+
                 {/* Subscores — Anamnese */}
                 <div>
                   <h4 className="text-sm font-semibold mb-3">Anamnese (0–6)</h4>
@@ -1172,7 +1325,8 @@ export default function VPAnalytics() {
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
           {editMode && (
             <DialogFooter className="border-t pt-4">
               <Button variant="ghost" onClick={() => setEditMode(false)} disabled={savingEdit}>Cancelar</Button>
