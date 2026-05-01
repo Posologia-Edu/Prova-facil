@@ -299,10 +299,33 @@ export default function VPAnalytics() {
       flags_seguranca: flagsArr.join("\n"),
     });
     setTranscriptLoading(true);
+    // For groups, all members share the primary session's messages.
+    // If this row's own session has no messages but it's part of a group,
+    // fetch messages from any sibling that does.
+    let sourceSessionId = grade.session_id;
+    if (grade.group_id) {
+      const { data: siblings } = await supabase
+        .from("virtual_patient_sessions")
+        .select("id, created_at")
+        .eq("group_id", grade.group_id)
+        .order("created_at", { ascending: true });
+      if (siblings && siblings.length > 0) {
+        // Find the first sibling that actually has messages
+        const ids = siblings.map((s: any) => s.id);
+        const { data: counts } = await supabase
+          .from("virtual_patient_messages")
+          .select("session_id")
+          .in("session_id", ids);
+        const cnt = new Map<string, number>();
+        (counts || []).forEach((m: any) => cnt.set(m.session_id, (cnt.get(m.session_id) || 0) + 1));
+        const primaryWithMsgs = siblings.find((s: any) => (cnt.get(s.id) || 0) > 0);
+        if (primaryWithMsgs) sourceSessionId = primaryWithMsgs.id;
+      }
+    }
     const { data } = await supabase
       .from("virtual_patient_messages")
       .select("role, content, encounter")
-      .eq("session_id", grade.session_id)
+      .eq("session_id", sourceSessionId)
       .order("created_at", { ascending: true });
     setTranscript((data as TranscriptMsg[]) || []);
     setTranscriptLoading(false);
