@@ -2,7 +2,7 @@ import { useState, useEffect, Fragment } from "react";
 import {
   BarChart3, Users, Award, AlertTriangle, Loader2, ArrowLeft,
   ChevronDown, Eye, MessageSquare, ShieldAlert, TrendingUp, BookOpen,
-  GraduationCap, ChevronRight,
+  GraduationCap, ChevronRight, Pill,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
