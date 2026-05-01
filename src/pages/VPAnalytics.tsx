@@ -781,65 +781,125 @@ export default function VPAnalytics() {
           {/* Student Table */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Resultados Individuais</CardTitle>
+              <CardTitle className="text-base">Resultados</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Aluno</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center">Nota (0-10)</TableHead>
-                    <TableHead className="text-center">Microlearning</TableHead>
-                    <TableHead className="text-center">Flags</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {grades.map(g => {
-                    const flags = Array.isArray(g.flags_seguranca) ? g.flags_seguranca : [];
-                    return (
-                      <TableRow key={g.id}>
-                        <TableCell className="font-medium">{g.student_name || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{g.student_email || "—"}</TableCell>
-                        <TableCell className="text-center">
-                          {g.correction_status === "graded" ? (
-                            <Badge variant="default">Corrigido</Badge>
-                          ) : (
-                            <Badge variant="secondary">Pendente</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {g.correction_status === "graded" ? (
-                            <Badge variant={(g.nota_final || 0) >= 6 ? "default" : "destructive"}>
-                              {(g.nota_final || 0).toFixed(1)}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">Aguardando</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {g.correction_status === "graded" ? (g.nota_microlearning || 0).toFixed(1) : "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {flags.length > 0 ? (
-                            <Badge variant="destructive" className="text-xs">{flags.length}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
-                            <Eye className="h-3.5 w-3.5 mr-1" />
-                            {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
-                          </Button>
-                        </TableCell>
+              {(() => {
+                // Build groups: by group_id (group sessions) or per session (individual)
+                type Bucket = {
+                  key: string;
+                  isGroup: boolean;
+                  label: string;
+                  cvpId: string;
+                  rows: GradeRow[];
+                };
+                const buckets = new Map<string, Bucket>();
+                grades.forEach((g) => {
+                  if (g.group_id) {
+                    const k = `g:${g.group_id}`;
+                    if (!buckets.has(k)) {
+                      buckets.set(k, {
+                        key: k,
+                        isGroup: true,
+                        label: g.group_label || "Grupo",
+                        cvpId: g.class_virtual_patient_id,
+                        rows: [],
+                      });
+                    }
+                    buckets.get(k)!.rows.push(g);
+                  } else {
+                    const k = `i:${g.session_id}`;
+                    buckets.set(k, {
+                      key: k,
+                      isGroup: false,
+                      label: g.group_label || "Individual",
+                      cvpId: g.class_virtual_patient_id,
+                      rows: [g],
+                    });
+                  }
+                });
+                const list = Array.from(buckets.values());
+
+                const renderRow = (g: GradeRow) => {
+                  const flags = Array.isArray(g.flags_seguranca) ? g.flags_seguranca : [];
+                  return (
+                    <TableRow key={g.id}>
+                      <TableCell className="font-medium">{g.student_name || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{g.student_email || "—"}</TableCell>
+                      <TableCell className="text-center">
+                        {g.correction_status === "graded" ? (
+                          <Badge variant="default">Corrigido</Badge>
+                        ) : (
+                          <Badge variant="secondary">Pendente</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {g.correction_status === "graded" ? (
+                          <Badge variant={(g.nota_final || 0) >= 6 ? "default" : "destructive"}>
+                            {(g.nota_final || 0).toFixed(1)}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Aguardando</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {g.correction_status === "graded" ? (g.nota_microlearning || 0).toFixed(1) : "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {flags.length > 0 ? (
+                          <Badge variant="destructive" className="text-xs">{flags.length}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                };
+
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Aluno</TableHead>
+                        <TableHead>E-mail</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-center">Nota (0-10)</TableHead>
+                        <TableHead className="text-center">Microlearning</TableHead>
+                        <TableHead className="text-center">Flags</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {list.map((b) => {
+                        if (b.isGroup) {
+                          return (
+                            <>
+                              <TableRow key={`${b.key}-h`} className="bg-muted/40 hover:bg-muted/40">
+                                <TableCell colSpan={7} className="py-2">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="default" className="text-xs">{b.label}</Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {b.rows.length} integrante{b.rows.length > 1 ? "s" : ""}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                              {b.rows.map(renderRow)}
+                            </>
+                          );
+                        }
+                        return b.rows.map(renderRow);
+                      })}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
             </CardContent>
           </Card>
         </>
