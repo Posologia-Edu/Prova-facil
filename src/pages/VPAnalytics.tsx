@@ -936,11 +936,27 @@ export default function VPAnalytics() {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        {g.correction_status === "graded" ? (
-                          <Badge variant={(g.nota_final || 0) >= 6 ? "default" : "destructive"}>
-                            {(g.nota_final || 0).toFixed(1)}
-                          </Badge>
-                        ) : (
+                        {g.correction_status === "graded" ? (() => {
+                          const finalScore = finalWithBonus(g.nota_final, g.nota_microlearning);
+                          const bonus = microBonus(g.nota_microlearning);
+                          return (
+                            <TooltipProvider>
+                              <UiTooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant={finalScore >= 6 ? "default" : "destructive"} className="cursor-help">
+                                    {finalScore.toFixed(1)}
+                                    {bonus > 0 && <span className="ml-1 text-[10px] opacity-80">(+{bonus.toFixed(2)})</span>}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">
+                                    Base: {(g.nota_final || 0).toFixed(2)} + Bônus Microlearning: {bonus.toFixed(2)} = <strong>{finalScore.toFixed(2)}</strong>
+                                  </p>
+                                </TooltipContent>
+                              </UiTooltip>
+                            </TooltipProvider>
+                          );
+                        })() : (
                           <span className="text-muted-foreground text-xs">Aguardando</span>
                         )}
                       </TableCell>
