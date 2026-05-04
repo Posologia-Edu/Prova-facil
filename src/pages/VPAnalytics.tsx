@@ -1401,12 +1401,74 @@ export default function VPAnalytics() {
                       if (meds.length === 0) {
                         return <p className="text-sm text-muted-foreground italic">MAI vazio.</p>;
                       }
+                      const maxPerMed = 30; // 10 critérios × 3 (pior caso = inapropriado)
+                      const minPerMed = 10; // 10 critérios × 1 (apropriado em tudo)
+                      const maxTotal = meds.length * maxPerMed;
+                      const minTotal = meds.length * minPerMed;
+                      // Quanto MENOR o score, melhor (1=apropriado, 2=marginal, 3=inapropriado)
+                      // Qualidade normalizada 0–1: 1 = perfeito, 0 = totalmente inapropriado
+                      const quality = maxTotal > minTotal
+                        ? 1 - ((totalScore - minTotal) / (maxTotal - minTotal))
+                        : 0;
+                      const qualityPct = Math.round(quality * 100);
+                      const qualityLabel = quality >= 0.85 ? "Excelente" : quality >= 0.65 ? "Bom" : quality >= 0.45 ? "Regular" : "Baixo";
+                      const qualityCls = quality >= 0.85 ? "text-green-600" : quality >= 0.65 ? "text-emerald-600" : quality >= 0.45 ? "text-yellow-600" : "text-destructive";
+
+                      // Detectar critérios que mais impactaram cada uma das 4 dimensões MAI
+                      const subs = (detailGrade.subscores || {}) as Record<string, number>;
+                      const dimImpact = {
+                        completude: { sub: subs.mai_completude ?? 0, label: "Completude", desc: "% de critérios respondidos para todos os medicamentos.", evidence: `${meds.reduce((a: number, m: any) => a + Object.keys(m.answers || {}).length, 0)} / ${meds.length * 10} respostas preenchidas` },
+                        coerencia: { sub: subs.mai_coerencia_clinica ?? 0, label: "Coerência clínica", desc: "Consistência entre as escolhas (indicação ↔ efetividade ↔ duração ↔ dose) e o perfil do paciente.", evidence: "Avaliada pela IA com base no caso clínico e nas respostas escolhidas." },
+                        critica: { sub: subs.mai_justificativa_critica ?? 0, label: "Justificativa crítica", desc: "Qualidade do raciocínio (por que classificou como apropriado/marginal/inapropriado).", evidence: "Comparada à conduta esperada do gabarito clínico." },
+                        seguranca: { sub: subs.mai_seguranca_paciente ?? 0, label: "Segurança do paciente", desc: "Detecção de risco: interações, duplicidades, contraindicações, alergias e flags de segurança.", evidence: `Critérios de risco: ${meds.flatMap((m: any) => ["drug_drug","drug_disease","duplication"].filter((k) => ["marginally","inappropriate"].includes(m.answers?.[k]))).length} sinalizações de "marginal/inapropriado".` },
+                      };
+
                       return (
                         <div className="space-y-3">
+                          {/* Explicação do Score */}
+                          <div className="rounded-lg border bg-muted/30 p-3 space-y-2 text-xs">
+                            <div className="flex items-start gap-2">
+                              <Info className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+                              <div className="space-y-1.5">
+                                <p>
+                                  <strong>Como o Score é calculado:</strong> cada um dos 10 critérios MAI por medicamento
+                                  recebe <strong>1</strong> (Apropriado), <strong>2</strong> (Marginalmente Apropriado) ou
+                                  <strong> 3</strong> (Inapropriado). O score é a <em>soma</em> — portanto, <strong>quanto menor, melhor</strong>.
+                                </p>
+                                <p>
+                                  Para este envio: faixa possível = <strong>{minTotal}</strong> (perfeito) a <strong>{maxTotal}</strong> (totalmente inapropriado).
+                                  O grupo somou <strong>{totalScore}</strong> → qualidade normalizada de <strong className={qualityCls}>{qualityPct}% ({qualityLabel})</strong>.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Como reflete nas 4 notas MAI */}
+                          <div className="rounded-lg border p-3 space-y-2">
+                            <p className="text-xs font-semibold">Como o Score reflete nas 4 notas MAI (0–1 cada)</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {Object.entries(dimImpact).map(([k, d]) => (
+                                <div key={k} className="rounded-md border p-2 text-xs space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium">{d.label}</span>
+                                    <Badge variant="outline" className="text-[10px]">{d.sub.toFixed(2)}/1</Badge>
+                                  </div>
+                                  <p className="text-muted-foreground">{d.desc}</p>
+                                  <p className="text-[11px] italic text-muted-foreground">{d.evidence}</p>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground italic">
+                              A IA avalia cada dimensão comparando as respostas do MAI ao caso clínico, à conduta esperada e às flags de segurança detectadas — não é uma divisão aritmética do score total, é uma análise qualitativa.
+                            </p>
+                          </div>
+
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span>{meds.length} medicamento(s)</span>
                             <span>•</span>
-                            <span>Score total: <strong className="text-foreground">{totalScore}</strong></span>
+                            <span>Score total: <strong className="text-foreground">{totalScore}</strong> (menor = melhor)</span>
+                            <span>•</span>
+                            <span>Qualidade: <strong className={qualityCls}>{qualityPct}%</strong></span>
                           </div>
                           {meds.map((med: any, idx: number) => (
                             <div key={idx} className="border rounded-lg overflow-hidden">
