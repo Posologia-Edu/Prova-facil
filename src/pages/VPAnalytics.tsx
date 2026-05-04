@@ -337,6 +337,12 @@ export default function VPAnalytics() {
     return Math.max(0, Math.min(10, total));
   };
 
+  // Bônus Microlearning: até +1.0 ponto na nota final (microlearning/5 × 1.0), com teto em 10.
+  const microBonus = (micro: number | null | undefined) =>
+    Math.max(0, Math.min(1, ((Number(micro) || 0) / 5)));
+  const finalWithBonus = (nota: number | null | undefined, micro: number | null | undefined) =>
+    Math.max(0, Math.min(10, (Number(nota) || 0) + microBonus(micro)));
+
   const handleSaveEdit = async () => {
     if (!detailGrade || !editForm) return;
     setSavingEdit(true);
