@@ -370,12 +370,44 @@ export default function VPAnalytics() {
       }));
     }
 
+    // If this session is part of a group, mirror the edit to all sibling sessions
+    let mirroredCount = 0;
+    if (!error && detailGrade.group_id) {
+      const { data: siblings } = await supabase
+        .from("virtual_patient_sessions")
+        .select("id, class_virtual_patient_id")
+        .eq("group_id", detailGrade.group_id)
+        .neq("id", detailGrade.session_id);
+      for (const sib of siblings || []) {
+        const { data: sibExisting } = await supabase
+          .from("virtual_patient_grades")
+          .select("id")
+          .eq("session_id", sib.id)
+          .maybeSingle();
+        if (sibExisting?.id) {
+          await supabase.from("virtual_patient_grades").update(payload).eq("id", sibExisting.id);
+        } else {
+          await supabase.from("virtual_patient_grades").insert({
+            ...payload,
+            session_id: sib.id,
+            class_virtual_patient_id: sib.class_virtual_patient_id,
+            bonus_penalidades: {},
+          });
+        }
+        mirroredCount++;
+      }
+    }
+
     setSavingEdit(false);
     if (error) {
       toast.error("Não foi possível salvar os ajustes: " + error.message);
       return;
     }
-    toast.success("Avaliação ajustada com sucesso.");
+    toast.success(
+      mirroredCount > 0
+        ? `Avaliação ajustada e replicada para ${mirroredCount} integrante(s) do grupo.`
+        : "Avaliação ajustada com sucesso."
+    );
     setEditMode(false);
     setDetailGrade(null);
     await loadGrades();
