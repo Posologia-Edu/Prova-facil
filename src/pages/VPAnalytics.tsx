@@ -1150,8 +1150,26 @@ export default function VPAnalytics() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {subscoreKeys.slice(6).map(key => (
                       <div key={key} className="p-3 rounded-lg border text-center">
-                        <p className="text-xs text-muted-foreground">{subscoreLabels[key]}</p>
-                        {editMode ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <p className="text-xs text-muted-foreground">{subscoreLabels[key]}</p>
+                          {key === "mai_justificativa_critica" && (
+                            <TooltipProvider>
+                              <UiTooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-xs">
+                                    <strong>MAI Crítica</strong> avalia a qualidade da <em>justificativa clínica</em> do aluno
+                                    para cada decisão do MAI: se argumentou de forma crítica e fundamentada
+                                    (com base em diretrizes, perfil do paciente, riscos e benefícios) ao classificar cada
+                                    medicamento como apropriado, marginalmente apropriado ou inapropriado.
+                                  </p>
+                                </TooltipContent>
+                              </UiTooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                           <Input
                             type="number" step="0.05" min="0" max="1"
                             className="mt-1 text-center font-bold"
