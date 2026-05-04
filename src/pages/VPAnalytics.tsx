@@ -2,8 +2,9 @@ import { useState, useEffect, Fragment } from "react";
 import {
   BarChart3, Users, Award, AlertTriangle, Loader2, ArrowLeft,
   ChevronDown, Eye, MessageSquare, ShieldAlert, TrendingUp, BookOpen,
-  GraduationCap, ChevronRight, Pill,
+  GraduationCap, ChevronRight, Pill, Info,
 } from "lucide-react";
+import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
