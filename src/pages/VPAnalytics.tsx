@@ -337,6 +337,12 @@ export default function VPAnalytics() {
     return Math.max(0, Math.min(10, total));
   };
 
+  // Bônus Microlearning: até +1.0 ponto na nota final (microlearning/5 × 1.0), com teto em 10.
+  const microBonus = (micro: number | null | undefined) =>
+    Math.max(0, Math.min(1, ((Number(micro) || 0) / 5)));
+  const finalWithBonus = (nota: number | null | undefined, micro: number | null | undefined) =>
+    Math.max(0, Math.min(10, (Number(nota) || 0) + microBonus(micro)));
+
   const handleSaveEdit = async () => {
     if (!detailGrade || !editForm) return;
     setSavingEdit(true);
@@ -930,11 +936,27 @@ export default function VPAnalytics() {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        {g.correction_status === "graded" ? (
-                          <Badge variant={(g.nota_final || 0) >= 6 ? "default" : "destructive"}>
-                            {(g.nota_final || 0).toFixed(1)}
-                          </Badge>
-                        ) : (
+                        {g.correction_status === "graded" ? (() => {
+                          const finalScore = finalWithBonus(g.nota_final, g.nota_microlearning);
+                          const bonus = microBonus(g.nota_microlearning);
+                          return (
+                            <TooltipProvider>
+                              <UiTooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant={finalScore >= 6 ? "default" : "destructive"} className="cursor-help">
+                                    {finalScore.toFixed(1)}
+                                    {bonus > 0 && <span className="ml-1 text-[10px] opacity-80">(+{bonus.toFixed(2)})</span>}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">
+                                    Base: {(g.nota_final || 0).toFixed(2)} + Bônus Microlearning: {bonus.toFixed(2)} = <strong>{finalScore.toFixed(2)}</strong>
+                                  </p>
+                                </TooltipContent>
+                              </UiTooltip>
+                            </TooltipProvider>
+                          );
+                        })() : (
                           <span className="text-muted-foreground text-xs">Aguardando</span>
                         )}
                       </TableCell>
@@ -1189,7 +1211,22 @@ export default function VPAnalytics() {
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-3">
                     <div className="p-3 rounded-lg border text-center bg-primary/5">
-                      <p className="text-xs text-muted-foreground">Nota Final (0–10)</p>
+                      <div className="flex items-center justify-center gap-1">
+                        <p className="text-xs text-muted-foreground">Nota Final (0–10)</p>
+                        <TooltipProvider>
+                          <UiTooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="text-xs">
+                                <strong>Nota Final = Base (rubrica 10 critérios) + Bônus Microlearning</strong>.
+                                O bônus vale até <strong>+1.0 ponto</strong> (microlearning ÷ 5), com teto em 10.
+                              </p>
+                            </TooltipContent>
+                          </UiTooltip>
+                        </TooltipProvider>
+                      </div>
                       {editMode ? (
                         <Input
                           type="number" step="0.1" min="0" max="10"
@@ -1197,9 +1234,18 @@ export default function VPAnalytics() {
                           value={editForm.nota_final}
                           onChange={(e) => setEditForm({ ...editForm, nota_final: parseFloat(e.target.value) || 0 })}
                         />
-                      ) : (
-                        <p className="text-2xl font-bold mt-1">{(detailGrade.nota_final || 0).toFixed(1)}/10</p>
-                      )}
+                      ) : (() => {
+                        const bonus = microBonus(detailGrade.nota_microlearning);
+                        const finalScore = finalWithBonus(detailGrade.nota_final, detailGrade.nota_microlearning);
+                        return (
+                          <>
+                            <p className="text-2xl font-bold mt-1">{finalScore.toFixed(1)}/10</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              Base {(detailGrade.nota_final || 0).toFixed(2)} {bonus > 0 && <>+ Bônus <strong className="text-primary">{bonus.toFixed(2)}</strong></>}
+                            </p>
+                          </>
+                        );
+                      })()}
                     </div>
                     <div className="p-3 rounded-lg border text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -1209,14 +1255,27 @@ export default function VPAnalytics() {
                             <TooltipTrigger asChild>
                               <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="text-xs">
-                                <strong>Microlearning</strong> é uma nota <em>formativa</em> (não compõe a nota final 0–10).
-                                Ela mede o engajamento do aluno com o material de estudo curto liberado após o
-                                atendimento (mini-lições, leitura dirigida, autocorreção). Serve para que o professor
-                                acompanhe quem aproveitou o feedback para reforçar a aprendizagem — pode ser usada
-                                como bônus, presença qualitativa ou indicador de adesão ao processo, conforme sua avaliação.
-                              </p>
+                            <TooltipContent className="max-w-sm">
+                              <div className="text-xs space-y-1.5">
+                                <p>
+                                  <strong>O que é:</strong> nota de 0 a 5 que mede o engajamento do aluno
+                                  com o material curto de estudo liberado após o atendimento (mini-lições,
+                                  leitura dirigida, autocorreção e reflexão sobre o feedback).
+                                </p>
+                                <p>
+                                  <strong>Como é calculada:</strong> com base em conclusão das mini-lições,
+                                  acertos nas perguntas de fixação e tempo dedicado ao reforço.
+                                </p>
+                                <p>
+                                  <strong>Como entra na nota final:</strong> vira bônus de até
+                                  <strong> +1.0 ponto</strong> (microlearning ÷ 5), somado à nota base, com teto em 10.
+                                  Ex.: microlearning 4/5 → bônus de +0.80.
+                                </p>
+                                <p className="text-muted-foreground italic">
+                                  Explique aos alunos: estudar o material após o caso é recompensado
+                                  diretamente na nota.
+                                </p>
+                              </div>
                             </TooltipContent>
                           </UiTooltip>
                         </TooltipProvider>
@@ -1229,7 +1288,12 @@ export default function VPAnalytics() {
                           onChange={(e) => setEditForm({ ...editForm, nota_microlearning: parseFloat(e.target.value) || 0 })}
                         />
                       ) : (
-                        <p className="text-2xl font-bold mt-1">{(detailGrade.nota_microlearning || 0).toFixed(1)}/5</p>
+                        <>
+                          <p className="text-2xl font-bold mt-1">{(detailGrade.nota_microlearning || 0).toFixed(1)}/5</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            Bônus aplicado: +{microBonus(detailGrade.nota_microlearning).toFixed(2)}
+                          </p>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1337,12 +1401,74 @@ export default function VPAnalytics() {
                       if (meds.length === 0) {
                         return <p className="text-sm text-muted-foreground italic">MAI vazio.</p>;
                       }
+                      const maxPerMed = 30; // 10 critérios × 3 (pior caso = inapropriado)
+                      const minPerMed = 10; // 10 critérios × 1 (apropriado em tudo)
+                      const maxTotal = meds.length * maxPerMed;
+                      const minTotal = meds.length * minPerMed;
+                      // Quanto MENOR o score, melhor (1=apropriado, 2=marginal, 3=inapropriado)
+                      // Qualidade normalizada 0–1: 1 = perfeito, 0 = totalmente inapropriado
+                      const quality = maxTotal > minTotal
+                        ? 1 - ((totalScore - minTotal) / (maxTotal - minTotal))
+                        : 0;
+                      const qualityPct = Math.round(quality * 100);
+                      const qualityLabel = quality >= 0.85 ? "Excelente" : quality >= 0.65 ? "Bom" : quality >= 0.45 ? "Regular" : "Baixo";
+                      const qualityCls = quality >= 0.85 ? "text-green-600" : quality >= 0.65 ? "text-emerald-600" : quality >= 0.45 ? "text-yellow-600" : "text-destructive";
+
+                      // Detectar critérios que mais impactaram cada uma das 4 dimensões MAI
+                      const subs = (detailGrade.subscores || {}) as Record<string, number>;
+                      const dimImpact = {
+                        completude: { sub: subs.mai_completude ?? 0, label: "Completude", desc: "% de critérios respondidos para todos os medicamentos.", evidence: `${meds.reduce((a: number, m: any) => a + Object.keys(m.answers || {}).length, 0)} / ${meds.length * 10} respostas preenchidas` },
+                        coerencia: { sub: subs.mai_coerencia_clinica ?? 0, label: "Coerência clínica", desc: "Consistência entre as escolhas (indicação ↔ efetividade ↔ duração ↔ dose) e o perfil do paciente.", evidence: "Avaliada pela IA com base no caso clínico e nas respostas escolhidas." },
+                        critica: { sub: subs.mai_justificativa_critica ?? 0, label: "Justificativa crítica", desc: "Qualidade do raciocínio (por que classificou como apropriado/marginal/inapropriado).", evidence: "Comparada à conduta esperada do gabarito clínico." },
+                        seguranca: { sub: subs.mai_seguranca_paciente ?? 0, label: "Segurança do paciente", desc: "Detecção de risco: interações, duplicidades, contraindicações, alergias e flags de segurança.", evidence: `Critérios de risco: ${meds.flatMap((m: any) => ["drug_drug","drug_disease","duplication"].filter((k) => ["marginally","inappropriate"].includes(m.answers?.[k]))).length} sinalizações de "marginal/inapropriado".` },
+                      };
+
                       return (
                         <div className="space-y-3">
+                          {/* Explicação do Score */}
+                          <div className="rounded-lg border bg-muted/30 p-3 space-y-2 text-xs">
+                            <div className="flex items-start gap-2">
+                              <Info className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+                              <div className="space-y-1.5">
+                                <p>
+                                  <strong>Como o Score é calculado:</strong> cada um dos 10 critérios MAI por medicamento
+                                  recebe <strong>1</strong> (Apropriado), <strong>2</strong> (Marginalmente Apropriado) ou
+                                  <strong> 3</strong> (Inapropriado). O score é a <em>soma</em> — portanto, <strong>quanto menor, melhor</strong>.
+                                </p>
+                                <p>
+                                  Para este envio: faixa possível = <strong>{minTotal}</strong> (perfeito) a <strong>{maxTotal}</strong> (totalmente inapropriado).
+                                  O grupo somou <strong>{totalScore}</strong> → qualidade normalizada de <strong className={qualityCls}>{qualityPct}% ({qualityLabel})</strong>.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Como reflete nas 4 notas MAI */}
+                          <div className="rounded-lg border p-3 space-y-2">
+                            <p className="text-xs font-semibold">Como o Score reflete nas 4 notas MAI (0–1 cada)</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {Object.entries(dimImpact).map(([k, d]) => (
+                                <div key={k} className="rounded-md border p-2 text-xs space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium">{d.label}</span>
+                                    <Badge variant="outline" className="text-[10px]">{d.sub.toFixed(2)}/1</Badge>
+                                  </div>
+                                  <p className="text-muted-foreground">{d.desc}</p>
+                                  <p className="text-[11px] italic text-muted-foreground">{d.evidence}</p>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground italic">
+                              A IA avalia cada dimensão comparando as respostas do MAI ao caso clínico, à conduta esperada e às flags de segurança detectadas — não é uma divisão aritmética do score total, é uma análise qualitativa.
+                            </p>
+                          </div>
+
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span>{meds.length} medicamento(s)</span>
                             <span>•</span>
-                            <span>Score total: <strong className="text-foreground">{totalScore}</strong></span>
+                            <span>Score total: <strong className="text-foreground">{totalScore}</strong> (menor = melhor)</span>
+                            <span>•</span>
+                            <span>Qualidade: <strong className={qualityCls}>{qualityPct}%</strong></span>
                           </div>
                           {meds.map((med: any, idx: number) => (
                             <div key={idx} className="border rounded-lg overflow-hidden">
