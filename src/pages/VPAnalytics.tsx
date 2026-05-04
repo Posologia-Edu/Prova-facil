@@ -508,10 +508,21 @@ export default function VPAnalytics() {
       }
     }
 
-    // Grade group sessions: ONE call per group, then mirror to siblings
+    // Grade group sessions: ONE call per group, then mirror to siblings.
+    // Pick the primary as the session with the MOST student messages (the one
+    // members actually used to chat). Falls back to the one with MAI, otherwise
+    // the first member.
     for (const [, members] of groupBuckets) {
-      const primary = members[0];
-      const siblings = members.slice(1).map(m => m.id);
+      const sorted = [...members].sort((a: any, b: any) => {
+        const am = msgCountMap[a.id] || 0;
+        const bm = msgCountMap[b.id] || 0;
+        if (bm !== am) return bm - am;
+        const ah = hasMai.has(a.id) ? 1 : 0;
+        const bh = hasMai.has(b.id) ? 1 : 0;
+        return bh - ah;
+      });
+      const primary = sorted[0];
+      const siblings = sorted.slice(1).map(m => m.id);
       const { error } = await supabase.functions.invoke("grade-virtual-patient", {
         body: { session_id: primary.id, class_virtual_patient_id: primary.class_virtual_patient_id },
       });
