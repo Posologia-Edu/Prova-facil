@@ -2,8 +2,9 @@ import { useState, useEffect, Fragment } from "react";
 import {
   BarChart3, Users, Award, AlertTriangle, Loader2, ArrowLeft,
   ChevronDown, Eye, MessageSquare, ShieldAlert, TrendingUp, BookOpen,
-  GraduationCap, ChevronRight, Pill,
+  GraduationCap, ChevronRight, Pill, Info,
 } from "lucide-react";
+import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -370,12 +371,44 @@ export default function VPAnalytics() {
       }));
     }
 
+    // If this session is part of a group, mirror the edit to all sibling sessions
+    let mirroredCount = 0;
+    if (!error && detailGrade.group_id) {
+      const { data: siblings } = await supabase
+        .from("virtual_patient_sessions")
+        .select("id, class_virtual_patient_id")
+        .eq("group_id", detailGrade.group_id)
+        .neq("id", detailGrade.session_id);
+      for (const sib of siblings || []) {
+        const { data: sibExisting } = await supabase
+          .from("virtual_patient_grades")
+          .select("id")
+          .eq("session_id", sib.id)
+          .maybeSingle();
+        if (sibExisting?.id) {
+          await supabase.from("virtual_patient_grades").update(payload).eq("id", sibExisting.id);
+        } else {
+          await supabase.from("virtual_patient_grades").insert({
+            ...payload,
+            session_id: sib.id,
+            class_virtual_patient_id: sib.class_virtual_patient_id,
+            bonus_penalidades: {},
+          });
+        }
+        mirroredCount++;
+      }
+    }
+
     setSavingEdit(false);
     if (error) {
       toast.error("Não foi possível salvar os ajustes: " + error.message);
       return;
     }
-    toast.success("Avaliação ajustada com sucesso.");
+    toast.success(
+      mirroredCount > 0
+        ? `Avaliação ajustada e replicada para ${mirroredCount} integrante(s) do grupo.`
+        : "Avaliação ajustada com sucesso."
+    );
     setEditMode(false);
     setDetailGrade(null);
     await loadGrades();
@@ -508,10 +541,21 @@ export default function VPAnalytics() {
       }
     }
 
-    // Grade group sessions: ONE call per group, then mirror to siblings
+    // Grade group sessions: ONE call per group, then mirror to siblings.
+    // Pick the primary as the session with the MOST student messages (the one
+    // members actually used to chat). Falls back to the one with MAI, otherwise
+    // the first member.
     for (const [, members] of groupBuckets) {
-      const primary = members[0];
-      const siblings = members.slice(1).map(m => m.id);
+      const sorted = [...members].sort((a: any, b: any) => {
+        const am = msgCountMap[a.id] || 0;
+        const bm = msgCountMap[b.id] || 0;
+        if (bm !== am) return bm - am;
+        const ah = hasMai.has(a.id) ? 1 : 0;
+        const bh = hasMai.has(b.id) ? 1 : 0;
+        return bh - ah;
+      });
+      const primary = sorted[0];
+      const siblings = sorted.slice(1).map(m => m.id);
       const { error } = await supabase.functions.invoke("grade-virtual-patient", {
         body: { session_id: primary.id, class_virtual_patient_id: primary.class_virtual_patient_id },
       });
@@ -1106,7 +1150,26 @@ export default function VPAnalytics() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {subscoreKeys.slice(6).map(key => (
                       <div key={key} className="p-3 rounded-lg border text-center">
-                        <p className="text-xs text-muted-foreground">{subscoreLabels[key]}</p>
+                        <div className="flex items-center justify-center gap-1">
+                          <p className="text-xs text-muted-foreground">{subscoreLabels[key]}</p>
+                          {key === "mai_justificativa_critica" && (
+                            <TooltipProvider>
+                              <UiTooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-xs">
+                                    <strong>MAI Crítica</strong> avalia a qualidade da <em>justificativa clínica</em> do aluno
+                                    para cada decisão do MAI: se argumentou de forma crítica e fundamentada
+                                    (com base em diretrizes, perfil do paciente, riscos e benefícios) ao classificar cada
+                                    medicamento como apropriado, marginalmente apropriado ou inapropriado.
+                                  </p>
+                                </TooltipContent>
+                              </UiTooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                         {editMode ? (
                           <Input
                             type="number" step="0.05" min="0" max="1"
@@ -1139,7 +1202,25 @@ export default function VPAnalytics() {
                       )}
                     </div>
                     <div className="p-3 rounded-lg border text-center">
-                      <p className="text-xs text-muted-foreground">Microlearning (0–5)</p>
+                      <div className="flex items-center justify-center gap-1">
+                        <p className="text-xs text-muted-foreground">Microlearning (0–5)</p>
+                        <TooltipProvider>
+                          <UiTooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="text-xs">
+                                <strong>Microlearning</strong> é uma nota <em>formativa</em> (não compõe a nota final 0–10).
+                                Ela mede o engajamento do aluno com o material de estudo curto liberado após o
+                                atendimento (mini-lições, leitura dirigida, autocorreção). Serve para que o professor
+                                acompanhe quem aproveitou o feedback para reforçar a aprendizagem — pode ser usada
+                                como bônus, presença qualitativa ou indicador de adesão ao processo, conforme sua avaliação.
+                              </p>
+                            </TooltipContent>
+                          </UiTooltip>
+                        </TooltipProvider>
+                      </div>
                       {editMode ? (
                         <Input
                           type="number" step="0.1" min="0" max="5"
