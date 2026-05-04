@@ -1202,7 +1202,25 @@ export default function VPAnalytics() {
                       )}
                     </div>
                     <div className="p-3 rounded-lg border text-center">
-                      <p className="text-xs text-muted-foreground">Microlearning (0–5)</p>
+                      <div className="flex items-center justify-center gap-1">
+                        <p className="text-xs text-muted-foreground">Microlearning (0–5)</p>
+                        <TooltipProvider>
+                          <UiTooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="text-xs">
+                                <strong>Microlearning</strong> é uma nota <em>formativa</em> (não compõe a nota final 0–10).
+                                Ela mede o engajamento do aluno com o material de estudo curto liberado após o
+                                atendimento (mini-lições, leitura dirigida, autocorreção). Serve para que o professor
+                                acompanhe quem aproveitou o feedback para reforçar a aprendizagem — pode ser usada
+                                como bônus, presença qualitativa ou indicador de adesão ao processo, conforme sua avaliação.
+                              </p>
+                            </TooltipContent>
+                          </UiTooltip>
+                        </TooltipProvider>
+                      </div>
                       {editMode ? (
                         <Input
                           type="number" step="0.1" min="0" max="5"
