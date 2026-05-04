@@ -535,22 +535,47 @@ export default function VPAnalytics() {
       }
     };
 
+    // Native fetch to grade endpoint with explicit timeout (avoids silent
+    // failures of supabase.functions.invoke that left some groups "Pendente").
+    const callGrade = async (sessionId: string, cvpId: string): Promise<{ ok: boolean; error?: string }> => {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token;
+      const apikey = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+      const url = `${(import.meta as any).env?.VITE_SUPABASE_URL}/functions/v1/grade-virtual-patient`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 120_000);
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(apikey ? { apikey } : {}),
+          },
+          body: JSON.stringify({ session_id: sessionId, class_virtual_patient_id: cvpId }),
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) {
+          let msg = `HTTP ${res.status}`;
+          try { const j = await res.json(); msg = j?.error || msg; } catch { /* ignore */ }
+          return { ok: false, error: msg };
+        }
+        return { ok: true };
+      } catch (e: any) {
+        clearTimeout(timer);
+        return { ok: false, error: e?.message || "Falha de rede" };
+      }
+    };
+
     // Grade individual sessions
     for (const session of individuals) {
-      const { error } = await supabase.functions.invoke("grade-virtual-patient", {
-        body: { session_id: session.id, class_virtual_patient_id: session.class_virtual_patient_id },
-      });
-      if (error) {
-        failures.push(await getFunctionErrorMessage(error));
-      } else {
-        success++;
-      }
+      const r = await callGrade(session.id, session.class_virtual_patient_id);
+      if (!r.ok) failures.push(r.error || "Erro ao corrigir.");
+      else success++;
     }
 
     // Grade group sessions: ONE call per group, then mirror to siblings.
-    // Pick the primary as the session with the MOST student messages (the one
-    // members actually used to chat). Falls back to the one with MAI, otherwise
-    // the first member.
     for (const [, members] of groupBuckets) {
       const sorted = [...members].sort((a: any, b: any) => {
         const am = msgCountMap[a.id] || 0;
@@ -562,11 +587,9 @@ export default function VPAnalytics() {
       });
       const primary = sorted[0];
       const siblings = sorted.slice(1).map(m => m.id);
-      const { error } = await supabase.functions.invoke("grade-virtual-patient", {
-        body: { session_id: primary.id, class_virtual_patient_id: primary.class_virtual_patient_id },
-      });
-      if (error) {
-        failures.push(await getFunctionErrorMessage(error));
+      const r = await callGrade(primary.id, primary.class_virtual_patient_id);
+      if (!r.ok) {
+        failures.push(`Grupo (${primary.student_name || primary.id.slice(0, 8)}): ${r.error}`);
       } else {
         await mirrorGradeToSiblings(primary.id, siblings);
         success++;
