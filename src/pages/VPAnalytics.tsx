@@ -589,7 +589,7 @@ export default function VPAnalytics() {
       const siblings = sorted.slice(1).map(m => m.id);
       const r = await callGrade(primary.id, primary.class_virtual_patient_id);
       if (!r.ok) {
-        failures.push(`Grupo (${primary.student_name || primary.id.slice(0, 8)}): ${r.error}`);
+        failures.push(`Grupo (${primary.id.slice(0, 8)}): ${r.error}`);
       } else {
         await mirrorGradeToSiblings(primary.id, siblings);
         success++;
