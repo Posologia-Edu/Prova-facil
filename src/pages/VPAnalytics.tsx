@@ -1170,6 +1170,7 @@ export default function VPAnalytics() {
                             </TooltipProvider>
                           )}
                         </div>
+                        {editMode ? (
                           <Input
                             type="number" step="0.05" min="0" max="1"
                             className="mt-1 text-center font-bold"
