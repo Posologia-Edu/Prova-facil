@@ -987,7 +987,7 @@ export default function VPAnalytics() {
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p className="text-xs">
-                                    Base: {(g.nota_final || 0).toFixed(2)} + Bônus Microlearning: {bonus.toFixed(2)} = <strong>{finalScore.toFixed(2)}</strong>
+                                    Base: {(g.nota_final || 0).toFixed(2)} + Bônus Eficiência Clínica: {bonus.toFixed(2)} = <strong>{finalScore.toFixed(2)}</strong>
                                   </p>
                                 </TooltipContent>
                               </UiTooltip>
