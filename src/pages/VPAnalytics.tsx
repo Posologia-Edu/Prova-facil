@@ -337,11 +337,25 @@ export default function VPAnalytics() {
     return Math.max(0, Math.min(10, total));
   };
 
-  // Bônus Microlearning: até +1.0 ponto na nota final (microlearning/5 × 1.0), com teto em 10.
-  const microBonus = (micro: number | null | undefined) =>
-    Math.max(0, Math.min(1, ((Number(micro) || 0) / 5)));
-  const finalWithBonus = (nota: number | null | undefined, micro: number | null | undefined) =>
-    Math.max(0, Math.min(10, (Number(nota) || 0) + microBonus(micro)));
+  // Eficiência Clínica (0–5): combina cobertura da anamnese com objetividade (nº de turnos do estudante).
+  // Vira bônus de até +1.0 ponto na nota final (eficiencia/5 × 1.0), com teto em 10.
+  const microBonus = (eff: number | null | undefined) =>
+    Math.max(0, Math.min(1, ((Number(eff) || 0) / 5)));
+  const finalWithBonus = (nota: number | null | undefined, eff: number | null | undefined) =>
+    Math.max(0, Math.min(10, (Number(nota) || 0) + microBonus(eff)));
+
+  // Compute Clinical Efficiency from existing data (anamnese coverage × objectivity)
+  const computeEfficiency = (subs: Record<string, number> | null | undefined, studentTurns: number) => {
+    const anamneseKeys = [
+      "identificacao_acolhimento", "queixa_principal_hda", "historia_medicamentosa",
+      "antecedentes_comorbidades", "habitos_estilo_vida", "escuta_raciocinio_clinico",
+    ];
+    const sum = anamneseKeys.reduce((s, k) => s + (Number(subs?.[k]) || 0), 0);
+    const coverage = Math.max(0, Math.min(1, sum / 6));
+    const t = Math.max(0, studentTurns);
+    const objectivity = Math.min(1, 25 / Math.max(t, 25)) * (t < 8 ? t / 8 : 1);
+    return Math.round(coverage * objectivity * 5 * 10) / 10;
+  };
 
   const handleSaveEdit = async () => {
     if (!detailGrade || !editForm) return;
