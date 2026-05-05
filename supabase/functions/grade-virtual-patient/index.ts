@@ -241,13 +241,25 @@ Avalie agora seguindo rigorosamente o schema do system prompt.`;
       .eq("session_id", session_id)
       .maybeSingle();
 
+    // Compute Clinical Efficiency (0–5) from anamnese coverage × objectivity (student turns)
+    const subs = gradeResult.subscores || {};
+    const anamneseKeys = [
+      "identificacao_acolhimento", "queixa_principal_hda", "historia_medicamentosa",
+      "antecedentes_comorbidades", "habitos_estilo_vida", "escuta_raciocinio_clinico",
+    ];
+    const sumAnam = anamneseKeys.reduce((s, k) => s + (Number(subs[k]) || 0), 0);
+    const coverage = Math.max(0, Math.min(1, sumAnam / 6));
+    const studentTurns = (messages || []).filter((m: any) => m.role === "user").length;
+    const objectivity = Math.min(1, 25 / Math.max(studentTurns, 25)) * (studentTurns < 8 ? studentTurns / 8 : 1);
+    const efficiency = Math.round(coverage * objectivity * 5 * 10) / 10;
+
     const payload = {
       session_id,
       class_virtual_patient_id,
-      subscores: gradeResult.subscores || {},
+      subscores: subs,
       bonus_penalidades: gradeResult.bonus_penalidades || {},
       nota_final: gradeResult.nota_final_0a10 || 0,
-      nota_microlearning: gradeResult.nota_microlearning_0a5 || 0,
+      nota_microlearning: efficiency,
       feedback_resumido: feedbackResumido,
       orientacoes_melhoria: orientacoes,
       flags_seguranca: gradeResult.flags_seguranca || [],
