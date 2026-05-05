@@ -178,7 +178,7 @@ export default function VPAnalytics() {
         .in("session_id", sessionIds),
       supabase
         .from("virtual_patient_grades")
-        .select("id, session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id")
+        .select("id, session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id, feedback_released")
         .in("class_virtual_patient_id", filteredCvpIds),
     ]);
 
