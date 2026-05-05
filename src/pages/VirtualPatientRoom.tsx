@@ -592,6 +592,26 @@ export default function VirtualPatientRoom() {
         <div ref={bottomRef} />
       </div>
 
+      {/* Vital signs quick-action: appears when student mentions measuring vitals */}
+      {showVitalsButton && (
+        <div className="border-t px-4 pt-3 flex flex-shrink-0">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={measureVitals}
+            disabled={measuringVitals || loading}
+            className="gap-1.5"
+          >
+            {measuringVitals ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Activity className="h-4 w-4" />
+            )}
+            {measuringVitals ? "Aferindo..." : "Medir Sinais Vitais"}
+          </Button>
+        </div>
+      )}
+
       {/* Input */}
       {!sessionCompleted && (
         <div className="border-t p-4 flex gap-2 flex-shrink-0">
