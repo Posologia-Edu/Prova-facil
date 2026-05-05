@@ -150,8 +150,8 @@ SCHEMA OBRIGATÓRIO (JSON)
   "nota_anamnese_0a6": 0.0,
   "nota_mai_0a4": 0.0,
   "nota_final_0a10": 0.0,
-  "feedback_resumido": "STRING única em markdown com 3-5 bullets iniciados por '- ' separados por \\n. NUNCA retorne array.",
-  "orientacoes_melhoria": "STRING única em markdown com 3-5 bullets iniciados por '- ' separados por \\n. NUNCA retorne array.",
+  "feedback_resumido": "STRING única em markdown com OBRIGATORIAMENTE 5 a 7 bullets iniciados por '- ' separados por \\n. Cada bullet deve ter 1-2 frases completas em 2ª pessoa ('Você...'), citando aspectos específicos da anamnese, comunicação, raciocínio clínico e MAI. Mínimo 600 caracteres. NUNCA retorne array nem texto curto/superficial.",
+  "orientacoes_melhoria": "STRING única em markdown com OBRIGATORIAMENTE 5 a 8 bullets iniciados por '- ' separados por \\n. Cada bullet deve ser uma orientação concreta e acionável em 2ª pessoa ('Você deve...'), referenciando o caso específico (medicamentos, comorbidades, situação do paciente). Mínimo 800 caracteres. NUNCA retorne array nem texto genérico.",
   "flags_seguranca": ["lista de problemas críticos identificados, ou vazio"]
 }
 
