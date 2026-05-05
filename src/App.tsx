@@ -493,6 +493,7 @@ const App = () => (
             />
             {/* Public Virtual Patient Room (student access via PIN) */}
             <Route path="/virtual-patients/room/:cvpId" element={<VirtualPatientRoom />} />
+            <Route path="/virtual-patients/feedback/:cvpId" element={<VirtualPatientFeedback />} />
             {/* SCT Routes */}
             <Route
               path="/sct"
