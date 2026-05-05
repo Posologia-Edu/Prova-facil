@@ -62,6 +62,7 @@ interface GradeRow {
   group_id?: string | null;
   group_label?: string | null;
   mai_json?: any;
+  feedback_released?: boolean;
 }
 interface TranscriptMsg { role: string; content: string; encounter: number; }
 
