@@ -150,7 +150,6 @@ SCHEMA OBRIGATÓRIO (JSON)
   "nota_anamnese_0a6": 0.0,
   "nota_mai_0a4": 0.0,
   "nota_final_0a10": 0.0,
-  "nota_final_0a10": 0.0,
   "feedback_resumido": "STRING única em markdown com 3-5 bullets iniciados por '- ' separados por \\n. NUNCA retorne array.",
   "orientacoes_melhoria": "STRING única em markdown com 3-5 bullets iniciados por '- ' separados por \\n. NUNCA retorne array.",
   "flags_seguranca": ["lista de problemas críticos identificados, ou vazio"]
