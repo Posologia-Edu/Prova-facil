@@ -1278,8 +1278,15 @@ export default function VPAnalytics() {
                             <TooltipTrigger asChild>
                               <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-sm">
-                              <div className="text-xs space-y-1.5">
+                            <TooltipContent
+                              side="left"
+                              align="start"
+                              sideOffset={8}
+                              collisionPadding={16}
+                              avoidCollisions
+                              className="w-[min(92vw,420px)] max-h-[70vh] overflow-y-auto z-[100]"
+                            >
+                              <div className="text-xs space-y-1.5 break-words whitespace-normal">
                                 <p>
                                   <strong>O que é:</strong> nota de 0 a 5 que mede o engajamento do aluno
                                   com o material curto de estudo liberado após o atendimento (mini-lições,
