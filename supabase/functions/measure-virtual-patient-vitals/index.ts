@@ -121,15 +121,16 @@ ${studentTurns || "(nenhuma fala registrada)"}
 
 Gere os sinais vitais NESTE momento da consulta, ajustando coerentemente. Retorne SOMENTE o JSON solicitado.`;
 
-    const aiRes = await callAiWithFallback({
+    const { response: aiResponse } = await callAiWithFallback({
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
       ],
-      preferredModel: "google/gemini-2.5-flash",
+      model: "google/gemini-2.5-flash",
     });
 
-    const raw: string = aiRes?.content || aiRes?.text || "";
+    const aiData = await aiResponse.json();
+    const raw: string = aiData?.choices?.[0]?.message?.content || "";
     // Extrair JSON tolerando code-fences ou texto extra
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     let parsed: any = null;
