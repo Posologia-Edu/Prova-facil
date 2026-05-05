@@ -254,6 +254,7 @@ export default function VPAnalytics() {
           group_id: session.group_id || null,
           group_label: cvpLabelMap.get(session.class_virtual_patient_id) || null,
           mai_json: mai || null,
+          feedback_released: !!grade?.feedback_released,
         };
       })
       .sort((a, b) => {
