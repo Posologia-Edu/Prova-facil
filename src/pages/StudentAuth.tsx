@@ -138,6 +138,45 @@ export default function StudentAuth() {
         .maybeSingle();
 
       if (vpRoom) {
+        // Antes mesmo de exigir sala "ativa", checa se já existe feedback liberado
+        // para este e-mail nesta sala. Se sim, encaminha o aluno direto para a
+        // tela de feedback (mesmo que a sala já tenha sido encerrada).
+        const checkEmail = (assessmentType === "individual"
+          ? primaryEmail
+          : validGroupEmails[0]).trim().toLowerCase();
+
+        const { data: studentSession } = await supabase
+          .from("virtual_patient_sessions")
+          .select("id, group_id")
+          .eq("class_virtual_patient_id", vpRoom.id)
+          .ilike("student_email", checkEmail)
+          .maybeSingle();
+
+        if (studentSession) {
+          // Reúne IDs do grupo (ou só a sessão individual)
+          let sessionIds = [studentSession.id];
+          if (studentSession.group_id) {
+            const { data: sibs } = await supabase
+              .from("virtual_patient_sessions")
+              .select("id")
+              .eq("group_id", studentSession.group_id);
+            sessionIds = (sibs || []).map((s: any) => s.id);
+          }
+          const { data: released } = await supabase
+            .from("virtual_patient_grades")
+            .select("id, feedback_released")
+            .in("session_id", sessionIds)
+            .eq("feedback_released", true)
+            .limit(1)
+            .maybeSingle();
+
+          if (released) {
+            sessionStorage.setItem("vp_email", checkEmail);
+            navigate(`/virtual-patients/feedback/${vpRoom.id}`);
+            return;
+          }
+        }
+
         if (vpRoom.status !== "active") {
           toast({ title: "Sala não disponível", description: "Este paciente virtual ainda não foi ativado pelo professor.", variant: "destructive" });
           setLoading(false);
