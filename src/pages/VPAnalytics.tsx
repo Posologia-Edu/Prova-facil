@@ -1041,11 +1041,27 @@ export default function VPAnalytics() {
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
-                          <Eye className="h-3.5 w-3.5 mr-1" />
-                          {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
-                        </Button>
+                       <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {g.correction_status === "graded" && (
+                            <Button
+                              variant={g.feedback_released ? "secondary" : "outline"}
+                              size="sm"
+                              onClick={() => toggleFeedbackRelease(g, !g.feedback_released)}
+                              title={g.feedback_released ? "Feedback liberado para o aluno — clique para ocultar" : "Liberar feedback para o aluno"}
+                            >
+                              {g.feedback_released ? (
+                                <><Eye className="h-3.5 w-3.5 mr-1" />Liberado</>
+                              ) : (
+                                <><Eye className="h-3.5 w-3.5 mr-1 opacity-50" />Liberar</>
+                              )}
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
