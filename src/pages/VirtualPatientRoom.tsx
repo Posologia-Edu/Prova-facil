@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users } from "lucide-react";
+import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
@@ -40,6 +40,7 @@ export default function VirtualPatientRoom() {
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [measuringVitals, setMeasuringVitals] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -396,6 +397,45 @@ export default function VirtualPatientRoom() {
     }
   };
 
+  // Detecta se a última mensagem do estudante menciona aferição/medida de
+  // sinais vitais — usado para exibir o botão "Medir Sinais Vitais" no chat.
+  const VITALS_REGEX = /\b(sinais\s+vitais|aferir|medir|pressao|press[aã]o|\bPA\b|\bP\.?A\.?\b|frequ[eê]ncia\s+card[ií]aca|\bFC\b|frequ[eê]ncia\s+respirat[oó]ria|\bFR\b|temperatura|\btemp\b|febre|satura[cç][aã]o|\bSatO2\b|\bSpO2\b|\boximetria|glicemia|glicose|dextro|HGT)\b/i;
+
+  const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+  const showVitalsButton =
+    !sessionCompleted &&
+    !!lastUserMessage &&
+    VITALS_REGEX.test(lastUserMessage.content);
+
+  const measureVitals = async () => {
+    if (measuringVitals || !sessionId) return;
+    setMeasuringVitals(true);
+    try {
+      const transcript = messages.map((m) => ({ role: m.role, content: m.content, encounter: m.encounter }));
+      const { data, error } = await supabase.functions.invoke("measure-virtual-patient-vitals", {
+        body: { patientId, encounter, transcript },
+      });
+      if (error) throw error;
+      const content: string = data?.message || "Não foi possível aferir os sinais vitais.";
+      const key = `assistant|${encounter}|${content}`;
+      seenMsgKeysRef.current.add(key);
+      const vitalsMsg: Message = { role: "assistant", content, encounter };
+      setMessages((prev) => [...prev, vitalsMsg]);
+      // Salva apenas na sessão primária — realtime distribui para os demais membros
+      await supabase.from("virtual_patient_messages").insert({
+        session_id: sessionId,
+        encounter,
+        role: "assistant",
+        content,
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Erro ao medir sinais vitais.");
+    } finally {
+      setMeasuringVitals(false);
+    }
+  };
+
   const handleMAIComplete = async () => {
     setShowMAI(false);
     setSessionCompleted(true);
@@ -551,6 +591,26 @@ export default function VirtualPatientRoom() {
 
         <div ref={bottomRef} />
       </div>
+
+      {/* Vital signs quick-action: appears when student mentions measuring vitals */}
+      {showVitalsButton && (
+        <div className="border-t px-4 pt-3 flex flex-shrink-0">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={measureVitals}
+            disabled={measuringVitals || loading}
+            className="gap-1.5"
+          >
+            {measuringVitals ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Activity className="h-4 w-4" />
+            )}
+            {measuringVitals ? "Aferindo..." : "Medir Sinais Vitais"}
+          </Button>
+        </div>
+      )}
 
       {/* Input */}
       {!sessionCompleted && (
