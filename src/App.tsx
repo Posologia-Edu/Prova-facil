@@ -108,6 +108,7 @@ import BiomedicineAggregator from "./pages/BiomedicineAggregator";
 import VirtualPatients from "./pages/VirtualPatients";
 import VirtualPatientChat from "./pages/VirtualPatientChat";
 import VirtualPatientRoom from "./pages/VirtualPatientRoom";
+import VirtualPatientFeedback from "./pages/VirtualPatientFeedback";
 import VPAnalytics from "./pages/VPAnalytics";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
@@ -492,6 +493,7 @@ const App = () => (
             />
             {/* Public Virtual Patient Room (student access via PIN) */}
             <Route path="/virtual-patients/room/:cvpId" element={<VirtualPatientRoom />} />
+            <Route path="/virtual-patients/feedback/:cvpId" element={<VirtualPatientFeedback />} />
             {/* SCT Routes */}
             <Route
               path="/sct"

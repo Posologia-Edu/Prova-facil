@@ -5661,6 +5661,8 @@ export type Database = {
           bonus_penalidades: Json | null
           class_virtual_patient_id: string
           created_at: string
+          feedback_released: boolean
+          feedback_released_at: string | null
           feedback_resumido: string | null
           flags_seguranca: Json | null
           id: string
@@ -5674,6 +5676,8 @@ export type Database = {
           bonus_penalidades?: Json | null
           class_virtual_patient_id: string
           created_at?: string
+          feedback_released?: boolean
+          feedback_released_at?: string | null
           feedback_resumido?: string | null
           flags_seguranca?: Json | null
           id?: string
@@ -5687,6 +5691,8 @@ export type Database = {
           bonus_penalidades?: Json | null
           class_virtual_patient_id?: string
           created_at?: string
+          feedback_released?: boolean
+          feedback_released_at?: string | null
           feedback_resumido?: string | null
           flags_seguranca?: Json | null
           id?: string

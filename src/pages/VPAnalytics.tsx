@@ -62,6 +62,7 @@ interface GradeRow {
   group_id?: string | null;
   group_label?: string | null;
   mai_json?: any;
+  feedback_released?: boolean;
 }
 interface TranscriptMsg { role: string; content: string; encounter: number; }
 
@@ -177,7 +178,7 @@ export default function VPAnalytics() {
         .in("session_id", sessionIds),
       supabase
         .from("virtual_patient_grades")
-        .select("id, session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id")
+        .select("id, session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id, feedback_released")
         .in("class_virtual_patient_id", filteredCvpIds),
     ]);
 
@@ -253,6 +254,7 @@ export default function VPAnalytics() {
           group_id: session.group_id || null,
           group_label: cvpLabelMap.get(session.class_virtual_patient_id) || null,
           mai_json: mai || null,
+          feedback_released: !!grade?.feedback_released,
         };
       })
       .sort((a, b) => {
@@ -432,6 +434,38 @@ export default function VPAnalytics() {
     setEditMode(false);
     setDetailGrade(null);
     await loadGrades();
+  };
+
+  // Liberar (ou revogar) o feedback para os alunos. Em sessões de grupo,
+  // a alteração é replicada para todos os membros do mesmo group_id, garantindo
+  // que todos do grupo vejam (ou não) o mesmo feedback.
+  const toggleFeedbackRelease = async (g: GradeRow, release: boolean) => {
+    try {
+      // Coletar todos os session_ids afetados (grupo inteiro ou apenas a sessão)
+      let sessionIds: string[] = [g.session_id];
+      if (g.group_id) {
+        const { data: siblings } = await supabase
+          .from("virtual_patient_sessions")
+          .select("id")
+          .eq("group_id", g.group_id);
+        sessionIds = (siblings || []).map((s: any) => s.id);
+      }
+
+      const { error } = await supabase
+        .from("virtual_patient_grades")
+        .update({
+          feedback_released: release,
+          feedback_released_at: release ? new Date().toISOString() : null,
+        })
+        .in("session_id", sessionIds);
+
+      if (error) throw error;
+
+      toast.success(release ? "Feedback liberado para o(s) aluno(s)." : "Feedback ocultado dos alunos.");
+      await loadGrades();
+    } catch (err: any) {
+      toast.error("Erro ao alterar liberação: " + (err?.message || "desconhecido"));
+    }
   };
 
   const handleBatchGrade = async () => {
@@ -1007,11 +1041,27 @@ export default function VPAnalytics() {
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
-                          <Eye className="h-3.5 w-3.5 mr-1" />
-                          {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
-                        </Button>
+                       <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {g.correction_status === "graded" && (
+                            <Button
+                              variant={g.feedback_released ? "secondary" : "outline"}
+                              size="sm"
+                              onClick={() => toggleFeedbackRelease(g, !g.feedback_released)}
+                              title={g.feedback_released ? "Feedback liberado para o aluno — clique para ocultar" : "Liberar feedback para o aluno"}
+                            >
+                              {g.feedback_released ? (
+                                <><Eye className="h-3.5 w-3.5 mr-1" />Liberado</>
+                              ) : (
+                                <><Eye className="h-3.5 w-3.5 mr-1 opacity-50" />Liberar</>
+                              )}
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
