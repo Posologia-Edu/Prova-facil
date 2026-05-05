@@ -1025,7 +1025,7 @@ export default function VPAnalytics() {
                         <TableHead>E-mail</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="text-center">Nota (0-10)</TableHead>
-                        <TableHead className="text-center">Microlearning</TableHead>
+                        <TableHead className="text-center">Eficiência Clínica</TableHead>
                         <TableHead className="text-center">Flags</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
