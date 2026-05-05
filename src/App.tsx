@@ -108,6 +108,7 @@ import BiomedicineAggregator from "./pages/BiomedicineAggregator";
 import VirtualPatients from "./pages/VirtualPatients";
 import VirtualPatientChat from "./pages/VirtualPatientChat";
 import VirtualPatientRoom from "./pages/VirtualPatientRoom";
+import VirtualPatientFeedback from "./pages/VirtualPatientFeedback";
 import VPAnalytics from "./pages/VPAnalytics";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
