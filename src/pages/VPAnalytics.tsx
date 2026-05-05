@@ -1257,8 +1257,8 @@ export default function VPAnalytics() {
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
                               <p className="text-xs">
-                                <strong>Nota Final = Base (rubrica 10 critérios) + Bônus Microlearning</strong>.
-                                O bônus vale até <strong>+1.0 ponto</strong> (microlearning ÷ 5), com teto em 10.
+                                <strong>Nota Final = Base (rubrica 10 critérios) + Bônus Eficiência Clínica</strong>.
+                                O bônus vale até <strong>+1.0 ponto</strong> (eficiência ÷ 5), com teto em 10.
                               </p>
                             </TooltipContent>
                           </UiTooltip>
