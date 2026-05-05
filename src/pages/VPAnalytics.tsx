@@ -1286,7 +1286,7 @@ export default function VPAnalytics() {
                     </div>
                     <div className="p-3 rounded-lg border text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <p className="text-xs text-muted-foreground">Microlearning (0–5)</p>
+                        <p className="text-xs text-muted-foreground">Eficiência Clínica (0–5)</p>
                         <TooltipProvider>
                           <UiTooltip>
                             <TooltipTrigger asChild>
@@ -1302,22 +1302,28 @@ export default function VPAnalytics() {
                             >
                               <div className="text-xs space-y-1.5 break-words whitespace-normal">
                                 <p>
-                                  <strong>O que é:</strong> nota de 0 a 5 que mede o engajamento do aluno
-                                  com o material curto de estudo liberado após o atendimento (mini-lições,
-                                  leitura dirigida, autocorreção e reflexão sobre o feedback).
+                                  <strong>O que é:</strong> nota de 0 a 5 que mede o quanto o aluno foi
+                                  <em> objetivo e completo</em> na consulta — cobriu os pontos essenciais
+                                  da anamnese sem alongar a interação desnecessariamente.
                                 </p>
                                 <p>
-                                  <strong>Como é calculada:</strong> com base em conclusão das mini-lições,
-                                  acertos nas perguntas de fixação e tempo dedicado ao reforço.
+                                  <strong>Como é calculada (automática, a partir do próprio caso):</strong>
                                 </p>
+                                <ul className="list-disc list-inside space-y-0.5 ml-1">
+                                  <li><strong>Cobertura</strong> = média dos 6 critérios da anamnese (acolhimento,
+                                  queixa/HDA, história medicamentosa, antecedentes, hábitos, raciocínio).</li>
+                                  <li><strong>Objetividade</strong> = penaliza conversas muito longas
+                                  (ideal ≈ 25 turnos do estudante) e também conversas rasas (&lt; 8 turnos).</li>
+                                  <li><strong>Eficiência</strong> = Cobertura × Objetividade × 5.</li>
+                                </ul>
                                 <p>
                                   <strong>Como entra na nota final:</strong> vira bônus de até
-                                  <strong> +1.0 ponto</strong> (microlearning ÷ 5), somado à nota base, com teto em 10.
-                                  Ex.: microlearning 4/5 → bônus de +0.80.
+                                  <strong> +1.0 ponto</strong> (eficiência ÷ 5), somado à nota base, com teto em 10.
+                                  Ex.: eficiência 4/5 → bônus de +0.80.
                                 </p>
                                 <p className="text-muted-foreground italic">
-                                  Explique aos alunos: estudar o material após o caso é recompensado
-                                  diretamente na nota.
+                                  Recompensa o aluno que cobriu os pontos essenciais com uma consulta enxuta —
+                                  habilidade clínica real, mensurada apenas com os dados da própria interação.
                                 </p>
                               </div>
                             </TooltipContent>
