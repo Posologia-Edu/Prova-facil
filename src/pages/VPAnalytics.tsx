@@ -1192,7 +1192,7 @@ export default function VPAnalytics() {
                             onChange={(e) => {
                               const v = parseFloat(e.target.value) || 0;
                               const newSubs = { ...editForm.subscores, [key]: v };
-                              setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs), nota_microlearning: recomputeFinal(newSubs) / 2 });
+                              setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs) });
                             }}
                           />
                         ) : (
@@ -1237,7 +1237,7 @@ export default function VPAnalytics() {
                             onChange={(e) => {
                               const v = parseFloat(e.target.value) || 0;
                               const newSubs = { ...editForm.subscores, [key]: v };
-                              setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs), nota_microlearning: recomputeFinal(newSubs) / 2 });
+                              setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs) });
                             }}
                           />
                         ) : (
