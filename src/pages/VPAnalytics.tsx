@@ -436,6 +436,38 @@ export default function VPAnalytics() {
     await loadGrades();
   };
 
+  // Liberar (ou revogar) o feedback para os alunos. Em sessões de grupo,
+  // a alteração é replicada para todos os membros do mesmo group_id, garantindo
+  // que todos do grupo vejam (ou não) o mesmo feedback.
+  const toggleFeedbackRelease = async (g: GradeRow, release: boolean) => {
+    try {
+      // Coletar todos os session_ids afetados (grupo inteiro ou apenas a sessão)
+      let sessionIds: string[] = [g.session_id];
+      if (g.group_id) {
+        const { data: siblings } = await supabase
+          .from("virtual_patient_sessions")
+          .select("id")
+          .eq("group_id", g.group_id);
+        sessionIds = (siblings || []).map((s: any) => s.id);
+      }
+
+      const { error } = await supabase
+        .from("virtual_patient_grades")
+        .update({
+          feedback_released: release,
+          feedback_released_at: release ? new Date().toISOString() : null,
+        })
+        .in("session_id", sessionIds);
+
+      if (error) throw error;
+
+      toast.success(release ? "Feedback liberado para o(s) aluno(s)." : "Feedback ocultado dos alunos.");
+      await loadGrades();
+    } catch (err: any) {
+      toast.error("Erro ao alterar liberação: " + (err?.message || "desconhecido"));
+    }
+  };
+
   const handleBatchGrade = async () => {
     setGrading(true);
     const { data: { user } } = await supabase.auth.getUser();
