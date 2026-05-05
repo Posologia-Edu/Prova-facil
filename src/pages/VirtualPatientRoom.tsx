@@ -40,6 +40,7 @@ export default function VirtualPatientRoom() {
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [measuringVitals, setMeasuringVitals] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
