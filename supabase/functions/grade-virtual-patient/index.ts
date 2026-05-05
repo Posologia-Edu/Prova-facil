@@ -150,7 +150,6 @@ SCHEMA OBRIGATÓRIO (JSON)
   "nota_anamnese_0a6": 0.0,
   "nota_mai_0a4": 0.0,
   "nota_final_0a10": 0.0,
-  "nota_microlearning_0a5": 0.0,
   "feedback_resumido": "STRING única em markdown com 3-5 bullets iniciados por '- ' separados por \\n. NUNCA retorne array.",
   "orientacoes_melhoria": "STRING única em markdown com 3-5 bullets iniciados por '- ' separados por \\n. NUNCA retorne array.",
   "flags_seguranca": ["lista de problemas críticos identificados, ou vazio"]
@@ -159,8 +158,7 @@ SCHEMA OBRIGATÓRIO (JSON)
 CÁLCULO:
 - nota_anamnese_0a6 = soma dos 6 subscores de anamnese (máx 6)
 - nota_mai_0a4 = soma dos 4 subscores MAI (máx 4)
-- nota_final_0a10 = nota_anamnese_0a6 + nota_mai_0a4 + bônus/penalidades (clamp 0–10)
-- nota_microlearning_0a5 = nota_final_0a10 / 2 (uma casa decimal)`;
+- nota_final_0a10 = nota_anamnese_0a6 + nota_mai_0a4 + bônus/penalidades (clamp 0–10)`;
 
     const userContent = `[CONTEXTO DA SESSÃO]
 Paciente virtual: ${sessionData?.patient_id || "?"}
@@ -243,13 +241,25 @@ Avalie agora seguindo rigorosamente o schema do system prompt.`;
       .eq("session_id", session_id)
       .maybeSingle();
 
+    // Compute Clinical Efficiency (0–5) from anamnese coverage × objectivity (student turns)
+    const subs = gradeResult.subscores || {};
+    const anamneseKeys = [
+      "identificacao_acolhimento", "queixa_principal_hda", "historia_medicamentosa",
+      "antecedentes_comorbidades", "habitos_estilo_vida", "escuta_raciocinio_clinico",
+    ];
+    const sumAnam = anamneseKeys.reduce((s, k) => s + (Number(subs[k]) || 0), 0);
+    const coverage = Math.max(0, Math.min(1, sumAnam / 6));
+    const studentTurns = (messages || []).filter((m: any) => m.role === "user").length;
+    const objectivity = Math.min(1, 25 / Math.max(studentTurns, 25)) * (studentTurns < 8 ? studentTurns / 8 : 1);
+    const efficiency = Math.round(coverage * objectivity * 5 * 10) / 10;
+
     const payload = {
       session_id,
       class_virtual_patient_id,
-      subscores: gradeResult.subscores || {},
+      subscores: subs,
       bonus_penalidades: gradeResult.bonus_penalidades || {},
       nota_final: gradeResult.nota_final_0a10 || 0,
-      nota_microlearning: gradeResult.nota_microlearning_0a5 || 0,
+      nota_microlearning: efficiency,
       feedback_resumido: feedbackResumido,
       orientacoes_melhoria: orientacoes,
       flags_seguranca: gradeResult.flags_seguranca || [],

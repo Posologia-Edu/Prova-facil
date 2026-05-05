@@ -337,11 +337,25 @@ export default function VPAnalytics() {
     return Math.max(0, Math.min(10, total));
   };
 
-  // Bônus Microlearning: até +1.0 ponto na nota final (microlearning/5 × 1.0), com teto em 10.
-  const microBonus = (micro: number | null | undefined) =>
-    Math.max(0, Math.min(1, ((Number(micro) || 0) / 5)));
-  const finalWithBonus = (nota: number | null | undefined, micro: number | null | undefined) =>
-    Math.max(0, Math.min(10, (Number(nota) || 0) + microBonus(micro)));
+  // Eficiência Clínica (0–5): combina cobertura da anamnese com objetividade (nº de turnos do estudante).
+  // Vira bônus de até +1.0 ponto na nota final (eficiencia/5 × 1.0), com teto em 10.
+  const microBonus = (eff: number | null | undefined) =>
+    Math.max(0, Math.min(1, ((Number(eff) || 0) / 5)));
+  const finalWithBonus = (nota: number | null | undefined, eff: number | null | undefined) =>
+    Math.max(0, Math.min(10, (Number(nota) || 0) + microBonus(eff)));
+
+  // Compute Clinical Efficiency from existing data (anamnese coverage × objectivity)
+  const computeEfficiency = (subs: Record<string, number> | null | undefined, studentTurns: number) => {
+    const anamneseKeys = [
+      "identificacao_acolhimento", "queixa_principal_hda", "historia_medicamentosa",
+      "antecedentes_comorbidades", "habitos_estilo_vida", "escuta_raciocinio_clinico",
+    ];
+    const sum = anamneseKeys.reduce((s, k) => s + (Number(subs?.[k]) || 0), 0);
+    const coverage = Math.max(0, Math.min(1, sum / 6));
+    const t = Math.max(0, studentTurns);
+    const objectivity = Math.min(1, 25 / Math.max(t, 25)) * (t < 8 ? t / 8 : 1);
+    return Math.round(coverage * objectivity * 5 * 10) / 10;
+  };
 
   const handleSaveEdit = async () => {
     if (!detailGrade || !editForm) return;
@@ -973,7 +987,7 @@ export default function VPAnalytics() {
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p className="text-xs">
-                                    Base: {(g.nota_final || 0).toFixed(2)} + Bônus Microlearning: {bonus.toFixed(2)} = <strong>{finalScore.toFixed(2)}</strong>
+                                    Base: {(g.nota_final || 0).toFixed(2)} + Bônus Eficiência Clínica: {bonus.toFixed(2)} = <strong>{finalScore.toFixed(2)}</strong>
                                   </p>
                                 </TooltipContent>
                               </UiTooltip>
@@ -1011,7 +1025,7 @@ export default function VPAnalytics() {
                         <TableHead>E-mail</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="text-center">Nota (0-10)</TableHead>
-                        <TableHead className="text-center">Microlearning</TableHead>
+                        <TableHead className="text-center">Eficiência Clínica</TableHead>
                         <TableHead className="text-center">Flags</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
@@ -1178,7 +1192,7 @@ export default function VPAnalytics() {
                             onChange={(e) => {
                               const v = parseFloat(e.target.value) || 0;
                               const newSubs = { ...editForm.subscores, [key]: v };
-                              setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs), nota_microlearning: recomputeFinal(newSubs) / 2 });
+                              setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs) });
                             }}
                           />
                         ) : (
@@ -1223,7 +1237,7 @@ export default function VPAnalytics() {
                             onChange={(e) => {
                               const v = parseFloat(e.target.value) || 0;
                               const newSubs = { ...editForm.subscores, [key]: v };
-                              setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs), nota_microlearning: recomputeFinal(newSubs) / 2 });
+                              setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs) });
                             }}
                           />
                         ) : (
@@ -1243,8 +1257,8 @@ export default function VPAnalytics() {
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
                               <p className="text-xs">
-                                <strong>Nota Final = Base (rubrica 10 critérios) + Bônus Microlearning</strong>.
-                                O bônus vale até <strong>+1.0 ponto</strong> (microlearning ÷ 5), com teto em 10.
+                                <strong>Nota Final = Base (rubrica 10 critérios) + Bônus Eficiência Clínica</strong>.
+                                O bônus vale até <strong>+1.0 ponto</strong> (eficiência ÷ 5), com teto em 10.
                               </p>
                             </TooltipContent>
                           </UiTooltip>
@@ -1272,7 +1286,7 @@ export default function VPAnalytics() {
                     </div>
                     <div className="p-3 rounded-lg border text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <p className="text-xs text-muted-foreground">Microlearning (0–5)</p>
+                        <p className="text-xs text-muted-foreground">Eficiência Clínica (0–5)</p>
                         <TooltipProvider>
                           <UiTooltip>
                             <TooltipTrigger asChild>
@@ -1288,22 +1302,28 @@ export default function VPAnalytics() {
                             >
                               <div className="text-xs space-y-1.5 break-words whitespace-normal">
                                 <p>
-                                  <strong>O que é:</strong> nota de 0 a 5 que mede o engajamento do aluno
-                                  com o material curto de estudo liberado após o atendimento (mini-lições,
-                                  leitura dirigida, autocorreção e reflexão sobre o feedback).
+                                  <strong>O que é:</strong> nota de 0 a 5 que mede o quanto o aluno foi
+                                  <em> objetivo e completo</em> na consulta — cobriu os pontos essenciais
+                                  da anamnese sem alongar a interação desnecessariamente.
                                 </p>
                                 <p>
-                                  <strong>Como é calculada:</strong> com base em conclusão das mini-lições,
-                                  acertos nas perguntas de fixação e tempo dedicado ao reforço.
+                                  <strong>Como é calculada (automática, a partir do próprio caso):</strong>
                                 </p>
+                                <ul className="list-disc list-inside space-y-0.5 ml-1">
+                                  <li><strong>Cobertura</strong> = média dos 6 critérios da anamnese (acolhimento,
+                                  queixa/HDA, história medicamentosa, antecedentes, hábitos, raciocínio).</li>
+                                  <li><strong>Objetividade</strong> = penaliza conversas muito longas
+                                  (ideal ≈ 25 turnos do estudante) e também conversas rasas (&lt; 8 turnos).</li>
+                                  <li><strong>Eficiência</strong> = Cobertura × Objetividade × 5.</li>
+                                </ul>
                                 <p>
                                   <strong>Como entra na nota final:</strong> vira bônus de até
-                                  <strong> +1.0 ponto</strong> (microlearning ÷ 5), somado à nota base, com teto em 10.
-                                  Ex.: microlearning 4/5 → bônus de +0.80.
+                                  <strong> +1.0 ponto</strong> (eficiência ÷ 5), somado à nota base, com teto em 10.
+                                  Ex.: eficiência 4/5 → bônus de +0.80.
                                 </p>
                                 <p className="text-muted-foreground italic">
-                                  Explique aos alunos: estudar o material após o caso é recompensado
-                                  diretamente na nota.
+                                  Recompensa o aluno que cobriu os pontos essenciais com uma consulta enxuta —
+                                  habilidade clínica real, mensurada apenas com os dados da própria interação.
                                 </p>
                               </div>
                             </TooltipContent>
