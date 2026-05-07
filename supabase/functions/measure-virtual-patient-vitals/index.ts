@@ -1,5 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
+
+async function loadCustomBaseline(patientId: string) {
+  if (!patientId?.startsWith("custom:")) return null;
+  const id = patientId.slice("custom:".length);
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const { data } = await admin
+    .from("custom_virtual_patients")
+    .select("name, age, description, baseline_vitals, baseline_context")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    description: `${data.name}, ${data.age}a — ${data.description}`,
+    baseline: data.baseline_vitals,
+    context: data.baseline_context || "",
+  };
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -96,14 +117,13 @@ serve(async (req) => {
   try {
     const { patientId, encounter = 1, transcript = [] } = await req.json();
 
-    if (!patientId || !BASELINES[patientId]) {
+    const info = BASELINES[patientId] || (await loadCustomBaseline(patientId));
+    if (!patientId || !info) {
       return new Response(
         JSON.stringify({ error: "patientId inválido ou paciente sem baseline cadastrada." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    const info = BASELINES[patientId];
 
     // Resumo da conversa: enviamos somente as falas do estudante para extrair condutas.
     const studentTurns = (transcript as Array<{ role: string; content: string; encounter?: number }>)

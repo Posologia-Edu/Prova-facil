@@ -44,9 +44,26 @@ export default function VirtualPatientChat() {
   const [encounter, setEncounter] = useState(1);
   const [showMAI, setShowMAI] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(false);
+  const [customPatient, setCustomPatient] = useState<{ name: string; age: number; module: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const patient = PATIENT_NAMES[patientId || ""];
+  // Detecta se é paciente customizado (UUID)
+  const isCustom = !!patientId && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(patientId);
+  const apiPatientId = isCustom ? `custom:${patientId}` : patientId;
+  const patient = PATIENT_NAMES[patientId || ""] || customPatient;
+
+  useEffect(() => {
+    if (isCustom && patientId) {
+      supabase.from("custom_virtual_patients")
+        .select("name, age, category")
+        .eq("id", patientId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setCustomPatient({ name: data.name, age: data.age, module: data.category });
+        });
+    }
+  }, [isCustom, patientId]);
+
 
   useEffect(() => {
     if (sessionId) loadSession();
@@ -102,7 +119,7 @@ export default function VirtualPatientChat() {
         .map(m => ({ role: m.role, content: m.content }));
 
       const response = await supabase.functions.invoke("virtual-patient-chat", {
-        body: { patientId, messages: aiMessages, encounter },
+        body: { patientId: apiPatientId, messages: aiMessages, encounter },
       });
 
       if (response.error) throw new Error(response.error.message);
