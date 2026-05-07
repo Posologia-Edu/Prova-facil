@@ -999,6 +999,35 @@ export default function SimulationJoin() {
               )}
             </div>
 
+            {/* Outras rodadas pendentes — pular para iniciar fora de ordem */}
+            {!isActive && (() => {
+              const otherPending = allRounds.filter(
+                (r: any) => r.status === "pending" && r.id !== nextPendingRound?.id
+              );
+              if (otherPending.length === 0) return null;
+              return (
+                <div className="border-t pt-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Pular para outra rodada (aluno chegou atrasado, etc.)
+                  </p>
+                  <div className="space-y-2">
+                    {otherPending.map((r: any) => (
+                      <div key={r.id} className="flex items-center justify-between gap-2 p-2 rounded-lg border bg-muted/30">
+                        <div className="text-sm">
+                          <span className="font-medium">Rodada {r.round_number}</span>
+                          <span className="text-muted-foreground"> — Ciclo {r.cycle}</span>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => startSpecificRound(r)} className="gap-1">
+                          <SkipForward className="h-3.5 w-3.5" />
+                          Iniciar esta
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Reset button when all rounds are still pending */}
             {allRoundsPending && !isActive && (
               <Button variant="outline" size="sm" onClick={resetRounds} className="w-full">
