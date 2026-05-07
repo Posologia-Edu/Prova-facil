@@ -460,6 +460,25 @@ export default function SimulationJoin() {
     toast({ title: "Participante substituído." });
   };
 
+  // Professor: liberar materiais de um ciclo específico (respeitando os papéis das rodadas daquele ciclo)
+  const releaseMaterialsForCycle = async (cycle: number) => {
+    if (!room) return;
+    const cycleRounds = allRounds.filter((r: any) => r.cycle === cycle);
+    if (cycleRounds.length === 0) return;
+    const alreadyReleased = cycleRounds.some((r: any) => r.materials_released);
+    if (alreadyReleased) {
+      toast({ title: `Materiais do ciclo ${cycle} já estavam liberados.` });
+      return;
+    }
+    await Promise.all([
+      supabase.from("simulation_rounds").update({ materials_released: true }).in("id", cycleRounds.map((r: any) => r.id)),
+      supabase.from("simulation_participants").update({ status: "waiting" }).eq("room_id", room.id).eq("participant_role", "student"),
+      supabase.from("simulation_rooms").update({ current_cycle: cycle, current_round: 0, status: "active" }).eq("id", room.id),
+    ]);
+    setMaterialsReady(false);
+    toast({ title: `Materiais do ciclo ${cycle} liberados para os participantes.` });
+  };
+
   // Professor: iniciar uma rodada pendente específica (pular fora da ordem)
   const startSpecificRound = async (round: any) => {
     if (activeRound) {
