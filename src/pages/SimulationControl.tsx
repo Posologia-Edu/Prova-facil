@@ -14,6 +14,7 @@ import { SimulationReportGenerator, type PairReport, type ReportSection } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SimulationProgressPanel } from "@/components/simulation/SimulationProgressPanel";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SimulationControl() {
   const { roomId } = useParams<{ roomId: string }>();
