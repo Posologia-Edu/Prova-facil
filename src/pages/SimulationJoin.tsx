@@ -855,7 +855,7 @@ export default function SimulationJoin() {
             const Icon = roleIcons[a.assigned_role] || Users;
             const participantData = allParticipants.find((p: any) => p.id === a.participant_id);
             const isReady = participantData?.status === "ready";
-            const canSwap = isProfessor && !isCompleted && !isActiveR && (a.assigned_role === "patient" || a.assigned_role === "observer");
+            const canSwap = isProfessor && !isCompleted && (a.assigned_role === "patient" || a.assigned_role === "observer");
             return (
               <div key={a.id} className="flex items-center gap-2 text-sm flex-wrap">
                 <Icon className="h-4 w-4 text-muted-foreground" />
