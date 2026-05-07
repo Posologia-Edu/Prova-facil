@@ -446,6 +446,50 @@ export default function SimulationJoin() {
     toast({ title: t("sim_round_released") });
   };
 
+  // Professor: substituir paciente/observador em uma rodada (aluno faltou)
+  const swapAssignmentParticipant = async (assignmentId: string, newParticipantId: string) => {
+    const { error } = await supabase
+      .from("simulation_round_assignments")
+      .update({ participant_id: newParticipantId })
+      .eq("id", assignmentId);
+    if (error) {
+      toast({ title: "Erro ao substituir", description: error.message, variant: "destructive" });
+      return;
+    }
+    setAllAssignments((prev) => prev.map((a) => a.id === assignmentId ? { ...a, participant_id: newParticipantId } : a));
+    toast({ title: "Participante substituído." });
+  };
+
+  // Professor: iniciar uma rodada pendente específica (pular fora da ordem)
+  const startSpecificRound = async (round: any) => {
+    if (activeRound) {
+      toast({ title: "Encerre a rodada ativa antes de iniciar outra.", variant: "destructive" });
+      return;
+    }
+    if (!room) return;
+    const cycleRounds = allRounds.filter((r: any) => r.cycle === round.cycle);
+    const needRelease = !cycleRounds.some((r: any) => r.materials_released);
+    const ops: Promise<any>[] = [];
+    if (needRelease) {
+      ops.push(
+        supabase.from("simulation_rounds").update({ materials_released: true }).in("id", cycleRounds.map((r: any) => r.id)) as any,
+        supabase.from("simulation_participants").update({ status: "waiting" }).eq("room_id", room.id).eq("participant_role", "student") as any,
+      );
+    }
+    ops.push(
+      supabase.from("simulation_rounds").update({
+        status: "active",
+        started_at: new Date().toISOString(),
+        released_by: participant?.student_name || "professor",
+      }).eq("id", round.id) as any,
+      supabase.from("simulation_rooms").update({ current_cycle: round.cycle, current_round: round.round_number, status: "active" }).eq("id", room.id) as any,
+    );
+    await Promise.all(ops);
+    setAnswers({});
+    setFeedback("");
+    toast({ title: `Rodada ${round.round_number} iniciada (fora da ordem).` });
+  };
+
   const endRound = async () => {
     if (!activeRound) return;
     // Check if professor submitted evaluation
