@@ -550,6 +550,27 @@ export default function SimulationJoin() {
     toast({ title: t("sim_round_ended") });
   };
 
+  // Professor: reabrir uma rodada encerrada por engano (volta para "active" para que alunos enviem)
+  const reopenRound = async (round: any) => {
+    if (!room) return;
+    if (activeRound && activeRound.id !== round.id) {
+      toast({ title: "Encerre a rodada ativa antes de reabrir outra.", variant: "destructive" });
+      return;
+    }
+    await Promise.all([
+      supabase.from("simulation_rounds").update({
+        status: "active",
+        finished_at: null,
+      }).eq("id", round.id),
+      supabase.from("simulation_rooms").update({
+        current_cycle: round.cycle,
+        current_round: round.round_number,
+        status: "active",
+      }).eq("id", room.id),
+    ]);
+    toast({ title: `Rodada ${round.round_number} reaberta. O aluno já pode enviar o formulário.` });
+  };
+
   // Student: mark materials as studied — persist to DB so professor can see
   const markMaterialsReady = async () => {
     if (!participant) return;
@@ -1688,6 +1709,18 @@ export default function SimulationJoin() {
                       {t("sim_round")} {round.round_number} — {t("sim_cycle")} {round.cycle}
                     </AccordionTrigger>
                     <AccordionContent>
+                      <div className="mb-3 flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => reopenRound(round)}
+                          className="gap-1"
+                          title="Reabrir esta rodada para que alunos possam enviar/editar o formulário"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          Reabrir rodada
+                        </Button>
+                      </div>
                       {/* Show participants */}
                       <div className="mb-3">
                         {renderRoundParticipants(round.id)}
