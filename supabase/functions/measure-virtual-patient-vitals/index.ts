@@ -117,14 +117,13 @@ serve(async (req) => {
   try {
     const { patientId, encounter = 1, transcript = [] } = await req.json();
 
-    if (!patientId || !BASELINES[patientId]) {
+    const info = BASELINES[patientId] || (await loadCustomBaseline(patientId));
+    if (!patientId || !info) {
       return new Response(
         JSON.stringify({ error: "patientId inválido ou paciente sem baseline cadastrada." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    const info = BASELINES[patientId];
 
     // Resumo da conversa: enviamos somente as falas do estudante para extrair condutas.
     const studentTurns = (transcript as Array<{ role: string; content: string; encounter?: number }>)
