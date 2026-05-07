@@ -17,7 +17,7 @@ import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle, Trash2, UserRound, PauseCircle, PlayCircle } from "lucide-react";
+import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle, Trash2, UserRound, PauseCircle, PlayCircle, UserCog, SkipForward } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { generateRounds } from "@/lib/simulation-distribution";
@@ -446,6 +446,50 @@ export default function SimulationJoin() {
     toast({ title: t("sim_round_released") });
   };
 
+  // Professor: substituir paciente/observador em uma rodada (aluno faltou)
+  const swapAssignmentParticipant = async (assignmentId: string, newParticipantId: string) => {
+    const { error } = await supabase
+      .from("simulation_round_assignments")
+      .update({ participant_id: newParticipantId })
+      .eq("id", assignmentId);
+    if (error) {
+      toast({ title: "Erro ao substituir", description: error.message, variant: "destructive" });
+      return;
+    }
+    setAllAssignments((prev) => prev.map((a) => a.id === assignmentId ? { ...a, participant_id: newParticipantId } : a));
+    toast({ title: "Participante substituído." });
+  };
+
+  // Professor: iniciar uma rodada pendente específica (pular fora da ordem)
+  const startSpecificRound = async (round: any) => {
+    if (activeRound) {
+      toast({ title: "Encerre a rodada ativa antes de iniciar outra.", variant: "destructive" });
+      return;
+    }
+    if (!room) return;
+    const cycleRounds = allRounds.filter((r: any) => r.cycle === round.cycle);
+    const needRelease = !cycleRounds.some((r: any) => r.materials_released);
+    const ops: Promise<any>[] = [];
+    if (needRelease) {
+      ops.push(
+        supabase.from("simulation_rounds").update({ materials_released: true }).in("id", cycleRounds.map((r: any) => r.id)) as any,
+        supabase.from("simulation_participants").update({ status: "waiting" }).eq("room_id", room.id).eq("participant_role", "student") as any,
+      );
+    }
+    ops.push(
+      supabase.from("simulation_rounds").update({
+        status: "active",
+        started_at: new Date().toISOString(),
+        released_by: participant?.student_name || "professor",
+      }).eq("id", round.id) as any,
+      supabase.from("simulation_rooms").update({ current_cycle: round.cycle, current_round: round.round_number, status: "active" }).eq("id", room.id) as any,
+    );
+    await Promise.all(ops);
+    setAnswers({});
+    setFeedback("");
+    toast({ title: `Rodada ${round.round_number} iniciada (fora da ordem).` });
+  };
+
   const endRound = async () => {
     if (!activeRound) return;
     // Check if professor submitted evaluation
@@ -721,6 +765,13 @@ export default function SimulationJoin() {
   const renderRoundParticipants = (roundId: string) => {
     const roundAssignments = getAssignmentsForRound(roundId);
     if (roundAssignments.length === 0) return null;
+    const round = allRounds.find((r: any) => r.id === roundId);
+    const isCompleted = round?.status === "completed";
+    const isActiveR = round?.status === "active";
+    const usedIds = new Set(roundAssignments.map((a: any) => a.participant_id));
+    const swapCandidates = allParticipants.filter(
+      (p: any) => p.participant_role === "student" && !usedIds.has(p.id)
+    );
 
     return (
       <div className="space-y-2">
@@ -730,8 +781,9 @@ export default function SimulationJoin() {
             const Icon = roleIcons[a.assigned_role] || Users;
             const participantData = allParticipants.find((p: any) => p.id === a.participant_id);
             const isReady = participantData?.status === "ready";
+            const canSwap = isProfessor && !isCompleted && !isActiveR && (a.assigned_role === "patient" || a.assigned_role === "observer");
             return (
-              <div key={a.id} className="flex items-center gap-2 text-sm">
+              <div key={a.id} className="flex items-center gap-2 text-sm flex-wrap">
                 <Icon className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">{getParticipantName(a.participant_id)}</span>
                 <Badge variant="outline" className={`text-xs ${roleBadgeColors[a.assigned_role] || ""}`}>
@@ -743,6 +795,21 @@ export default function SimulationJoin() {
                   ) : (
                     <Clock className="h-4 w-4 text-muted-foreground/50" />
                   )
+                )}
+                {canSwap && swapCandidates.length > 0 && (
+                  <Select onValueChange={(val) => swapAssignmentParticipant(a.id, val)}>
+                    <SelectTrigger className="h-7 w-auto text-xs gap-1 border-dashed ml-1">
+                      <UserCog className="h-3 w-3" />
+                      <SelectValue placeholder="Substituir" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {swapCandidates.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id} className="text-xs">
+                          {c.student_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             );
@@ -931,6 +998,35 @@ export default function SimulationJoin() {
                 </Button>
               )}
             </div>
+
+            {/* Outras rodadas pendentes — pular para iniciar fora de ordem */}
+            {!isActive && (() => {
+              const otherPending = allRounds.filter(
+                (r: any) => r.status === "pending" && r.id !== nextPendingRound?.id
+              );
+              if (otherPending.length === 0) return null;
+              return (
+                <div className="border-t pt-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Pular para outra rodada (aluno chegou atrasado, etc.)
+                  </p>
+                  <div className="space-y-2">
+                    {otherPending.map((r: any) => (
+                      <div key={r.id} className="flex items-center justify-between gap-2 p-2 rounded-lg border bg-muted/30">
+                        <div className="text-sm">
+                          <span className="font-medium">Rodada {r.round_number}</span>
+                          <span className="text-muted-foreground"> — Ciclo {r.cycle}</span>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => startSpecificRound(r)} className="gap-1">
+                          <SkipForward className="h-3.5 w-3.5" />
+                          Iniciar esta
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Reset button when all rounds are still pending */}
             {allRoundsPending && !isActive && (
