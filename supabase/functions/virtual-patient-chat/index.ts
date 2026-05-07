@@ -1,5 +1,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
+
+async function loadCustomPatient(patientId: string) {
+  if (!patientId?.startsWith("custom:")) return null;
+  const id = patientId.slice("custom:".length);
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const { data } = await admin
+    .from("custom_virtual_patients")
+    .select("name, age, profession, category, description, system_prompt")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    name: data.name,
+    age: data.age,
+    profession: data.profession,
+    module: data.category,
+    description: data.description,
+    systemPrompt: data.system_prompt,
+  };
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
