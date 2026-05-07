@@ -1709,6 +1709,18 @@ export default function SimulationJoin() {
                       {t("sim_round")} {round.round_number} — {t("sim_cycle")} {round.cycle}
                     </AccordionTrigger>
                     <AccordionContent>
+                      <div className="mb-3 flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => reopenRound(round)}
+                          className="gap-1"
+                          title="Reabrir esta rodada para que alunos possam enviar/editar o formulário"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          Reabrir rodada
+                        </Button>
+                      </div>
                       {/* Show participants */}
                       <div className="mb-3">
                         {renderRoundParticipants(round.id)}
