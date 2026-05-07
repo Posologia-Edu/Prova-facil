@@ -785,6 +785,57 @@ export type Database = {
           },
         ]
       }
+      custom_virtual_patients: {
+        Row: {
+          age: number
+          baseline_context: string
+          baseline_vitals: Json
+          category: string
+          clinical_case: Json
+          clinical_context: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          profession: string
+          system_prompt: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age: number
+          baseline_context?: string
+          baseline_vitals?: Json
+          category: string
+          clinical_case?: Json
+          clinical_context: string
+          created_at?: string
+          description: string
+          id?: string
+          name: string
+          profession: string
+          system_prompt: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age?: number
+          baseline_context?: string
+          baseline_vitals?: Json
+          category?: string
+          clinical_case?: Json
+          clinical_context?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          profession?: string
+          system_prompt?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dentistry_clinical_cases: {
         Row: {
           content: string | null
