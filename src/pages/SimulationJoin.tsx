@@ -765,6 +765,13 @@ export default function SimulationJoin() {
   const renderRoundParticipants = (roundId: string) => {
     const roundAssignments = getAssignmentsForRound(roundId);
     if (roundAssignments.length === 0) return null;
+    const round = allRounds.find((r: any) => r.id === roundId);
+    const isCompleted = round?.status === "completed";
+    const isActiveR = round?.status === "active";
+    const usedIds = new Set(roundAssignments.map((a: any) => a.participant_id));
+    const swapCandidates = allParticipants.filter(
+      (p: any) => p.participant_role === "student" && !usedIds.has(p.id)
+    );
 
     return (
       <div className="space-y-2">
@@ -774,8 +781,9 @@ export default function SimulationJoin() {
             const Icon = roleIcons[a.assigned_role] || Users;
             const participantData = allParticipants.find((p: any) => p.id === a.participant_id);
             const isReady = participantData?.status === "ready";
+            const canSwap = isProfessor && !isCompleted && !isActiveR && (a.assigned_role === "patient" || a.assigned_role === "observer");
             return (
-              <div key={a.id} className="flex items-center gap-2 text-sm">
+              <div key={a.id} className="flex items-center gap-2 text-sm flex-wrap">
                 <Icon className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">{getParticipantName(a.participant_id)}</span>
                 <Badge variant="outline" className={`text-xs ${roleBadgeColors[a.assigned_role] || ""}`}>
@@ -787,6 +795,21 @@ export default function SimulationJoin() {
                   ) : (
                     <Clock className="h-4 w-4 text-muted-foreground/50" />
                   )
+                )}
+                {canSwap && swapCandidates.length > 0 && (
+                  <Select onValueChange={(val) => swapAssignmentParticipant(a.id, val)}>
+                    <SelectTrigger className="h-7 w-auto text-xs gap-1 border-dashed ml-1">
+                      <UserCog className="h-3 w-3" />
+                      <SelectValue placeholder="Substituir" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {swapCandidates.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id} className="text-xs">
+                          {c.student_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             );
