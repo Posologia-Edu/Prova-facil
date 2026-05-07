@@ -8,12 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap, Play, BookOpen, Square, PauseCircle, PlayCircle } from "lucide-react";
+import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap, Play, BookOpen, Square, PauseCircle, PlayCircle, SkipForward, UserCog } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SimulationReportGenerator, type PairReport, type ReportSection } from "@/components/SimulationReportGenerator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SimulationProgressPanel } from "@/components/simulation/SimulationProgressPanel";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SimulationControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -203,6 +204,45 @@ export default function SimulationControl() {
     queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
     queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
     toast({ title: `Rodada ${nextPendingRound.round_number} iniciada!` });
+  };
+
+  // Start a specific pending round (allows skipping over earlier pending rounds in the same cycle)
+  const startSpecificRound = async (round: any) => {
+    if (!room || activeRound) {
+      toast({ title: "Encerre a rodada ativa antes de iniciar outra.", variant: "destructive" });
+      return;
+    }
+    const cycleRounds = rounds.filter((r: any) => r.cycle === round.cycle);
+    const needRelease = !cycleRounds.some((r: any) => r.materials_released);
+    const ops: Promise<any>[] = [];
+    if (needRelease) {
+      ops.push(
+        supabase.from("simulation_rounds").update({ materials_released: true }).in("id", cycleRounds.map((r: any) => r.id)) as any,
+        supabase.from("simulation_participants").update({ status: "waiting" }).eq("room_id", room.id).eq("participant_role", "student") as any,
+      );
+    }
+    ops.push(
+      supabase.from("simulation_rounds").update({ status: "active", started_at: new Date().toISOString(), released_by: "professor" }).eq("id", round.id) as any,
+      supabase.from("simulation_rooms").update({ current_cycle: round.cycle, current_round: round.round_number, status: "active" }).eq("id", room.id) as any,
+    );
+    await Promise.all(ops);
+    queryClient.invalidateQueries({ queryKey: ["simulation-rounds", roomId] });
+    queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
+    toast({ title: `Rodada ${round.round_number} iniciada (fora da ordem).` });
+  };
+
+  // Swap the participant of a specific assignment within a round (substituir aluno ausente)
+  const swapAssignmentParticipant = async (assignmentId: string, newParticipantId: string) => {
+    const { error } = await supabase
+      .from("simulation_round_assignments")
+      .update({ participant_id: newParticipantId })
+      .eq("id", assignmentId);
+    if (error) {
+      toast({ title: "Erro ao substituir", description: error.message, variant: "destructive" });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["simulation-assignments", roomId] });
+    toast({ title: "Participante substituído." });
   };
 
   const endActiveRound = async () => {
@@ -626,6 +666,10 @@ export default function SimulationControl() {
             const isCompleted = round.status === "completed";
             const isPending = round.status === "pending";
 
+            // Eligible substitutes for swapping (only patient/observer can be swapped, professional must remain to keep the evaluation history)
+            const usedIds = new Set(roundAssignments.map((a: any) => a.participant_id));
+            const swapCandidates = students.filter((s: any) => !usedIds.has(s.id));
+
             return (
               <Card key={round.id} className={isActive ? "ring-2 ring-primary" : ""}>
                 <CardHeader className="pb-3">
@@ -637,13 +681,18 @@ export default function SimulationControl() {
                       {isCompleted && <Badge variant="secondary"><CheckCircle className="h-3 w-3 mr-1" />{t("sim_status_completed")}</Badge>}
                       {isActive && <Badge className="bg-green-600">{t("sim_status_active")}</Badge>}
                       {isPending && <Badge variant="outline">{t("sim_status_pending")}</Badge>}
+                      {isPending && !activeRound && nextPendingRound?.id !== round.id && (
+                        <Button size="sm" variant="outline" onClick={() => startSpecificRound(round)} className="gap-1">
+                          <SkipForward className="h-3.5 w-3.5" />
+                          Iniciar esta rodada
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-3">
                     {roundAssignments.map((a: any) => {
-                      // Get case info for patients
                       let caseLabel = "";
                       if (a.assigned_role === "patient" && a.case_index != null) {
                         const patientScriptForm = forms.find((f: any) => f.form_type === "patient_script");
@@ -652,6 +701,7 @@ export default function SimulationControl() {
                           caseLabel = content[0].cases[a.case_index]?.title || `Caso ${a.case_index + 1}`;
                         }
                       }
+                      const canSwap = !isCompleted && (a.assigned_role === "patient" || a.assigned_role === "observer");
                       return (
                         <div key={a.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                           <Badge className={roleColors[a.assigned_role] || ""}>
@@ -665,6 +715,21 @@ export default function SimulationControl() {
                           )}
                           {roundResponses.some((r: any) => r.participant_id === a.participant_id && r.submitted_at) && (
                             <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                          )}
+                          {canSwap && swapCandidates.length > 0 && (
+                            <Select onValueChange={(val) => swapAssignmentParticipant(a.id, val)}>
+                              <SelectTrigger className="h-7 w-auto text-xs gap-1 border-dashed">
+                                <UserCog className="h-3 w-3" />
+                                <SelectValue placeholder="Substituir" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {swapCandidates.map((c: any) => (
+                                  <SelectItem key={c.id} value={c.id} className="text-xs">
+                                    {c.student_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           )}
                         </div>
                       );
