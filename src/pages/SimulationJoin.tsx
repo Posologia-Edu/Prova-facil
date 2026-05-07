@@ -460,6 +460,25 @@ export default function SimulationJoin() {
     toast({ title: "Participante substituído." });
   };
 
+  // Professor: liberar materiais de um ciclo específico (respeitando os papéis das rodadas daquele ciclo)
+  const releaseMaterialsForCycle = async (cycle: number) => {
+    if (!room) return;
+    const cycleRounds = allRounds.filter((r: any) => r.cycle === cycle);
+    if (cycleRounds.length === 0) return;
+    const alreadyReleased = cycleRounds.some((r: any) => r.materials_released);
+    if (alreadyReleased) {
+      toast({ title: `Materiais do ciclo ${cycle} já estavam liberados.` });
+      return;
+    }
+    await Promise.all([
+      supabase.from("simulation_rounds").update({ materials_released: true }).in("id", cycleRounds.map((r: any) => r.id)),
+      supabase.from("simulation_participants").update({ status: "waiting" }).eq("room_id", room.id).eq("participant_role", "student"),
+      supabase.from("simulation_rooms").update({ current_cycle: cycle, current_round: 0, status: "active" }).eq("id", room.id),
+    ]);
+    setMaterialsReady(false);
+    toast({ title: `Materiais do ciclo ${cycle} liberados para os participantes.` });
+  };
+
   // Professor: iniciar uma rodada pendente específica (pular fora da ordem)
   const startSpecificRound = async (round: any) => {
     if (activeRound) {
@@ -1011,18 +1030,30 @@ export default function SimulationJoin() {
                     Pular para outra rodada (aluno chegou atrasado, etc.)
                   </p>
                   <div className="space-y-2">
-                    {otherPending.map((r: any) => (
-                      <div key={r.id} className="flex items-center justify-between gap-2 p-2 rounded-lg border bg-muted/30">
-                        <div className="text-sm">
-                          <span className="font-medium">Rodada {r.round_number}</span>
-                          <span className="text-muted-foreground"> — Ciclo {r.cycle}</span>
+                    {otherPending.map((r: any) => {
+                      const cycleReleased = allRounds.some((x: any) => x.cycle === r.cycle && x.materials_released);
+                      return (
+                        <div key={r.id} className="flex items-center justify-between gap-2 p-2 rounded-lg border bg-muted/30">
+                          <div className="text-sm">
+                            <span className="font-medium">Rodada {r.round_number}</span>
+                            <span className="text-muted-foreground"> — Ciclo {r.cycle}</span>
+                            {cycleReleased && <span className="ml-2 text-xs text-emerald-600">(materiais liberados)</span>}
+                          </div>
+                          <div className="flex gap-1">
+                            {!cycleReleased && (
+                              <Button size="sm" variant="outline" onClick={() => releaseMaterialsForCycle(r.cycle)} className="gap-1">
+                                <BookOpen className="h-3.5 w-3.5" />
+                                Liberar materiais
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => startSpecificRound(r)} className="gap-1">
+                              <SkipForward className="h-3.5 w-3.5" />
+                              Iniciar esta
+                            </Button>
+                          </div>
                         </div>
-                        <Button size="sm" variant="outline" onClick={() => startSpecificRound(r)} className="gap-1">
-                          <SkipForward className="h-3.5 w-3.5" />
-                          Iniciar esta
-                        </Button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
