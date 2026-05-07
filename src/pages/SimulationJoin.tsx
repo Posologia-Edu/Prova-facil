@@ -465,11 +465,8 @@ export default function SimulationJoin() {
     if (!room) return;
     const cycleRounds = allRounds.filter((r: any) => r.cycle === cycle);
     if (cycleRounds.length === 0) return;
-    const alreadyReleased = cycleRounds.some((r: any) => r.materials_released);
-    if (alreadyReleased) {
-      toast({ title: `Materiais do ciclo ${cycle} já estavam liberados.` });
-      return;
-    }
+    // Always re-apply: ensures all rounds in cycle are flagged released and resets students to "waiting"
+    // so the materials view re-opens for them even if they had already received it.
     await Promise.all([
       supabase.from("simulation_rounds").update({ materials_released: true }).in("id", cycleRounds.map((r: any) => r.id)),
       supabase.from("simulation_participants").update({ status: "waiting" }).eq("room_id", room.id).eq("participant_role", "student"),
