@@ -1,5 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
+
+async function loadCustomBaseline(patientId: string) {
+  if (!patientId?.startsWith("custom:")) return null;
+  const id = patientId.slice("custom:".length);
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const { data } = await admin
+    .from("custom_virtual_patients")
+    .select("name, age, description, baseline_vitals, baseline_context")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    description: `${data.name}, ${data.age}a — ${data.description}`,
+    baseline: data.baseline_vitals,
+    context: data.baseline_context || "",
+  };
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
