@@ -119,7 +119,7 @@ export default function VirtualPatientChat() {
         .map(m => ({ role: m.role, content: m.content }));
 
       const response = await supabase.functions.invoke("virtual-patient-chat", {
-        body: { patientId, messages: aiMessages, encounter },
+        body: { patientId: apiPatientId, messages: aiMessages, encounter },
       });
 
       if (response.error) throw new Error(response.error.message);
