@@ -440,7 +440,7 @@ serve(async (req) => {
   try {
     const { patientId, messages, encounter } = await req.json();
 
-    const patient = PATIENTS[patientId];
+    const patient = PATIENTS[patientId] || (await loadCustomPatient(patientId));
     if (!patient) {
       return new Response(JSON.stringify({ error: "Paciente não encontrado" }), {
         status: 404,
