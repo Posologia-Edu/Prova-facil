@@ -465,11 +465,8 @@ export default function SimulationJoin() {
     if (!room) return;
     const cycleRounds = allRounds.filter((r: any) => r.cycle === cycle);
     if (cycleRounds.length === 0) return;
-    const alreadyReleased = cycleRounds.some((r: any) => r.materials_released);
-    if (alreadyReleased) {
-      toast({ title: `Materiais do ciclo ${cycle} já estavam liberados.` });
-      return;
-    }
+    // Always re-apply: ensures all rounds in cycle are flagged released and resets students to "waiting"
+    // so the materials view re-opens for them even if they had already received it.
     await Promise.all([
       supabase.from("simulation_rounds").update({ materials_released: true }).in("id", cycleRounds.map((r: any) => r.id)),
       supabase.from("simulation_participants").update({ status: "waiting" }).eq("room_id", room.id).eq("participant_role", "student"),
@@ -1017,7 +1014,7 @@ export default function SimulationJoin() {
               );
             })()}
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {/* Material release stage - first round of cycle only */}
               {!isActive && nextPendingRound && needsMaterialRelease && (
                 <Button onClick={releaseMaterials} className="flex-1" variant="outline">
@@ -1030,6 +1027,18 @@ export default function SimulationJoin() {
                   <Play className="h-4 w-4 mr-1" />{t("sim_start_simulation")} — {t("sim_round")} {nextPendingRound.round_number}
                 </Button>
               )}
+              {/* Manual re-release for the current cycle (always available to professor when not active) */}
+              {!isActive && nextPendingRound && !needsMaterialRelease && (
+                <Button
+                  onClick={() => releaseMaterialsForCycle(nextPendingRound.cycle)}
+                  variant="outline"
+                  className="gap-1"
+                  title="Reenviar/forçar liberação dos materiais do ciclo atual"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Liberar materiais novamente
+                </Button>
+              )}
               {isActive && (
                 <Button onClick={endRound} variant="destructive" className="flex-1">
                   <Square className="h-4 w-4 mr-1" />{t("sim_end_round")}
@@ -1039,6 +1048,17 @@ export default function SimulationJoin() {
                 <Button onClick={cancelActiveRound} variant="outline" className="gap-1">
                   <RefreshCw className="h-4 w-4" />
                   Cancelar e escolher outra
+                </Button>
+              )}
+              {isActive && isProfessor && activeRound && (
+                <Button
+                  onClick={() => releaseMaterialsForCycle(activeRound.cycle)}
+                  variant="outline"
+                  className="gap-1"
+                  title="Reenviar materiais do ciclo da rodada ativa"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Liberar materiais
                 </Button>
               )}
             </div>
