@@ -509,6 +509,25 @@ export default function SimulationJoin() {
     toast({ title: `Rodada ${round.round_number} iniciada (fora da ordem).` });
   };
 
+  // Professor: cancelar a rodada ativa e voltá-la para "pendente" (para escolher outra)
+  const cancelActiveRound = async () => {
+    if (!activeRound || !room) return;
+    await Promise.all([
+      supabase.from("simulation_rounds").update({
+        status: "pending",
+        started_at: null,
+        finished_at: null,
+      }).eq("id", activeRound.id),
+      supabase.from("simulation_rooms").update({
+        current_round: 0,
+        status: "active",
+      }).eq("id", room.id),
+    ]);
+    setAnswers({});
+    setFeedback("");
+    toast({ title: "Rodada cancelada. Escolha outra para iniciar." });
+  };
+
   const endRound = async () => {
     if (!activeRound) return;
     // Check if professor submitted evaluation
@@ -1014,6 +1033,12 @@ export default function SimulationJoin() {
               {isActive && (
                 <Button onClick={endRound} variant="destructive" className="flex-1">
                   <Square className="h-4 w-4 mr-1" />{t("sim_end_round")}
+                </Button>
+              )}
+              {isActive && isProfessor && (
+                <Button onClick={cancelActiveRound} variant="outline" className="gap-1">
+                  <RefreshCw className="h-4 w-4" />
+                  Cancelar e escolher outra
                 </Button>
               )}
             </div>
