@@ -666,6 +666,10 @@ export default function SimulationControl() {
             const isCompleted = round.status === "completed";
             const isPending = round.status === "pending";
 
+            // Eligible substitutes for swapping (only patient/observer can be swapped, professional must remain to keep the evaluation history)
+            const usedIds = new Set(roundAssignments.map((a: any) => a.participant_id));
+            const swapCandidates = students.filter((s: any) => !usedIds.has(s.id));
+
             return (
               <Card key={round.id} className={isActive ? "ring-2 ring-primary" : ""}>
                 <CardHeader className="pb-3">
@@ -677,13 +681,18 @@ export default function SimulationControl() {
                       {isCompleted && <Badge variant="secondary"><CheckCircle className="h-3 w-3 mr-1" />{t("sim_status_completed")}</Badge>}
                       {isActive && <Badge className="bg-green-600">{t("sim_status_active")}</Badge>}
                       {isPending && <Badge variant="outline">{t("sim_status_pending")}</Badge>}
+                      {isPending && !activeRound && nextPendingRound?.id !== round.id && (
+                        <Button size="sm" variant="outline" onClick={() => startSpecificRound(round)} className="gap-1">
+                          <SkipForward className="h-3.5 w-3.5" />
+                          Iniciar esta rodada
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-3">
                     {roundAssignments.map((a: any) => {
-                      // Get case info for patients
                       let caseLabel = "";
                       if (a.assigned_role === "patient" && a.case_index != null) {
                         const patientScriptForm = forms.find((f: any) => f.form_type === "patient_script");
@@ -692,6 +701,7 @@ export default function SimulationControl() {
                           caseLabel = content[0].cases[a.case_index]?.title || `Caso ${a.case_index + 1}`;
                         }
                       }
+                      const canSwap = !isCompleted && (a.assigned_role === "patient" || a.assigned_role === "observer");
                       return (
                         <div key={a.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                           <Badge className={roleColors[a.assigned_role] || ""}>
@@ -705,6 +715,21 @@ export default function SimulationControl() {
                           )}
                           {roundResponses.some((r: any) => r.participant_id === a.participant_id && r.submitted_at) && (
                             <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                          )}
+                          {canSwap && swapCandidates.length > 0 && (
+                            <Select onValueChange={(val) => swapAssignmentParticipant(a.id, val)}>
+                              <SelectTrigger className="h-7 w-auto text-xs gap-1 border-dashed">
+                                <UserCog className="h-3 w-3" />
+                                <SelectValue placeholder="Substituir" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {swapCandidates.map((c: any) => (
+                                  <SelectItem key={c.id} value={c.id} className="text-xs">
+                                    {c.student_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           )}
                         </div>
                       );
