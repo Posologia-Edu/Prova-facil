@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Star } from "lucide-react";
 import { FormField, getSections } from "./types";
+import HandwritingInput from "./HandwritingInput";
 
 interface FormRendererProps {
   fields: FormField[];
@@ -65,20 +66,40 @@ export default function FormRenderer({
         )}
 
         {field.type === "text" && (
-          <Input
-            value={answers[field.id] || ""}
-            onChange={(e) => onChange({ ...answers, [field.id]: e.target.value })}
-            disabled={readOnly}
-          />
+          <div className="space-y-1.5">
+            <Input
+              value={answers[field.id] || ""}
+              onChange={(e) => onChange({ ...answers, [field.id]: e.target.value })}
+              disabled={readOnly}
+            />
+            {!readOnly && (
+              <HandwritingInput
+                context={field.label}
+                currentValue={answers[field.id] || ""}
+                appendMode={false}
+                onTranscribe={(text) => onChange({ ...answers, [field.id]: text })}
+              />
+            )}
+          </div>
         )}
 
         {field.type === "textarea" && (
-          <Textarea
-            value={answers[field.id] || ""}
-            onChange={(e) => onChange({ ...answers, [field.id]: e.target.value })}
-            disabled={readOnly}
-            rows={4}
-          />
+          <div className="space-y-1.5">
+            <Textarea
+              value={answers[field.id] || ""}
+              onChange={(e) => onChange({ ...answers, [field.id]: e.target.value })}
+              disabled={readOnly}
+              rows={4}
+            />
+            {!readOnly && (
+              <HandwritingInput
+                context={field.label}
+                currentValue={answers[field.id] || ""}
+                appendMode
+                onTranscribe={(text) => onChange({ ...answers, [field.id]: text })}
+              />
+            )}
+          </div>
         )}
 
         {field.type === "radio" && field.options && (
