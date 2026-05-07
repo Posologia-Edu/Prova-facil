@@ -1035,6 +1035,12 @@ export default function SimulationJoin() {
                   <Square className="h-4 w-4 mr-1" />{t("sim_end_round")}
                 </Button>
               )}
+              {isActive && isProfessor && (
+                <Button onClick={cancelActiveRound} variant="outline" className="gap-1">
+                  <RefreshCw className="h-4 w-4" />
+                  Cancelar e escolher outra
+                </Button>
+              )}
             </div>
 
             {/* Outras rodadas pendentes — pular para iniciar fora de ordem */}
