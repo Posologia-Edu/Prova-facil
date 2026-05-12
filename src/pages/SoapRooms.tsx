@@ -67,6 +67,30 @@ export default function SoapRooms() {
     },
   });
 
+  const { data: pendingTeacherEvals } = useQuery({
+    queryKey: ["soap-pending-teacher-evals"],
+    queryFn: async () => {
+      const { data: responses } = await supabase
+        .from("soap_responses")
+        .select("id, room_id, participant_id, needs_teacher_peer_eval, target_participant_id")
+        .eq("needs_teacher_peer_eval" as any, true);
+      if (!responses?.length) return {};
+      const targets = new Set(
+        (responses as any[])
+          .filter((r) => r.target_participant_id)
+          .map((r) => `${r.room_id}:${r.target_participant_id}`)
+      );
+      const counts: Record<string, number> = {};
+      (responses as any[]).forEach((r) => {
+        if (r.target_participant_id) return;
+        if (targets.has(`${r.room_id}:${r.participant_id}`)) return;
+        counts[r.room_id] = (counts[r.room_id] || 0) + 1;
+      });
+      return counts;
+    },
+    refetchInterval: 30000,
+  });
+
   // Fetch profiles to show teacher name
   const { data: profile } = useQuery({
     queryKey: ["my-profile"],
