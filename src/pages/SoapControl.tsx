@@ -110,6 +110,12 @@ export default function SoapControl() {
   const soapResponses = responses.filter((r: any) => !r.target_participant_id);
   const peerResponses = responses.filter((r: any) => r.target_participant_id);
 
+  // SOAPs flagged as needing teacher peer-eval (partner absent), with no peer eval yet.
+  const pendingTeacherPeerEvals = soapResponses.filter((r: any) => {
+    if (!r.needs_teacher_peer_eval) return false;
+    return !peerResponses.some((pe: any) => pe.target_participant_id === r.participant_id);
+  });
+
   const fieldLabels = useMemo(() => {
     const labels: Record<string, string> = {};
     forms.forEach((form: any) => {
