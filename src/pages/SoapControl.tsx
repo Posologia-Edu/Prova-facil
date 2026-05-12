@@ -511,9 +511,38 @@ export default function SoapControl() {
           <TabsTrigger value="pairs"><Shuffle className="h-4 w-4 mr-1" />Duplas</TabsTrigger>
           <TabsTrigger value="responses">Respostas SOAP</TabsTrigger>
           <TabsTrigger value="evaluations">Avaliações entre Pares</TabsTrigger>
+          <TabsTrigger value="absent">
+            <UserX className="h-4 w-4 mr-1" />Pares Ausentes
+            {pendingTeacherPeerEvals.length > 0 && (
+              <Badge variant="destructive" className="ml-1.5 h-5 px-1.5">{pendingTeacherPeerEvals.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="admin">Notas do Admin</TabsTrigger>
           <TabsTrigger value="final"><Trophy className="h-4 w-4 mr-1" />Notas Finais</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="absent" className="space-y-3">
+          {pendingTeacherPeerEvals.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Nenhum aluno com par ausente aguardando sua avaliação.
+              </CardContent>
+            </Card>
+          ) : (
+            pendingTeacherPeerEvals.map((response: any) => (
+              <TeacherPeerEvalCard
+                key={response.id}
+                response={response}
+                participants={participants}
+                forms={forms}
+                getParticipantName={getParticipantName}
+                renderAnswerEntries={renderAnswerEntries}
+                onSubmitted={() => queryClient.invalidateQueries({ queryKey: ["soap-responses", roomId] })}
+              />
+            ))
+          )}
+        </TabsContent>
+
 
         <TabsContent value="pairs" className="space-y-4">
           <div className="flex gap-2 flex-wrap">
