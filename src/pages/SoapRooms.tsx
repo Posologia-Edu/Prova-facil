@@ -70,10 +70,10 @@ export default function SoapRooms() {
   const { data: pendingTeacherEvals } = useQuery({
     queryKey: ["soap-pending-teacher-evals"],
     queryFn: async () => {
-      const { data: responses } = await supabase
+      const { data: responses } = await (supabase as any)
         .from("soap_responses")
         .select("id, room_id, participant_id, needs_teacher_peer_eval, target_participant_id")
-        .eq("needs_teacher_peer_eval" as any, true);
+        .eq("needs_teacher_peer_eval", true);
       if (!responses?.length) return {};
       const targets = new Set(
         (responses as any[])
