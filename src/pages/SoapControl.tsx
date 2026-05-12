@@ -10,8 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trophy, Bot, Loader2 } from "lucide-react";
+import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trophy, Bot, Loader2, UserX } from "lucide-react";
 import { computeFieldScore, FormField } from "@/components/forms/types";
+import FormRenderer from "@/components/forms/FormRenderer";
 import { SimulationReportGenerator, type PairReport, type ReportSection } from "@/components/SimulationReportGenerator";
 
 export default function SoapControl() {
