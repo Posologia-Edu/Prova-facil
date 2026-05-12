@@ -872,3 +872,113 @@ export default function SoapControl() {
     </div>
   );
 }
+
+// --- Teacher peer-evaluation card (used when partner is absent) ---
+function TeacherPeerEvalCard({
+  response,
+  participants,
+  forms,
+  getParticipantName,
+  renderAnswerEntries,
+  onSubmitted,
+}: {
+  response: any;
+  participants: any[];
+  forms: any[];
+  getParticipantName: (id: string) => string;
+  renderAnswerEntries: (a: Record<string, any>, showItemScores?: boolean) => JSX.Element;
+  onSubmitted: () => void;
+}) {
+  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const submitter = participants.find((p: any) => p.id === response.participant_id);
+  const absentPartner = participants.find(
+    (p: any) =>
+      p.pair_index === submitter?.pair_index &&
+      p.id !== submitter?.id &&
+      p.participant_role !== "teacher",
+  );
+  const peerForm = forms.find(
+    (f: any) =>
+      f.form_type === "peer_evaluation" ||
+      (f.title || "").toLowerCase().includes("avalia"),
+  );
+  const peerFields: FormField[] = peerForm ? (peerForm.content_json as FormField[]) : [];
+
+  const submit = async () => {
+    if (!peerForm) {
+      toast({ title: "Erro", description: "Instrumento de avaliação não encontrado.", variant: "destructive" });
+      return;
+    }
+    if (!absentPartner) {
+      toast({ title: "Erro", description: "Par ausente não identificado nesta dupla.", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase.from("soap_responses").insert({
+      room_id: response.room_id,
+      participant_id: absentPartner.id,
+      target_participant_id: response.participant_id,
+      form_id: peerForm.id,
+      answers_json: answers,
+      teacher_filled: true,
+    } as any);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      setSubmitting(false);
+      return;
+    }
+    // Clear pending flag on the SOAP response so it disappears from the list
+    await supabase
+      .from("soap_responses")
+      .update({ needs_teacher_peer_eval: false } as any)
+      .eq("id", response.id);
+    toast({ title: "Avaliação enviada", description: "A nota entrará na composição final do aluno." });
+    setSubmitting(false);
+    onSubmitted();
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <UserX className="h-4 w-4 text-destructive" />
+          {getParticipantName(response.participant_id)}
+          <span className="text-sm font-normal text-muted-foreground">
+            — par ausente{absentPartner ? `: ${absentPartner.student_name}` : ""}
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">SOAP enviado pelo aluno</Label>
+            {renderAnswerEntries(response.answers_json)}
+          </div>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">
+              Instrumento de avaliação (preenchido pelo professor)
+            </Label>
+            {peerFields.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhum instrumento de avaliação configurado para esta sala.
+              </p>
+            ) : (
+              <>
+                <FormRenderer fields={peerFields} answers={answers} onChange={setAnswers} />
+                <Button onClick={submit} disabled={submitting} className="w-full">
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enviando...</>
+                  ) : (
+                    <><Send className="h-4 w-4 mr-2" />Enviar avaliação</>
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
