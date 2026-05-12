@@ -264,6 +264,7 @@ export default function SoapRooms() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {rooms.map((room) => {
             const studentCount = participantCounts?.[room.id] || 0;
+            const pendingCount = pendingTeacherEvals?.[room.id] || 0;
             return (
               <Card key={room.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
@@ -286,6 +287,13 @@ export default function SoapRooms() {
                     <GraduationCap className="h-3.5 w-3.5" />
                     <span>{teacherName}</span>
                   </div>
+                  {pendingCount > 0 && (
+                    <div className="mb-3">
+                      <Badge variant="destructive" className="text-xs">
+                        {pendingCount} aluno(s) aguardando sua avaliação (par ausente)
+                      </Badge>
+                    </div>
+                  )}
                   <div className="flex gap-2 flex-wrap">
                     <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/editor/${room.id}`)}>
                       <Settings className="h-3.5 w-3.5 mr-1" />Editar
