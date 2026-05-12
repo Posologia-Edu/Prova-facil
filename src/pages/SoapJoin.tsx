@@ -531,13 +531,22 @@ export default function SoapJoin() {
   }
 
   // Done
+  const awaitingTeacher = participant?.status === "awaiting_teacher_peer";
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md text-center">
         <CardContent className="py-12">
           <CheckCircle className="h-12 w-12 mx-auto text-primary mb-4" />
           <h2 className="text-xl font-bold mb-2">Módulo SOAP Concluído!</h2>
-          <p className="text-muted-foreground">Você enviou seu formulário SOAP e a avaliação do colega. Obrigado!</p>
+          {awaitingTeacher ? (
+            <p className="text-muted-foreground">
+              Seu SOAP foi enviado. Como seu colega de dupla não compareceu, o professor fará a avaliação no lugar dele. Obrigado!
+            </p>
+          ) : participant?.pair_position === "S" ? (
+            <p className="text-muted-foreground">Seu SOAP foi enviado. Obrigado!</p>
+          ) : (
+            <p className="text-muted-foreground">Você enviou seu formulário SOAP e a avaliação do colega. Obrigado!</p>
+          )}
         </CardContent>
       </Card>
     </div>
