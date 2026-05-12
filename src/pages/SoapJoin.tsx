@@ -138,6 +138,12 @@ export default function SoapJoin() {
     sessionStorage.setItem("soap_pin", usedPin);
     sessionStorage.setItem("soap_email", usedEmail);
 
+    // Mark presence: if status is still 'waiting', upgrade to 'joined' so the partner
+    // can detect that this student is in the system.
+    if (me.status === "waiting") {
+      await supabase.from("soap_participants").update({ status: "joined" }).eq("id", me.id);
+    }
+
     // Find partner (skip for solo students)
     const isSolo = me.pair_position === "S";
     if (me.pair_index >= 0 && !isSolo) {
