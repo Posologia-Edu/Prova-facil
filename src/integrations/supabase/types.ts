@@ -5351,10 +5351,12 @@ export type Database = {
           created_at: string
           form_id: string
           id: string
+          needs_teacher_peer_eval: boolean
           participant_id: string
           room_id: string
           submitted_at: string | null
           target_participant_id: string | null
+          teacher_filled: boolean
         }
         Insert: {
           admin_feedback?: string | null
@@ -5365,10 +5367,12 @@ export type Database = {
           created_at?: string
           form_id: string
           id?: string
+          needs_teacher_peer_eval?: boolean
           participant_id: string
           room_id: string
           submitted_at?: string | null
           target_participant_id?: string | null
+          teacher_filled?: boolean
         }
         Update: {
           admin_feedback?: string | null
@@ -5379,10 +5383,12 @@ export type Database = {
           created_at?: string
           form_id?: string
           id?: string
+          needs_teacher_peer_eval?: boolean
           participant_id?: string
           room_id?: string
           submitted_at?: string | null
           target_participant_id?: string | null
+          teacher_filled?: boolean
         }
         Relationships: [
           {

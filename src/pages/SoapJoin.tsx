@@ -138,6 +138,12 @@ export default function SoapJoin() {
     sessionStorage.setItem("soap_pin", usedPin);
     sessionStorage.setItem("soap_email", usedEmail);
 
+    // Mark presence: if status is still 'waiting', upgrade to 'joined' so the partner
+    // can detect that this student is in the system.
+    if (me.status === "waiting") {
+      await supabase.from("soap_participants").update({ status: "joined" }).eq("id", me.id);
+    }
+
     // Find partner (skip for solo students)
     const isSolo = me.pair_position === "S";
     if (me.pair_index >= 0 && !isSolo) {
@@ -312,22 +318,57 @@ export default function SoapJoin() {
 
   const submitSoap = async () => {
     if (!soapForm || !participant || !room) return;
+
+    // Determine partner-absent status (only relevant for paired A/B students)
+    const isSolo = participant.pair_position === "S";
+    let partnerAbsent = false;
+    if (!isSolo && participant.pair_index >= 0) {
+      const { data: partners } = await supabase
+        .from("soap_participants")
+        .select("id, status")
+        .eq("room_id", room.id)
+        .eq("pair_index", participant.pair_index)
+        .neq("id", participant.id);
+      const pt = partners?.[0];
+      // Partner absent = never logged in (status still 'waiting') and never submitted
+      if (!pt) {
+        partnerAbsent = true;
+      } else if (pt.status === "waiting") {
+        const { data: partnerResp } = await supabase
+          .from("soap_responses")
+          .select("id")
+          .eq("participant_id", pt.id)
+          .eq("room_id", room.id)
+          .limit(1);
+        partnerAbsent = !partnerResp?.length;
+      }
+    }
+
     const { error } = await supabase.from("soap_responses").insert({
       room_id: room.id,
       participant_id: participant.id,
       form_id: soapForm.id,
       answers_json: soapAnswers,
-    });
+      needs_teacher_peer_eval: partnerAbsent,
+    } as any);
     if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
     await supabase.from("soap_participants").update({ status: "submitted" }).eq("id", participant.id);
     setSubmittedSoap(true);
     toast({ title: "SOAP enviado!" });
     // Solo students skip peer evaluation — trigger AI peer grading instead
-    if (participant.pair_position === "S") {
+    if (isSolo) {
       await supabase.from("soap_participants").update({ status: "done" }).eq("id", participant.id);
       setPhase("done");
       // Fire-and-forget AI grading for solo student
       triggerAIPeerGrading(room, participant, soapForm, soapAnswers).catch(console.error);
+    } else if (partnerAbsent) {
+      // Partner did not show up → professor will fill the peer evaluation
+      await supabase.from("soap_participants").update({ status: "awaiting_teacher_peer" }).eq("id", participant.id);
+      toast({
+        title: "Par ausente",
+        description: "Seu colega de dupla não está no sistema. O professor avaliará seu SOAP.",
+      });
+      setPhase("done");
     } else {
       await checkPartnerAndPeerStatus(room.id, participant);
     }
@@ -490,13 +531,22 @@ export default function SoapJoin() {
   }
 
   // Done
+  const awaitingTeacher = participant?.status === "awaiting_teacher_peer";
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md text-center">
         <CardContent className="py-12">
           <CheckCircle className="h-12 w-12 mx-auto text-primary mb-4" />
           <h2 className="text-xl font-bold mb-2">Módulo SOAP Concluído!</h2>
-          <p className="text-muted-foreground">Você enviou seu formulário SOAP e a avaliação do colega. Obrigado!</p>
+          {awaitingTeacher ? (
+            <p className="text-muted-foreground">
+              Seu SOAP foi enviado. Como seu colega de dupla não compareceu, o professor fará a avaliação no lugar dele. Obrigado!
+            </p>
+          ) : participant?.pair_position === "S" ? (
+            <p className="text-muted-foreground">Seu SOAP foi enviado. Obrigado!</p>
+          ) : (
+            <p className="text-muted-foreground">Você enviou seu formulário SOAP e a avaliação do colega. Obrigado!</p>
+          )}
         </CardContent>
       </Card>
     </div>

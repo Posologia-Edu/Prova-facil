@@ -10,8 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trophy, Bot, Loader2 } from "lucide-react";
+import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trophy, Bot, Loader2, UserX } from "lucide-react";
 import { computeFieldScore, FormField } from "@/components/forms/types";
+import FormRenderer from "@/components/forms/FormRenderer";
 import { SimulationReportGenerator, type PairReport, type ReportSection } from "@/components/SimulationReportGenerator";
 
 export default function SoapControl() {
@@ -108,6 +109,12 @@ export default function SoapControl() {
   const paired = studentsOnly.filter((p) => p.pair_index >= 0);
   const soapResponses = responses.filter((r: any) => !r.target_participant_id);
   const peerResponses = responses.filter((r: any) => r.target_participant_id);
+
+  // SOAPs flagged as needing teacher peer-eval (partner absent), with no peer eval yet.
+  const pendingTeacherPeerEvals = soapResponses.filter((r: any) => {
+    if (!r.needs_teacher_peer_eval) return false;
+    return !peerResponses.some((pe: any) => pe.target_participant_id === r.participant_id);
+  });
 
   const fieldLabels = useMemo(() => {
     const labels: Record<string, string> = {};
@@ -510,9 +517,38 @@ export default function SoapControl() {
           <TabsTrigger value="pairs"><Shuffle className="h-4 w-4 mr-1" />Duplas</TabsTrigger>
           <TabsTrigger value="responses">Respostas SOAP</TabsTrigger>
           <TabsTrigger value="evaluations">Avaliações entre Pares</TabsTrigger>
+          <TabsTrigger value="absent">
+            <UserX className="h-4 w-4 mr-1" />Pares Ausentes
+            {pendingTeacherPeerEvals.length > 0 && (
+              <Badge variant="destructive" className="ml-1.5 h-5 px-1.5">{pendingTeacherPeerEvals.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="admin">Notas do Admin</TabsTrigger>
           <TabsTrigger value="final"><Trophy className="h-4 w-4 mr-1" />Notas Finais</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="absent" className="space-y-3">
+          {pendingTeacherPeerEvals.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Nenhum aluno com par ausente aguardando sua avaliação.
+              </CardContent>
+            </Card>
+          ) : (
+            pendingTeacherPeerEvals.map((response: any) => (
+              <TeacherPeerEvalCard
+                key={response.id}
+                response={response}
+                participants={participants}
+                forms={forms}
+                getParticipantName={getParticipantName}
+                renderAnswerEntries={renderAnswerEntries}
+                onSubmitted={() => queryClient.invalidateQueries({ queryKey: ["soap-responses", roomId] })}
+              />
+            ))
+          )}
+        </TabsContent>
+
 
         <TabsContent value="pairs" className="space-y-4">
           <div className="flex gap-2 flex-wrap">
@@ -834,5 +870,115 @@ export default function SoapControl() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// --- Teacher peer-evaluation card (used when partner is absent) ---
+function TeacherPeerEvalCard({
+  response,
+  participants,
+  forms,
+  getParticipantName,
+  renderAnswerEntries,
+  onSubmitted,
+}: {
+  response: any;
+  participants: any[];
+  forms: any[];
+  getParticipantName: (id: string) => string;
+  renderAnswerEntries: (a: Record<string, any>, showItemScores?: boolean) => JSX.Element;
+  onSubmitted: () => void;
+}) {
+  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const submitter = participants.find((p: any) => p.id === response.participant_id);
+  const absentPartner = participants.find(
+    (p: any) =>
+      p.pair_index === submitter?.pair_index &&
+      p.id !== submitter?.id &&
+      p.participant_role !== "teacher",
+  );
+  const peerForm = forms.find(
+    (f: any) =>
+      f.form_type === "peer_evaluation" ||
+      (f.title || "").toLowerCase().includes("avalia"),
+  );
+  const peerFields: FormField[] = peerForm ? (peerForm.content_json as FormField[]) : [];
+
+  const submit = async () => {
+    if (!peerForm) {
+      toast({ title: "Erro", description: "Instrumento de avaliação não encontrado.", variant: "destructive" });
+      return;
+    }
+    if (!absentPartner) {
+      toast({ title: "Erro", description: "Par ausente não identificado nesta dupla.", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase.from("soap_responses").insert({
+      room_id: response.room_id,
+      participant_id: absentPartner.id,
+      target_participant_id: response.participant_id,
+      form_id: peerForm.id,
+      answers_json: answers,
+      teacher_filled: true,
+    } as any);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      setSubmitting(false);
+      return;
+    }
+    // Clear pending flag on the SOAP response so it disappears from the list
+    await supabase
+      .from("soap_responses")
+      .update({ needs_teacher_peer_eval: false } as any)
+      .eq("id", response.id);
+    toast({ title: "Avaliação enviada", description: "A nota entrará na composição final do aluno." });
+    setSubmitting(false);
+    onSubmitted();
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <UserX className="h-4 w-4 text-destructive" />
+          {getParticipantName(response.participant_id)}
+          <span className="text-sm font-normal text-muted-foreground">
+            — par ausente{absentPartner ? `: ${absentPartner.student_name}` : ""}
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">SOAP enviado pelo aluno</Label>
+            {renderAnswerEntries(response.answers_json)}
+          </div>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">
+              Instrumento de avaliação (preenchido pelo professor)
+            </Label>
+            {peerFields.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhum instrumento de avaliação configurado para esta sala.
+              </p>
+            ) : (
+              <>
+                <FormRenderer fields={peerFields} answers={answers} onChange={setAnswers} />
+                <Button onClick={submit} disabled={submitting} className="w-full">
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enviando...</>
+                  ) : (
+                    <><Send className="h-4 w-4 mr-2" />Enviar avaliação</>
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
