@@ -67,6 +67,30 @@ export default function SoapRooms() {
     },
   });
 
+  const { data: pendingTeacherEvals } = useQuery({
+    queryKey: ["soap-pending-teacher-evals"],
+    queryFn: async () => {
+      const { data: responses } = await (supabase as any)
+        .from("soap_responses")
+        .select("id, room_id, participant_id, needs_teacher_peer_eval, target_participant_id")
+        .eq("needs_teacher_peer_eval", true);
+      if (!responses?.length) return {};
+      const targets = new Set(
+        (responses as any[])
+          .filter((r) => r.target_participant_id)
+          .map((r) => `${r.room_id}:${r.target_participant_id}`)
+      );
+      const counts: Record<string, number> = {};
+      (responses as any[]).forEach((r) => {
+        if (r.target_participant_id) return;
+        if (targets.has(`${r.room_id}:${r.participant_id}`)) return;
+        counts[r.room_id] = (counts[r.room_id] || 0) + 1;
+      });
+      return counts;
+    },
+    refetchInterval: 30000,
+  });
+
   // Fetch profiles to show teacher name
   const { data: profile } = useQuery({
     queryKey: ["my-profile"],
@@ -240,6 +264,7 @@ export default function SoapRooms() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {rooms.map((room) => {
             const studentCount = participantCounts?.[room.id] || 0;
+            const pendingCount = pendingTeacherEvals?.[room.id] || 0;
             return (
               <Card key={room.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
@@ -262,11 +287,18 @@ export default function SoapRooms() {
                     <GraduationCap className="h-3.5 w-3.5" />
                     <span>{teacherName}</span>
                   </div>
+                  {pendingCount > 0 && (
+                    <div className="mb-3">
+                      <Badge variant="destructive" className="text-xs">
+                        {pendingCount} aluno(s) aguardando sua avaliação (par ausente)
+                      </Badge>
+                    </div>
+                  )}
                   <div className="flex gap-2 flex-wrap">
                     <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/editor/${room.id}`)}>
                       <Settings className="h-3.5 w-3.5 mr-1" />Editar
                     </Button>
-                    {room.status === "active" && (
+                    {room.status !== "draft" && (
                       <Button size="sm" onClick={() => navigate(`/simulations/soap/control/${room.id}`)}>
                         <Play className="h-3.5 w-3.5 mr-1" />Controle
                       </Button>
