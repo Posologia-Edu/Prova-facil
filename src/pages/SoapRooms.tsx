@@ -266,7 +266,7 @@ export default function SoapRooms() {
                     <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/editor/${room.id}`)}>
                       <Settings className="h-3.5 w-3.5 mr-1" />Editar
                     </Button>
-                    {room.status === "active" && (
+                    {room.status !== "draft" && (
                       <Button size="sm" onClick={() => navigate(`/simulations/soap/control/${room.id}`)}>
                         <Play className="h-3.5 w-3.5 mr-1" />Controle
                       </Button>
