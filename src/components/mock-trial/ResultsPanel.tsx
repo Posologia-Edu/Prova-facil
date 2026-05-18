@@ -186,42 +186,97 @@ export function ResultsPanel(props: Props) {
 
         {/* === Notas consolidadas === */}
         <TabsContent value="summary" className="space-y-3">
-          {consolidated.length === 0 ? (
+          {consolidated.length === 0 && !juryGroup ? (
             <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Sem grupos distribuídos.</CardContent></Card>
           ) : (
-            consolidated.map(c => {
-              const group = groups.find(g => g.id === c.groupId);
-              return (
-                <Card key={c.groupId}>
+            <>
+              {consolidated.map(c => {
+                const group = groups.find(g => g.id === c.groupId);
+                const members = group ? students.filter(s => s.group_id === group.id) : [];
+                const style = roleStyles[c.role];
+                return (
+                  <Card key={c.groupId} className={style?.wrap}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${style?.chip}`}>
+                          <Scale className="h-3 w-3" />
+                          {style?.label || ROLE_LABEL[c.role]}
+                        </span>
+                        <CardTitle className="text-base">{formatGroupLabel(group)}</CardTitle>
+                      </div>
+                      {members.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {members.map(m => (
+                            <span key={m.id} className="inline-flex items-center gap-1 rounded-md border border-foreground/15 bg-muted/40 px-2 py-0.5 text-xs">
+                              <UserSquare2 className="h-3 w-3 text-muted-foreground" />
+                              {m.student_name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs text-muted-foreground italic">Sem integrantes cadastrados neste grupo.</p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+                        <ScoreBox icon={<Gavel className="h-4 w-4" />} label="Juiz" value={c.judge} />
+                        <ScoreBox icon={<GraduationCap className="h-4 w-4" />} label="Professor" value={c.teacher} />
+                        <ScoreBox icon={<Sparkles className="h-4 w-4" />} label="IA (jurados)" value={c.ai} hint="Coerência com evidências" />
+                        <div className="rounded-lg border-2 border-primary p-3 bg-primary/5">
+                          <div className="text-xs text-muted-foreground">Nota Final do Grupo</div>
+                          <div className="text-3xl font-bold text-primary">
+                            {c.finalGroup != null ? c.finalGroup.toFixed(1) : "—"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">(Juiz + Professor) / 2</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+              {juryGroup && (
+                <Card className={roleStyles.jury.wrap}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant={c.role === "prosecution" ? "destructive" : "default"}>
-                        {ROLE_LABEL[c.role]}
-                      </Badge>
-                      <CardTitle className="text-base">
-                        {formatGroupLabel(group)}
-                      </CardTitle>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${roleStyles.jury.chip}`}>
+                        <Gavel className="h-3 w-3" />
+                        Júri Técnico
+                      </span>
+                      <CardTitle className="text-base">{formatGroupLabel(juryGroup)}</CardTitle>
                     </div>
+                    {juryMembers.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {juryMembers.map(m => (
+                          <span key={m.id} className="inline-flex items-center gap-1 rounded-md border border-foreground/15 bg-muted/40 px-2 py-0.5 text-xs">
+                            <UserSquare2 className="h-3 w-3 text-muted-foreground" />
+                            {m.student_name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-xs text-muted-foreground italic">Sem integrantes cadastrados neste grupo.</p>
+                    )}
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-                      <ScoreBox icon={<Gavel className="h-4 w-4" />} label="Juiz" value={c.judge} />
-                      <ScoreBox icon={<GraduationCap className="h-4 w-4" />} label="Professor" value={c.teacher} />
-                      <ScoreBox icon={<Sparkles className="h-4 w-4" />} label="IA (jurados)" value={c.ai} hint="Coerência com evidências" />
-                      <div className="rounded-lg border-2 border-primary p-3 bg-primary/5">
-                        <div className="text-xs text-muted-foreground">Nota Final do Grupo</div>
-                        <div className="text-3xl font-bold text-primary">
-                          {c.finalGroup != null ? c.finalGroup.toFixed(1) : "—"}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                      <ScoreBox icon={<Sparkles className="h-4 w-4" />} label="Interrogação" value={juryEval?.criteria_json?.capacidade_interrogacao} hint="Esclarecer pontos" />
+                      <ScoreBox icon={<Scale className="h-4 w-4" />} label="Julgamento justo" value={juryEval?.criteria_json?.julgamento_justo} hint="Provas + contra-argumentos" />
+                      <div className="rounded-lg border-2 border-amber-500 p-3 bg-amber-500/5">
+                        <div className="text-xs text-muted-foreground">Nota Final do Júri Técnico</div>
+                        <div className="text-3xl font-bold text-amber-600">
+                          {juryEval ? Number(juryEval.score).toFixed(1) : "—"}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">(Juiz + Professor) / 2</div>
+                        <div className="text-[10px] text-muted-foreground">Avaliação IA</div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              );
-            })
+              )}
+            </>
           )}
         </TabsContent>
+
 
         {/* === Envios dos grupos (formato premium) === */}
         <TabsContent value="submissions" className="space-y-3">
