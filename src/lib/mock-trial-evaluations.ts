@@ -81,14 +81,13 @@ export function consolidateScores(
     const teacherScore = teacher ? Number(teacher.score) : undefined;
     const aiScore = ai ? Number(ai.score) : undefined;
 
-    let finalGroup: number | null = null;
-    if (judgeScore != null && teacherScore != null) {
-      finalGroup = Number(((judgeScore + teacherScore) / 2).toFixed(2));
-    } else if (judgeScore != null) {
-      finalGroup = judgeScore;
-    } else if (teacherScore != null) {
-      finalGroup = teacherScore;
-    }
+    const parts = [judgeScore, teacherScore, aiScore].filter(
+      (v): v is number => v != null && !Number.isNaN(v)
+    );
+    const finalGroup =
+      parts.length > 0
+        ? Number((parts.reduce((a, b) => a + b, 0) / parts.length).toFixed(2))
+        : null;
 
     result.push({
       groupId: a.group_id,
