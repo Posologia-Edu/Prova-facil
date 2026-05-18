@@ -277,22 +277,23 @@ export default function SoapControl() {
           .replace(/\s+/g, " ")
           .trim();
 
-      const loadAnamnesisFromRoom = async (anamRoomId: string, pairIndex?: number | null, studentNameToMatch?: string) => {
+      const loadAnamnesisFromRoom = async (anamRoomId: string, participantId?: string | null, studentNameToMatch?: string) => {
         const { data: anamForms } = await supabase
           .from("simulation_forms")
           .select("*")
           .eq("room_id", anamRoomId)
-          .eq("form_type", "standard");
+          .eq("form_type", "anamnesis");
         const anamForm = anamForms?.[0];
         if (!anamForm) return false;
 
         let anamResponse: any = null;
-        if (pairIndex != null) {
+        if (participantId) {
           const { data: byPair } = await (supabase.from("simulation_responses") as any)
-            .select("answers_json, participant_id, pair_index")
-            .eq("room_id", anamRoomId)
+            .select("answers_json, participant_id, submitted_at, created_at")
             .eq("form_id", anamForm.id)
-            .eq("pair_index", pairIndex)
+            .eq("participant_id", participantId)
+            .not("submitted_at", "is", null)
+            .order("submitted_at", { ascending: false })
             .limit(1);
           anamResponse = byPair?.[0] || null;
         }
@@ -306,10 +307,11 @@ export default function SoapControl() {
           const target = (anamPs || []).find((p: any) => normalize(p.student_name) === normalize(studentNameToMatch));
           if (target) {
             const { data: byPid } = await (supabase.from("simulation_responses") as any)
-              .select("answers_json")
-              .eq("room_id", anamRoomId)
+              .select("answers_json, submitted_at, created_at")
               .eq("form_id", anamForm.id)
-              .or(`participant_id.eq.${target.id},pair_index.eq.${target.pair_index ?? -1}`)
+              .eq("participant_id", target.id)
+              .not("submitted_at", "is", null)
+              .order("submitted_at", { ascending: false })
               .limit(1);
             anamResponse = byPid?.[0] || null;
           }
@@ -337,7 +339,7 @@ export default function SoapControl() {
         if (anamnesisParticipant) {
           await loadAnamnesisFromRoom(
             room.anamnesis_room_id,
-            anamnesisParticipant.pair_index,
+            studentParticipant.anamnesis_participant_id,
             anamnesisParticipant.student_name || studentName
           );
         }
