@@ -426,7 +426,73 @@ export function ResultsPanel(props: Props) {
           </Card>
         </TabsContent>
 
-        {/* === Avaliação do Professor === */}
+        {/* === Avaliar Júri Técnico (IA) === */}
+        <TabsContent value="jury-panel" className="space-y-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Gavel className="h-4 w-4 text-amber-600" />
+                    Avaliação do Júri Técnico pela IA
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    A IA compara o que a <strong>Acusação</strong> e a <strong>Defesa</strong> enviaram e avalia o júri técnico em dois critérios: <strong>capacidade de interrogação</strong> (esclarecer pontos importantes) e <strong>capacidade de julgamento justo</strong> (ponderar provas, argumentos e contra-argumentos).
+                  </p>
+                </div>
+                <Button onClick={runJuryAi} disabled={juryAiRunning || !juryAssign} size="sm">
+                  <RefreshCw className={`h-4 w-4 mr-1 ${juryAiRunning ? "animate-spin" : ""}`} />
+                  {juryAiRunning ? "Avaliando..." : "Avaliar Júri Técnico"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!juryAssign ? (
+                <p className="text-sm text-muted-foreground italic">Este processo não tem grupo de júri técnico distribuído.</p>
+              ) : !juryEval ? (
+                <p className="text-sm text-muted-foreground italic">Ainda não há avaliação. Aguarde os jurados, a acusação e a defesa enviarem os formulários, depois clique em "Avaliar Júri Técnico".</p>
+              ) : (
+                <div className="border rounded-lg p-3 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${roleStyles.jury.chip}`}>
+                        <Gavel className="h-3 w-3" /> Júri Técnico
+                      </span>
+                      <span className="font-medium text-sm">{formatGroupLabel(juryGroup)}</span>
+                    </div>
+                    <Badge className="text-base px-3 py-1 bg-amber-500 text-white border-amber-600">
+                      {Number(juryEval.score).toFixed(1)}/10
+                    </Badge>
+                  </div>
+                  {juryMembers.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {juryMembers.map(m => (
+                        <span key={m.id} className="inline-flex items-center gap-1 rounded-md border border-foreground/15 bg-muted/40 px-2 py-0.5 text-xs">
+                          <UserSquare2 className="h-3 w-3 text-muted-foreground" />
+                          {m.student_name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <ScoreBox icon={<Sparkles className="h-4 w-4" />} label="Capacidade de interrogação" value={juryEval.criteria_json?.capacidade_interrogacao} hint="Esclareceu pontos importantes" />
+                    <ScoreBox icon={<Scale className="h-4 w-4" />} label="Julgamento justo" value={juryEval.criteria_json?.julgamento_justo} hint="Provas + contra-argumentos" />
+                  </div>
+                  {juryEval.feedback && (
+                    <div className="rounded-md border bg-muted/30 p-3">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" /> Feedback da IA
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap text-foreground/90">{juryEval.feedback}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+
         <TabsContent value="teacher" className="space-y-3">
           {!session ? (
             <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Inicie a sessão no painel do juiz para liberar a avaliação.</CardContent></Card>
