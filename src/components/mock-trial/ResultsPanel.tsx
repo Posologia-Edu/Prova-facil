@@ -124,7 +124,7 @@ export function ResultsPanel(props: Props) {
               <span className="h-px flex-1 bg-foreground/10" />
               <span className="font-mono text-foreground/70">{cases.length} processo(s)</span>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            <div className="flex gap-2 overflow-x-auto pb-1 pt-3 -mx-1 px-1">
               {cases.map((c, idx) => {
                 const active = selectedCaseId === c.id;
                 const num = c.case_number || String(idx + 1).padStart(3, "0");
@@ -140,6 +140,11 @@ export function ResultsPanel(props: Props) {
                         : "border-foreground/15 bg-card hover:border-primary/50 hover:bg-muted/40"
                     ].join(" ")}
                   >
+                    {active && (
+                      <span className="absolute -top-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-amber-500 text-white text-[9px] px-2 py-0.5 font-bold uppercase tracking-wider shadow ring-2 ring-background whitespace-nowrap">
+                        Em pauta
+                      </span>
+                    )}
                     <div className={[
                       "flex flex-col items-center justify-center rounded-sm px-2 py-1 font-mono text-[10px] leading-tight border",
                       active ? "border-primary-foreground/40 bg-primary-foreground/10" : "border-foreground/15 bg-muted/50"
@@ -161,11 +166,6 @@ export function ResultsPanel(props: Props) {
                         {c.title}
                       </div>
                     </div>
-                    {active && (
-                      <span className="absolute -top-1.5 right-3 inline-flex items-center gap-1 rounded-full bg-amber-500 text-white text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider shadow">
-                        Em pauta
-                      </span>
-                    )}
                   </button>
                 );
               })}

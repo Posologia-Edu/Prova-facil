@@ -28,6 +28,7 @@ import { WitnessesEditor } from "@/components/mock-trial/WitnessesEditor";
 import { InlineEditInput } from "@/components/mock-trial/InlineEditInput";
 import { MockTrialSectionsBuilder } from "@/components/mock-trial/MockTrialSectionsBuilder";
 import { TeacherGuidePanel } from "@/components/mock-trial/TeacherGuidePanel";
+import { StudentScoresPanel } from "@/components/mock-trial/StudentScoresPanel";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
@@ -786,6 +787,7 @@ export default function MockTrialEditor() {
           <TabsTrigger value="forms"><ClipboardList className="h-4 w-4 mr-1" />Formulários</TabsTrigger>
           <TabsTrigger value="judge"><Gavel className="h-4 w-4 mr-1" />Painel do Juiz</TabsTrigger>
           <TabsTrigger value="results"><BarChart3 className="h-4 w-4 mr-1" />Resultados</TabsTrigger>
+          <TabsTrigger value="student-scores"><Users className="h-4 w-4 mr-1" />Notas dos Alunos</TabsTrigger>
         </TabsList>
 
         {/* PROCESSOS TAB */}
@@ -1026,16 +1028,28 @@ export default function MockTrialEditor() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {groups.map(g => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {groups.map((g, gIdx) => {
               const groupStudents = students.filter(s => s.group_id === g.id);
               return (
-                <Card key={g.id}>
-                  <CardHeader className="pb-2">
+                <Card
+                  key={g.id}
+                  className="relative overflow-hidden border-foreground/15 bg-gradient-to-b from-card to-muted/20 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  {/* Faixa lateral estilo capa de processo */}
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary to-primary/60" />
+                  <CardHeader className="pb-2 pl-5">
                     <div className="flex items-start justify-between gap-1">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm truncate">{g.name}</CardTitle>
-                        <p className="text-xs text-muted-foreground">{groupStudents.length} aluno(s)</p>
+                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-1">
+                          <Users className="h-3 w-3" />
+                          <span>Câmara</span>
+                          <span className="font-mono text-foreground/70">{String(gIdx + 1).padStart(2, "0")}</span>
+                        </div>
+                        <CardTitle className="text-sm font-bold truncate text-foreground">{g.name}</CardTitle>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {groupStudents.length} integrante(s) cadastrado(s)
+                        </p>
                       </div>
                       <Button
                         size="sm"
@@ -1048,29 +1062,54 @@ export default function MockTrialEditor() {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    {groupStudents.map(s => (
-                      <div key={s.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
-                        <div className="truncate flex-1">
-                          <p className="font-medium text-xs">{s.student_name}</p>
-                          {s.student_email && <p className="text-xs text-muted-foreground truncate">{s.student_email}</p>}
+                  <CardContent className="pl-5 space-y-1.5">
+                    <div className="h-px bg-foreground/10 mb-2" />
+                    {groupStudents.map((s, sIdx) => (
+                      <div
+                        key={s.id}
+                        className="flex items-center justify-between gap-2 p-2 rounded-md border border-foreground/10 bg-background/60 hover:bg-muted/40 transition-colors"
+                      >
+                        <div className="flex items-start gap-2 min-w-0 flex-1">
+                          <span className="font-mono text-[10px] text-muted-foreground mt-0.5 shrink-0 w-5">
+                            {String(sIdx + 1).padStart(2, "0")}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium text-xs leading-tight truncate text-foreground">{s.student_name}</p>
+                            {s.student_email && (
+                              <p className="text-[10px] text-muted-foreground truncate">{s.student_email}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex gap-1 ml-2">
+                        <div className="flex gap-0.5 shrink-0">
                           <Select onValueChange={(val) => moveStudent(s.id, val)}>
-                            <SelectTrigger className="h-6 w-6 p-0 border-none"><Shuffle className="h-3 w-3" /></SelectTrigger>
+                            <SelectTrigger
+                              className="h-6 w-6 p-0 border-none hover:bg-muted"
+                              title="Mover para outro grupo"
+                            >
+                              <Shuffle className="h-3 w-3" />
+                            </SelectTrigger>
                             <SelectContent>
                               {groups.filter(og => og.id !== g.id).map(og => (
                                 <SelectItem key={og.id} value={og.id}>{og.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => removeStudent(s.id)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeStudent(s.id)}
+                          >
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
                     ))}
-                    {groupStudents.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">Sem alunos</p>}
+                    {groupStudents.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-3 italic">
+                        Câmara sem integrantes
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -1080,45 +1119,89 @@ export default function MockTrialEditor() {
 
         {/* DISTRIBUIÇÃO TAB */}
         <TabsContent value="distribution" className="space-y-4">
-          <div className="flex gap-2">
-            <Button onClick={generateAutoDistribution}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Pauta de Distribuição dos Autos
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Atribua cada câmara como Acusação, Defesa ou Júri Técnico em cada processo.
+              </p>
+            </div>
+            <Button onClick={generateAutoDistribution} variant="default">
               <Shuffle className="h-4 w-4 mr-1" />Gerar Distribuição Automática
             </Button>
           </div>
 
           {cases.length > 0 && groups.length > 0 && (
-            <Card>
-              <CardContent className="pt-6 overflow-x-auto">
-                <table className="w-full text-sm">
+            <Card className="border-foreground/15 overflow-hidden bg-gradient-to-b from-card to-muted/10">
+              <CardContent className="p-0 overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2 font-medium">Grupo</th>
-                      {cases.map((c: any) => (
-                        <th key={c.id} className="text-center p-2 font-medium">{c.title}</th>
+                    <tr className="bg-muted/60 border-b-2 border-foreground/15">
+                      <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground border-r border-foreground/10 min-w-[140px]">
+                        Câmara / Autos
+                      </th>
+                      {cases.map((c: any, idx: number) => (
+                        <th
+                          key={c.id}
+                          className="text-center px-3 py-3 border-r border-foreground/10 last:border-r-0 min-w-[180px]"
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              Nº {c.case_number || String(idx + 1).padStart(3, "0")}
+                            </span>
+                            <span className="text-xs font-semibold text-foreground line-clamp-2 leading-tight px-1">
+                              {c.title}
+                            </span>
+                          </div>
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {groups.map(g => (
-                      <tr key={g.id} className="border-b">
-                        <td className="p-2 font-medium">{g.name}</td>
+                    {groups.map((g, gIdx) => (
+                      <tr
+                        key={g.id}
+                        className={`border-b border-foreground/10 ${gIdx % 2 === 0 ? "bg-background" : "bg-muted/20"} hover:bg-primary/5 transition-colors`}
+                      >
+                        <td className="px-4 py-3 border-r border-foreground/10 align-middle">
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-1 rounded-full bg-gradient-to-b from-primary to-primary/60" />
+                            <div>
+                              <div className="font-mono text-[10px] text-muted-foreground leading-tight">
+                                Câmara {String(gIdx + 1).padStart(2, "0")}
+                              </div>
+                              <div className="font-semibold text-xs text-foreground">{g.name}</div>
+                            </div>
+                          </div>
+                        </td>
                         {cases.map((c: any) => {
                           const assignment = assignments.find((a: any) => a.case_id === c.id && a.group_id === g.id);
                           const currentRole = assignment ? (assignment as any).role : "none";
+                          const roleStyle =
+                            currentRole === "prosecution"
+                              ? "border-red-500/40 bg-red-500/5 text-red-700"
+                              : currentRole === "defense"
+                                ? "border-primary/40 bg-primary/5 text-primary"
+                                : currentRole === "jury"
+                                  ? "border-amber-500/40 bg-amber-500/5 text-amber-700"
+                                  : "border-dashed border-foreground/20 text-muted-foreground";
                           return (
-                            <td key={c.id} className="text-center p-2">
+                            <td key={c.id} className="text-center px-2 py-2 border-r border-foreground/10 last:border-r-0">
                               <Select
                                 value={currentRole}
                                 onValueChange={(v) => updateAssignment(c.id, g.id, v)}
                               >
-                                <SelectTrigger className="h-8 w-32 mx-auto text-xs">
+                                <SelectTrigger className={`h-9 w-full mx-auto text-xs font-semibold border ${roleStyle}`}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="none">— Não participa</SelectItem>
-                                  <SelectItem value="prosecution">Acusação</SelectItem>
-                                  <SelectItem value="defense">Defesa</SelectItem>
-                                  <SelectItem value="jury">Júri</SelectItem>
+                                  <SelectItem value="prosecution">⚖️ Acusação</SelectItem>
+                                  <SelectItem value="defense">🛡️ Defesa</SelectItem>
+                                  <SelectItem value="jury">🏛️ Júri Técnico</SelectItem>
                                 </SelectContent>
                               </Select>
                             </td>
@@ -1236,6 +1319,17 @@ export default function MockTrialEditor() {
             sessions={sessions}
             evaluationForms={evaluationForms}
             onRefresh={() => { refetchEvaluations(); refetchResponses(); }}
+          />
+        </TabsContent>
+
+        {/* NOTAS DOS ALUNOS TAB */}
+        <TabsContent value="student-scores" className="space-y-4">
+          <StudentScoresPanel
+            cases={cases}
+            groups={groups}
+            students={students}
+            assignments={assignments}
+            evaluations={evaluations}
           />
         </TabsContent>
       </Tabs>
