@@ -1028,16 +1028,28 @@ export default function MockTrialEditor() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {groups.map(g => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {groups.map((g, gIdx) => {
               const groupStudents = students.filter(s => s.group_id === g.id);
               return (
-                <Card key={g.id}>
-                  <CardHeader className="pb-2">
+                <Card
+                  key={g.id}
+                  className="relative overflow-hidden border-foreground/15 bg-gradient-to-b from-card to-muted/20 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  {/* Faixa lateral estilo capa de processo */}
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary to-primary/60" />
+                  <CardHeader className="pb-2 pl-5">
                     <div className="flex items-start justify-between gap-1">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm truncate">{g.name}</CardTitle>
-                        <p className="text-xs text-muted-foreground">{groupStudents.length} aluno(s)</p>
+                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-1">
+                          <Users className="h-3 w-3" />
+                          <span>Câmara</span>
+                          <span className="font-mono text-foreground/70">{String(gIdx + 1).padStart(2, "0")}</span>
+                        </div>
+                        <CardTitle className="text-sm font-bold truncate text-foreground">{g.name}</CardTitle>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {groupStudents.length} integrante(s) cadastrado(s)
+                        </p>
                       </div>
                       <Button
                         size="sm"
@@ -1050,29 +1062,54 @@ export default function MockTrialEditor() {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    {groupStudents.map(s => (
-                      <div key={s.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
-                        <div className="truncate flex-1">
-                          <p className="font-medium text-xs">{s.student_name}</p>
-                          {s.student_email && <p className="text-xs text-muted-foreground truncate">{s.student_email}</p>}
+                  <CardContent className="pl-5 space-y-1.5">
+                    <div className="h-px bg-foreground/10 mb-2" />
+                    {groupStudents.map((s, sIdx) => (
+                      <div
+                        key={s.id}
+                        className="flex items-center justify-between gap-2 p-2 rounded-md border border-foreground/10 bg-background/60 hover:bg-muted/40 transition-colors"
+                      >
+                        <div className="flex items-start gap-2 min-w-0 flex-1">
+                          <span className="font-mono text-[10px] text-muted-foreground mt-0.5 shrink-0 w-5">
+                            {String(sIdx + 1).padStart(2, "0")}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium text-xs leading-tight truncate text-foreground">{s.student_name}</p>
+                            {s.student_email && (
+                              <p className="text-[10px] text-muted-foreground truncate">{s.student_email}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex gap-1 ml-2">
+                        <div className="flex gap-0.5 shrink-0">
                           <Select onValueChange={(val) => moveStudent(s.id, val)}>
-                            <SelectTrigger className="h-6 w-6 p-0 border-none"><Shuffle className="h-3 w-3" /></SelectTrigger>
+                            <SelectTrigger
+                              className="h-6 w-6 p-0 border-none hover:bg-muted"
+                              title="Mover para outro grupo"
+                            >
+                              <Shuffle className="h-3 w-3" />
+                            </SelectTrigger>
                             <SelectContent>
                               {groups.filter(og => og.id !== g.id).map(og => (
                                 <SelectItem key={og.id} value={og.id}>{og.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => removeStudent(s.id)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeStudent(s.id)}
+                          >
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
                     ))}
-                    {groupStudents.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">Sem alunos</p>}
+                    {groupStudents.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-3 italic">
+                        Câmara sem integrantes
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               );
