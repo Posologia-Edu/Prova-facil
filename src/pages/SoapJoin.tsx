@@ -344,14 +344,36 @@ export default function SoapJoin() {
       }
     }
 
-    const { error } = await supabase.from("soap_responses").insert({
-      room_id: room.id,
-      participant_id: participant.id,
-      form_id: soapForm.id,
-      answers_json: soapAnswers,
-      needs_teacher_peer_eval: partnerAbsent,
-    } as any);
-    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    // Guard against duplicate submissions (e.g. double-click / stale state)
+    const { data: alreadySent } = await supabase
+      .from("soap_responses")
+      .select("id")
+      .eq("room_id", room.id)
+      .eq("participant_id", participant.id)
+      .is("target_participant_id", null)
+      .maybeSingle();
+    if (alreadySent?.id) {
+      setSubmittedSoap(true);
+      toast({ title: "SOAP já enviado", description: "Seu SOAP já havia sido registrado." });
+    } else {
+      const { error } = await supabase.from("soap_responses").insert({
+        room_id: room.id,
+        participant_id: participant.id,
+        form_id: soapForm.id,
+        answers_json: soapAnswers,
+        needs_teacher_peer_eval: partnerAbsent,
+      } as any);
+      if (error) {
+        // Unique index will raise 23505 if a concurrent insert happened
+        if ((error as any).code === "23505") {
+          setSubmittedSoap(true);
+          toast({ title: "SOAP já enviado", description: "Seu SOAP já havia sido registrado." });
+        } else {
+          toast({ title: "Erro", description: error.message, variant: "destructive" });
+          return;
+        }
+      }
+    }
     await supabase.from("soap_participants").update({ status: "submitted" }).eq("id", participant.id);
     setSubmittedSoap(true);
     toast({ title: "SOAP enviado!" });
@@ -376,6 +398,19 @@ export default function SoapJoin() {
 
   const submitPeerEval = async () => {
     if (!peerForm || !participant || !partner || !room) return;
+    const { data: alreadyPeer } = await supabase
+      .from("soap_responses")
+      .select("id")
+      .eq("room_id", room.id)
+      .eq("participant_id", participant.id)
+      .eq("target_participant_id", partner.id)
+      .maybeSingle();
+    if (alreadyPeer?.id) {
+      setSubmittedPeer(true);
+      setPhase("done");
+      toast({ title: "Avaliação já enviada" });
+      return;
+    }
     const { error } = await supabase.from("soap_responses").insert({
       room_id: room.id,
       participant_id: participant.id,
@@ -383,7 +418,16 @@ export default function SoapJoin() {
       form_id: peerForm.id,
       answers_json: peerAnswers,
     });
-    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      if ((error as any).code === "23505") {
+        setSubmittedPeer(true);
+        setPhase("done");
+        toast({ title: "Avaliação já enviada" });
+        return;
+      }
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
     setSubmittedPeer(true);
     setPhase("done");
     toast({ title: "Avaliação enviada!" });
