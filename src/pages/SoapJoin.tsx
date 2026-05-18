@@ -45,14 +45,15 @@ export default function SoapJoin() {
             .from("simulation_forms")
             .select("*")
             .eq("room_id", roomData.anamnesis_room_id)
-            .eq("form_type", "standard");
-          const anamForm = anamForms?.[0];
+            .in("form_type", ["anamnesis", "standard"]);
+          const anamForm = anamForms?.find((form: any) => form.form_type === "anamnesis") || anamForms?.[0];
           if (anamForm) {
             const { data: anamResps } = await (supabase.from("simulation_responses") as any)
               .select("answers_json")
-              .eq("room_id", roomData.anamnesis_room_id)
               .eq("form_id", anamForm.id)
-              .eq("pair_index", anamP.pair_index)
+              .eq("participant_id", participantData.anamnesis_participant_id)
+              .not("submitted_at", "is", null)
+              .order("submitted_at", { ascending: false })
               .limit(1);
             if (anamResps?.[0]?.answers_json) {
               const fields = Array.isArray(anamForm.content_json) ? (anamForm.content_json as any[]) : [];
