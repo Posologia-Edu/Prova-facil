@@ -266,47 +266,101 @@ export default function SoapControl() {
       const studentName = studentParticipant?.student_name || "";
       const patientName = (patientNames as Record<string, string>)[selectedResponse.participant_id] || "";
 
-      // Try to fetch anamnesis data if linked
+      // Try to fetch anamnesis data
       let anamnesisAnswers: Record<string, any> = {};
+
+      const normalize = (s: string) =>
+        (s || "")
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+
+      const loadAnamnesisFromRoom = async (anamRoomId: string, pairIndex?: number | null, studentNameToMatch?: string) => {
+        const { data: anamForms } = await supabase
+          .from("simulation_forms")
+          .select("*")
+          .eq("room_id", anamRoomId)
+          .eq("form_type", "standard");
+        const anamForm = anamForms?.[0];
+        if (!anamForm) return false;
+
+        let anamResponse: any = null;
+        if (pairIndex != null) {
+          const { data: byPair } = await (supabase.from("simulation_responses") as any)
+            .select("answers_json, participant_id, pair_index")
+            .eq("room_id", anamRoomId)
+            .eq("form_id", anamForm.id)
+            .eq("pair_index", pairIndex)
+            .limit(1);
+          anamResponse = byPair?.[0] || null;
+        }
+
+        if (!anamResponse && studentNameToMatch) {
+          // Find by student name match across this anamnesis room
+          const { data: anamPs } = await supabase
+            .from("simulation_participants")
+            .select("id, pair_index, student_name")
+            .eq("room_id", anamRoomId);
+          const target = (anamPs || []).find((p: any) => normalize(p.student_name) === normalize(studentNameToMatch));
+          if (target) {
+            const { data: byPid } = await (supabase.from("simulation_responses") as any)
+              .select("answers_json")
+              .eq("room_id", anamRoomId)
+              .eq("form_id", anamForm.id)
+              .or(`participant_id.eq.${target.id},pair_index.eq.${target.pair_index ?? -1}`)
+              .limit(1);
+            anamResponse = byPid?.[0] || null;
+          }
+        }
+
+        if (!anamResponse?.answers_json) return false;
+        const anamFields = Array.isArray(anamForm.content_json) ? (anamForm.content_json as any[]) : [];
+        const answers = anamResponse.answers_json as Record<string, any>;
+        for (const [key, value] of Object.entries(answers)) {
+          if (key === "_feedback") continue;
+          const field = anamFields.find((f: any) => f.id === key);
+          const label = field?.label || key;
+          anamnesisAnswers[label] = value;
+        }
+        return Object.keys(anamnesisAnswers).length > 0;
+      };
+
+      // 1) Try the explicitly linked anamnesis participant
       if (studentParticipant?.anamnesis_participant_id && room?.anamnesis_room_id) {
-        // Get the anamnesis participant
         const { data: anamnesisParticipant } = await supabase
           .from("simulation_participants")
-          .select("pair_index")
+          .select("pair_index, student_name")
           .eq("id", studentParticipant.anamnesis_participant_id)
-          .single();
-
+          .maybeSingle();
         if (anamnesisParticipant) {
-          // Get anamnesis form (standard type)
-          const { data: anamForms } = await supabase
-            .from("simulation_forms")
-            .select("*")
-            .eq("room_id", room.anamnesis_room_id)
-            .eq("form_type", "standard");
+          await loadAnamnesisFromRoom(
+            room.anamnesis_room_id,
+            anamnesisParticipant.pair_index,
+            anamnesisParticipant.student_name || studentName
+          );
+        }
+      }
 
-          const anamForm = anamForms?.[0];
-          if (anamForm) {
-            // Get the anamnesis response for this pair
-            const { data: anamResponses } = await (supabase
-              .from("simulation_responses") as any)
-              .select("answers_json")
-              .eq("room_id", room.anamnesis_room_id)
-              .eq("form_id", anamForm.id)
-              .eq("pair_index", anamnesisParticipant.pair_index)
-              .limit(1);
-            const anamResponse = anamResponses?.[0];
+      // 2) Fallback: linked anamnesis room but no link — match by student name
+      if (Object.keys(anamnesisAnswers).length === 0 && room?.anamnesis_room_id && studentName) {
+        await loadAnamnesisFromRoom(room.anamnesis_room_id, null, studentName);
+      }
 
-            if (anamResponse?.answers_json) {
-              // Map field IDs to labels for better AI context
-              const anamFields = Array.isArray(anamForm.content_json) ? anamForm.content_json as any[] : [];
-              const answers = anamResponse.answers_json as Record<string, any>;
-              for (const [key, value] of Object.entries(answers)) {
-                if (key === "_feedback") continue;
-                const field = anamFields.find((f: any) => f.id === key);
-                const label = field?.label || key;
-                anamnesisAnswers[label] = value;
-              }
-            }
+      // 3) Fallback: search ALL anamnesis rooms owned by this teacher for a participant with same name
+      if (Object.keys(anamnesisAnswers).length === 0 && studentName) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: rooms } = await supabase
+            .from("simulation_rooms")
+            .select("id")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false })
+            .limit(50);
+          for (const r of rooms || []) {
+            const ok = await loadAnamnesisFromRoom(r.id, null, studentName);
+            if (ok) break;
           }
         }
       }
