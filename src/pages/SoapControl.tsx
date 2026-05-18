@@ -348,22 +348,6 @@ export default function SoapControl() {
         await loadAnamnesisFromRoom(room.anamnesis_room_id, null, studentName);
       }
 
-      // 3) Fallback: search ALL anamnesis rooms owned by this teacher for a participant with same name
-      if (Object.keys(anamnesisAnswers).length === 0 && studentName) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const { data: rooms } = await supabase
-            .from("simulation_rooms")
-            .select("id")
-            .eq("user_id", session.user.id)
-            .order("created_at", { ascending: false })
-            .limit(50);
-          for (const r of rooms || []) {
-            const ok = await loadAnamnesisFromRoom(r.id, null, studentName);
-            if (ok) break;
-          }
-        }
-      }
 
       // Get SOAP form fields
       const soapForm = forms.find((f: any) => f.form_type === "standard" || f.form_type === "soap");
