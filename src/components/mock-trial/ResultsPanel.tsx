@@ -80,31 +80,109 @@ export function ResultsPanel(props: Props) {
     }
   };
 
+  const runJuryAi = async () => {
+    if (!session?.id) {
+      toast.error("Inicie a sessão deste processo no painel do juiz primeiro.");
+      return;
+    }
+    setJuryAiRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("grade-mock-trial-jury-panel", {
+        body: { session_id: session.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Júri Técnico avaliado pela IA!");
+      onRefresh();
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao avaliar júri técnico");
+    } finally {
+      setJuryAiRunning(false);
+    }
+  };
+
+  const juryAssign = caseAssigns.find(a => a.role === "jury");
+  const juryGroup = juryAssign ? groups.find(g => g.id === juryAssign.group_id) : null;
+  const juryMembers = juryGroup ? students.filter(s => s.group_id === juryGroup.id) : [];
+  const juryEval = caseEvaluations.find(e => e.evaluator_type === "ai_jury_panel" && e.evaluated_role === "jury");
+
+  const roleStyles: Record<string, { wrap: string; chip: string; icon: any; label: string }> = {
+    prosecution: { wrap: "border-l-[6px] border-l-red-600", chip: "bg-red-600 text-white", icon: Scale, label: "Acusação" },
+    defense:     { wrap: "border-l-[6px] border-l-primary", chip: "bg-primary text-primary-foreground", icon: Scale, label: "Defesa" },
+    jury:        { wrap: "border-l-[6px] border-l-amber-500", chip: "bg-amber-500 text-white", icon: Gavel, label: "Júri Técnico" },
+  };
+
   return (
     <div className="space-y-4">
-      {/* Seletor de processo */}
-      {cases.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {cases.map(c => (
-            <Button
-              key={c.id}
-              variant={selectedCaseId === c.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCaseId(c.id)}
-            >
-              {c.title}
-            </Button>
-          ))}
-        </div>
+      {/* Seletor de processo — visual de "autos do processo" */}
+      {cases.length > 0 && (
+        <Card className="border-foreground/10 bg-gradient-to-b from-muted/40 to-background">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              <Scroll className="h-3.5 w-3.5" />
+              <span>Autos do Processo</span>
+              <span className="h-px flex-1 bg-foreground/10" />
+              <span className="font-mono text-foreground/70">{cases.length} processo(s)</span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {cases.map((c, idx) => {
+                const active = selectedCaseId === c.id;
+                const num = c.case_number || String(idx + 1).padStart(3, "0");
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedCaseId(c.id)}
+                    className={[
+                      "group relative shrink-0 min-w-[240px] max-w-[320px] text-left rounded-md border transition-all",
+                      "px-3 py-2.5 flex items-start gap-3",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                        : "border-foreground/15 bg-card hover:border-primary/50 hover:bg-muted/40"
+                    ].join(" ")}
+                  >
+                    <div className={[
+                      "flex flex-col items-center justify-center rounded-sm px-2 py-1 font-mono text-[10px] leading-tight border",
+                      active ? "border-primary-foreground/40 bg-primary-foreground/10" : "border-foreground/15 bg-muted/50"
+                    ].join(" ")}>
+                      <span className="opacity-70">Nº</span>
+                      <span className="font-bold text-xs tracking-tight">{num}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={[
+                        "text-[9px] uppercase tracking-[0.15em] font-semibold mb-0.5",
+                        active ? "text-primary-foreground/80" : "text-muted-foreground"
+                      ].join(" ")}>
+                        Processo
+                      </div>
+                      <div className={[
+                        "text-sm font-semibold leading-snug line-clamp-2",
+                        active ? "text-primary-foreground" : "text-foreground"
+                      ].join(" ")}>
+                        {c.title}
+                      </div>
+                    </div>
+                    {active && (
+                      <span className="absolute -top-1.5 right-3 inline-flex items-center gap-1 rounded-full bg-amber-500 text-white text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider shadow">
+                        Em pauta
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="summary">Notas Consolidadas</TabsTrigger>
           <TabsTrigger value="submissions">Envios dos Grupos</TabsTrigger>
           <TabsTrigger value="ai">Avaliação dos Jurados (IA)</TabsTrigger>
+          <TabsTrigger value="jury-panel">Avaliar Júri Técnico</TabsTrigger>
           <TabsTrigger value="teacher">Avaliação do Professor</TabsTrigger>
         </TabsList>
+
 
         {/* === Notas consolidadas === */}
         <TabsContent value="summary" className="space-y-3">
