@@ -282,8 +282,8 @@ export default function SoapControl() {
           .from("simulation_forms")
           .select("*")
           .eq("room_id", anamRoomId)
-          .eq("form_type", "anamnesis");
-        const anamForm = anamForms?.[0];
+          .in("form_type", ["anamnesis", "standard"]);
+        const anamForm = anamForms?.find((form: any) => form.form_type === "anamnesis") || anamForms?.[0];
         if (!anamForm) return false;
 
         let anamResponse: any = null;
