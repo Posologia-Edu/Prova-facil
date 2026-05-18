@@ -1240,6 +1240,17 @@ export default function MockTrialEditor() {
             onRefresh={() => { refetchEvaluations(); refetchResponses(); }}
           />
         </TabsContent>
+
+        {/* NOTAS DOS ALUNOS TAB */}
+        <TabsContent value="student-scores" className="space-y-4">
+          <StudentScoresPanel
+            cases={cases}
+            groups={groups}
+            students={students}
+            assignments={assignments}
+            evaluations={evaluations}
+          />
+        </TabsContent>
       </Tabs>
     </div>
   );
