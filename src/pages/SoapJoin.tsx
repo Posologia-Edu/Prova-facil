@@ -398,6 +398,19 @@ export default function SoapJoin() {
 
   const submitPeerEval = async () => {
     if (!peerForm || !participant || !partner || !room) return;
+    const { data: alreadyPeer } = await supabase
+      .from("soap_responses")
+      .select("id")
+      .eq("room_id", room.id)
+      .eq("participant_id", participant.id)
+      .eq("target_participant_id", partner.id)
+      .maybeSingle();
+    if (alreadyPeer?.id) {
+      setSubmittedPeer(true);
+      setPhase("done");
+      toast({ title: "Avaliação já enviada" });
+      return;
+    }
     const { error } = await supabase.from("soap_responses").insert({
       room_id: room.id,
       participant_id: participant.id,
@@ -405,7 +418,16 @@ export default function SoapJoin() {
       form_id: peerForm.id,
       answers_json: peerAnswers,
     });
-    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      if ((error as any).code === "23505") {
+        setSubmittedPeer(true);
+        setPhase("done");
+        toast({ title: "Avaliação já enviada" });
+        return;
+      }
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
     setSubmittedPeer(true);
     setPhase("done");
     toast({ title: "Avaliação enviada!" });
