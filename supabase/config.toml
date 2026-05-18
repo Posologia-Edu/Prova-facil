@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.transcribe-handwriting]
 verify_jwt = false
+
+[functions.grade-mock-trial-jury-panel]
+verify_jwt = false
