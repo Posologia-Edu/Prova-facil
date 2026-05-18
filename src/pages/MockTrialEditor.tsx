@@ -1325,6 +1325,7 @@ export default function MockTrialEditor() {
         {/* NOTAS DOS ALUNOS TAB */}
         <TabsContent value="student-scores" className="space-y-4">
           <StudentScoresPanel
+            mockTrialId={id!}
             cases={cases}
             groups={groups}
             students={students}
