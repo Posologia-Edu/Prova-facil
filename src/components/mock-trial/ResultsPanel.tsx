@@ -35,9 +35,10 @@ const ROLE_COLOR: Record<string, string> = {
 };
 
 export function ResultsPanel(props: Props) {
-  const { cases, groups, assignments, forms, responses, evaluations, sessions, evaluationForms, onRefresh } = props;
+  const { cases, groups, students = [], assignments, forms, responses, evaluations, sessions, evaluationForms, onRefresh } = props;
   const [selectedCaseId, setSelectedCaseId] = useState<string>(cases[0]?.id || "");
   const [aiRunning, setAiRunning] = useState(false);
+  const [juryAiRunning, setJuryAiRunning] = useState(false);
 
   if (cases.length === 0) {
     return (
