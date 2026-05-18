@@ -1228,6 +1228,7 @@ export default function MockTrialEditor() {
           <ResultsPanel
             cases={cases}
             groups={groups}
+            students={students}
             assignments={assignments}
             forms={forms}
             responses={responses}
