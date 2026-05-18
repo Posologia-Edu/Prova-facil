@@ -2217,6 +2217,42 @@ export type Database = {
           },
         ]
       }
+      mock_trial_attendance: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          mock_trial_id: string
+          notes: string | null
+          score_override: number | null
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          mock_trial_id: string
+          notes?: string | null
+          score_override?: number | null
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          mock_trial_id?: string
+          notes?: string | null
+          score_override?: number | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mock_trial_case_bank: {
         Row: {
           case_number: string | null
