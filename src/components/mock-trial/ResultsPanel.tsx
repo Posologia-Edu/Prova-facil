@@ -227,7 +227,7 @@ export function ResultsPanel(props: Props) {
                           <div className="text-3xl font-bold text-primary">
                             {c.finalGroup != null ? c.finalGroup.toFixed(1) : "—"}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">(Juiz + Professor) / 2</div>
+                          <div className="text-[10px] text-muted-foreground">(Juiz + Professor + IA) / 3</div>
                         </div>
                       </div>
                     </CardContent>
