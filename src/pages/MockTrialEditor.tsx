@@ -1119,45 +1119,89 @@ export default function MockTrialEditor() {
 
         {/* DISTRIBUIÇÃO TAB */}
         <TabsContent value="distribution" className="space-y-4">
-          <div className="flex gap-2">
-            <Button onClick={generateAutoDistribution}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Pauta de Distribuição dos Autos
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Atribua cada câmara como Acusação, Defesa ou Júri Técnico em cada processo.
+              </p>
+            </div>
+            <Button onClick={generateAutoDistribution} variant="default">
               <Shuffle className="h-4 w-4 mr-1" />Gerar Distribuição Automática
             </Button>
           </div>
 
           {cases.length > 0 && groups.length > 0 && (
-            <Card>
-              <CardContent className="pt-6 overflow-x-auto">
-                <table className="w-full text-sm">
+            <Card className="border-foreground/15 overflow-hidden bg-gradient-to-b from-card to-muted/10">
+              <CardContent className="p-0 overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2 font-medium">Grupo</th>
-                      {cases.map((c: any) => (
-                        <th key={c.id} className="text-center p-2 font-medium">{c.title}</th>
+                    <tr className="bg-muted/60 border-b-2 border-foreground/15">
+                      <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground border-r border-foreground/10 min-w-[140px]">
+                        Câmara / Autos
+                      </th>
+                      {cases.map((c: any, idx: number) => (
+                        <th
+                          key={c.id}
+                          className="text-center px-3 py-3 border-r border-foreground/10 last:border-r-0 min-w-[180px]"
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              Nº {c.case_number || String(idx + 1).padStart(3, "0")}
+                            </span>
+                            <span className="text-xs font-semibold text-foreground line-clamp-2 leading-tight px-1">
+                              {c.title}
+                            </span>
+                          </div>
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {groups.map(g => (
-                      <tr key={g.id} className="border-b">
-                        <td className="p-2 font-medium">{g.name}</td>
+                    {groups.map((g, gIdx) => (
+                      <tr
+                        key={g.id}
+                        className={`border-b border-foreground/10 ${gIdx % 2 === 0 ? "bg-background" : "bg-muted/20"} hover:bg-primary/5 transition-colors`}
+                      >
+                        <td className="px-4 py-3 border-r border-foreground/10 align-middle">
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-1 rounded-full bg-gradient-to-b from-primary to-primary/60" />
+                            <div>
+                              <div className="font-mono text-[10px] text-muted-foreground leading-tight">
+                                Câmara {String(gIdx + 1).padStart(2, "0")}
+                              </div>
+                              <div className="font-semibold text-xs text-foreground">{g.name}</div>
+                            </div>
+                          </div>
+                        </td>
                         {cases.map((c: any) => {
                           const assignment = assignments.find((a: any) => a.case_id === c.id && a.group_id === g.id);
                           const currentRole = assignment ? (assignment as any).role : "none";
+                          const roleStyle =
+                            currentRole === "prosecution"
+                              ? "border-red-500/40 bg-red-500/5 text-red-700"
+                              : currentRole === "defense"
+                                ? "border-primary/40 bg-primary/5 text-primary"
+                                : currentRole === "jury"
+                                  ? "border-amber-500/40 bg-amber-500/5 text-amber-700"
+                                  : "border-dashed border-foreground/20 text-muted-foreground";
                           return (
-                            <td key={c.id} className="text-center p-2">
+                            <td key={c.id} className="text-center px-2 py-2 border-r border-foreground/10 last:border-r-0">
                               <Select
                                 value={currentRole}
                                 onValueChange={(v) => updateAssignment(c.id, g.id, v)}
                               >
-                                <SelectTrigger className="h-8 w-32 mx-auto text-xs">
+                                <SelectTrigger className={`h-9 w-full mx-auto text-xs font-semibold border ${roleStyle}`}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="none">— Não participa</SelectItem>
-                                  <SelectItem value="prosecution">Acusação</SelectItem>
-                                  <SelectItem value="defense">Defesa</SelectItem>
-                                  <SelectItem value="jury">Júri</SelectItem>
+                                  <SelectItem value="prosecution">⚖️ Acusação</SelectItem>
+                                  <SelectItem value="defense">🛡️ Defesa</SelectItem>
+                                  <SelectItem value="jury">🏛️ Júri Técnico</SelectItem>
                                 </SelectContent>
                               </Select>
                             </td>
