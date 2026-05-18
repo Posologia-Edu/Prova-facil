@@ -13,6 +13,7 @@ import { formatGroupLabel } from "@/lib/mock-trial-utils";
 interface Props {
   cases: any[];
   groups: any[];
+  students?: any[];
   assignments: any[];
   forms: any[];
   responses: any[];
