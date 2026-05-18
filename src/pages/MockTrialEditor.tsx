@@ -28,6 +28,7 @@ import { WitnessesEditor } from "@/components/mock-trial/WitnessesEditor";
 import { InlineEditInput } from "@/components/mock-trial/InlineEditInput";
 import { MockTrialSectionsBuilder } from "@/components/mock-trial/MockTrialSectionsBuilder";
 import { TeacherGuidePanel } from "@/components/mock-trial/TeacherGuidePanel";
+import { StudentScoresPanel } from "@/components/mock-trial/StudentScoresPanel";
 
 export default function MockTrialEditor() {
   const { id } = useParams<{ id: string }>();
