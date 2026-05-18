@@ -787,6 +787,7 @@ export default function MockTrialEditor() {
           <TabsTrigger value="forms"><ClipboardList className="h-4 w-4 mr-1" />Formulários</TabsTrigger>
           <TabsTrigger value="judge"><Gavel className="h-4 w-4 mr-1" />Painel do Juiz</TabsTrigger>
           <TabsTrigger value="results"><BarChart3 className="h-4 w-4 mr-1" />Resultados</TabsTrigger>
+          <TabsTrigger value="student-scores"><Users className="h-4 w-4 mr-1" />Notas dos Alunos</TabsTrigger>
         </TabsList>
 
         {/* PROCESSOS TAB */}
