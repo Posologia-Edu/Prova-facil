@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, CheckCircle2, Clock, RefreshCw, Sparkles, Gavel, GraduationCap, Users, FileText } from "lucide-react";
+import { BarChart3, CheckCircle2, Clock, RefreshCw, Sparkles, Gavel, GraduationCap, Users, FileText, Scale, Scroll, UserSquare2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvaluationForm";
@@ -13,6 +13,7 @@ import { formatGroupLabel } from "@/lib/mock-trial-utils";
 interface Props {
   cases: any[];
   groups: any[];
+  students?: any[];
   assignments: any[];
   forms: any[];
   responses: any[];
@@ -34,9 +35,10 @@ const ROLE_COLOR: Record<string, string> = {
 };
 
 export function ResultsPanel(props: Props) {
-  const { cases, groups, assignments, forms, responses, evaluations, sessions, evaluationForms, onRefresh } = props;
+  const { cases, groups, students = [], assignments, forms, responses, evaluations, sessions, evaluationForms, onRefresh } = props;
   const [selectedCaseId, setSelectedCaseId] = useState<string>(cases[0]?.id || "");
   const [aiRunning, setAiRunning] = useState(false);
+  const [juryAiRunning, setJuryAiRunning] = useState(false);
 
   if (cases.length === 0) {
     return (
@@ -78,70 +80,203 @@ export function ResultsPanel(props: Props) {
     }
   };
 
+  const runJuryAi = async () => {
+    if (!session?.id) {
+      toast.error("Inicie a sessão deste processo no painel do juiz primeiro.");
+      return;
+    }
+    setJuryAiRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("grade-mock-trial-jury-panel", {
+        body: { session_id: session.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Júri Técnico avaliado pela IA!");
+      onRefresh();
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao avaliar júri técnico");
+    } finally {
+      setJuryAiRunning(false);
+    }
+  };
+
+  const juryAssign = caseAssigns.find(a => a.role === "jury");
+  const juryGroup = juryAssign ? groups.find(g => g.id === juryAssign.group_id) : null;
+  const juryMembers = juryGroup ? students.filter(s => s.group_id === juryGroup.id) : [];
+  const juryEval = caseEvaluations.find(e => e.evaluator_type === "ai_jury_panel" && e.evaluated_role === "jury");
+
+  const roleStyles: Record<string, { wrap: string; chip: string; icon: any; label: string }> = {
+    prosecution: { wrap: "border-l-[6px] border-l-red-600", chip: "bg-red-600 text-white", icon: Scale, label: "Acusação" },
+    defense:     { wrap: "border-l-[6px] border-l-primary", chip: "bg-primary text-primary-foreground", icon: Scale, label: "Defesa" },
+    jury:        { wrap: "border-l-[6px] border-l-amber-500", chip: "bg-amber-500 text-white", icon: Gavel, label: "Júri Técnico" },
+  };
+
   return (
     <div className="space-y-4">
-      {/* Seletor de processo */}
-      {cases.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {cases.map(c => (
-            <Button
-              key={c.id}
-              variant={selectedCaseId === c.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCaseId(c.id)}
-            >
-              {c.title}
-            </Button>
-          ))}
-        </div>
+      {/* Seletor de processo — visual de "autos do processo" */}
+      {cases.length > 0 && (
+        <Card className="border-foreground/10 bg-gradient-to-b from-muted/40 to-background">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              <Scroll className="h-3.5 w-3.5" />
+              <span>Autos do Processo</span>
+              <span className="h-px flex-1 bg-foreground/10" />
+              <span className="font-mono text-foreground/70">{cases.length} processo(s)</span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {cases.map((c, idx) => {
+                const active = selectedCaseId === c.id;
+                const num = c.case_number || String(idx + 1).padStart(3, "0");
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedCaseId(c.id)}
+                    className={[
+                      "group relative shrink-0 min-w-[240px] max-w-[320px] text-left rounded-md border transition-all",
+                      "px-3 py-2.5 flex items-start gap-3",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                        : "border-foreground/15 bg-card hover:border-primary/50 hover:bg-muted/40"
+                    ].join(" ")}
+                  >
+                    <div className={[
+                      "flex flex-col items-center justify-center rounded-sm px-2 py-1 font-mono text-[10px] leading-tight border",
+                      active ? "border-primary-foreground/40 bg-primary-foreground/10" : "border-foreground/15 bg-muted/50"
+                    ].join(" ")}>
+                      <span className="opacity-70">Nº</span>
+                      <span className="font-bold text-xs tracking-tight">{num}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={[
+                        "text-[9px] uppercase tracking-[0.15em] font-semibold mb-0.5",
+                        active ? "text-primary-foreground/80" : "text-muted-foreground"
+                      ].join(" ")}>
+                        Processo
+                      </div>
+                      <div className={[
+                        "text-sm font-semibold leading-snug line-clamp-2",
+                        active ? "text-primary-foreground" : "text-foreground"
+                      ].join(" ")}>
+                        {c.title}
+                      </div>
+                    </div>
+                    {active && (
+                      <span className="absolute -top-1.5 right-3 inline-flex items-center gap-1 rounded-full bg-amber-500 text-white text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider shadow">
+                        Em pauta
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="summary">Notas Consolidadas</TabsTrigger>
           <TabsTrigger value="submissions">Envios dos Grupos</TabsTrigger>
           <TabsTrigger value="ai">Avaliação dos Jurados (IA)</TabsTrigger>
+          <TabsTrigger value="jury-panel">Avaliar Júri Técnico</TabsTrigger>
           <TabsTrigger value="teacher">Avaliação do Professor</TabsTrigger>
         </TabsList>
 
+
         {/* === Notas consolidadas === */}
         <TabsContent value="summary" className="space-y-3">
-          {consolidated.length === 0 ? (
+          {consolidated.length === 0 && !juryGroup ? (
             <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Sem grupos distribuídos.</CardContent></Card>
           ) : (
-            consolidated.map(c => {
-              const group = groups.find(g => g.id === c.groupId);
-              return (
-                <Card key={c.groupId}>
+            <>
+              {consolidated.map(c => {
+                const group = groups.find(g => g.id === c.groupId);
+                const members = group ? students.filter(s => s.group_id === group.id) : [];
+                const style = roleStyles[c.role];
+                return (
+                  <Card key={c.groupId} className={style?.wrap}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${style?.chip}`}>
+                          <Scale className="h-3 w-3" />
+                          {style?.label || ROLE_LABEL[c.role]}
+                        </span>
+                        <CardTitle className="text-base">{formatGroupLabel(group)}</CardTitle>
+                      </div>
+                      {members.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {members.map(m => (
+                            <span key={m.id} className="inline-flex items-center gap-1 rounded-md border border-foreground/15 bg-muted/40 px-2 py-0.5 text-xs">
+                              <UserSquare2 className="h-3 w-3 text-muted-foreground" />
+                              {m.student_name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs text-muted-foreground italic">Sem integrantes cadastrados neste grupo.</p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+                        <ScoreBox icon={<Gavel className="h-4 w-4" />} label="Juiz" value={c.judge} />
+                        <ScoreBox icon={<GraduationCap className="h-4 w-4" />} label="Professor" value={c.teacher} />
+                        <ScoreBox icon={<Sparkles className="h-4 w-4" />} label="IA (jurados)" value={c.ai} hint="Coerência com evidências" />
+                        <div className="rounded-lg border-2 border-primary p-3 bg-primary/5">
+                          <div className="text-xs text-muted-foreground">Nota Final do Grupo</div>
+                          <div className="text-3xl font-bold text-primary">
+                            {c.finalGroup != null ? c.finalGroup.toFixed(1) : "—"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">(Juiz + Professor) / 2</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+              {juryGroup && (
+                <Card className={roleStyles.jury.wrap}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant={c.role === "prosecution" ? "destructive" : "default"}>
-                        {ROLE_LABEL[c.role]}
-                      </Badge>
-                      <CardTitle className="text-base">
-                        {formatGroupLabel(group)}
-                      </CardTitle>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${roleStyles.jury.chip}`}>
+                        <Gavel className="h-3 w-3" />
+                        Júri Técnico
+                      </span>
+                      <CardTitle className="text-base">{formatGroupLabel(juryGroup)}</CardTitle>
                     </div>
+                    {juryMembers.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {juryMembers.map(m => (
+                          <span key={m.id} className="inline-flex items-center gap-1 rounded-md border border-foreground/15 bg-muted/40 px-2 py-0.5 text-xs">
+                            <UserSquare2 className="h-3 w-3 text-muted-foreground" />
+                            {m.student_name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-xs text-muted-foreground italic">Sem integrantes cadastrados neste grupo.</p>
+                    )}
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-                      <ScoreBox icon={<Gavel className="h-4 w-4" />} label="Juiz" value={c.judge} />
-                      <ScoreBox icon={<GraduationCap className="h-4 w-4" />} label="Professor" value={c.teacher} />
-                      <ScoreBox icon={<Sparkles className="h-4 w-4" />} label="IA (jurados)" value={c.ai} hint="Coerência com evidências" />
-                      <div className="rounded-lg border-2 border-primary p-3 bg-primary/5">
-                        <div className="text-xs text-muted-foreground">Nota Final do Grupo</div>
-                        <div className="text-3xl font-bold text-primary">
-                          {c.finalGroup != null ? c.finalGroup.toFixed(1) : "—"}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                      <ScoreBox icon={<Sparkles className="h-4 w-4" />} label="Interrogação" value={juryEval?.criteria_json?.capacidade_interrogacao} hint="Esclarecer pontos" />
+                      <ScoreBox icon={<Scale className="h-4 w-4" />} label="Julgamento justo" value={juryEval?.criteria_json?.julgamento_justo} hint="Provas + contra-argumentos" />
+                      <div className="rounded-lg border-2 border-amber-500 p-3 bg-amber-500/5">
+                        <div className="text-xs text-muted-foreground">Nota Final do Júri Técnico</div>
+                        <div className="text-3xl font-bold text-amber-600">
+                          {juryEval ? Number(juryEval.score).toFixed(1) : "—"}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">(Juiz + Professor) / 2</div>
+                        <div className="text-[10px] text-muted-foreground">Avaliação IA</div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              );
-            })
+              )}
+            </>
           )}
         </TabsContent>
+
 
         {/* === Envios dos grupos (formato premium) === */}
         <TabsContent value="submissions" className="space-y-3">
@@ -291,7 +426,73 @@ export function ResultsPanel(props: Props) {
           </Card>
         </TabsContent>
 
-        {/* === Avaliação do Professor === */}
+        {/* === Avaliar Júri Técnico (IA) === */}
+        <TabsContent value="jury-panel" className="space-y-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Gavel className="h-4 w-4 text-amber-600" />
+                    Avaliação do Júri Técnico pela IA
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    A IA compara o que a <strong>Acusação</strong> e a <strong>Defesa</strong> enviaram e avalia o júri técnico em dois critérios: <strong>capacidade de interrogação</strong> (esclarecer pontos importantes) e <strong>capacidade de julgamento justo</strong> (ponderar provas, argumentos e contra-argumentos).
+                  </p>
+                </div>
+                <Button onClick={runJuryAi} disabled={juryAiRunning || !juryAssign} size="sm">
+                  <RefreshCw className={`h-4 w-4 mr-1 ${juryAiRunning ? "animate-spin" : ""}`} />
+                  {juryAiRunning ? "Avaliando..." : "Avaliar Júri Técnico"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!juryAssign ? (
+                <p className="text-sm text-muted-foreground italic">Este processo não tem grupo de júri técnico distribuído.</p>
+              ) : !juryEval ? (
+                <p className="text-sm text-muted-foreground italic">Ainda não há avaliação. Aguarde os jurados, a acusação e a defesa enviarem os formulários, depois clique em "Avaliar Júri Técnico".</p>
+              ) : (
+                <div className="border rounded-lg p-3 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${roleStyles.jury.chip}`}>
+                        <Gavel className="h-3 w-3" /> Júri Técnico
+                      </span>
+                      <span className="font-medium text-sm">{formatGroupLabel(juryGroup)}</span>
+                    </div>
+                    <Badge className="text-base px-3 py-1 bg-amber-500 text-white border-amber-600">
+                      {Number(juryEval.score).toFixed(1)}/10
+                    </Badge>
+                  </div>
+                  {juryMembers.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {juryMembers.map(m => (
+                        <span key={m.id} className="inline-flex items-center gap-1 rounded-md border border-foreground/15 bg-muted/40 px-2 py-0.5 text-xs">
+                          <UserSquare2 className="h-3 w-3 text-muted-foreground" />
+                          {m.student_name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <ScoreBox icon={<Sparkles className="h-4 w-4" />} label="Capacidade de interrogação" value={juryEval.criteria_json?.capacidade_interrogacao} hint="Esclareceu pontos importantes" />
+                    <ScoreBox icon={<Scale className="h-4 w-4" />} label="Julgamento justo" value={juryEval.criteria_json?.julgamento_justo} hint="Provas + contra-argumentos" />
+                  </div>
+                  {juryEval.feedback && (
+                    <div className="rounded-md border bg-muted/30 p-3">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" /> Feedback da IA
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap text-foreground/90">{juryEval.feedback}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+
         <TabsContent value="teacher" className="space-y-3">
           {!session ? (
             <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Inicie a sessão no painel do juiz para liberar a avaliação.</CardContent></Card>
