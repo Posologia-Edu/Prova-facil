@@ -815,15 +815,9 @@ export default function SoapControl() {
                 peerScore = totalMax > 0 ? (totalScore / totalMax) * 10 : 0;
               }
 
-              // Admin score & AI score: from SOAP response
-              // SOAP é submetido por um aluno da dupla; nota do professor vale para ambos da mesma dupla.
-              let soapResp = soapResponses.find((r: any) => r.participant_id === student.id);
-              if (!soapResp && student.pair_index >= 0) {
-                soapResp = soapResponses.find((r: any) => {
-                  const submitter = participants.find((p: any) => p.id === r.participant_id);
-                  return submitter && submitter.pair_index === student.pair_index;
-                });
-              }
+              // Admin score & AI score: somente da SOAP submetida pelo próprio aluno.
+              // Cada aluno é responsável por submeter seu próprio SOAP; se não submeteu, não recebe nota do professor/IA.
+              const soapResp = soapResponses.find((r: any) => r.participant_id === student.id);
               const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
               const aiSc = soapResp?.ai_score != null ? Number(soapResp.ai_score) : null;
 
