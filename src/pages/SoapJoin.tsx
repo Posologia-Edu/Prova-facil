@@ -485,8 +485,10 @@ export default function SoapJoin() {
     }
     setSubmittedPeer(true);
     setPhase("done");
+    await peerDraft.clearDraft();
     toast({ title: "Avaliação enviada!" });
   };
+
 
   const renderFormFields = (fields: FormField[], answers: Record<string, any>, setAnswers: (a: Record<string, any>) => void, readOnly = false) => (
     <FormRenderer fields={fields} answers={answers} onChange={setAnswers} readOnly={readOnly} />
