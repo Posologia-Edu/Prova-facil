@@ -281,6 +281,9 @@ export default function DocumentationJoin() {
           </Card>
         )}
 
+        <div className="flex justify-end">
+          <DraftStatusBadge status={draftStatus} lastSavedAt={lastSavedAt} />
+        </div>
         <Button className="w-full" onClick={handleSubmit} disabled={submitted}>
           <Send className="h-4 w-4 mr-2" />Enviar Documentação
         </Button>
