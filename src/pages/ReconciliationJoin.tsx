@@ -10,6 +10,10 @@ import { toast } from "@/hooks/use-toast";
 import { FileText, Send, CheckCircle, BookOpen, Users } from "lucide-react";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+
+
 
 type Phase = "login" | "waiting" | "active" | "done";
 
