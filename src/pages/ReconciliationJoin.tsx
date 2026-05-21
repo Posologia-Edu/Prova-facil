@@ -115,6 +115,38 @@ export default function ReconciliationJoin() {
     sessionStorage.setItem("recon_email", email.trim().toLowerCase());
   };
 
+  // Autosave draft for reconciliation form
+  const draftKey =
+    room && participant && form
+      ? `reconciliation:${room.id}:${participant.id}:${form.id}`
+      : null;
+  const {
+    draft,
+    loaded: draftLoaded,
+    status: draftStatus,
+    lastSavedAt,
+    saveDraft,
+    clearDraft,
+  } = useFormDraft({ draftKey, module: "reconciliation", enabled: !submitted });
+
+  // Restore draft once on first load if no final submission
+  const draftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!draftLoaded || submitted || draftRestoredRef.current) return;
+    if (draft && Object.keys(draft).length > 0) {
+      setAnswers(draft);
+      toast({ title: "Rascunho recuperado", description: "Suas respostas anteriores foram restauradas." });
+    }
+    draftRestoredRef.current = true;
+  }, [draft, draftLoaded, submitted]);
+
+  // Trigger debounced autosave on answers change
+  useEffect(() => {
+    if (!draftKey || submitted) return;
+    if (!draftLoaded) return;
+    saveDraft(answers);
+  }, [answers, draftKey, draftLoaded, submitted, saveDraft]);
+
   const handleSubmit = async () => {
     if (!room || !participant || !form) return;
 
@@ -138,10 +170,12 @@ export default function ReconciliationJoin() {
       .eq("room_id", room.id)
       .eq("pair_index", participant.pair_index);
 
+    await clearDraft();
     setSubmitted(true);
     setPhase("done");
     toast({ title: "Enviado!", description: "Ficha de reconciliação enviada com sucesso." });
   };
+
 
   const fields: FormField[] = form ? (Array.isArray(form.content_json) ? form.content_json : []) : [];
 
