@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,10 @@ import { toast } from "@/hooks/use-toast";
 import { FileText, Send, CheckCircle, BookOpen, Users } from "lucide-react";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+
+
 
 type Phase = "login" | "waiting" | "active" | "done";
 
@@ -111,6 +115,38 @@ export default function ReconciliationJoin() {
     sessionStorage.setItem("recon_email", email.trim().toLowerCase());
   };
 
+  // Autosave draft for reconciliation form
+  const draftKey =
+    room && participant && form
+      ? `reconciliation:${room.id}:${participant.id}:${form.id}`
+      : null;
+  const {
+    draft,
+    loaded: draftLoaded,
+    status: draftStatus,
+    lastSavedAt,
+    saveDraft,
+    clearDraft,
+  } = useFormDraft({ draftKey, module: "reconciliation", enabled: !submitted });
+
+  // Restore draft once on first load if no final submission
+  const draftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!draftLoaded || submitted || draftRestoredRef.current) return;
+    if (draft && Object.keys(draft).length > 0) {
+      setAnswers(draft);
+      toast({ title: "Rascunho recuperado", description: "Suas respostas anteriores foram restauradas." });
+    }
+    draftRestoredRef.current = true;
+  }, [draft, draftLoaded, submitted]);
+
+  // Trigger debounced autosave on answers change
+  useEffect(() => {
+    if (!draftKey || submitted) return;
+    if (!draftLoaded) return;
+    saveDraft(answers);
+  }, [answers, draftKey, draftLoaded, submitted, saveDraft]);
+
   const handleSubmit = async () => {
     if (!room || !participant || !form) return;
 
@@ -134,10 +170,12 @@ export default function ReconciliationJoin() {
       .eq("room_id", room.id)
       .eq("pair_index", participant.pair_index);
 
+    await clearDraft();
     setSubmitted(true);
     setPhase("done");
     toast({ title: "Enviado!", description: "Ficha de reconciliação enviada com sucesso." });
   };
+
 
   const fields: FormField[] = form ? (Array.isArray(form.content_json) ? form.content_json : []) : [];
 
@@ -226,11 +264,15 @@ export default function ReconciliationJoin() {
         {form && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                {form.title}
-              </CardTitle>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  {form.title}
+                </CardTitle>
+                <DraftStatusBadge status={draftStatus} lastSavedAt={lastSavedAt} />
+              </div>
             </CardHeader>
+
             <CardContent className="space-y-6">
               <FormRenderer
                 fields={fields}

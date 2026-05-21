@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,9 @@ import { toast } from "@/hooks/use-toast";
 import { FileText, Send, Eye, CheckCircle } from "lucide-react";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+
 
 type Phase = "login" | "soap" | "waiting_peer" | "evaluate" | "done";
 
@@ -109,7 +112,56 @@ export default function SoapJoin() {
   const [submittedSoap, setSubmittedSoap] = useState(false);
   const [submittedPeer, setSubmittedPeer] = useState(false);
 
+  // Autosave SOAP draft
+  const soapDraftKey =
+    room && participant && soapForm
+      ? `soap:${room.id}:${participant.id}:${soapForm.id}`
+      : null;
+  const soapDraft = useFormDraft({
+    draftKey: soapDraftKey,
+    module: "soap",
+    enabled: !submittedSoap,
+  });
+  const soapDraftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!soapDraft.loaded || submittedSoap || soapDraftRestoredRef.current) return;
+    if (soapDraft.draft && Object.keys(soapDraft.draft).length > 0) {
+      setSoapAnswers(soapDraft.draft);
+      toast({ title: "Rascunho recuperado", description: "Suas respostas anteriores do SOAP foram restauradas." });
+    }
+    soapDraftRestoredRef.current = true;
+  }, [soapDraft.draft, soapDraft.loaded, submittedSoap]);
+  useEffect(() => {
+    if (!soapDraftKey || submittedSoap || !soapDraft.loaded) return;
+    soapDraft.saveDraft(soapAnswers);
+  }, [soapAnswers, soapDraftKey, soapDraft.loaded, submittedSoap]);
+
+  // Autosave peer evaluation draft
+  const peerDraftKey =
+    room && participant && partner && peerForm
+      ? `soap_peer:${room.id}:${participant.id}:${partner.id}:${peerForm.id}`
+      : null;
+  const peerDraft = useFormDraft({
+    draftKey: peerDraftKey,
+    module: "soap_peer",
+    enabled: !submittedPeer,
+  });
+  const peerDraftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!peerDraft.loaded || submittedPeer || peerDraftRestoredRef.current) return;
+    if (peerDraft.draft && Object.keys(peerDraft.draft).length > 0) {
+      setPeerAnswers(peerDraft.draft);
+    }
+    peerDraftRestoredRef.current = true;
+  }, [peerDraft.draft, peerDraft.loaded, submittedPeer]);
+  useEffect(() => {
+    if (!peerDraftKey || submittedPeer || !peerDraft.loaded) return;
+    peerDraft.saveDraft(peerAnswers);
+  }, [peerAnswers, peerDraftKey, peerDraft.loaded, submittedPeer]);
+
   const doLogin = async (usedPin: string, usedEmail: string) => {
+
+
     if (!usedPin || !usedEmail) return;
     // Find room by access code
     const { data: rooms, error: roomErr } = await supabase
@@ -377,7 +429,9 @@ export default function SoapJoin() {
     }
     await supabase.from("soap_participants").update({ status: "submitted" }).eq("id", participant.id);
     setSubmittedSoap(true);
+    await soapDraft.clearDraft();
     toast({ title: "SOAP enviado!" });
+
     // Solo students skip peer evaluation — trigger AI peer grading instead
     if (isSolo) {
       await supabase.from("soap_participants").update({ status: "done" }).eq("id", participant.id);
@@ -431,8 +485,10 @@ export default function SoapJoin() {
     }
     setSubmittedPeer(true);
     setPhase("done");
+    await peerDraft.clearDraft();
     toast({ title: "Avaliação enviada!" });
   };
+
 
   const renderFormFields = (fields: FormField[], answers: Record<string, any>, setAnswers: (a: Record<string, any>) => void, readOnly = false) => (
     <FormRenderer fields={fields} answers={answers} onChange={setAnswers} readOnly={readOnly} />
@@ -505,8 +561,12 @@ export default function SoapJoin() {
             {/* SOAP form */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{soapForm?.title || "SOAP"}</CardTitle>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{soapForm?.title || "SOAP"}</CardTitle>
+                  <DraftStatusBadge status={soapDraft.status} lastSavedAt={soapDraft.lastSavedAt} />
+                </div>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 {renderFormFields(soapFields, soapAnswers, setSoapAnswers)}
                 <Button onClick={submitSoap} className="w-full"><Send className="h-4 w-4 mr-2" />Enviar SOAP</Button>
@@ -562,8 +622,12 @@ export default function SoapJoin() {
             {/* Peer evaluation form */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{peerForm?.title || "Avaliação"}</CardTitle>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{peerForm?.title || "Avaliação"}</CardTitle>
+                  <DraftStatusBadge status={peerDraft.status} lastSavedAt={peerDraft.lastSavedAt} />
+                </div>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 {renderFormFields(peerFields, peerAnswers, setPeerAnswers)}
                 <Button onClick={submitPeerEval} className="w-full"><Send className="h-4 w-4 mr-2" />Enviar Avaliação</Button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
@@ -31,6 +31,9 @@ import {
   getStudyRole,
 } from "@/lib/simulation-materials";
 import SimulationPausedView from "@/components/simulation/SimulationPausedView";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+
 
 // FormField type imported from @/components/forms/types
 
@@ -341,6 +344,46 @@ export default function SimulationJoin() {
     return forms.find((f: any) => f.form_type === formType) || null;
   };
 
+  // Autosave draft for the currently-active form (anamnese / observer / professor eval)
+  const currentDraftFormId = useMemo(() => {
+    const isProf = participant?.participant_role === "professor";
+    if (isProf) {
+      return forms.find((f: any) => f.form_type === "professor_eval")?.id || null;
+    }
+    return getFormForRole()?.id || null;
+  }, [participant, forms, assignment]);
+
+  const simDraftKey =
+    activeRound && participant && currentDraftFormId && !submitted
+      ? `simulation:${activeRound.id}:${participant.id}:${currentDraftFormId}`
+      : null;
+  const simDraft = useFormDraft({
+    draftKey: simDraftKey,
+    module: "simulation",
+    enabled: !submitted,
+  });
+  const simDraftRestoredKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!simDraftKey || !simDraft.loaded || submitted) return;
+    if (simDraftRestoredKeyRef.current === simDraftKey) return;
+    if (simDraft.draft) {
+      const d: any = simDraft.draft;
+      const savedAnswers = d.answers && typeof d.answers === "object" ? d.answers : d;
+      if (savedAnswers && typeof savedAnswers === "object" && Object.keys(savedAnswers).length > 0) {
+        setAnswers(savedAnswers);
+        if (typeof d.feedback === "string") setFeedback(d.feedback);
+        toast({ title: "Rascunho recuperado", description: "Suas respostas anteriores foram restauradas." });
+      }
+    }
+    simDraftRestoredKeyRef.current = simDraftKey;
+  }, [simDraftKey, simDraft.loaded, simDraft.draft, submitted]);
+
+  useEffect(() => {
+    if (!simDraftKey || submitted || !simDraft.loaded) return;
+    simDraft.saveDraft({ answers, feedback });
+  }, [answers, feedback, simDraftKey, simDraft.loaded, submitted]);
+
+
   const submitForm = async () => {
     if (!activeRound || !participant || !assignment) return;
     const form = getFormForRole();
@@ -370,8 +413,10 @@ export default function SimulationJoin() {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
       setSubmitted(true);
+      await simDraft.clearDraft();
       toast({ title: t("sim_submitted") });
     }
+
   };
 
   // Determine if current round is first round of its cycle
@@ -1606,11 +1651,15 @@ export default function SimulationJoin() {
           return (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  {profForm.title || t("sim_form_professor_eval")}
-                </CardTitle>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    {profForm.title || t("sim_form_professor_eval")}
+                  </CardTitle>
+                  <DraftStatusBadge status={simDraft.status} lastSavedAt={simDraft.lastSavedAt} />
+                </div>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 <FormRenderer
                   fields={fields}
@@ -1649,8 +1698,10 @@ export default function SimulationJoin() {
                     toast({ title: "Erro", description: error.message, variant: "destructive" });
                   } else {
                     setSubmitted(true);
+                    await simDraft.clearDraft();
                     toast({ title: t("sim_submitted") });
                   }
+
                 }} className="w-full mt-4">
                   <Send className="h-4 w-4 mr-2" />{t("sim_submit")}
                 </Button>
@@ -1664,11 +1715,17 @@ export default function SimulationJoin() {
       {isActive && !submitted && !isProfessor && participatesInActiveRound && form && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              {form.title || roleLabels[assignment?.assigned_role]}
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                {form.title || roleLabels[assignment?.assigned_role]}
+              </CardTitle>
+              {assignment?.assigned_role !== "patient" && (
+                <DraftStatusBadge status={simDraft.status} lastSavedAt={simDraft.lastSavedAt} />
+              )}
+            </div>
           </CardHeader>
+
           <CardContent className="space-y-4">
             {assignment?.assigned_role === "patient" ? (
               <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
