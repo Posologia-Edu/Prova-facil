@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,9 @@ import { toast } from "@/hooks/use-toast";
 import { FileText, Send, CheckCircle, BookOpen, Users, Table2, Plus, Trash2 } from "lucide-react";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+
 
 // FormField type imported from @/components/forms/types
 type MedColumn = { id: string; label: string };
