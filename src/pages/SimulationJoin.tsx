@@ -1715,11 +1715,17 @@ export default function SimulationJoin() {
       {isActive && !submitted && !isProfessor && participatesInActiveRound && form && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              {form.title || roleLabels[assignment?.assigned_role]}
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                {form.title || roleLabels[assignment?.assigned_role]}
+              </CardTitle>
+              {assignment?.assigned_role !== "patient" && (
+                <DraftStatusBadge status={simDraft.status} lastSavedAt={simDraft.lastSavedAt} />
+              )}
+            </div>
           </CardHeader>
+
           <CardContent className="space-y-4">
             {assignment?.assigned_role === "patient" ? (
               <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
