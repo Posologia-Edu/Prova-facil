@@ -82,6 +82,40 @@ export default function DocumentationJoin() {
     sessionStorage.setItem("doc_email", email.trim().toLowerCase());
   };
 
+  // Autosave: one combined draft per (room, participant) covering both forms
+  const draftKey =
+    room && participant
+      ? `documentation:${room.id}:${participant.id}`
+      : null;
+  const {
+    draft,
+    loaded: draftLoaded,
+    status: draftStatus,
+    lastSavedAt,
+    saveDraft,
+    clearDraft,
+  } = useFormDraft({ draftKey, module: "documentation", enabled: !submitted });
+
+  const draftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!draftLoaded || submitted || draftRestoredRef.current) return;
+    if (draft) {
+      const r = (draft as any).referralAnswers;
+      const m = (draft as any).medRows;
+      if (r && typeof r === "object") setReferralAnswers(r);
+      if (Array.isArray(m)) setMedRows(m);
+      if ((r && Object.keys(r).length) || (Array.isArray(m) && m.length)) {
+        toast({ title: "Rascunho recuperado", description: "Suas respostas anteriores foram restauradas." });
+      }
+    }
+    draftRestoredRef.current = true;
+  }, [draft, draftLoaded, submitted]);
+
+  useEffect(() => {
+    if (!draftKey || submitted || !draftLoaded) return;
+    saveDraft({ referralAnswers, medRows });
+  }, [referralAnswers, medRows, draftKey, draftLoaded, submitted, saveDraft]);
+
   const handleSubmit = async () => {
     if (!room || !participant) return;
 
@@ -111,10 +145,12 @@ export default function DocumentationJoin() {
 
     await supabase.from("documentation_participants").update({ status: "done" }).eq("room_id", room.id).eq("pair_index", participant.pair_index);
 
+    await clearDraft();
     setSubmitted(true);
     setPhase("done");
     toast({ title: "Enviado!", description: "Documentação enviada com sucesso." });
   };
+
 
   const referralFields: FormField[] = referralForm ? (Array.isArray(referralForm.content_json) ? referralForm.content_json : []) : [];
   const medContent: MedFormContent | null = medForm ? (medForm.content_json as MedFormContent) : null;
