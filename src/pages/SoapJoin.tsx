@@ -112,7 +112,53 @@ export default function SoapJoin() {
   const [submittedSoap, setSubmittedSoap] = useState(false);
   const [submittedPeer, setSubmittedPeer] = useState(false);
 
-  const doLogin = async (usedPin: string, usedEmail: string) => {
+  // Autosave SOAP draft
+  const soapDraftKey =
+    room && participant && soapForm
+      ? `soap:${room.id}:${participant.id}:${soapForm.id}`
+      : null;
+  const soapDraft = useFormDraft({
+    draftKey: soapDraftKey,
+    module: "soap",
+    enabled: !submittedSoap,
+  });
+  const soapDraftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!soapDraft.loaded || submittedSoap || soapDraftRestoredRef.current) return;
+    if (soapDraft.draft && Object.keys(soapDraft.draft).length > 0) {
+      setSoapAnswers(soapDraft.draft);
+      toast({ title: "Rascunho recuperado", description: "Suas respostas anteriores do SOAP foram restauradas." });
+    }
+    soapDraftRestoredRef.current = true;
+  }, [soapDraft.draft, soapDraft.loaded, submittedSoap]);
+  useEffect(() => {
+    if (!soapDraftKey || submittedSoap || !soapDraft.loaded) return;
+    soapDraft.saveDraft(soapAnswers);
+  }, [soapAnswers, soapDraftKey, soapDraft.loaded, submittedSoap]);
+
+  // Autosave peer evaluation draft
+  const peerDraftKey =
+    room && participant && partner && peerForm
+      ? `soap_peer:${room.id}:${participant.id}:${partner.id}:${peerForm.id}`
+      : null;
+  const peerDraft = useFormDraft({
+    draftKey: peerDraftKey,
+    module: "soap_peer",
+    enabled: !submittedPeer,
+  });
+  const peerDraftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!peerDraft.loaded || submittedPeer || peerDraftRestoredRef.current) return;
+    if (peerDraft.draft && Object.keys(peerDraft.draft).length > 0) {
+      setPeerAnswers(peerDraft.draft);
+    }
+    peerDraftRestoredRef.current = true;
+  }, [peerDraft.draft, peerDraft.loaded, submittedPeer]);
+  useEffect(() => {
+    if (!peerDraftKey || submittedPeer || !peerDraft.loaded) return;
+    peerDraft.saveDraft(peerAnswers);
+  }, [peerAnswers, peerDraftKey, peerDraft.loaded, submittedPeer]);
+
     if (!usedPin || !usedEmail) return;
     // Find room by access code
     const { data: rooms, error: roomErr } = await supabase
