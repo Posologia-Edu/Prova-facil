@@ -339,12 +339,15 @@ export default function SimulationJoin() {
       patient: "patient_script",
       observer: "observer_eval",
       professor: "professor_eval",
+    };
+    const formType = roleFormMap[assignment.assigned_role];
+    return forms.find((f: any) => f.form_type === formType) || null;
   };
 
   // Autosave draft for the currently-active form (anamnese / observer / professor eval)
   const currentDraftFormId = useMemo(() => {
-    const isProfessor = participant?.participant_role === "professor";
-    if (isProfessor) {
+    const isProf = participant?.participant_role === "professor";
+    if (isProf) {
       return forms.find((f: any) => f.form_type === "professor_eval")?.id || null;
     }
     return getFormForRole()?.id || null;
@@ -365,7 +368,6 @@ export default function SimulationJoin() {
     if (simDraftRestoredKeyRef.current === simDraftKey) return;
     if (simDraft.draft) {
       const d: any = simDraft.draft;
-      // Saved shape: { answers, feedback }
       const savedAnswers = d.answers && typeof d.answers === "object" ? d.answers : d;
       if (savedAnswers && typeof savedAnswers === "object" && Object.keys(savedAnswers).length > 0) {
         setAnswers(savedAnswers);
@@ -381,10 +383,6 @@ export default function SimulationJoin() {
     simDraft.saveDraft({ answers, feedback });
   }, [answers, feedback, simDraftKey, simDraft.loaded, submitted]);
 
-
-    const formType = roleFormMap[assignment.assigned_role];
-    return forms.find((f: any) => f.form_type === formType) || null;
-  };
 
   const submitForm = async () => {
     if (!activeRound || !participant || !assignment) return;
