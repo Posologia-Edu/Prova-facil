@@ -159,6 +159,9 @@ export default function SoapJoin() {
     peerDraft.saveDraft(peerAnswers);
   }, [peerAnswers, peerDraftKey, peerDraft.loaded, submittedPeer]);
 
+  const doLogin = async (usedPin: string, usedEmail: string) => {
+
+
     if (!usedPin || !usedEmail) return;
     // Find room by access code
     const { data: rooms, error: roomErr } = await supabase
