@@ -1543,6 +1543,33 @@ export type Database = {
           },
         ]
       }
+      form_drafts: {
+        Row: {
+          answers_json: Json
+          created_at: string
+          draft_key: string
+          id: string
+          module: string
+          updated_at: string
+        }
+        Insert: {
+          answers_json?: Json
+          created_at?: string
+          draft_key: string
+          id?: string
+          module: string
+          updated_at?: string
+        }
+        Update: {
+          answers_json?: Json
+          created_at?: string
+          draft_key?: string
+          id?: string
+          module?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       form_template_shares: {
         Row: {
           created_at: string
