@@ -31,6 +31,9 @@ import {
   getStudyRole,
 } from "@/lib/simulation-materials";
 import SimulationPausedView from "@/components/simulation/SimulationPausedView";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+
 
 // FormField type imported from @/components/forms/types
 
