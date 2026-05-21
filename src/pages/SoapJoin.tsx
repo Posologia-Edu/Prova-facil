@@ -622,8 +622,12 @@ export default function SoapJoin() {
             {/* Peer evaluation form */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{peerForm?.title || "Avaliação"}</CardTitle>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{peerForm?.title || "Avaliação"}</CardTitle>
+                  <DraftStatusBadge status={peerDraft.status} lastSavedAt={peerDraft.lastSavedAt} />
+                </div>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 {renderFormFields(peerFields, peerAnswers, setPeerAnswers)}
                 <Button onClick={submitPeerEval} className="w-full"><Send className="h-4 w-4 mr-2" />Enviar Avaliação</Button>
