@@ -561,8 +561,12 @@ export default function SoapJoin() {
             {/* SOAP form */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{soapForm?.title || "SOAP"}</CardTitle>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{soapForm?.title || "SOAP"}</CardTitle>
+                  <DraftStatusBadge status={soapDraft.status} lastSavedAt={soapDraft.lastSavedAt} />
+                </div>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 {renderFormFields(soapFields, soapAnswers, setSoapAnswers)}
                 <Button onClick={submitSoap} className="w-full"><Send className="h-4 w-4 mr-2" />Enviar SOAP</Button>
