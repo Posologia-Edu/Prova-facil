@@ -429,7 +429,9 @@ export default function SoapJoin() {
     }
     await supabase.from("soap_participants").update({ status: "submitted" }).eq("id", participant.id);
     setSubmittedSoap(true);
+    await soapDraft.clearDraft();
     toast({ title: "SOAP enviado!" });
+
     // Solo students skip peer evaluation — trigger AI peer grading instead
     if (isSolo) {
       await supabase.from("soap_participants").update({ status: "done" }).eq("id", participant.id);
