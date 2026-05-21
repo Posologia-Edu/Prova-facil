@@ -264,11 +264,15 @@ export default function ReconciliationJoin() {
         {form && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                {form.title}
-              </CardTitle>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  {form.title}
+                </CardTitle>
+                <DraftStatusBadge status={draftStatus} lastSavedAt={lastSavedAt} />
+              </div>
             </CardHeader>
+
             <CardContent className="space-y-6">
               <FormRenderer
                 fields={fields}
