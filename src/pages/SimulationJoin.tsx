@@ -415,8 +415,10 @@ export default function SimulationJoin() {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
       setSubmitted(true);
+      await simDraft.clearDraft();
       toast({ title: t("sim_submitted") });
     }
+
   };
 
   // Determine if current round is first round of its cycle
