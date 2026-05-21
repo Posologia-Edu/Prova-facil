@@ -339,7 +339,49 @@ export default function SimulationJoin() {
       patient: "patient_script",
       observer: "observer_eval",
       professor: "professor_eval",
-    };
+  };
+
+  // Autosave draft for the currently-active form (anamnese / observer / professor eval)
+  const currentDraftFormId = useMemo(() => {
+    const isProfessor = participant?.participant_role === "professor";
+    if (isProfessor) {
+      return forms.find((f: any) => f.form_type === "professor_eval")?.id || null;
+    }
+    return getFormForRole()?.id || null;
+  }, [participant, forms, assignment]);
+
+  const simDraftKey =
+    activeRound && participant && currentDraftFormId && !submitted
+      ? `simulation:${activeRound.id}:${participant.id}:${currentDraftFormId}`
+      : null;
+  const simDraft = useFormDraft({
+    draftKey: simDraftKey,
+    module: "simulation",
+    enabled: !submitted,
+  });
+  const simDraftRestoredKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!simDraftKey || !simDraft.loaded || submitted) return;
+    if (simDraftRestoredKeyRef.current === simDraftKey) return;
+    if (simDraft.draft) {
+      const d: any = simDraft.draft;
+      // Saved shape: { answers, feedback }
+      const savedAnswers = d.answers && typeof d.answers === "object" ? d.answers : d;
+      if (savedAnswers && typeof savedAnswers === "object" && Object.keys(savedAnswers).length > 0) {
+        setAnswers(savedAnswers);
+        if (typeof d.feedback === "string") setFeedback(d.feedback);
+        toast({ title: "Rascunho recuperado", description: "Suas respostas anteriores foram restauradas." });
+      }
+    }
+    simDraftRestoredKeyRef.current = simDraftKey;
+  }, [simDraftKey, simDraft.loaded, simDraft.draft, submitted]);
+
+  useEffect(() => {
+    if (!simDraftKey || submitted || !simDraft.loaded) return;
+    simDraft.saveDraft({ answers, feedback });
+  }, [answers, feedback, simDraftKey, simDraft.loaded, submitted]);
+
+
     const formType = roleFormMap[assignment.assigned_role];
     return forms.find((f: any) => f.form_type === formType) || null;
   };
