@@ -1651,11 +1651,15 @@ export default function SimulationJoin() {
           return (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  {profForm.title || t("sim_form_professor_eval")}
-                </CardTitle>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    {profForm.title || t("sim_form_professor_eval")}
+                  </CardTitle>
+                  <DraftStatusBadge status={simDraft.status} lastSavedAt={simDraft.lastSavedAt} />
+                </div>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 <FormRenderer
                   fields={fields}
