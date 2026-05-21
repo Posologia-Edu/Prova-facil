@@ -1694,8 +1694,10 @@ export default function SimulationJoin() {
                     toast({ title: "Erro", description: error.message, variant: "destructive" });
                   } else {
                     setSubmitted(true);
+                    await simDraft.clearDraft();
                     toast({ title: t("sim_submitted") });
                   }
+
                 }} className="w-full mt-4">
                   <Send className="h-4 w-4 mr-2" />{t("sim_submit")}
                 </Button>
