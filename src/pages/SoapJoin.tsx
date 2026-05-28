@@ -587,7 +587,16 @@ export default function SoapJoin() {
 
               <CardContent className="space-y-4">
                 {renderFormFields(soapFields, soapAnswers, setSoapAnswers)}
-                <Button onClick={submitSoap} className="w-full"><Send className="h-4 w-4 mr-2" />Enviar SOAP</Button>
+                <Button
+                  type="button"
+                  onClick={submitSoap}
+                  disabled={submittingSoap}
+                  className="w-full sticky bottom-2 z-10 shadow-lg"
+                  size="lg"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {submittingSoap ? "Enviando..." : "Enviar SOAP"}
+                </Button>
               </CardContent>
             </Card>
           </div>
