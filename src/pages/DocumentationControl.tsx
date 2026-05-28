@@ -318,6 +318,42 @@ export default function DocumentationControl() {
     };
   };
 
+  const reopenPairSubmission = async (pairIdx: number) => {
+    if (!roomId) return;
+    try {
+      // Clear submitted_at on all responses for this pair so the student form unlocks.
+      // Existing answers stay so students can adjust instead of starting over.
+      const { error: respErr } = await supabase
+        .from("documentation_responses")
+        .update({ submitted_at: null })
+        .eq("room_id", roomId)
+        .eq("pair_index", pairIdx);
+      if (respErr) throw respErr;
+
+      // Reset participants in this pair back to "ready" so they're not marked as done.
+      await supabase
+        .from("documentation_participants")
+        .update({ status: "ready" })
+        .eq("room_id", roomId)
+        .eq("pair_index", pairIdx);
+
+      // If the room was concluded, reactivate it so students can log back in.
+      if (room?.status === "completed") {
+        await supabase.from("documentation_rooms").update({ status: "active" }).eq("id", roomId);
+        queryClient.invalidateQueries({ queryKey: ["documentation-room", roomId] });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["documentation-responses", roomId] });
+      queryClient.invalidateQueries({ queryKey: ["documentation-participants", roomId] });
+      toast({
+        title: "Envio reaberto",
+        description: "A dupla pode entrar novamente com PIN e e-mail para ajustar e reenviar.",
+      });
+    } catch (err: any) {
+      toast({ title: "Erro ao reabrir envio", description: err.message, variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
