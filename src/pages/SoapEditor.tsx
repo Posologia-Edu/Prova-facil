@@ -403,7 +403,7 @@ export default function SoapEditor() {
                 <div className="flex gap-2">
                   <Button
                     onClick={async () => {
-                      await importFromAnamnesis();
+                      await importFromAnamnesis(true);
                       setSelectedImportRoom("");
                     }}
                     disabled={!selectedImportRoom}
@@ -412,7 +412,7 @@ export default function SoapEditor() {
                   >
                     Importar e adicionar outra sala
                   </Button>
-                  <Button onClick={importFromAnamnesis} disabled={!selectedImportRoom} className="flex-1">
+                  <Button onClick={() => importFromAnamnesis(false)} disabled={!selectedImportRoom} className="flex-1">
                     Importar e fechar
                   </Button>
                 </div>
