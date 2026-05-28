@@ -75,6 +75,19 @@ export default function DocumentationJoin() {
       setSubmitted(true);
       setPhase("done");
     } else {
+      // If a response row exists without submitted_at, the teacher has reopened the activity.
+      // Pre-populate the form with previously sent data so students can adjust and resend.
+      if (existingResp?.length) {
+        const prevReferral = existingResp.find((r: any) => r.form_id === rf?.id);
+        const prevMed = existingResp.find((r: any) => r.form_id === mf?.id);
+        if (prevReferral?.answers_json && typeof prevReferral.answers_json === "object") {
+          setReferralAnswers(prevReferral.answers_json as any);
+        }
+        if (prevMed?.answers_json && (prevMed.answers_json as any).rows) {
+          setMedRows((prevMed.answers_json as any).rows);
+        }
+        toast({ title: "Atividade reaberta", description: "Suas respostas anteriores foram carregadas. Ajuste e reenvie." });
+      }
       setPhase("active");
     }
 
@@ -119,28 +132,50 @@ export default function DocumentationJoin() {
   const handleSubmit = async () => {
     if (!room || !participant) return;
 
+    // Look up any existing (possibly reopened) response rows for this pair
+    const { data: existing } = await supabase
+      .from("documentation_responses")
+      .select("id, form_id")
+      .eq("room_id", room.id)
+      .eq("pair_index", participant.pair_index);
+
+    const findExistingId = (formId: string) =>
+      existing?.find((r: any) => r.form_id === formId)?.id as string | undefined;
+
     // Submit referral response
     if (referralForm) {
-      await supabase.from("documentation_responses").insert({
+      const existingId = findExistingId(referralForm.id);
+      const payload = {
         room_id: room.id,
         pair_index: participant.pair_index,
         form_id: referralForm.id,
         clinical_case_id: clinicalCase?.id || null,
         answers_json: referralAnswers as any,
         submitted_at: new Date().toISOString(),
-      });
+      };
+      if (existingId) {
+        await supabase.from("documentation_responses").update(payload).eq("id", existingId);
+      } else {
+        await supabase.from("documentation_responses").insert(payload);
+      }
     }
 
     // Submit medication summary response
     if (medForm) {
-      await supabase.from("documentation_responses").insert({
+      const existingId = findExistingId(medForm.id);
+      const payload = {
         room_id: room.id,
         pair_index: participant.pair_index,
         form_id: medForm.id,
         clinical_case_id: clinicalCase?.id || null,
         answers_json: { rows: medRows } as any,
         submitted_at: new Date().toISOString(),
-      });
+      };
+      if (existingId) {
+        await supabase.from("documentation_responses").update(payload).eq("id", existingId);
+      } else {
+        await supabase.from("documentation_responses").insert(payload);
+      }
     }
 
     await supabase.from("documentation_participants").update({ status: "done" }).eq("room_id", room.id).eq("pair_index", participant.pair_index);

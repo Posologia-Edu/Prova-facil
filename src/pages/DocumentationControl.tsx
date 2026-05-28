@@ -11,7 +11,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, Table2, ChevronDown, ChevronRight, Lock } from "lucide-react";
+import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, Table2, ChevronDown, ChevronRight, Lock, Unlock } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
 
 type FormField = { id: string; label: string; type: string; options?: string[]; max_score?: number };
@@ -307,6 +318,42 @@ export default function DocumentationControl() {
     };
   };
 
+  const reopenPairSubmission = async (pairIdx: number) => {
+    if (!roomId) return;
+    try {
+      // Clear submitted_at on all responses for this pair so the student form unlocks.
+      // Existing answers stay so students can adjust instead of starting over.
+      const { error: respErr } = await supabase
+        .from("documentation_responses")
+        .update({ submitted_at: null })
+        .eq("room_id", roomId)
+        .eq("pair_index", pairIdx);
+      if (respErr) throw respErr;
+
+      // Reset participants in this pair back to "ready" so they're not marked as done.
+      await supabase
+        .from("documentation_participants")
+        .update({ status: "ready" })
+        .eq("room_id", roomId)
+        .eq("pair_index", pairIdx);
+
+      // If the room was concluded, reactivate it so students can log back in.
+      if (room?.status === "completed") {
+        await supabase.from("documentation_rooms").update({ status: "active" }).eq("id", roomId);
+        queryClient.invalidateQueries({ queryKey: ["documentation-room", roomId] });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["documentation-responses", roomId] });
+      queryClient.invalidateQueries({ queryKey: ["documentation-participants", roomId] });
+      toast({
+        title: "Envio reaberto",
+        description: "A dupla pode entrar novamente com PIN e e-mail para ajustar e reenviar.",
+      });
+    } catch (err: any) {
+      toast({ title: "Erro ao reabrir envio", description: err.message, variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -403,19 +450,43 @@ export default function DocumentationControl() {
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {Object.entries(pairs).map(([idx, pair]) => {
               const pairIdx = Number(idx);
-              const hasResponse = responses.some(r => r.pair_index === pairIdx);
+              const pairResponses = responses.filter(r => r.pair_index === pairIdx);
+              const hasResponse = pairResponses.length > 0;
+              const hasSubmitted = pairResponses.some(r => r.submitted_at);
               return (
                 <Card key={idx}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm">{pair.some((p: any) => p.pair_position === "S") ? "Individual" : `Dupla ${pairIdx + 1}`}</CardTitle>
-                      <Badge variant={hasResponse ? "default" : "outline"}>
-                        {hasResponse ? "Enviou" : pair.every(p => p.status === "ready") ? "Pronto" : "Aguardando"}
+                      <Badge variant={hasSubmitted ? "default" : hasResponse ? "secondary" : "outline"}>
+                        {hasSubmitted ? "Enviou" : hasResponse ? "Reaberto" : pair.every(p => p.status === "ready") ? "Pronto" : "Aguardando"}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-2">
                     {pair.map((p: any) => <p key={p.id} className="text-sm">{p.student_name}</p>)}
+                    {hasSubmitted && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full mt-2">
+                            <Unlock className="h-3.5 w-3.5 mr-1" />Reabrir envio
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Reabrir envio desta dupla?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              A dupla poderá entrar novamente com o PIN e o e-mail para ajustar e reenviar a documentação.
+                              As respostas atuais serão mantidas como rascunho até o novo envio. Se a sala estiver concluída, ela será reativada.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => reopenPairSubmission(pairIdx)}>Reabrir</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </CardContent>
                 </Card>
               );
