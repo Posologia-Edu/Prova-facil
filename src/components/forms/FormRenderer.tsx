@@ -5,9 +5,44 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Star, Copy, Check } from "lucide-react";
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
 import { FormField, getSections } from "./types";
 import HandwritingInput from "./HandwritingInput";
+
+function CopyTextButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handle = async () => {
+    if (!text) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      toast({ title: "Texto copiado!", description: "O conteúdo do campo foi copiado para a área de transferência." });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível copiar. Selecione manualmente.", variant: "destructive" });
+    }
+  };
+  return (
+    <Button type="button" variant="outline" size="sm" onClick={handle} disabled={!text} className="gap-1.5 h-8">
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      <span className="text-xs">{copied ? "Copiado" : "Copiar texto"}</span>
+    </Button>
+  );
+}
 
 interface FormRendererProps {
   fields: FormField[];
