@@ -152,8 +152,9 @@ export default function SoapEditor() {
     refetchParticipants();
   };
 
-  // Import from anamnesis
-  const importFromAnamnesis = async () => {
+  // Import from anamnesis. When `keepOpen` is true, dialog stays open so the
+  // teacher can repeat the import for another anamnesis room (mixed-class pairs).
+  const importFromAnamnesis = async (keepOpen = false) => {
     if (!selectedImportRoom) return;
     const { data: simParticipants, error } = await supabase
       .from("simulation_participants")
@@ -163,13 +164,22 @@ export default function SoapEditor() {
       toast({ title: "Erro", description: "Nenhum participante encontrado na sala de anamnese.", variant: "destructive" });
       return;
     }
-    // Only import students, not teachers
     const students = simParticipants.filter(p => p.participant_role === "student");
     if (!students.length) {
       toast({ title: "Erro", description: "Nenhum aluno encontrado na sala de anamnese.", variant: "destructive" });
       return;
     }
-    const inserts = students.map((p) => ({
+    // Skip students already imported (by anamnesis_participant_id) to avoid duplicates on repeated imports
+    const existingAnamIds = new Set(
+      participants.map((p: any) => p.anamnesis_participant_id).filter(Boolean)
+    );
+    const toInsert = students.filter((p) => !existingAnamIds.has(p.id));
+    if (!toInsert.length) {
+      toast({ title: "Nada a importar", description: "Todos os alunos desta sala já foram importados." });
+      if (!keepOpen) setImportDialogOpen(false);
+      return;
+    }
+    const inserts = toInsert.map((p) => ({
       room_id: roomId!,
       student_name: p.student_name,
       student_email: p.student_email || "",
@@ -178,8 +188,8 @@ export default function SoapEditor() {
     }));
     const { error: insertErr } = await supabase.from("soap_participants").insert(inserts as any);
     if (insertErr) { toast({ title: "Erro", description: insertErr.message, variant: "destructive" }); return; }
-    toast({ title: "Importado", description: `${students.length} aluno(s) importado(s).` });
-    setImportDialogOpen(false);
+    toast({ title: "Importado", description: `${toInsert.length} aluno(s) importado(s).` });
+    if (!keepOpen) setImportDialogOpen(false);
     refetchParticipants();
   };
 
