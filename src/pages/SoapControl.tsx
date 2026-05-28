@@ -518,13 +518,14 @@ export default function SoapControl() {
 
           const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
           const aiSc = soapResp?.ai_score != null ? Number(soapResp.ai_score) : null;
-          // For solo students, use AI score as peer score
+          // For solo students, use AI score as peer score (teacher acts as pair)
           const isSolo = student.pair_position === "S";
           if (isSolo && peerScore == null && aiSc != null) {
             peerScore = aiSc;
           }
-          const allScores = [peerScore, adminSc, aiSc].filter((s): s is number => s != null);
-          const finalScore = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
+          // Final score = média entre Professor e Pares (AI não entra no relatório)
+          const finalScores = [peerScore, adminSc].filter((s): s is number => s != null);
+          const finalScore = finalScores.length > 0 ? finalScores.reduce((a, b) => a + b, 0) / finalScores.length : 0;
 
           return {
             pairIndex: idx,
@@ -533,12 +534,13 @@ export default function SoapControl() {
             maxScore: 10,
             details: [],
             sections,
-            aiScore: aiSc,
+            aiScore: null,
             adminScore: adminSc,
             peerScore: peerScore,
-            aiFeedback: soapResp?.ai_feedback_json ? (typeof soapResp.ai_feedback_json === "string" ? soapResp.ai_feedback_json : JSON.stringify(soapResp.ai_feedback_json)) : null,
+            aiFeedback: null,
             adminFeedback: soapResp?.admin_feedback || null,
           };
+
         });
 
         const filteredPairs = reportPairs.filter(p => p.sections && p.sections.length > 0);
