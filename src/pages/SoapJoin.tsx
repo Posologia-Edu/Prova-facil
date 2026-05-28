@@ -657,7 +657,16 @@ export default function SoapJoin() {
 
               <CardContent className="space-y-4">
                 {renderFormFields(peerFields, peerAnswers, setPeerAnswers)}
-                <Button onClick={submitPeerEval} className="w-full"><Send className="h-4 w-4 mr-2" />Enviar Avaliação</Button>
+                <Button
+                  type="button"
+                  onClick={submitPeerEval}
+                  disabled={submittingPeer}
+                  className="w-full sticky bottom-2 z-10 shadow-lg"
+                  size="lg"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {submittingPeer ? "Enviando..." : "Enviar Avaliação"}
+                </Button>
               </CardContent>
             </Card>
           </div>
