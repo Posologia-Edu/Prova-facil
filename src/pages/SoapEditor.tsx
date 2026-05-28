@@ -377,6 +377,11 @@ export default function SoapEditor() {
             <DialogContent>
               <DialogHeader><DialogTitle>Importar Alunos da Anamnese</DialogTitle></DialogHeader>
               <div className="space-y-4">
+                <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2 border">
+                  💡 Você pode importar de <strong>mais de uma sala de anamnese</strong> para formar duplas mistas
+                  (ex.: reposição entre turmas). Basta repetir esta ação selecionando outra sala — cada aluno manterá
+                  o vínculo com sua própria anamnese.
+                </p>
                 <Select value={selectedImportRoom} onValueChange={setSelectedImportRoom}>
                   <SelectTrigger><SelectValue placeholder="Selecione a sala de anamnese" /></SelectTrigger>
                   <SelectContent>
@@ -385,7 +390,22 @@ export default function SoapEditor() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button onClick={importFromAnamnesis} disabled={!selectedImportRoom} className="w-full">Importar</Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={async () => {
+                      await importFromAnamnesis();
+                      setSelectedImportRoom("");
+                    }}
+                    disabled={!selectedImportRoom}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Importar e adicionar outra sala
+                  </Button>
+                  <Button onClick={importFromAnamnesis} disabled={!selectedImportRoom} className="flex-1">
+                    Importar e fechar
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
