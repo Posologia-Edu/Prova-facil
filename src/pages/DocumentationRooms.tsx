@@ -191,7 +191,7 @@ export default function DocumentationRooms() {
       if (forms?.length) {
         await supabase.from("documentation_forms").insert(forms.map(f => {
           let contentJson = f.content_json;
-          if (f.form_type === "answer_key" && contentJson && typeof contentJson === "object" && !Array.isArray(contentJson) && (contentJson as any).case_answers) {
+          if ((f.form_type === "answer_key" || f.form_type === "referral_answer_key" || f.form_type === "medication_answer_key") && contentJson && typeof contentJson === "object" && !Array.isArray(contentJson) && (contentJson as any).case_answers) {
             const oldAnswers = (contentJson as any).case_answers as Record<string, any>;
             const newAnswers: Record<string, any> = {};
             for (const [oldId, fields] of Object.entries(oldAnswers)) {
