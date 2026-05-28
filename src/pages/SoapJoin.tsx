@@ -111,6 +111,8 @@ export default function SoapJoin() {
   const [partnerSoapAnswers, setPartnerSoapAnswers] = useState<Record<string, any>>({});
   const [submittedSoap, setSubmittedSoap] = useState(false);
   const [submittedPeer, setSubmittedPeer] = useState(false);
+  const [submittingSoap, setSubmittingSoap] = useState(false);
+  const [submittingPeer, setSubmittingPeer] = useState(false);
 
   // Autosave SOAP draft
   const soapDraftKey =
