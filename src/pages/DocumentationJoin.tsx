@@ -75,6 +75,19 @@ export default function DocumentationJoin() {
       setSubmitted(true);
       setPhase("done");
     } else {
+      // If a response row exists without submitted_at, the teacher has reopened the activity.
+      // Pre-populate the form with previously sent data so students can adjust and resend.
+      if (existingResp?.length) {
+        const prevReferral = existingResp.find((r: any) => r.form_id === rf?.id);
+        const prevMed = existingResp.find((r: any) => r.form_id === mf?.id);
+        if (prevReferral?.answers_json && typeof prevReferral.answers_json === "object") {
+          setReferralAnswers(prevReferral.answers_json as any);
+        }
+        if (prevMed?.answers_json && (prevMed.answers_json as any).rows) {
+          setMedRows((prevMed.answers_json as any).rows);
+        }
+        toast({ title: "Atividade reaberta", description: "Suas respostas anteriores foram carregadas. Ajuste e reenvie." });
+      }
       setPhase("active");
     }
 
