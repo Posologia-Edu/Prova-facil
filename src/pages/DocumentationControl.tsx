@@ -450,19 +450,43 @@ export default function DocumentationControl() {
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {Object.entries(pairs).map(([idx, pair]) => {
               const pairIdx = Number(idx);
-              const hasResponse = responses.some(r => r.pair_index === pairIdx);
+              const pairResponses = responses.filter(r => r.pair_index === pairIdx);
+              const hasResponse = pairResponses.length > 0;
+              const hasSubmitted = pairResponses.some(r => r.submitted_at);
               return (
                 <Card key={idx}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm">{pair.some((p: any) => p.pair_position === "S") ? "Individual" : `Dupla ${pairIdx + 1}`}</CardTitle>
-                      <Badge variant={hasResponse ? "default" : "outline"}>
-                        {hasResponse ? "Enviou" : pair.every(p => p.status === "ready") ? "Pronto" : "Aguardando"}
+                      <Badge variant={hasSubmitted ? "default" : hasResponse ? "secondary" : "outline"}>
+                        {hasSubmitted ? "Enviou" : hasResponse ? "Reaberto" : pair.every(p => p.status === "ready") ? "Pronto" : "Aguardando"}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-2">
                     {pair.map((p: any) => <p key={p.id} className="text-sm">{p.student_name}</p>)}
+                    {hasSubmitted && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full mt-2">
+                            <Unlock className="h-3.5 w-3.5 mr-1" />Reabrir envio
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Reabrir envio desta dupla?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              A dupla poderá entrar novamente com o PIN e o e-mail para ajustar e reenviar a documentação.
+                              As respostas atuais serão mantidas como rascunho até o novo envio. Se a sala estiver concluída, ela será reativada.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => reopenPairSubmission(pairIdx)}>Reabrir</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </CardContent>
                 </Card>
               );
