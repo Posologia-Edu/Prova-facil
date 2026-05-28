@@ -1753,7 +1753,7 @@ export default function SimulationJoin() {
                   readOnly={!canFill}
                   showScores={true}
                 />
-                <Button onClick={submitForm} disabled={!canFill} className="w-full mt-4">
+                <Button type="button" onClick={submitForm} disabled={!canFill} className="w-full mt-4 sticky bottom-2 z-10 shadow-lg" size="lg">
                   <Send className="h-4 w-4 mr-2" />{t("sim_submit")}
                 </Button>
               </>
