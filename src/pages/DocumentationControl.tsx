@@ -11,7 +11,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, Table2, ChevronDown, ChevronRight, Lock } from "lucide-react";
+import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, Table2, ChevronDown, ChevronRight, Lock, Unlock } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
 
 type FormField = { id: string; label: string; type: string; options?: string[]; max_score?: number };
