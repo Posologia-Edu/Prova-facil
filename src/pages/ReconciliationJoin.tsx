@@ -281,7 +281,7 @@ export default function ReconciliationJoin() {
                 showScores={true}
               />
 
-              <Button className="w-full" onClick={handleSubmit} disabled={submitted}>
+              <Button type="button" className="w-full sticky bottom-2 z-10 shadow-lg" size="lg" onClick={handleSubmit} disabled={submitted}>
                 <Send className="h-4 w-4 mr-2" />Enviar Ficha de Reconciliação
               </Button>
             </CardContent>

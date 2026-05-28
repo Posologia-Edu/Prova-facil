@@ -111,6 +111,8 @@ export default function SoapJoin() {
   const [partnerSoapAnswers, setPartnerSoapAnswers] = useState<Record<string, any>>({});
   const [submittedSoap, setSubmittedSoap] = useState(false);
   const [submittedPeer, setSubmittedPeer] = useState(false);
+  const [submittingSoap, setSubmittingSoap] = useState(false);
+  const [submittingPeer, setSubmittingPeer] = useState(false);
 
   // Autosave SOAP draft
   const soapDraftKey =
@@ -371,122 +373,138 @@ export default function SoapJoin() {
 
   const submitSoap = async () => {
     if (!soapForm || !participant || !room) return;
-
-    // Determine partner-absent status (only relevant for paired A/B students)
-    const isSolo = participant.pair_position === "S";
-    let partnerAbsent = false;
-    if (!isSolo && participant.pair_index >= 0) {
-      const { data: partners } = await supabase
-        .from("soap_participants")
-        .select("id, status")
-        .eq("room_id", room.id)
-        .eq("pair_index", participant.pair_index)
-        .neq("id", participant.id);
-      const pt = partners?.[0];
-      // Partner absent = never logged in (status still 'waiting') and never submitted
-      if (!pt) {
-        partnerAbsent = true;
-      } else if (pt.status === "waiting") {
-        const { data: partnerResp } = await supabase
-          .from("soap_responses")
-          .select("id")
-          .eq("participant_id", pt.id)
+    if (submittingSoap) return;
+    setSubmittingSoap(true);
+    try {
+      // Determine partner-absent status (only relevant for paired A/B students)
+      const isSolo = participant.pair_position === "S";
+      let partnerAbsent = false;
+      if (!isSolo && participant.pair_index >= 0) {
+        const { data: partners } = await supabase
+          .from("soap_participants")
+          .select("id, status")
           .eq("room_id", room.id)
-          .limit(1);
-        partnerAbsent = !partnerResp?.length;
-      }
-    }
-
-    // Guard against duplicate submissions (e.g. double-click / stale state)
-    const { data: alreadySent } = await supabase
-      .from("soap_responses")
-      .select("id")
-      .eq("room_id", room.id)
-      .eq("participant_id", participant.id)
-      .is("target_participant_id", null)
-      .maybeSingle();
-    if (alreadySent?.id) {
-      setSubmittedSoap(true);
-      toast({ title: "SOAP já enviado", description: "Seu SOAP já havia sido registrado." });
-    } else {
-      const { error } = await supabase.from("soap_responses").insert({
-        room_id: room.id,
-        participant_id: participant.id,
-        form_id: soapForm.id,
-        answers_json: soapAnswers,
-        needs_teacher_peer_eval: partnerAbsent,
-      } as any);
-      if (error) {
-        // Unique index will raise 23505 if a concurrent insert happened
-        if ((error as any).code === "23505") {
-          setSubmittedSoap(true);
-          toast({ title: "SOAP já enviado", description: "Seu SOAP já havia sido registrado." });
-        } else {
-          toast({ title: "Erro", description: error.message, variant: "destructive" });
-          return;
+          .eq("pair_index", participant.pair_index)
+          .neq("id", participant.id);
+        const pt = partners?.[0];
+        if (!pt) {
+          partnerAbsent = true;
+        } else if (pt.status === "waiting") {
+          const { data: partnerResp } = await supabase
+            .from("soap_responses")
+            .select("id")
+            .eq("participant_id", pt.id)
+            .eq("room_id", room.id)
+            .limit(1);
+          partnerAbsent = !partnerResp?.length;
         }
       }
-    }
-    await supabase.from("soap_participants").update({ status: "submitted" }).eq("id", participant.id);
-    setSubmittedSoap(true);
-    await soapDraft.clearDraft();
-    toast({ title: "SOAP enviado!" });
 
-    // Solo students skip peer evaluation — trigger AI peer grading instead
-    if (isSolo) {
-      await supabase.from("soap_participants").update({ status: "done" }).eq("id", participant.id);
-      setPhase("done");
-      // Fire-and-forget AI grading for solo student
-      triggerAIPeerGrading(room, participant, soapForm, soapAnswers).catch(console.error);
-    } else if (partnerAbsent) {
-      // Partner did not show up → professor will fill the peer evaluation
-      await supabase.from("soap_participants").update({ status: "awaiting_teacher_peer" }).eq("id", participant.id);
+      // Guard against duplicate submissions (e.g. double-click / stale state)
+      const { data: alreadySent } = await supabase
+        .from("soap_responses")
+        .select("id")
+        .eq("room_id", room.id)
+        .eq("participant_id", participant.id)
+        .is("target_participant_id", null)
+        .maybeSingle();
+      if (alreadySent?.id) {
+        setSubmittedSoap(true);
+        toast({ title: "SOAP já enviado", description: "Seu SOAP já havia sido registrado." });
+      } else {
+        const { error } = await supabase.from("soap_responses").insert({
+          room_id: room.id,
+          participant_id: participant.id,
+          form_id: soapForm.id,
+          answers_json: soapAnswers,
+          needs_teacher_peer_eval: partnerAbsent,
+        } as any);
+        if (error) {
+          if ((error as any).code === "23505") {
+            setSubmittedSoap(true);
+            toast({ title: "SOAP já enviado", description: "Seu SOAP já havia sido registrado." });
+          } else {
+            toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
+            return;
+          }
+        }
+      }
+      await supabase.from("soap_participants").update({ status: "submitted" }).eq("id", participant.id);
+      setSubmittedSoap(true);
+      await soapDraft.clearDraft();
+      toast({ title: "SOAP enviado!" });
+
+      if (isSolo) {
+        await supabase.from("soap_participants").update({ status: "done" }).eq("id", participant.id);
+        setPhase("done");
+        triggerAIPeerGrading(room, participant, soapForm, soapAnswers).catch(console.error);
+      } else if (partnerAbsent) {
+        await supabase.from("soap_participants").update({ status: "awaiting_teacher_peer" }).eq("id", participant.id);
+        toast({
+          title: "Par ausente",
+          description: "Seu colega de dupla não está no sistema. O professor avaliará seu SOAP.",
+        });
+        setPhase("done");
+      } else {
+        await checkPartnerAndPeerStatus(room.id, participant);
+      }
+    } catch (err: any) {
+      console.error("submitSoap error", err);
       toast({
-        title: "Par ausente",
-        description: "Seu colega de dupla não está no sistema. O professor avaliará seu SOAP.",
+        title: "Erro inesperado",
+        description: err?.message || "Tente novamente. Suas respostas estão salvas automaticamente.",
+        variant: "destructive",
       });
-      setPhase("done");
-    } else {
-      await checkPartnerAndPeerStatus(room.id, participant);
+    } finally {
+      setSubmittingSoap(false);
     }
   };
 
   const submitPeerEval = async () => {
     if (!peerForm || !participant || !partner || !room) return;
-    const { data: alreadyPeer } = await supabase
-      .from("soap_responses")
-      .select("id")
-      .eq("room_id", room.id)
-      .eq("participant_id", participant.id)
-      .eq("target_participant_id", partner.id)
-      .maybeSingle();
-    if (alreadyPeer?.id) {
-      setSubmittedPeer(true);
-      setPhase("done");
-      toast({ title: "Avaliação já enviada" });
-      return;
-    }
-    const { error } = await supabase.from("soap_responses").insert({
-      room_id: room.id,
-      participant_id: participant.id,
-      target_participant_id: partner.id,
-      form_id: peerForm.id,
-      answers_json: peerAnswers,
-    });
-    if (error) {
-      if ((error as any).code === "23505") {
+    if (submittingPeer) return;
+    setSubmittingPeer(true);
+    try {
+      const { data: alreadyPeer } = await supabase
+        .from("soap_responses")
+        .select("id")
+        .eq("room_id", room.id)
+        .eq("participant_id", participant.id)
+        .eq("target_participant_id", partner.id)
+        .maybeSingle();
+      if (alreadyPeer?.id) {
         setSubmittedPeer(true);
         setPhase("done");
         toast({ title: "Avaliação já enviada" });
         return;
       }
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-      return;
+      const { error } = await supabase.from("soap_responses").insert({
+        room_id: room.id,
+        participant_id: participant.id,
+        target_participant_id: partner.id,
+        form_id: peerForm.id,
+        answers_json: peerAnswers,
+      });
+      if (error) {
+        if ((error as any).code === "23505") {
+          setSubmittedPeer(true);
+          setPhase("done");
+          toast({ title: "Avaliação já enviada" });
+          return;
+        }
+        toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
+        return;
+      }
+      setSubmittedPeer(true);
+      setPhase("done");
+      await peerDraft.clearDraft();
+      toast({ title: "Avaliação enviada!" });
+    } catch (err: any) {
+      console.error("submitPeerEval error", err);
+      toast({ title: "Erro inesperado", description: err?.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setSubmittingPeer(false);
     }
-    setSubmittedPeer(true);
-    setPhase("done");
-    await peerDraft.clearDraft();
-    toast({ title: "Avaliação enviada!" });
   };
 
 
@@ -569,7 +587,16 @@ export default function SoapJoin() {
 
               <CardContent className="space-y-4">
                 {renderFormFields(soapFields, soapAnswers, setSoapAnswers)}
-                <Button onClick={submitSoap} className="w-full"><Send className="h-4 w-4 mr-2" />Enviar SOAP</Button>
+                <Button
+                  type="button"
+                  onClick={submitSoap}
+                  disabled={submittingSoap}
+                  className="w-full sticky bottom-2 z-10 shadow-lg"
+                  size="lg"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {submittingSoap ? "Enviando..." : "Enviar SOAP"}
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -630,7 +657,16 @@ export default function SoapJoin() {
 
               <CardContent className="space-y-4">
                 {renderFormFields(peerFields, peerAnswers, setPeerAnswers)}
-                <Button onClick={submitPeerEval} className="w-full"><Send className="h-4 w-4 mr-2" />Enviar Avaliação</Button>
+                <Button
+                  type="button"
+                  onClick={submitPeerEval}
+                  disabled={submittingPeer}
+                  className="w-full sticky bottom-2 z-10 shadow-lg"
+                  size="lg"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {submittingPeer ? "Enviando..." : "Enviar Avaliação"}
+                </Button>
               </CardContent>
             </Card>
           </div>

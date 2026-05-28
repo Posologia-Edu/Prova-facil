@@ -7,23 +7,20 @@ interface Options {
   draftKey: string | null;
   module: string;
   enabled?: boolean;
-  /** Debounce in ms for saves (default 1500). */
+  /** Debounce in ms for server saves (default 800). LocalStorage mirror is immediate. */
   debounceMs?: number;
 }
 
 /**
- * Universal server-side autosave for student form drafts.
+ * Universal autosave for student form drafts.
  *
  * Strategy:
- * - On mount, looks up an existing draft by `draft_key`.
- * - `saveDraft(answers)` debounces an upsert to `form_drafts`.
- * - `clearDraft()` removes the row (call after final submission succeeds).
- *
- * Drafts are intentionally readable/writable by anyone — students access via
- * PIN+email (unauthenticated), and the `draft_key` embeds room+participant+form
- * which acts as the capability token (matches existing PIN-based tables).
+ * - On every change, mirror immediately to localStorage (synchronous, instant).
+ * - Debounced upsert to `form_drafts` for cross-device recovery.
+ * - On mount, restore from whichever source is newest (local vs server).
+ * - Flushes on pagehide / visibilitychange / beforeunload.
  */
-export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 1500 }: Options) {
+export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 800 }: Options) {
   const [loaded, setLoaded] = useState(false);
   const [draft, setDraft] = useState<Record<string, any> | null>(null);
   const [status, setStatus] = useState<DraftStatus>("idle");
@@ -31,31 +28,59 @@ export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 15
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestRef = useRef<Record<string, any> | null>(null);
+  const draftKeyRef = useRef<string | null>(null);
+  draftKeyRef.current = draftKey;
 
-  // Load existing draft
+  const localKey = draftKey ? `form_draft_v1:${draftKey}` : null;
+
+  // Load existing draft (local first, then server; pick newest)
   useEffect(() => {
     let cancelled = false;
-    if (!enabled || !draftKey) {
+    if (!enabled || !draftKey || !localKey) {
       setLoaded(true);
       return;
     }
     setLoaded(false);
+
+    // 1) Read local mirror synchronously
+    let localPayload: { answers: Record<string, any>; ts: number } | null = null;
+    try {
+      const raw = localStorage.getItem(localKey);
+      if (raw) localPayload = JSON.parse(raw);
+    } catch {
+      /* ignore */
+    }
+
     (async () => {
       const { data } = await (supabase.from("form_drafts") as any)
         .select("answers_json, updated_at")
         .eq("draft_key", draftKey)
         .maybeSingle();
       if (cancelled) return;
-      if (data) {
-        setDraft((data.answers_json as Record<string, any>) || null);
-        if (data.updated_at) setLastSavedAt(new Date(data.updated_at));
+
+      const serverTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
+      const localTs = localPayload?.ts || 0;
+
+      let chosen: Record<string, any> | null = null;
+      let chosenTs = 0;
+      if (localTs >= serverTs && localPayload) {
+        chosen = localPayload.answers;
+        chosenTs = localTs;
+      } else if (data) {
+        chosen = (data.answers_json as Record<string, any>) || null;
+        chosenTs = serverTs;
+      }
+
+      if (chosen) {
+        setDraft(chosen);
+        if (chosenTs) setLastSavedAt(new Date(chosenTs));
       }
       setLoaded(true);
     })();
     return () => {
       cancelled = true;
     };
-  }, [draftKey, enabled]);
+  }, [draftKey, enabled, localKey]);
 
   const performSave = useCallback(async () => {
     if (!draftKey || !enabled) return;
@@ -71,7 +96,7 @@ export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 15
       { onConflict: "draft_key" }
     );
     if (error) {
-      console.error("[useFormDraft] save error", error);
+      console.error("[useFormDraft] server save error", error);
       setStatus("error");
     } else {
       setStatus("saved");
@@ -81,26 +106,39 @@ export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 15
 
   const saveDraft = useCallback(
     (answers: Record<string, any>) => {
-      if (!enabled || !draftKey) return;
+      if (!enabled || !draftKey || !localKey) return;
       latestRef.current = answers;
+
+      // Immediate localStorage mirror (synchronous, survives refresh even before server save)
+      try {
+        localStorage.setItem(localKey, JSON.stringify({ answers, ts: Date.now() }));
+      } catch {
+        /* quota or private mode — ignore */
+      }
+
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         performSave();
       }, debounceMs);
     },
-    [draftKey, enabled, debounceMs, performSave]
+    [draftKey, enabled, debounceMs, performSave, localKey]
   );
 
   const clearDraft = useCallback(async () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (!draftKey) return;
+    try {
+      if (localKey) localStorage.removeItem(localKey);
+    } catch {
+      /* ignore */
+    }
     await (supabase.from("form_drafts") as any).delete().eq("draft_key", draftKey);
     setDraft(null);
     setLastSavedAt(null);
     setStatus("idle");
-  }, [draftKey]);
+  }, [draftKey, localKey]);
 
-  // Flush on unmount / page hide
+  // Flush on unmount / page hide / visibility change
   useEffect(() => {
     const flush = () => {
       if (timerRef.current) {
@@ -109,15 +147,17 @@ export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 15
         performSave();
       }
     };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
     window.addEventListener("beforeunload", flush);
     window.addEventListener("pagehide", flush);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") flush();
-    });
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       flush();
       window.removeEventListener("beforeunload", flush);
       window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [performSave]);
 
