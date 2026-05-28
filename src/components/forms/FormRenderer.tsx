@@ -107,14 +107,17 @@ export default function FormRenderer({
               onChange={(e) => onChange({ ...answers, [field.id]: e.target.value })}
               disabled={readOnly}
             />
-            {!readOnly && (
-              <HandwritingInput
-                context={field.label}
-                currentValue={answers[field.id] || ""}
-                appendMode={false}
-                onTranscribe={(text) => onChange({ ...answers, [field.id]: text })}
-              />
-            )}
+            <div className="flex flex-wrap gap-2">
+              <CopyTextButton text={answers[field.id] || ""} />
+              {!readOnly && (
+                <HandwritingInput
+                  context={field.label}
+                  currentValue={answers[field.id] || ""}
+                  appendMode={false}
+                  onTranscribe={(text) => onChange({ ...answers, [field.id]: text })}
+                />
+              )}
+            </div>
           </div>
         )}
 
@@ -126,14 +129,17 @@ export default function FormRenderer({
               disabled={readOnly}
               rows={4}
             />
-            {!readOnly && (
-              <HandwritingInput
-                context={field.label}
-                currentValue={answers[field.id] || ""}
-                appendMode
-                onTranscribe={(text) => onChange({ ...answers, [field.id]: text })}
-              />
-            )}
+            <div className="flex flex-wrap gap-2">
+              <CopyTextButton text={answers[field.id] || ""} />
+              {!readOnly && (
+                <HandwritingInput
+                  context={field.label}
+                  currentValue={answers[field.id] || ""}
+                  appendMode
+                  onTranscribe={(text) => onChange({ ...answers, [field.id]: text })}
+                />
+              )}
+            </div>
           </div>
         )}
 
