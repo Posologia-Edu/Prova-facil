@@ -215,6 +215,14 @@ const App = () => (
               }
             />
             <Route
+              path="/classes/:classId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><ClassDetail /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/analytics"
               element={
                 <ProtectedRoute>
