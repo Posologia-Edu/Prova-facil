@@ -15,6 +15,7 @@ import Exams from "./pages/Exams";
 import ExamEditor from "./pages/ExamEditor";
 import ExamView from "./pages/ExamView";
 import Classes from "./pages/Classes";
+import ClassDetail from "./pages/ClassDetail";
 import Analytics from "./pages/Analytics";
 import Admin from "./pages/Admin";
 import Pricing from "./pages/Pricing";
@@ -210,6 +211,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><Classes /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/classes/:classId"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><ClassDetail /></AppLayout>
                 </ProtectedRoute>
               }
             />

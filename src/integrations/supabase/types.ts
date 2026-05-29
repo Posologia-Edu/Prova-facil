@@ -405,11 +405,193 @@ export type Database = {
         }
         Relationships: []
       }
+      class_documents: {
+        Row: {
+          category: string
+          class_id: string
+          created_at: string
+          description: string | null
+          file_path: string | null
+          id: string
+          link_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          class_id: string
+          created_at?: string
+          description?: string | null
+          file_path?: string | null
+          id?: string
+          link_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          class_id?: string
+          created_at?: string
+          description?: string | null
+          file_path?: string | null
+          id?: string
+          link_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_documents_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_lesson_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_system: boolean
+          lesson_type: string
+          name: string
+          schema: Json
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          lesson_type: string
+          name: string
+          schema?: Json
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          lesson_type?: string
+          name?: string
+          schema?: Json
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      class_schedule_items: {
+        Row: {
+          created_at: string
+          id: string
+          lesson_date: string | null
+          lesson_type: string
+          notes: string | null
+          order_index: number
+          semester_id: string
+          status: string
+          template_data: Json
+          template_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lesson_date?: string | null
+          lesson_type?: string
+          notes?: string | null
+          order_index?: number
+          semester_id: string
+          status?: string
+          template_data?: Json
+          template_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lesson_date?: string | null
+          lesson_type?: string
+          notes?: string | null
+          order_index?: number
+          semester_id?: string
+          status?: string
+          template_data?: Json
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_schedule_items_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_schedule_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "class_lesson_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_semesters: {
+        Row: {
+          class_id: string
+          created_at: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          label: string
+          order_index: number
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          order_index?: number
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          order_index?: number
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_semesters_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_students: {
         Row: {
           class_id: string
           created_at: string
           id: string
+          semester_id: string | null
           student_email: string | null
           student_name: string
           student_registration: string | null
@@ -418,6 +600,7 @@ export type Database = {
           class_id: string
           created_at?: string
           id?: string
+          semester_id?: string | null
           student_email?: string | null
           student_name: string
           student_registration?: string | null
@@ -426,6 +609,7 @@ export type Database = {
           class_id?: string
           created_at?: string
           id?: string
+          semester_id?: string | null
           student_email?: string | null
           student_name?: string
           student_registration?: string | null
@@ -433,6 +617,54 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "class_students_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_students_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_teachers: {
+        Row: {
+          class_id: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          order_index: number
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          order_index?: number
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_teachers_class_id_fkey"
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
@@ -448,6 +680,7 @@ export type Database = {
           group_label: string | null
           id: string
           patient_id: string
+          semester_id: string | null
           status: string
         }
         Insert: {
@@ -457,6 +690,7 @@ export type Database = {
           group_label?: string | null
           id?: string
           patient_id: string
+          semester_id?: string | null
           status?: string
         }
         Update: {
@@ -466,6 +700,7 @@ export type Database = {
           group_label?: string | null
           id?: string
           patient_id?: string
+          semester_id?: string | null
           status?: string
         }
         Relationships: [
@@ -474,6 +709,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_virtual_patients_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
             referencedColumns: ["id"]
           },
         ]
@@ -664,6 +906,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           id: string
+          semester_id: string | null
           status: string
           title: string
           type: string
@@ -678,6 +921,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          semester_id?: string | null
           status?: string
           title?: string
           type?: string
@@ -692,6 +936,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          semester_id?: string | null
           status?: string
           title?: string
           type?: string
@@ -704,6 +949,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_observations_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
             referencedColumns: ["id"]
           },
         ]
@@ -1500,6 +1752,7 @@ export type Database = {
           id: string
           layout_config_json: Json
           proctoring_config: Json | null
+          semester_id: string | null
           status: string
           title: string
           updated_at: string
@@ -1514,6 +1767,7 @@ export type Database = {
           id?: string
           layout_config_json?: Json
           proctoring_config?: Json | null
+          semester_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -1528,6 +1782,7 @@ export type Database = {
           id?: string
           layout_config_json?: Json
           proctoring_config?: Json | null
+          semester_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -1539,6 +1794,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exams_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
             referencedColumns: ["id"]
           },
         ]
@@ -1728,6 +1990,7 @@ export type Database = {
           deleted_at: string | null
           description: string | null
           id: string
+          semester_id: string | null
           status: string
           title: string
           updated_at: string
@@ -1739,6 +2002,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           id?: string
+          semester_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -1750,6 +2014,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           id?: string
+          semester_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -1761,6 +2026,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kfe_exams_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
             referencedColumns: ["id"]
           },
         ]
@@ -3489,6 +3761,7 @@ export type Database = {
           current_rotation: number
           id: string
           osce_exam_id: string
+          semester_id: string | null
           started_at: string | null
           status: string
           updated_at: string
@@ -3501,6 +3774,7 @@ export type Database = {
           current_rotation?: number
           id?: string
           osce_exam_id: string
+          semester_id?: string | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -3513,6 +3787,7 @@ export type Database = {
           current_rotation?: number
           id?: string
           osce_exam_id?: string
+          semester_id?: string | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -3531,6 +3806,13 @@ export type Database = {
             columns: ["osce_exam_id"]
             isOneToOne: false
             referencedRelation: "osce_exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "osce_circuits_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
             referencedColumns: ["id"]
           },
         ]
@@ -3648,6 +3930,7 @@ export type Database = {
           description: string | null
           id: string
           is_online: boolean
+          semester_id: string | null
           station_duration_minutes: number
           status: string
           title: string
@@ -3662,6 +3945,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_online?: boolean
+          semester_id?: string | null
           station_duration_minutes?: number
           status?: string
           title?: string
@@ -3676,6 +3960,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_online?: boolean
+          semester_id?: string | null
           station_duration_minutes?: number
           status?: string
           title?: string
@@ -3689,6 +3974,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "osce_exams_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
             referencedColumns: ["id"]
           },
         ]
@@ -4625,6 +4917,7 @@ export type Database = {
           description: string | null
           expert_panel_size: number
           id: string
+          semester_id: string | null
           status: string
           title: string
           updated_at: string
@@ -4637,6 +4930,7 @@ export type Database = {
           description?: string | null
           expert_panel_size?: number
           id?: string
+          semester_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -4649,6 +4943,7 @@ export type Database = {
           description?: string | null
           expert_panel_size?: number
           id?: string
+          semester_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -4660,6 +4955,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sct_exams_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
             referencedColumns: ["id"]
           },
         ]
@@ -5191,6 +5493,7 @@ export type Database = {
           description: string | null
           id: string
           scoring_method: string
+          semester_id: string | null
           status: string
           title: string
           updated_at: string
@@ -5203,6 +5506,7 @@ export type Database = {
           description?: string | null
           id?: string
           scoring_method?: string
+          semester_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -5215,6 +5519,7 @@ export type Database = {
           description?: string | null
           id?: string
           scoring_method?: string
+          semester_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -5226,6 +5531,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sjt_exams_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
             referencedColumns: ["id"]
           },
         ]
