@@ -17,14 +17,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, GraduationCap, Plus, Calendar, FileText, UserCog, Layers,
-  Pencil, Trash2, Download, ExternalLink, Upload, Loader2, ClipboardList,
+  Pencil, Trash2, Download, ExternalLink, Upload, Loader2, LayoutDashboard,
+  Users, BookOpenCheck, ClipboardCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LessonDialog, LessonItem } from "@/components/classes/LessonDialog";
 import { SeminarEvaluationDialog } from "@/components/classes/SeminarEvaluationDialog";
-import { getLessonTypeStyle } from "@/lib/lesson-type-style";
-import { cn } from "@/lib/utils";
 import { SeminarRubric } from "@/lib/seminar-rubric";
+import { OverviewTab } from "@/components/classes/OverviewTab";
+import { GradebookTab } from "@/components/classes/GradebookTab";
+import { AttendanceTab } from "@/components/classes/AttendanceTab";
+import { StudentsTab } from "@/components/classes/StudentsTab";
+import { ScheduleViews, ScheduleLesson } from "@/components/classes/ScheduleViews";
 
 interface ClassRow {
   id: string;
@@ -41,19 +45,10 @@ interface Semester {
   order_index: number;
   student_count?: number;
 }
-interface Teacher {
-  id: string;
-  name: string;
-  email: string | null;
-  role: string;
-}
+interface Teacher { id: string; name: string; email: string | null; role: string; }
 interface DocItem {
-  id: string;
-  title: string;
-  category: string;
-  description: string | null;
-  file_path: string | null;
-  link_url: string | null;
+  id: string; title: string; category: string; description: string | null;
+  file_path: string | null; link_url: string | null;
 }
 interface Lesson extends LessonItem { id: string; rubric_json?: SeminarRubric | null; }
 
@@ -82,8 +77,8 @@ export default function ClassDetail() {
   const [documents, setDocuments] = useState<DocItem[]>([]);
   const [activeSemesterId, setActiveSemesterId] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("overview");
 
-  // dialogs
   const [semDialog, setSemDialog] = useState<{ open: boolean; editing?: Semester | null }>({ open: false });
   const [teacherDialog, setTeacherDialog] = useState<{ open: boolean; editing?: Teacher | null }>({ open: false });
   const [docDialog, setDocDialog] = useState<{ open: boolean; editing?: DocItem | null }>({ open: false });
@@ -101,29 +96,25 @@ export default function ClassDetail() {
       supabase.from("class_teachers").select("*").eq("class_id", classId!).order("order_index"),
       supabase.from("class_documents").select("*").eq("class_id", classId!).order("created_at", { ascending: false }),
     ]);
-    if (c.error) {
-      toast.error("Turma não encontrada");
-      navigate("/classes");
-      return;
-    }
+    if (c.error) { toast.error("Turma não encontrada"); navigate("/classes"); return; }
     setKlass(c.data as any);
 
-    // student counts per semester
     const semList = (sem.data as Semester[]) || [];
     const ids = semList.map((s) => s.id);
-    let counts: Record<string, number> = {};
+    const counts: Record<string, number> = {};
     if (ids.length) {
-      const { data: stu } = await supabase
-        .from("class_students")
-        .select("semester_id")
-        .in("semester_id", ids);
+      const { data: stu } = await supabase.from("class_students").select("semester_id").in("semester_id", ids);
       stu?.forEach((s: any) => { counts[s.semester_id] = (counts[s.semester_id] || 0) + 1; });
     }
     const decorated = semList.map((s) => ({ ...s, student_count: counts[s.id] || 0 }));
     setSemesters(decorated);
     setTeachers((tch.data as any) || []);
     setDocuments((doc.data as any) || []);
-    if (!activeSemesterId && decorated.length) setActiveSemesterId(decorated[0].id);
+    if (!activeSemesterId && decorated.length) {
+      // prefer active semester
+      const preferred = decorated.find(s => s.is_active) || decorated[0];
+      setActiveSemesterId(preferred.id);
+    }
     setLoading(false);
   }
 
@@ -139,7 +130,6 @@ export default function ClassDetail() {
     setLessons((data as any) || []);
   }
 
-  // ===== Semesters =====
   async function saveSemester(form: Partial<Semester>) {
     const payload = {
       class_id: classId,
@@ -158,7 +148,6 @@ export default function ClassDetail() {
     load();
   }
 
-  // ===== Teachers =====
   async function saveTeacher(form: Partial<Teacher>) {
     if (!form.name?.trim()) return toast.error("Informe o nome");
     const payload = {
@@ -176,7 +165,6 @@ export default function ClassDetail() {
     load();
   }
 
-  // ===== Documents =====
   async function uploadAndSaveDoc(file: File | null, form: Partial<DocItem>) {
     if (!form.title?.trim()) return toast.error("Informe o título");
     let file_path = form.file_path || null;
@@ -194,8 +182,7 @@ export default function ClassDetail() {
       title: form.title.trim(),
       category: form.category || "other",
       description: form.description || null,
-      file_path,
-      link_url: form.link_url?.trim() || null,
+      file_path, link_url: form.link_url?.trim() || null,
     };
     const { error } = docDialog.editing
       ? await supabase.from("class_documents").update(payload).eq("id", docDialog.editing.id)
@@ -216,7 +203,6 @@ export default function ClassDetail() {
     }
   }
 
-  // ===== Delete handler =====
   async function performDelete() {
     if (!confirmDelete) return;
     const tableMap: Record<string, string> = {
@@ -240,300 +226,297 @@ export default function ClassDetail() {
   );
   if (!klass) return null;
 
+  const activeSemester = semesters.find(s => s.id === activeSemesterId) || null;
+
   return (
-    <div className="container mx-auto p-6 space-y-6 max-w-7xl">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/classes")}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <GraduationCap className="w-6 h-6 text-primary" />
-            {klass.name}
-          </h1>
-          {klass.description && <p className="text-sm text-muted-foreground">{klass.description}</p>}
+    <div className="min-h-screen bg-background">
+      {/* HERO */}
+      <div className="relative overflow-hidden border-b">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/80" />
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--secondary)),transparent_50%)]" />
+        <div className="relative container mx-auto px-6 py-6 max-w-7xl">
+          <div className="flex items-center gap-2 text-primary-foreground/70 text-sm mb-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/classes")} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 h-7 px-2">
+              <ArrowLeft className="w-4 h-4 mr-1" />Turmas
+            </Button>
+            <span>/</span>
+            <span className="text-primary-foreground/90">{klass.name}</span>
+            {activeSemester && <><span>/</span><span className="font-medium text-secondary">{activeSemester.label}</span></>}
+          </div>
+
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold text-primary-foreground flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-secondary/20 backdrop-blur flex items-center justify-center border border-secondary/30">
+                  <GraduationCap className="h-6 w-6 text-secondary" />
+                </div>
+                {klass.name}
+              </h1>
+              {klass.description && <p className="text-sm text-primary-foreground/80 mt-2 max-w-2xl">{klass.description}</p>}
+            </div>
+
+            <div className="flex items-center gap-2 bg-background/10 backdrop-blur-md rounded-lg p-2 border border-primary-foreground/10">
+              <Label className="text-primary-foreground/90 text-xs uppercase tracking-wider">Semestre</Label>
+              {semesters.length ? (
+                <Select value={activeSemesterId ?? ""} onValueChange={setActiveSemesterId}>
+                  <SelectTrigger className="w-48 bg-background/90 border-0 h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {semesters.map(s => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.label} {!s.is_active && "(arquivado)"} · {s.student_count} alunos
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Button size="sm" onClick={() => setSemDialog({ open: true })} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+                  <Plus className="w-4 h-4 mr-1" />Criar semestre
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
-        <Badge variant="secondary">{semesters.length} semestre(s)</Badge>
       </div>
 
-      <Tabs defaultValue="semesters" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="semesters"><Layers className="w-4 h-4 mr-1" />Semestres</TabsTrigger>
-          <TabsTrigger value="schedule"><Calendar className="w-4 h-4 mr-1" />Cronograma</TabsTrigger>
-          <TabsTrigger value="teachers"><UserCog className="w-4 h-4 mr-1" />Professores</TabsTrigger>
-          <TabsTrigger value="documents"><FileText className="w-4 h-4 mr-1" />Documentos</TabsTrigger>
-        </TabsList>
+      <div className="container mx-auto px-6 py-6 max-w-7xl">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="overview"><LayoutDashboard className="w-4 h-4 mr-1" />Visão geral</TabsTrigger>
+            <TabsTrigger value="schedule"><Calendar className="w-4 h-4 mr-1" />Cronograma</TabsTrigger>
+            <TabsTrigger value="students"><Users className="w-4 h-4 mr-1" />Alunos</TabsTrigger>
+            <TabsTrigger value="grades"><BookOpenCheck className="w-4 h-4 mr-1" />Notas</TabsTrigger>
+            <TabsTrigger value="attendance"><ClipboardCheck className="w-4 h-4 mr-1" />Presença</TabsTrigger>
+            <TabsTrigger value="semesters"><Layers className="w-4 h-4 mr-1" />Semestres</TabsTrigger>
+            <TabsTrigger value="teachers"><UserCog className="w-4 h-4 mr-1" />Professores</TabsTrigger>
+            <TabsTrigger value="documents"><FileText className="w-4 h-4 mr-1" />Materiais</TabsTrigger>
+          </TabsList>
 
-        {/* SEMESTERS */}
-        <TabsContent value="semesters" className="space-y-3">
-          <div className="flex justify-end">
-            <Button onClick={() => setSemDialog({ open: true, editing: null })}>
-              <Plus className="w-4 h-4 mr-1" />Novo semestre
-            </Button>
-          </div>
-          {semesters.length === 0 ? (
-            <Card><CardContent className="py-10 text-center text-muted-foreground">
-              Nenhum semestre cadastrado. Crie o primeiro para começar.
-            </CardContent></Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {semesters.map((s) => (
-                <Card key={s.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4 flex justify-between items-start">
-                    <div>
-                      <div className="font-semibold text-lg">{s.label}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {s.student_count || 0} alunos
-                        {s.start_date && ` · ${s.start_date} a ${s.end_date || "?"}`}
-                      </div>
-                      {!s.is_active && <Badge variant="outline" className="mt-2">Arquivado</Badge>}
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => setSemDialog({ open: true, editing: s })}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({ kind: "semester", id: s.id, label: s.label })}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
+          {/* OVERVIEW */}
+          <TabsContent value="overview">
+            <OverviewTab classId={classId!} semesterId={activeSemesterId} onNavigateTab={setActiveTab} />
+          </TabsContent>
 
-        {/* SCHEDULE */}
-        <TabsContent value="schedule" className="space-y-3">
-          {semesters.length === 0 ? (
-            <Card><CardContent className="py-10 text-center text-muted-foreground">
-              Crie um semestre primeiro para registrar aulas.
-            </CardContent></Card>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-3 justify-between">
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Semestre:</Label>
-                  <Select value={activeSemesterId ?? ""} onValueChange={setActiveSemesterId}>
-                    <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {semesters.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+          {/* SCHEDULE */}
+          <TabsContent value="schedule" className="space-y-3">
+            {!activeSemesterId ? (
+              <Card><CardContent className="py-10 text-center text-muted-foreground">
+                Crie um semestre primeiro para registrar aulas.
+              </CardContent></Card>
+            ) : (
+              <>
+                <div className="flex justify-end">
+                  <Button onClick={() => setLessonDialog({ open: true, editing: null })}>
+                    <Plus className="w-4 h-4 mr-1" />Nova aula
+                  </Button>
                 </div>
-                <Button onClick={() => setLessonDialog({ open: true, editing: null })}>
-                  <Plus className="w-4 h-4 mr-1" />Nova aula
-                </Button>
-              </div>
+                <ScheduleViews
+                  lessons={lessons as ScheduleLesson[]}
+                  onOpenLesson={(l) => setLessonDialog({ open: true, editing: l as Lesson })}
+                  onDeleteLesson={(l) => setConfirmDelete({ kind: "lesson", id: l.id, label: l.title })}
+                  onOpenSeminarEval={(l) => setSeminarEval({ open: true, lesson: l as Lesson })}
+                />
+              </>
+            )}
+          </TabsContent>
 
-              {lessons.length === 0 ? (
-                <Card><CardContent className="py-10 text-center text-muted-foreground">
-                  Sem aulas registradas neste semestre.
-                </CardContent></Card>
-              ) : (
-                <Card>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-32">Data</TableHead>
-                        <TableHead>Aula</TableHead>
-                        <TableHead className="w-44">Tipo</TableHead>
-                        <TableHead className="w-32">Status</TableHead>
-                        <TableHead className="w-32"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {lessons.map((l) => {
-                        const style = getLessonTypeStyle(l.lesson_type);
-                        const Icon = style.icon;
-                        return (
-                          <TableRow key={l.id} className={cn("cursor-pointer border-l-4", style.accent, style.rowBg)}
-                            onClick={() => setLessonDialog({ open: true, editing: l })}>
-                            <TableCell>{l.lesson_date ?? "—"}</TableCell>
-                            <TableCell className="font-medium">{l.title}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={cn("gap-1", style.badge)}>
-                                <Icon className="w-3 h-3" />{style.label}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"}>
-                                {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-end gap-1">
-                                {l.lesson_type === "seminar" && (
-                                  <Button variant="ghost" size="icon" title="Avaliar alunos"
-                                    onClick={() => setSeminarEval({ open: true, lesson: l })}>
-                                    <ClipboardList className="w-4 h-4 text-amber-600" />
-                                  </Button>
-                                )}
-                                <Button variant="ghost" size="icon"
-                                  onClick={() => setConfirmDelete({ kind: "lesson", id: l.id, label: l.title })}>
-                                  <Trash2 className="w-4 h-4 text-destructive" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </Card>
-              )}
-            </>
-          )}
-        </TabsContent>
+          {/* STUDENTS */}
+          <TabsContent value="students">
+            {activeSemesterId ? (
+              <StudentsTab classId={classId!} semesterId={activeSemesterId} onChanged={load} />
+            ) : (
+              <Card><CardContent className="py-10 text-center text-muted-foreground">Crie um semestre primeiro.</CardContent></Card>
+            )}
+          </TabsContent>
 
-        {/* TEACHERS */}
-        <TabsContent value="teachers" className="space-y-3">
-          <div className="flex justify-end">
-            <Button onClick={() => setTeacherDialog({ open: true, editing: null })}>
-              <Plus className="w-4 h-4 mr-1" />Novo professor
-            </Button>
-          </div>
-          {teachers.length === 0 ? (
-            <Card><CardContent className="py-10 text-center text-muted-foreground">
-              Cadastre os professores que ministram esta disciplina.
-            </CardContent></Card>
-          ) : (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="w-32">Função</TableHead>
-                    <TableHead className="w-24"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {teachers.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell className="font-medium">{t.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{t.email ?? "—"}</TableCell>
-                      <TableCell><Badge variant="outline">{TEACHER_ROLES.find((r) => r.value === t.role)?.label ?? t.role}</Badge></TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => setTeacherDialog({ open: true, editing: t })}>
+          {/* GRADES */}
+          <TabsContent value="grades">
+            {activeSemesterId ? (
+              <GradebookTab classId={classId!} semesterId={activeSemesterId} />
+            ) : (
+              <Card><CardContent className="py-10 text-center text-muted-foreground">Crie um semestre primeiro.</CardContent></Card>
+            )}
+          </TabsContent>
+
+          {/* ATTENDANCE */}
+          <TabsContent value="attendance">
+            {activeSemesterId ? (
+              <AttendanceTab semesterId={activeSemesterId} />
+            ) : (
+              <Card><CardContent className="py-10 text-center text-muted-foreground">Crie um semestre primeiro.</CardContent></Card>
+            )}
+          </TabsContent>
+
+          {/* SEMESTERS */}
+          <TabsContent value="semesters" className="space-y-3">
+            <div className="flex justify-end">
+              <Button onClick={() => setSemDialog({ open: true, editing: null })}>
+                <Plus className="w-4 h-4 mr-1" />Novo semestre
+              </Button>
+            </div>
+            {semesters.length === 0 ? (
+              <Card><CardContent className="py-10 text-center text-muted-foreground">
+                Nenhum semestre cadastrado. Crie o primeiro para começar.
+              </CardContent></Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {semesters.map((s) => (
+                  <Card key={s.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 flex justify-between items-start">
+                      <div>
+                        <div className="font-semibold text-lg flex items-center gap-2">
+                          {s.label}
+                          {s.is_active && <Badge className="text-[10px]">Ativo</Badge>}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {s.student_count || 0} alunos
+                          {s.start_date && ` · ${s.start_date} a ${s.end_date || "?"}`}
+                        </div>
+                        {!s.is_active && <Badge variant="outline" className="mt-2">Arquivado</Badge>}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setSemDialog({ open: true, editing: s })}>
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({ kind: "teacher", id: t.id, label: t.name })}>
+                        <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({ kind: "semester", id: s.id, label: s.label })}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* DOCUMENTS */}
-        <TabsContent value="documents" className="space-y-3">
-          <div className="flex justify-end">
-            <Button onClick={() => setDocDialog({ open: true, editing: null })}>
-              <Plus className="w-4 h-4 mr-1" />Novo documento
-            </Button>
-          </div>
-          {documents.length === 0 ? (
-            <Card><CardContent className="py-10 text-center text-muted-foreground">
-              Faça upload do calendário acadêmico, regulamento, ementa, etc.
-            </CardContent></Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {documents.map((d) => (
-                <Card key={d.id}>
-                  <CardContent className="p-4 flex justify-between items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-primary shrink-0" />
-                        <span className="font-medium truncate">{d.title}</span>
                       </div>
-                      <Badge variant="outline" className="mt-1">
-                        {DOC_CATEGORIES.find((c) => c.value === d.category)?.label ?? d.category}
-                      </Badge>
-                      {d.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{d.description}</p>}
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      {(d.file_path || d.link_url) && (
-                        <Button variant="ghost" size="icon" onClick={() => downloadDoc(d)}>
-                          {d.link_url ? <ExternalLink className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="icon" onClick={() => setDocDialog({ open: true, editing: d })}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({ kind: "document", id: d.id, label: d.title })}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* TEACHERS */}
+          <TabsContent value="teachers" className="space-y-3">
+            <div className="flex justify-end">
+              <Button onClick={() => setTeacherDialog({ open: true, editing: null })}>
+                <Plus className="w-4 h-4 mr-1" />Novo professor
+              </Button>
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            {teachers.length === 0 ? (
+              <Card><CardContent className="py-10 text-center text-muted-foreground">
+                Cadastre os professores que ministram esta disciplina.
+              </CardContent></Card>
+            ) : (
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead className="w-32">Função</TableHead>
+                      <TableHead className="w-24"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teachers.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="font-medium">{t.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{t.email ?? "—"}</TableCell>
+                        <TableCell><Badge variant="outline">{TEACHER_ROLES.find((r) => r.value === t.role)?.label ?? t.role}</Badge></TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" onClick={() => setTeacherDialog({ open: true, editing: t })}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({ kind: "teacher", id: t.id, label: t.name })}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            )}
+          </TabsContent>
 
-      {/* SEMESTER DIALOG */}
-      <SemesterDialog
-        state={semDialog}
-        onClose={() => setSemDialog({ open: false })}
-        onSave={saveSemester}
-      />
+          {/* DOCUMENTS */}
+          <TabsContent value="documents" className="space-y-3">
+            <div className="flex justify-end">
+              <Button onClick={() => setDocDialog({ open: true, editing: null })}>
+                <Plus className="w-4 h-4 mr-1" />Novo documento
+              </Button>
+            </div>
+            {documents.length === 0 ? (
+              <Card><CardContent className="py-10 text-center text-muted-foreground">
+                Faça upload do calendário acadêmico, regulamento, ementa, etc.
+              </CardContent></Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {documents.map((d) => (
+                  <Card key={d.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 flex justify-between items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-primary shrink-0" />
+                          <span className="font-medium truncate">{d.title}</span>
+                        </div>
+                        <Badge variant="outline" className="mt-1">
+                          {DOC_CATEGORIES.find((c) => c.value === d.category)?.label ?? d.category}
+                        </Badge>
+                        {d.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{d.description}</p>}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {(d.file_path || d.link_url) && (
+                          <Button variant="ghost" size="icon" onClick={() => downloadDoc(d)}>
+                            {d.link_url ? <ExternalLink className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" onClick={() => setDocDialog({ open: true, editing: d })}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({ kind: "document", id: d.id, label: d.title })}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
-      {/* TEACHER DIALOG */}
-      <TeacherDialog
-        state={teacherDialog}
-        onClose={() => setTeacherDialog({ open: false })}
-        onSave={saveTeacher}
-      />
+        <SemesterDialog state={semDialog} onClose={() => setSemDialog({ open: false })} onSave={saveSemester} />
+        <TeacherDialog state={teacherDialog} onClose={() => setTeacherDialog({ open: false })} onSave={saveTeacher} />
+        <DocumentDialog state={docDialog} onClose={() => setDocDialog({ open: false })} onSave={uploadAndSaveDoc} />
 
-      {/* DOCUMENT DIALOG */}
-      <DocumentDialog
-        state={docDialog}
-        onClose={() => setDocDialog({ open: false })}
-        onSave={uploadAndSaveDoc}
-      />
+        {activeSemesterId && (
+          <LessonDialog
+            open={lessonDialog.open}
+            onOpenChange={(v) => setLessonDialog({ open: v })}
+            semesterId={activeSemesterId}
+            lesson={lessonDialog.editing ?? null}
+            onSaved={() => loadLessons(activeSemesterId)}
+          />
+        )}
 
-      {/* LESSON DIALOG */}
-      {activeSemesterId && (
-        <LessonDialog
-          open={lessonDialog.open}
-          onOpenChange={(v) => setLessonDialog({ open: v })}
-          semesterId={activeSemesterId}
-          lesson={lessonDialog.editing ?? null}
-          onSaved={() => loadLessons(activeSemesterId)}
-        />
-      )}
+        {seminarEval.lesson && activeSemesterId && (
+          <SeminarEvaluationDialog
+            open={seminarEval.open}
+            onOpenChange={(v) => setSeminarEval({ open: v, lesson: v ? seminarEval.lesson : null })}
+            lessonId={seminarEval.lesson.id}
+            lessonTitle={seminarEval.lesson.title}
+            semesterId={activeSemesterId}
+            initialRubric={seminarEval.lesson.rubric_json ?? null}
+          />
+        )}
 
-      {/* SEMINAR EVALUATION DIALOG */}
-      {seminarEval.lesson && activeSemesterId && (
-        <SeminarEvaluationDialog
-          open={seminarEval.open}
-          onOpenChange={(v) => setSeminarEval({ open: v, lesson: v ? seminarEval.lesson : null })}
-          lessonId={seminarEval.lesson.id}
-          lessonTitle={seminarEval.lesson.title}
-          semesterId={activeSemesterId}
-          initialRubric={seminarEval.lesson.rubric_json ?? null}
-        />
-      )}
-
-      {/* CONFIRM DELETE */}
-      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir "{confirmDelete?.label}"?</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={performDelete}>Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir "{confirmDelete?.label}"?</AlertDialogTitle>
+              <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={performDelete}>Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 }
