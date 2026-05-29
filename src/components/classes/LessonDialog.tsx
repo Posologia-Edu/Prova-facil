@@ -226,4 +226,3 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
   );
 }
 
-import { Textarea } from "@/components/ui/textarea";
