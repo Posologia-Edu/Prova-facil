@@ -161,6 +161,11 @@ export default function ClassesPage() {
   const [profileName, setProfileName] = useState("");
   const [profileEmail, setProfileEmail] = useState("");
 
+  // Hub list view: search, grouping, filters
+  const [listSearch, setListSearch] = useState("");
+  const [listView, setListView] = useState<"groups" | "all">("groups");
+  const [collapsedDisciplines, setCollapsedDisciplines] = useState<Set<string>>(new Set());
+
   const buildPublicationMap = (
     publications: Array<{ exam_id: string; access_code: string; is_active: boolean; created_at: string }> | null,
   ) => {
