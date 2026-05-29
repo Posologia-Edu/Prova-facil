@@ -513,6 +513,18 @@ export default function ClassDetail() {
         />
       )}
 
+      {/* SEMINAR EVALUATION DIALOG */}
+      {seminarEval.lesson && activeSemesterId && (
+        <SeminarEvaluationDialog
+          open={seminarEval.open}
+          onOpenChange={(v) => setSeminarEval({ open: v, lesson: v ? seminarEval.lesson : null })}
+          lessonId={seminarEval.lesson.id}
+          lessonTitle={seminarEval.lesson.title}
+          semesterId={activeSemesterId}
+          initialRubric={seminarEval.lesson.rubric_json ?? null}
+        />
+      )}
+
       {/* CONFIRM DELETE */}
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>
