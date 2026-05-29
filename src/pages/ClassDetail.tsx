@@ -595,7 +595,7 @@ function DocumentDialog({
 }: {
   state: { open: boolean; editing?: DocItem | null };
   onClose: () => void;
-  onSave: (file: File | null, f: Partial<DocItem>) => Promise<void>;
+  onSave: (file: File | null, f: Partial<DocItem>) => Promise<unknown>;
 }) {
   const [form, setForm] = useState<Partial<DocItem>>({});
   const [file, setFile] = useState<File | null>(null);
