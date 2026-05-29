@@ -1261,6 +1261,9 @@ export default function ClassesPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/classes/${cls.id}`); }}>
+                        <BookOpen className="h-4 w-4 mr-2" /> Semestres, professores e cronograma
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEdit(cls); }}>
                         <Pencil className="h-4 w-4 mr-2" /> Editar
                       </DropdownMenuItem>
