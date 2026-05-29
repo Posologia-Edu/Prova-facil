@@ -29,6 +29,7 @@ import { GradebookTab } from "@/components/classes/GradebookTab";
 import { AttendanceTab } from "@/components/classes/AttendanceTab";
 import { StudentsTab } from "@/components/classes/StudentsTab";
 import { ScheduleViews, ScheduleLesson } from "@/components/classes/ScheduleViews";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 interface ClassRow {
   id: string;
@@ -218,6 +219,24 @@ export default function ClassDetail() {
     else { toast.success("Excluído"); load(); if (activeSemesterId) loadLessons(activeSemesterId); }
     setConfirmDelete(null);
   }
+
+  async function rescheduleLesson(lessonId: string, newDate: string) {
+    const { error } = await supabase.from("class_schedule_items").update({ lesson_date: newDate }).eq("id", lessonId);
+    if (error) throw error;
+    if (activeSemesterId) loadLessons(activeSemesterId);
+  }
+
+  useKeyboardShortcuts({
+    "1": () => setActiveTab("overview"),
+    "2": () => setActiveTab("schedule"),
+    "3": () => setActiveTab("students"),
+    "4": () => setActiveTab("grades"),
+    "5": () => setActiveTab("attendance"),
+    "6": () => setActiveTab("semesters"),
+    "7": () => setActiveTab("teachers"),
+    "8": () => setActiveTab("documents"),
+    "n": () => { if (activeTab === "schedule" && activeSemesterId) setLessonDialog({ open: true, editing: null }); },
+  });
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-[400px]">
