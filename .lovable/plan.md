@@ -1,97 +1,113 @@
-## Visão geral
+## Plano: Evolução do módulo "Turmas"
 
-Hoje "Turma" = disciplina + 1 semestre. Vamos transformar **Turma** numa **Disciplina** que contém vários **Semestres**, cada um com seus próprios alunos, provas, pacientes virtuais, simulações etc. Além disso, adicionar **Professores**, **Documentos** e **Cronograma de Aulas** (com templates) por semestre.
+Objetivo: elevar a experiência de gestão de turmas/avaliação ao nível das melhores plataformas (Google Classroom, Canvas LMS, Moodle, Schoology, Notion for Education), mantendo a identidade visual navy/gold + glassmorphism do sistema.
 
-## Nova estrutura de dados
+Escopo: apenas o módulo Turmas (`/classes`, `/classes/:id`) e seus componentes auxiliares. Não toca em Simulação, SOAP, Juri, VPs (apenas vínculos já existentes).
 
-```text
-Turma (disciplina)
-├── Professores                  (nome, email, função)
-├── Documentos                   (calendário, regulamento, ementa...)
-└── Semestres (2025.2, 2026.1, ...)
-    ├── Alunos
-    ├── Provas / VPs / SOAP / Simulações  (vinculados a este semestre)
-    └── Cronograma de aulas
-        └── Aula (data, tipo, template preenchido, anotações)
-```
+---
 
-## 1. Mudanças no banco
+### 1. Hub de Turmas (`Classes.tsx`) — estética
 
-**Novas tabelas:**
-- `class_semesters` — `class_id`, `label` (ex: "2026.1"), `start_date`, `end_date`, `is_active`, `order_index`
-- `class_teachers` — `class_id`, `name`, `email`, `role` (titular / auxiliar / monitor / convidado), `order_index`
-- `class_documents` — `class_id`, `title`, `category` (calendário / regulamento / ementa / outro), `file_url` (storage) ou `link_url`, `description`
-- `class_schedule_items` — `semester_id`, `lesson_date`, `title`, `lesson_type` (theoretical / practical / simulation / seminar / case / other), `template_id` (nullable), `template_data` (jsonb estruturado), `notes` (markdown livre), `status` (planejada / realizada / cancelada), `order_index`
-- `class_lesson_templates` — `user_id` (null = sistema), `name`, `lesson_type`, `schema` (jsonb com campos do template), `is_system`
+Hoje: lista plana de cards com botões soltos. Misto de modos (exam vs vp) confunde.
 
-**Alterações em tabelas existentes:**
-- `class_students`: adicionar `semester_id uuid` (FK → `class_semesters`)
-- `exams`, `osce_exams`, `kfe_exams`, `sct_exams`, `sjt_exams`, `clinical_observations`, `osce_circuits`, `class_virtual_patients`: adicionar `semester_id uuid` (FK → `class_semesters`, ON DELETE SET NULL). `class_id` permanece para compatibilidade.
+Mudanças:
+- **Header com KPIs**: total de disciplinas, semestres ativos, alunos matriculados, avaliações em andamento, próximas aulas (próximos 7 dias).
+- **Agrupamento por Disciplina → Semestre** já existe em backend; trazer essa hierarquia para a listagem (cards de disciplina expansíveis mostrando semestres como sub-itens com mini-badge "ativo").
+- **Cards redesenhados** estilo Canvas/Notion: thumbnail/ícone colorido por disciplina (gerado a partir do nome), barra de progresso do semestre (datas), contagem de alunos/aulas/avaliações, último acesso.
+- **Filtros e busca**: pill bar (Todas / Ativas / Arquivadas / Este semestre) + busca por nome ou aluno.
+- **View toggle**: Cards / Tabela / Calendário acadêmico (visão global de cronogramas).
+- **Quick actions** em hover: abrir, adicionar aluno, criar aula, gerar PIN.
 
-**Novo bucket de storage:** `class-documents` (privado, apenas dono da turma lê/escreve).
+### 2. Página de Detalhe da Turma (`ClassDetail.tsx`)
 
-**RLS:** mesmas regras de `classes` (dono + admin). Acesso anônimo só onde já existe hoje (ex: `class_students` para fluxo de VP).
+Hoje: 4 abas planas (Semestres, Cronograma, Professores, Documentos). Sem visão geral.
 
-**GRANTs:** authenticated + service_role em todas as tabelas novas.
+Mudanças:
+- **Hero da disciplina**: gradiente navy/gold, nome, semestre ativo em destaque, breadcrumbs Disciplina ▸ Semestre, switch rápido de semestre no topo (sempre visível).
+- **Nova aba Overview (default)**: dashboard do semestre — próximas aulas (timeline), entregas/avaliações pendentes, presença média, distribuição de notas, atividade recente.
+- **Reorganização de abas**: Overview · Cronograma · Alunos · Avaliações · Professores · Materiais · Notas.
+- **Aba Alunos**: tabela rica (foto inicial, nome, matrícula, e-mail, presença %, média geral, último envio, status), import CSV com preview, mover entre semestres, ações em lote.
+- **Aba Avaliações**: consolidação de provas, VPs, simulações vinculadas, com filtros por tipo e status.
+- **Aba Notas (novo)**: gradebook estilo Canvas — linhas = alunos, colunas = atividades do semestre (provas, VPs, simulações, seminários), célula colorida por nota, média ponderada configurável, export CSV/PDF.
+- **Aba Materiais**: documentos com preview inline (PDF), categorias com ícones, drag-and-drop de upload.
 
-## 2. Migração automática de dados
+### 3. Cronograma da disciplina
 
-Em uma transação:
-1. Agrupar `classes` existentes por `(user_id, name)` (sem distinguir maiúsculas e sem o sufixo de semestre).
-2. Para cada grupo, escolher uma turma "mestre" (a mais antiga); criar um `class_semesters` para cada turma do grupo usando o campo `semester` atual como `label`.
-3. Reatribuir todas as referências (`class_students`, `exams`, `osce_exams`, `class_virtual_patients`, etc.) para `class_id = mestre.id` e `semester_id = <semestre correspondente>`.
-4. Soft-deletar as turmas duplicadas (`deleted_at = now()`) — sem perder histórico.
-5. Para turmas que não casam em nenhum grupo, criar 1 semestre default com o `semester` atual.
+Hoje: tabela simples com badges coloridos por tipo. Aulas tem rubrica só p/ seminário.
 
-Pré-visualização: a migração emite `RAISE NOTICE` com a contagem de turmas agrupadas e linhas remapeadas para conferência.
+Mudanças:
+- **3 visualizações**: Lista (atual, melhorada), **Timeline vertical** estilo Linear/Notion (mês ▸ semana ▸ dia, dot colorido por tipo) e **Calendário mensal** com pílulas coloridas.
+- **Filtros**: por tipo, por status, intervalo de datas.
+- **Lesson Card aprimorado**: contadores ("3 anexos · 12 anotações · 1 avaliação"), botão "Marcar como realizada", "Duplicar para próxima semana".
+- **Drag-and-drop** para reordenar e mover entre datas.
+- **Notas por aula** (anotações pós-aula com timestamp, fotos, áudio curto).
+- **Templates reutilizáveis**: salvar uma aula como template pessoal/compartilhado.
+- **Sincronização opcional**: export ICS para Google Calendar.
 
-## 3. Templates de aula (seed inicial)
+### 4. Avaliações & rubricas
 
-Templates `is_system = true` criados na migração, todos editáveis pelo professor (que cria uma cópia ao customizar):
+- Rubricas reutilizáveis ao nível da disciplina (não só dentro de uma aula).
+- Biblioteca de rubricas com clone/import.
+- Para cada avaliação: configurar peso na média do semestre.
+- Feedback do aluno (visualização do aluno futura — apenas estrutura por enquanto).
 
-- **Aula teórica**: objetivos de aprendizagem, conteúdo programático, metodologia, recursos, bibliografia, avaliação formativa, anotações pós-aula.
-- **Aula prática**: objetivos, materiais/equipamentos, roteiro de atividades, normas de segurança, produto esperado, avaliação, anotações.
-- **Simulação**: cenário clínico, briefing, objetivos, papéis dos alunos, checklist de avaliação, debriefing, anotações.
-- **Seminário / caso clínico**: tema, grupos/apresentadores, roteiro do caso, critérios de avaliação, perguntas norteadoras, anotações.
-- **Avaliação**: tipo de prova, conteúdos, instrumento, peso, observações.
-- **Outro / livre**: apenas título + anotações em markdown.
+### 5. Comunicação & engajamento
 
-Cada template define um JSON-schema simples (campos `text`, `textarea`, `list`, `date`) usado por um `LessonTemplateRenderer` reaproveitando o padrão de `FormRenderer`.
+- **Mural da turma** (Stream estilo Classroom): avisos do professor, anexos, alunos veem read-only (já protegido por PIN/email).
+- **Anotações compartilhadas entre professores** da mesma disciplina.
 
-## 4. Mudanças de UI
+### 6. Gestão de presença
 
-**`src/pages/Classes.tsx`** — listagem passa a mostrar a Turma como disciplina (sem semestre no card), com badge "N semestres" e "N alunos totais".
+- Tabela rápida por aula: marcar presença em massa, justificativas, geração automática de % por aluno alimentando o gradebook.
 
-**`src/pages/ClassDetail.tsx` (novo)** — página da turma com tabs:
-- **Semestres** — lista; criar/editar/arquivar semestres; ao abrir um semestre vai para `ClassSemesterDetail`.
-- **Professores** — CRUD simples (nome, email, função).
-- **Documentos** — upload/link + categoria + download.
-- **Configurações** — renomear, descrição, excluir.
+### 7. Documentos
 
-**`src/pages/ClassSemesterDetail.tsx` (novo)** — tabs internas:
-- **Alunos** — herda UI atual de alunos de turma.
-- **Provas & atividades** — lista filtrada por `semester_id` (provas, OSCE, KFE, SCT, SJT, SOAP, simulações, VPs).
-- **Cronograma** — tabela de aulas (data, título, tipo, status) + botão "Nova aula" abre dialog com seletor de template; ao abrir uma aula mostra o template estruturado + área de anotações em markdown com autosave (reaproveita `use-form-draft`).
-- **Pacientes virtuais** — herda UI atual filtrada por semestre.
+- Categorias com ícones distintos, preview inline para PDF/imagem, busca, versão/data, marcar como "obrigatório".
 
-**`src/components/classes/LessonDialog.tsx` (novo)** — escolhe template → renderiza campos → salva.
-**`src/components/classes/LessonTemplateManager.tsx` (novo)** — duplicar template do sistema e editar campos.
+### 8. Identidade visual & micro-interações
 
-**`AppSidebar`** — link "Turmas" inalterado; novas rotas `/classes/:classId` e `/classes/:classId/semesters/:semesterId`.
+- Tokens: usar `--primary` navy e `--accent` gold já existentes; novo gradient `--gradient-class-hero`.
+- Glassmorphism nos cards do hub (já é o padrão do projeto).
+- Skeletons reais por seção (substituir spinner único).
+- Empty states ilustrados (SVG inline) com CTA claro.
+- Toasts e confirmações padronizadas.
+- Atalhos de teclado (g+t = turmas, n = nova aula).
+- 100% responsivo mobile (cronograma vira lista, gradebook vira cards por aluno).
 
-## 5. Compatibilidade com módulos existentes
+---
 
-Onde hoje a UI pergunta "turma" (SOAP, simulação, exames, VP, observação clínica), passa a perguntar "turma → semestre". O `class_id` continua sendo gravado (para não quebrar relatórios/queries antigas), e adicionamos `semester_id`. Filtros nas telas de controle e relatórios passam a usar `semester_id` quando presente, caindo em `class_id` quando ausente (turmas legadas pré-migração).
+### Implementação por fases
 
-## 6. Memória do projeto
+**Fase 1 — Estética e navegação (sem backend novo)**
+- Redesign do hub `Classes.tsx` com KPIs, agrupamento, filtros, view toggle.
+- Redesign do `ClassDetail.tsx`: hero, switch de semestre, reorganização de abas, aba Overview com widgets a partir de dados existentes.
+- Lesson timeline e calendário no cronograma.
+- Skeletons, empty states, micro-interações.
 
-Atualizar `mem://features/class-management` para refletir a nova hierarquia Turma → Semestre, professores, documentos e cronograma com templates.
+**Fase 2 — Gradebook e presença**
+- Migration: `class_grade_columns` (peso, tipo, vínculo opcional a exam/vp/simulation/seminar) e `class_attendance` (lesson_id, student_id, status, justification).
+- Aba Notas (gradebook) com cálculo de média ponderada e export.
+- UI de presença por aula.
 
-## Detalhes técnicos
+**Fase 3 — Comunicação e biblioteca de rubricas**
+- Migration: `class_announcements` e `class_rubrics` (rubricas reutilizáveis).
+- Mural na aba Overview.
+- Picker de rubrica ao criar/editar aulas e avaliações.
 
-- **Storage**: bucket privado `class-documents`, paths `<user_id>/<class_id>/<uuid>.<ext>`; download via signed URL (60 min).
-- **Templates JSON**: shape `{ sections: [{ id, label, fields: [{ id, label, type, placeholder }] }] }`. `template_data` segue o mesmo padrão `{ fieldId: value }` já usado em `FormRenderer`.
-- **Autosave de aula**: `draft_key = "lesson:<semester_id>:<lesson_id>"` reaproveitando o hook existente `use-form-draft`.
-- **Customização de template**: ao editar um template `is_system`, é criada uma cópia com `user_id = auth.uid()` e `is_system = false` (sistema permanece imutável para outros usuários).
-- **Migração 1 (estrutura)** e **migração 2 (data move)** ficam em arquivos separados para facilitar rollback. A migração 2 roda dentro de um bloco `DO $$ ... $$` com `RAISE NOTICE` de auditoria.
-- **Sem mudanças destrutivas**: nenhuma coluna existente é removida; `classes.semester` continua existindo (apenas deixa de ser usada na UI nova).
+**Fase 4 — Polimento**
+- Export ICS, drag-and-drop avançado, atalhos, otimizações mobile.
+
+---
+
+### Detalhes técnicos (para referência)
+
+- Reaproveitar `Tabs`, `Card`, `Badge`, `Table` do design system; nenhum import externo novo.
+- Calendário: usar `react-day-picker` já presente (`components/ui/calendar`).
+- Timeline: implementada com flex + connector lines (sem libs).
+- Gradebook: tabela virtualizada com `@tanstack/react-virtual` apenas se >200 linhas (avaliar na fase 2).
+- Cores por tipo de aula: reusar `src/lib/lesson-type-style.ts`; estender para presença/avaliação.
+- Manter RLS atual; novas tabelas seguem padrão `user_id` do dono da turma + GRANTs explícitos.
+
+---
+
+Posso começar pela **Fase 1** (puramente visual/estrutural, sem migrations) ou prefere que eu inclua a **Fase 2 (gradebook + presença)** já no primeiro ciclo?
