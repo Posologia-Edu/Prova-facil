@@ -405,6 +405,51 @@ export type Database = {
         }
         Relationships: []
       }
+      class_attendance: {
+        Row: {
+          created_at: string
+          id: string
+          justification: string | null
+          lesson_id: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          justification?: string | null
+          lesson_id: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          justification?: string | null
+          lesson_id?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_attendance_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "class_schedule_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "class_students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_documents: {
         Row: {
           category: string
@@ -445,6 +490,108 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_grade_columns: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          label: string
+          max_score: number
+          order_index: number
+          semester_id: string
+          source_ref_id: string | null
+          source_type: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          label: string
+          max_score?: number
+          order_index?: number
+          semester_id: string
+          source_ref_id?: string | null
+          source_type?: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          max_score?: number
+          order_index?: number
+          semester_id?: string
+          source_ref_id?: string | null
+          source_type?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_grade_columns_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_grade_columns_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_grade_entries: {
+        Row: {
+          column_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          score: number | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          column_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          score?: number | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          column_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          score?: number | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_grade_entries_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "class_grade_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_grade_entries_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "class_students"
             referencedColumns: ["id"]
           },
         ]
