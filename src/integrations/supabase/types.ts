@@ -490,6 +490,7 @@ export type Database = {
           lesson_type: string
           notes: string | null
           order_index: number
+          rubric_json: Json
           semester_id: string
           status: string
           template_data: Json
@@ -504,6 +505,7 @@ export type Database = {
           lesson_type?: string
           notes?: string | null
           order_index?: number
+          rubric_json?: Json
           semester_id: string
           status?: string
           template_data?: Json
@@ -518,6 +520,7 @@ export type Database = {
           lesson_type?: string
           notes?: string | null
           order_index?: number
+          rubric_json?: Json
           semester_id?: string
           status?: string
           template_data?: Json
@@ -582,6 +585,60 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_seminar_evaluations: {
+        Row: {
+          answers: Json
+          created_at: string
+          id: string
+          lesson_id: string
+          max_score: number
+          notes: string | null
+          percent: number
+          student_id: string
+          total_score: number
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          lesson_id: string
+          max_score?: number
+          notes?: string | null
+          percent?: number
+          student_id: string
+          total_score?: number
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          lesson_id?: string
+          max_score?: number
+          notes?: string | null
+          percent?: number
+          student_id?: string
+          total_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_seminar_evaluations_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "class_schedule_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_seminar_evaluations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "class_students"
             referencedColumns: ["id"]
           },
         ]
