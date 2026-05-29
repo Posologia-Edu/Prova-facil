@@ -407,7 +407,7 @@ function StudentEvaluator({
         <Button onClick={onSave}><Save className="w-4 h-4 mr-1" />Salvar</Button>
       </div>
 
-      <ScrollArea className="flex-1 pr-3">
+      <ScrollArea className="h-[70vh] pr-3">
         <div className="space-y-3 py-3">
           {rubric.dimensions.map((d) => {
             const dimScore = liveScore.perDimension.find((x) => x.id === d.id);
