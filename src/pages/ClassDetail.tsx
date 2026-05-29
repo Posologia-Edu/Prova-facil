@@ -341,31 +341,47 @@ export default function ClassDetail() {
                       <TableRow>
                         <TableHead className="w-32">Data</TableHead>
                         <TableHead>Aula</TableHead>
-                        <TableHead className="w-32">Tipo</TableHead>
+                        <TableHead className="w-44">Tipo</TableHead>
                         <TableHead className="w-32">Status</TableHead>
-                        <TableHead className="w-24"></TableHead>
+                        <TableHead className="w-32"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {lessons.map((l) => (
-                        <TableRow key={l.id} className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => setLessonDialog({ open: true, editing: l })}>
-                          <TableCell>{l.lesson_date ?? "—"}</TableCell>
-                          <TableCell className="font-medium">{l.title}</TableCell>
-                          <TableCell><Badge variant="outline">{LESSON_TYPE_LABEL[l.lesson_type] ?? l.lesson_type}</Badge></TableCell>
-                          <TableCell>
-                            <Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"}>
-                              {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon"
-                              onClick={() => setConfirmDelete({ kind: "lesson", id: l.id, label: l.title })}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {lessons.map((l) => {
+                        const style = getLessonTypeStyle(l.lesson_type);
+                        const Icon = style.icon;
+                        return (
+                          <TableRow key={l.id} className={cn("cursor-pointer border-l-4", style.accent, style.rowBg)}
+                            onClick={() => setLessonDialog({ open: true, editing: l })}>
+                            <TableCell>{l.lesson_date ?? "—"}</TableCell>
+                            <TableCell className="font-medium">{l.title}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={cn("gap-1", style.badge)}>
+                                <Icon className="w-3 h-3" />{style.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"}>
+                                {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                {l.lesson_type === "seminar" && (
+                                  <Button variant="ghost" size="icon" title="Avaliar alunos"
+                                    onClick={() => setSeminarEval({ open: true, lesson: l })}>
+                                    <ClipboardList className="w-4 h-4 text-amber-600" />
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="icon"
+                                  onClick={() => setConfirmDelete({ kind: "lesson", id: l.id, label: l.title })}>
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </Card>
