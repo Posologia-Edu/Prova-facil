@@ -92,6 +92,7 @@ export default function ClassDetail() {
   const [teacherDialog, setTeacherDialog] = useState<{ open: boolean; editing?: Teacher | null }>({ open: false });
   const [docDialog, setDocDialog] = useState<{ open: boolean; editing?: DocItem | null }>({ open: false });
   const [lessonDialog, setLessonDialog] = useState<{ open: boolean; editing?: Lesson | null }>({ open: false });
+  const [seminarEval, setSeminarEval] = useState<{ open: boolean; lesson?: Lesson | null }>({ open: false });
   const [confirmDelete, setConfirmDelete] = useState<null | { kind: string; id: string; label: string }>(null);
 
   useEffect(() => { if (classId) load(); /* eslint-disable-next-line */ }, [classId]);
