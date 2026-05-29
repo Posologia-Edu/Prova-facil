@@ -299,16 +299,18 @@ export default function ClassDetail() {
 
       <div className="container mx-auto px-6 py-6 max-w-7xl">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="overview"><LayoutDashboard className="w-4 h-4 mr-1" />Visão geral</TabsTrigger>
-            <TabsTrigger value="schedule"><Calendar className="w-4 h-4 mr-1" />Cronograma</TabsTrigger>
-            <TabsTrigger value="students"><Users className="w-4 h-4 mr-1" />Alunos</TabsTrigger>
-            <TabsTrigger value="grades"><BookOpenCheck className="w-4 h-4 mr-1" />Notas</TabsTrigger>
-            <TabsTrigger value="attendance"><ClipboardCheck className="w-4 h-4 mr-1" />Presença</TabsTrigger>
-            <TabsTrigger value="semesters"><Layers className="w-4 h-4 mr-1" />Semestres</TabsTrigger>
-            <TabsTrigger value="teachers"><UserCog className="w-4 h-4 mr-1" />Professores</TabsTrigger>
-            <TabsTrigger value="documents"><FileText className="w-4 h-4 mr-1" />Materiais</TabsTrigger>
-          </TabsList>
+          <div className="-mx-2 px-2 overflow-x-auto md:overflow-visible">
+            <TabsList className="flex md:flex-wrap h-auto w-max md:w-auto">
+              <TabsTrigger value="overview"><LayoutDashboard className="w-4 h-4 mr-1" />Visão geral</TabsTrigger>
+              <TabsTrigger value="schedule"><Calendar className="w-4 h-4 mr-1" />Cronograma</TabsTrigger>
+              <TabsTrigger value="students"><Users className="w-4 h-4 mr-1" />Alunos</TabsTrigger>
+              <TabsTrigger value="grades"><BookOpenCheck className="w-4 h-4 mr-1" />Notas</TabsTrigger>
+              <TabsTrigger value="attendance"><ClipboardCheck className="w-4 h-4 mr-1" />Presença</TabsTrigger>
+              <TabsTrigger value="semesters"><Layers className="w-4 h-4 mr-1" />Semestres</TabsTrigger>
+              <TabsTrigger value="teachers"><UserCog className="w-4 h-4 mr-1" />Professores</TabsTrigger>
+              <TabsTrigger value="documents"><FileText className="w-4 h-4 mr-1" />Materiais</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* OVERVIEW */}
           <TabsContent value="overview">
