@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   GraduationCap, Plus, Users, MoreHorizontal, BookOpen, Pencil, Copy, Trash2,
   UserCog, ArrowLeft, Loader2, UserPlus, X, FileText, Upload, HeartPulse,
   KeyRound, ToggleLeft, ToggleRight, BarChart3, UsersRound, Check, Tag,
+  Search, LayoutGrid, List, Archive, Layers, CalendarClock, ChevronDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -158,6 +160,11 @@ export default function ClassesPage() {
   // Profile info for detail view
   const [profileName, setProfileName] = useState("");
   const [profileEmail, setProfileEmail] = useState("");
+
+  // Hub list view: search, grouping, filters
+  const [listSearch, setListSearch] = useState("");
+  const [listView, setListView] = useState<"groups" | "all">("groups");
+  const [collapsedDisciplines, setCollapsedDisciplines] = useState<Set<string>>(new Set());
 
   const buildPublicationMap = (
     publications: Array<{ exam_id: string; access_code: string; is_active: boolean; created_at: string }> | null,
@@ -1196,106 +1203,226 @@ export default function ClassesPage() {
   }
 
   // Class list view
+  const filteredClasses = classes.filter(c => {
+    if (!listSearch.trim()) return true;
+    const q = listSearch.trim().toLowerCase();
+    return c.name.toLowerCase().includes(q) || (c.semester || "").toLowerCase().includes(q) || (c.description || "").toLowerCase().includes(q);
+  });
+  const totalStudents = classes.reduce((a, c) => a + c.studentCount, 0);
+  const totalExams = classes.reduce((a, c) => a + c.examCount, 0);
+  const disciplinesCount = new Set(classes.map(c => c.name)).size;
+
+  // group by discipline name
+  const groupsMap = new Map<string, ClassItem[]>();
+  filteredClasses.forEach(c => {
+    if (!groupsMap.has(c.name)) groupsMap.set(c.name, []);
+    groupsMap.get(c.name)!.push(c);
+  });
+  const groups = Array.from(groupsMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+
+  function disciplineHue(name: string) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+    return h;
+  }
+
+  function ClassTile({ cls, compact = false }: { cls: ClassItem; compact?: boolean }) {
+    const hue = disciplineHue(cls.name);
+    return (
+      <Card
+        className="hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer group relative overflow-hidden"
+        onClick={() => openClassDetail(cls)}
+      >
+        <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, hsl(${hue} 70% 45%), hsl(${(hue + 40) % 360} 70% 55%))` }} />
+        <CardContent className={cn("p-5", compact && "p-4")}>
+          <div className="flex items-start justify-between">
+            <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold"
+              style={{ background: `linear-gradient(135deg, hsl(${hue} 65% 40%), hsl(${(hue + 40) % 360} 65% 50%))` }}>
+              {cls.name.slice(0, 2).toUpperCase()}
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/classes/${cls.id}`); }}>
+                  <Layers className="h-4 w-4 mr-2" /> Semestres, notas e cronograma
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEdit(cls); }}>
+                  <Pencil className="h-4 w-4 mr-2" /> Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openManageStudents(cls.id); }}>
+                  <UserCog className="h-4 w-4 mr-2" /> Gerenciar Alunos
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicateClass(cls); }}>
+                  <Copy className="h-4 w-4 mr-2" /> Duplicar
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(cls.id); }}>
+                  <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <h3 className="font-semibold mt-3 leading-tight">{cls.name}</h3>
+          {cls.semester && <Badge variant="outline" className="mt-1 text-[11px]"><CalendarClock className="h-3 w-3 mr-1" />{cls.semester}</Badge>}
+          {!compact && cls.description && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{cls.description}</p>}
+          <div className="flex items-center gap-4 mt-4 pt-3 border-t">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Users className="h-3.5 w-3.5" /> {cls.studentCount}
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <BookOpen className="h-3.5 w-3.5" /> {cls.examCount}
+            </div>
+            <Button variant="ghost" size="sm" className="ml-auto h-7 text-[11px]" onClick={(e) => { e.stopPropagation(); navigate(`/classes/${cls.id}`); }}>
+              Detalhes →
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Minhas Turmas</h1>
-          <p className="text-muted-foreground text-sm mt-1">Gerencie suas turmas e listas de alunos.</p>
-        </div>
-        <Dialog open={createOpen} onOpenChange={(open) => {
-          setCreateOpen(open);
-          if (!open) { setNewName(""); setNewSemester(""); setNewDescription(""); }
-        }}>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" /> Nova Turma
-          </Button>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Criar Nova Turma</DialogTitle></DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label>Nome da Turma *</Label>
-                <Input placeholder="Ex: Farmacologia 101" value={newName} onChange={(e) => setNewName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Semestre</Label>
-                <Input placeholder="Ex: 1º Sem. 2026" value={newSemester} onChange={(e) => setNewSemester(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea placeholder="Breve descrição..." rows={2} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
-              </div>
+      {/* Hero header */}
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary via-primary/95 to-primary/80 p-6 text-primary-foreground shadow-lg">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_80%_30%,hsl(var(--secondary)),transparent_50%)]" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-primary-foreground/70 text-xs uppercase tracking-widest mb-1">
+              <Layers className="h-3.5 w-3.5" /> Gestão de turmas
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-              <Button onClick={handleCreateClass}>Criar Turma</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <h1 className="text-3xl font-bold tracking-tight">Minhas Turmas</h1>
+            <p className="text-primary-foreground/80 text-sm mt-1 max-w-xl">
+              Organize disciplinas, semestres, alunos, cronograma, presença e notas em um só lugar.
+            </p>
+          </div>
+          <Dialog open={createOpen} onOpenChange={(open) => {
+            setCreateOpen(open);
+            if (!open) { setNewName(""); setNewSemester(""); setNewDescription(""); }
+          }}>
+            <Button onClick={() => setCreateOpen(true)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+              <Plus className="h-4 w-4 mr-2" /> Nova Turma
+            </Button>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Criar Nova Turma</DialogTitle></DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Nome da Turma *</Label>
+                  <Input placeholder="Ex: Farmacologia 101" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Semestre</Label>
+                  <Input placeholder="Ex: 1º Sem. 2026" value={newSemester} onChange={(e) => setNewSemester(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Descrição</Label>
+                  <Textarea placeholder="Breve descrição..." rows={2} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+                <Button onClick={handleCreateClass}>Criar Turma</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* KPIs */}
+        <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+          {[
+            { label: "Disciplinas", value: disciplinesCount, icon: BookOpen },
+            { label: "Turmas",      value: classes.length,   icon: Layers },
+            { label: "Alunos",      value: totalStudents,    icon: Users },
+            { label: "Avaliações",  value: totalExams,       icon: FileText },
+          ].map(k => (
+            <div key={k.label} className="bg-background/10 backdrop-blur rounded-lg p-3 border border-primary-foreground/10">
+              <div className="flex items-center gap-2 text-primary-foreground/70 text-[11px] uppercase tracking-wider">
+                <k.icon className="h-3.5 w-3.5" />{k.label}
+              </div>
+              <div className="text-2xl font-bold mt-1">{k.value}</div>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* Toolbar */}
+      {classes.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 max-w-md min-w-[220px]">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input value={listSearch} onChange={e => setListSearch(e.target.value)} placeholder="Buscar disciplina, semestre, descrição..." className="pl-8" />
+          </div>
+          <div className="flex gap-1 border rounded-md p-0.5 ml-auto">
+            <Button variant={listView === "groups" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setListView("groups")}>
+              <LayoutGrid className="h-4 w-4 mr-1" />Por disciplina
+            </Button>
+            <Button variant={listView === "all" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setListView("all")}>
+              <List className="h-4 w-4 mr-1" />Todas
+            </Button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : classes.length === 0 ? (
-        <div className="text-center py-16">
+        <Card><CardContent className="py-16 text-center">
           <GraduationCap className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
           <p className="font-semibold text-foreground text-lg">Nenhuma turma criada</p>
-          <p className="text-sm text-muted-foreground mt-1 mb-5">Cadastre sua primeira turma para organizar alunos e vincular provas.</p>
+          <p className="text-sm text-muted-foreground mt-1 mb-5">Cadastre sua primeira turma para organizar alunos, cronograma e notas.</p>
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-2" /> Criar Primeira Turma
           </Button>
+        </CardContent></Card>
+      ) : filteredClasses.length === 0 ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">
+          Nenhum resultado para "{listSearch}".
+        </CardContent></Card>
+      ) : listView === "all" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredClasses.map((cls) => <ClassTile key={cls.id} cls={cls} />)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {classes.map((cls) => (
-            <Card key={cls.id} className="hover:shadow-md transition-shadow cursor-pointer group" onClick={() => openClassDetail(cls)}>
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <GraduationCap className="h-5 w-5 text-primary" />
+        <div className="space-y-5">
+          {groups.map(([disciplineName, items]) => {
+            const collapsed = collapsedDisciplines.has(disciplineName);
+            const hue = disciplineHue(disciplineName);
+            return (
+              <div key={disciplineName}>
+                <button
+                  onClick={() => setCollapsedDisciplines(prev => {
+                    const next = new Set(prev);
+                    if (next.has(disciplineName)) next.delete(disciplineName); else next.add(disciplineName);
+                    return next;
+                  })}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-card hover:bg-muted/40 border transition-colors mb-3 group"
+                >
+                  <div className="h-8 w-8 rounded-md flex items-center justify-center text-white text-xs font-bold"
+                    style={{ background: `linear-gradient(135deg, hsl(${hue} 65% 40%), hsl(${(hue + 40) % 360} 65% 50%))` }}>
+                    {disciplineName.slice(0, 2).toUpperCase()}
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/classes/${cls.id}`); }}>
-                        <BookOpen className="h-4 w-4 mr-2" /> Semestres, professores e cronograma
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEdit(cls); }}>
-                        <Pencil className="h-4 w-4 mr-2" /> Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openManageStudents(cls.id); }}>
-                        <UserCog className="h-4 w-4 mr-2" /> Gerenciar Alunos
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicateClass(cls); }}>
-                        <Copy className="h-4 w-4 mr-2" /> Duplicar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(cls.id); }}>
-                        <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <h3 className="font-semibold mt-3">{cls.name}</h3>
-                {cls.semester && <Badge variant="outline" className="mt-1 text-[11px]">{cls.semester}</Badge>}
-                {cls.description && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{cls.description}</p>}
-                <div className="flex items-center gap-4 mt-4 pt-3 border-t">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Users className="h-3.5 w-3.5" /> {cls.studentCount} alunos
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold">{disciplineName}</div>
+                    <div className="text-xs text-muted-foreground">{items.length} {items.length === 1 ? "semestre" : "semestres"} · {items.reduce((a, b) => a + b.studentCount, 0)} alunos</div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <BookOpen className="h-3.5 w-3.5" /> {cls.examCount} provas
+                  <ChevronDown className={cn("h-4 w-4 transition-transform text-muted-foreground", collapsed && "-rotate-90")} />
+                </button>
+                {!collapsed && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ml-2">
+                    {items.map(cls => <ClassTile key={cls.id} cls={cls} compact />)}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
+
+
 
       {/* Edit dialog (from list) */}
       {!selectedClass && (
