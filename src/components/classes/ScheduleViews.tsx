@@ -5,9 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LayoutList, GitBranch, CalendarDays, Search, ClipboardList, Trash2 } from "lucide-react";
+import { LayoutList, GitBranch, CalendarDays, Search, ClipboardList, Trash2, Download } from "lucide-react";
 import { getLessonTypeStyle, LESSON_TYPE_STYLE } from "@/lib/lesson-type-style";
 import { cn } from "@/lib/utils";
+import { buildIcs, downloadIcs } from "@/lib/ics-export";
+import { toast } from "sonner";
 
 export interface ScheduleLesson {
   id: string;
@@ -22,6 +24,8 @@ interface Props {
   onOpenLesson: (l: ScheduleLesson) => void;
   onDeleteLesson: (l: ScheduleLesson) => void;
   onOpenSeminarEval?: (l: ScheduleLesson) => void;
+  onReschedule?: (lessonId: string, newDate: string) => Promise<void> | void;
+  calendarName?: string;
 }
 
 type View = "list" | "timeline" | "calendar";
