@@ -213,6 +213,15 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
             />
           )}
 
+          {(form.lesson_type === "seminar" || form.lesson_type === "assessment") && (
+            <RubricPicker
+              value={form.rubric_id ?? null}
+              onChange={(id, json) => setForm({ ...form, rubric_id: id, rubric_json: json ?? form.rubric_json })}
+              scope="seminar"
+              label="Rubrica de avaliação (biblioteca)"
+            />
+          )}
+
           <div className="space-y-1.5">
             <Label>Anotações livres (markdown)</Label>
             <Textarea
