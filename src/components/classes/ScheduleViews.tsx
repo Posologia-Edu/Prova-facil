@@ -34,12 +34,29 @@ function ptMonth(date: Date) {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
-export function ScheduleViews({ lessons, onOpenLesson, onDeleteLesson, onOpenSeminarEval }: Props) {
+export function ScheduleViews({ lessons, onOpenLesson, onDeleteLesson, onOpenSeminarEval, onReschedule, calendarName }: Props) {
   const [view, setView] = useState<View>("list");
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [calMonth, setCalMonth] = useState<Date>(() => new Date());
+  const [dragOverIso, setDragOverIso] = useState<string | null>(null);
+
+  function handleExportIcs() {
+    const dated = lessons.filter(l => l.lesson_date);
+    if (dated.length === 0) {
+      toast.error("Nenhuma aula com data definida.");
+      return;
+    }
+    const ics = buildIcs(calendarName || "Cronograma da turma", dated.map(l => ({
+      uid: l.id,
+      title: l.title,
+      date: l.lesson_date!,
+      description: `${getLessonTypeStyle(l.lesson_type).label} · ${l.status}`,
+    })));
+    downloadIcs(`${(calendarName || "cronograma").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.ics`, ics);
+    toast.success("Arquivo ICS exportado");
+  }
 
   const filtered = useMemo(() => {
     return lessons.filter(l => {
