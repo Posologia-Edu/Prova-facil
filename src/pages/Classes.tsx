@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   GraduationCap, Plus, Users, MoreHorizontal, BookOpen, Pencil, Copy, Trash2,
   UserCog, ArrowLeft, Loader2, UserPlus, X, FileText, Upload, HeartPulse,
   KeyRound, ToggleLeft, ToggleRight, BarChart3, UsersRound, Check, Tag,
+  Search, LayoutGrid, List, Archive, Layers, CalendarClock, ChevronDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
