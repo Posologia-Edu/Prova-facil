@@ -405,6 +405,57 @@ export type Database = {
         }
         Relationships: []
       }
+      class_announcements: {
+        Row: {
+          body: string | null
+          class_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          pinned: boolean
+          semester_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          class_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          pinned?: boolean
+          semester_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          class_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          pinned?: boolean
+          semester_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_announcements_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_announcements_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "class_semesters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_attendance: {
         Row: {
           created_at: string
@@ -629,6 +680,39 @@ export type Database = {
         }
         Relationships: []
       }
+      class_rubrics: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          rubric_json: Json
+          scope: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          rubric_json: Json
+          scope?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          rubric_json?: Json
+          scope?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       class_schedule_items: {
         Row: {
           created_at: string
@@ -637,6 +721,7 @@ export type Database = {
           lesson_type: string
           notes: string | null
           order_index: number
+          rubric_id: string | null
           rubric_json: Json
           semester_id: string
           status: string
@@ -652,6 +737,7 @@ export type Database = {
           lesson_type?: string
           notes?: string | null
           order_index?: number
+          rubric_id?: string | null
           rubric_json?: Json
           semester_id: string
           status?: string
@@ -667,6 +753,7 @@ export type Database = {
           lesson_type?: string
           notes?: string | null
           order_index?: number
+          rubric_id?: string | null
           rubric_json?: Json
           semester_id?: string
           status?: string
@@ -676,6 +763,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "class_schedule_items_rubric_id_fkey"
+            columns: ["rubric_id"]
+            isOneToOne: false
+            referencedRelation: "class_rubrics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "class_schedule_items_semester_id_fkey"
             columns: ["semester_id"]

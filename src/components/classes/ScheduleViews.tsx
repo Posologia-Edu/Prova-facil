@@ -5,9 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LayoutList, GitBranch, CalendarDays, Search, ClipboardList, Trash2 } from "lucide-react";
+import { LayoutList, GitBranch, CalendarDays, Search, ClipboardList, Trash2, Download } from "lucide-react";
 import { getLessonTypeStyle, LESSON_TYPE_STYLE } from "@/lib/lesson-type-style";
 import { cn } from "@/lib/utils";
+import { buildIcs, downloadIcs } from "@/lib/ics-export";
+import { toast } from "sonner";
 
 export interface ScheduleLesson {
   id: string;
@@ -22,6 +24,8 @@ interface Props {
   onOpenLesson: (l: ScheduleLesson) => void;
   onDeleteLesson: (l: ScheduleLesson) => void;
   onOpenSeminarEval?: (l: ScheduleLesson) => void;
+  onReschedule?: (lessonId: string, newDate: string) => Promise<void> | void;
+  calendarName?: string;
 }
 
 type View = "list" | "timeline" | "calendar";
@@ -30,12 +34,29 @@ function ptMonth(date: Date) {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
-export function ScheduleViews({ lessons, onOpenLesson, onDeleteLesson, onOpenSeminarEval }: Props) {
+export function ScheduleViews({ lessons, onOpenLesson, onDeleteLesson, onOpenSeminarEval, onReschedule, calendarName }: Props) {
   const [view, setView] = useState<View>("list");
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [calMonth, setCalMonth] = useState<Date>(() => new Date());
+  const [dragOverIso, setDragOverIso] = useState<string | null>(null);
+
+  function handleExportIcs() {
+    const dated = lessons.filter(l => l.lesson_date);
+    if (dated.length === 0) {
+      toast.error("Nenhuma aula com data definida.");
+      return;
+    }
+    const ics = buildIcs(calendarName || "Cronograma da turma", dated.map(l => ({
+      uid: l.id,
+      title: l.title,
+      date: l.lesson_date!,
+      description: `${getLessonTypeStyle(l.lesson_type).label} · ${l.status}`,
+    })));
+    downloadIcs(`${(calendarName || "cronograma").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.ics`, ics);
+    toast.success("Arquivo ICS exportado");
+  }
 
   const filtered = useMemo(() => {
     return lessons.filter(l => {
@@ -121,6 +142,11 @@ export function ScheduleViews({ lessons, onOpenLesson, onDeleteLesson, onOpenSem
               <SelectItem value="cancelled">Cancelada</SelectItem>
             </SelectContent>
           </Select>
+          <div className="ml-auto">
+            <Button variant="outline" size="sm" className="h-9" onClick={handleExportIcs} title="Exportar para Google/Outlook/Apple Calendar">
+              <Download className="h-4 w-4 mr-1" />Exportar ICS
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -214,15 +240,46 @@ export function ScheduleViews({ lessons, onOpenLesson, onDeleteLesson, onOpenSem
             <div className="grid grid-cols-7 gap-1">
               {calendarDays.map(({ date, iso, inMonth }) => {
                 const items = byDate.get(iso) || [];
+                const isDropTarget = !!onReschedule;
+                const isOver = dragOverIso === iso;
                 return (
-                  <div key={iso} className={cn("min-h-[80px] rounded-md border p-1 text-xs", !inMonth && "opacity-40 bg-muted/30")}>
+                  <div
+                    key={iso}
+                    className={cn(
+                      "min-h-[80px] rounded-md border p-1 text-xs transition-colors",
+                      !inMonth && "opacity-40 bg-muted/30",
+                      isOver && "border-primary bg-primary/10 ring-2 ring-primary/30",
+                    )}
+                    onDragOver={isDropTarget ? (e) => { e.preventDefault(); setDragOverIso(iso); } : undefined}
+                    onDragLeave={isDropTarget ? () => setDragOverIso((c) => (c === iso ? null : c)) : undefined}
+                    onDrop={isDropTarget ? async (e) => {
+                      e.preventDefault();
+                      setDragOverIso(null);
+                      const id = e.dataTransfer.getData("text/lesson-id");
+                      if (!id) return;
+                      try {
+                        await onReschedule!(id, iso);
+                        toast.success(`Aula movida para ${date.toLocaleDateString("pt-BR")}`);
+                      } catch (err: any) {
+                        toast.error(err?.message || "Erro ao mover aula");
+                      }
+                    } : undefined}
+                  >
                     <div className="text-right text-[10px] text-muted-foreground tabular-nums">{date.getDate()}</div>
                     <div className="space-y-0.5 mt-0.5">
                       {items.slice(0, 3).map(l => {
                         const s = getLessonTypeStyle(l.lesson_type);
                         return (
-                          <button key={l.id} onClick={() => onOpenLesson(l)}
-                            className={cn("w-full text-left truncate px-1 py-0.5 rounded border", s.badge)}>
+                          <button
+                            key={l.id}
+                            onClick={() => onOpenLesson(l)}
+                            draggable={isDropTarget}
+                            onDragStart={isDropTarget ? (e) => {
+                              e.dataTransfer.setData("text/lesson-id", l.id);
+                              e.dataTransfer.effectAllowed = "move";
+                            } : undefined}
+                            className={cn("w-full text-left truncate px-1 py-0.5 rounded border cursor-grab active:cursor-grabbing", s.badge)}
+                          >
                             {l.title}
                           </button>
                         );

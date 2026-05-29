@@ -29,6 +29,7 @@ import { GradebookTab } from "@/components/classes/GradebookTab";
 import { AttendanceTab } from "@/components/classes/AttendanceTab";
 import { StudentsTab } from "@/components/classes/StudentsTab";
 import { ScheduleViews, ScheduleLesson } from "@/components/classes/ScheduleViews";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 interface ClassRow {
   id: string;
@@ -219,6 +220,24 @@ export default function ClassDetail() {
     setConfirmDelete(null);
   }
 
+  async function rescheduleLesson(lessonId: string, newDate: string) {
+    const { error } = await supabase.from("class_schedule_items").update({ lesson_date: newDate }).eq("id", lessonId);
+    if (error) throw error;
+    if (activeSemesterId) loadLessons(activeSemesterId);
+  }
+
+  useKeyboardShortcuts({
+    "1": () => setActiveTab("overview"),
+    "2": () => setActiveTab("schedule"),
+    "3": () => setActiveTab("students"),
+    "4": () => setActiveTab("grades"),
+    "5": () => setActiveTab("attendance"),
+    "6": () => setActiveTab("semesters"),
+    "7": () => setActiveTab("teachers"),
+    "8": () => setActiveTab("documents"),
+    "n": () => { if (activeTab === "schedule" && activeSemesterId) setLessonDialog({ open: true, editing: null }); },
+  });
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[400px]">
       <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -280,16 +299,18 @@ export default function ClassDetail() {
 
       <div className="container mx-auto px-6 py-6 max-w-7xl">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="overview"><LayoutDashboard className="w-4 h-4 mr-1" />Visão geral</TabsTrigger>
-            <TabsTrigger value="schedule"><Calendar className="w-4 h-4 mr-1" />Cronograma</TabsTrigger>
-            <TabsTrigger value="students"><Users className="w-4 h-4 mr-1" />Alunos</TabsTrigger>
-            <TabsTrigger value="grades"><BookOpenCheck className="w-4 h-4 mr-1" />Notas</TabsTrigger>
-            <TabsTrigger value="attendance"><ClipboardCheck className="w-4 h-4 mr-1" />Presença</TabsTrigger>
-            <TabsTrigger value="semesters"><Layers className="w-4 h-4 mr-1" />Semestres</TabsTrigger>
-            <TabsTrigger value="teachers"><UserCog className="w-4 h-4 mr-1" />Professores</TabsTrigger>
-            <TabsTrigger value="documents"><FileText className="w-4 h-4 mr-1" />Materiais</TabsTrigger>
-          </TabsList>
+          <div className="-mx-2 px-2 overflow-x-auto md:overflow-visible">
+            <TabsList className="flex md:flex-wrap h-auto w-max md:w-auto">
+              <TabsTrigger value="overview"><LayoutDashboard className="w-4 h-4 mr-1" />Visão geral</TabsTrigger>
+              <TabsTrigger value="schedule"><Calendar className="w-4 h-4 mr-1" />Cronograma</TabsTrigger>
+              <TabsTrigger value="students"><Users className="w-4 h-4 mr-1" />Alunos</TabsTrigger>
+              <TabsTrigger value="grades"><BookOpenCheck className="w-4 h-4 mr-1" />Notas</TabsTrigger>
+              <TabsTrigger value="attendance"><ClipboardCheck className="w-4 h-4 mr-1" />Presença</TabsTrigger>
+              <TabsTrigger value="semesters"><Layers className="w-4 h-4 mr-1" />Semestres</TabsTrigger>
+              <TabsTrigger value="teachers"><UserCog className="w-4 h-4 mr-1" />Professores</TabsTrigger>
+              <TabsTrigger value="documents"><FileText className="w-4 h-4 mr-1" />Materiais</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* OVERVIEW */}
           <TabsContent value="overview">
@@ -311,9 +332,11 @@ export default function ClassDetail() {
                 </div>
                 <ScheduleViews
                   lessons={lessons as ScheduleLesson[]}
+                  calendarName={`${klass.name}${activeSemester ? " - " + activeSemester.label : ""}`}
                   onOpenLesson={(l) => setLessonDialog({ open: true, editing: l as Lesson })}
                   onDeleteLesson={(l) => setConfirmDelete({ kind: "lesson", id: l.id, label: l.title })}
                   onOpenSeminarEval={(l) => setSeminarEval({ open: true, lesson: l as Lesson })}
+                  onReschedule={rescheduleLesson}
                 />
               </>
             )}
