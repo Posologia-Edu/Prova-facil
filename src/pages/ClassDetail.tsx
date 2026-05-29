@@ -70,10 +70,6 @@ const TEACHER_ROLES = [
   { value: "monitor", label: "Monitor" },
   { value: "guest", label: "Convidado" },
 ];
-const LESSON_TYPE_LABEL: Record<string, string> = {
-  theoretical: "Teórica", practical: "Prática", simulation: "Simulação",
-  seminar: "Seminário", assessment: "Avaliação", other: "Outro",
-};
 
 export default function ClassDetail() {
   const { classId } = useParams<{ classId: string }>();
