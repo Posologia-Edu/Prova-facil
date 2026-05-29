@@ -6,6 +6,7 @@ import { Users, Calendar, GraduationCap, CheckCircle2, Clock, FileText } from "l
 import { getLessonTypeStyle } from "@/lib/lesson-type-style";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AnnouncementsBoard } from "./AnnouncementsBoard";
 
 interface Props {
   classId: string;
@@ -156,6 +157,8 @@ export function OverviewTab({ classId, semesterId, onNavigateTab }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      <AnnouncementsBoard classId={classId} semesterId={semesterId} />
     </div>
   );
 }

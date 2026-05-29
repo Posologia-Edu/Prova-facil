@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LessonTemplateRenderer, TemplateSchema } from "./LessonTemplateRenderer";
+import { RubricPicker } from "./RubricPicker";
+import { SeminarRubric } from "@/lib/seminar-rubric";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
