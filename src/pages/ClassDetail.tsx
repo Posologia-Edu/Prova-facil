@@ -17,10 +17,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, GraduationCap, Plus, Calendar, FileText, UserCog, Layers,
-  Pencil, Trash2, Download, ExternalLink, Upload, Loader2,
+  Pencil, Trash2, Download, ExternalLink, Upload, Loader2, ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LessonDialog, LessonItem } from "@/components/classes/LessonDialog";
+import { SeminarEvaluationDialog } from "@/components/classes/SeminarEvaluationDialog";
+import { getLessonTypeStyle } from "@/lib/lesson-type-style";
+import { cn } from "@/lib/utils";
+import { SeminarRubric } from "@/lib/seminar-rubric";
 
 interface ClassRow {
   id: string;
