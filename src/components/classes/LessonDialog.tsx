@@ -31,6 +31,8 @@ export interface LessonItem {
   template_data: Record<string, string>;
   notes: string | null;
   status: string;
+  rubric_id?: string | null;
+  rubric_json?: SeminarRubric | null;
 }
 
 const LESSON_TYPES = [
@@ -66,6 +68,8 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
     template_data: {},
     notes: "",
     status: "planned",
+    rubric_id: null,
+    rubric_json: null,
   });
   const [saving, setSaving] = useState(false);
 
@@ -90,6 +94,8 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
         template_data: {},
         notes: "",
         status: "planned",
+        rubric_id: null,
+        rubric_json: null,
       });
     }
   }, [open, lesson, semesterId]);
@@ -112,6 +118,8 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
       template_data: form.template_data,
       notes: form.notes,
       status: form.status,
+      rubric_id: form.rubric_id ?? null,
+      rubric_json: (form.rubric_json ?? null) as any,
     };
     const { error } = lesson?.id
       ? await supabase.from("class_schedule_items").update(payload).eq("id", lesson.id)
