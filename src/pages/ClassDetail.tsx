@@ -55,7 +55,7 @@ interface DocItem {
   file_path: string | null;
   link_url: string | null;
 }
-interface Lesson extends LessonItem { id: string; }
+interface Lesson extends LessonItem { id: string; rubric_json?: SeminarRubric | null; }
 
 const DOC_CATEGORIES = [
   { value: "calendar", label: "Calendário acadêmico" },
