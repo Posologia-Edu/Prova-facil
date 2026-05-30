@@ -315,6 +315,11 @@ export function SeminarEvaluationDialog({
                                 <div className="text-xs text-muted-foreground">{ev.percent.toFixed(0)}%</div>
                               </div>
                             )}
+                            {ev && (
+                              <Button variant="ghost" size="icon" onClick={() => resetEvaluation(s.id)} className="text-destructive hover:bg-destructive/10">
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
+                            )}
                             <Button
                               size="sm" variant={isSelected ? "default" : "outline"}
                               disabled={!isSelected}
