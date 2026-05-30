@@ -415,7 +415,7 @@ export function SeminarEvaluationDialog({
 }
 
 function StudentEvaluator({
-  student, evaluation, rubric, liveScore, onBack, onAnswer, onNotes, onSave,
+  student, evaluation, rubric, liveScore, onBack, onAnswer, onNotes, onSave, onReset,
 }: {
   student: Student;
   evaluation: Evaluation;
@@ -425,6 +425,7 @@ function StudentEvaluator({
   onAnswer: (criterionId: string, v: number) => void;
   onNotes: (n: string) => void;
   onSave: () => void;
+  onReset: () => void;
 }) {
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
