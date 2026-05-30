@@ -130,6 +130,24 @@ export function SeminarEvaluationDialog({
     else toast.success("Instrumento salvo");
   }
 
+  async function resetEvaluation(studentId: string) {
+    if (!window.confirm("Tem certeza que deseja resetar esta avaliação? Os dados serão perdidos.")) return;
+    const { error } = await supabase.from("class_seminar_evaluations").delete()
+      .eq("lesson_id", lessonId).eq("student_id", studentId);
+    if (error) { toast.error(error.message); return; }
+    setEvaluations((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(studentId);
+      return next;
+    });
+    toast.success("Avaliação resetada");
+  }
+
   function toggleStudent(id: string, on: boolean) {
     setSelected((prev) => {
       const next = new Set(prev);
