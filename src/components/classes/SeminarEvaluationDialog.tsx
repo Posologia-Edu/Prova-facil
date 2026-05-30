@@ -441,7 +441,12 @@ function StudentEvaluator({
           </div>
           <div className="text-xs text-muted-foreground">{liveScore.totalPercent.toFixed(1)}%</div>
         </div>
-        <Button onClick={onSave}><Save className="w-4 h-4 mr-1" />Salvar</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onReset} className="text-destructive border-destructive/30 hover:bg-destructive/10">
+            <RotateCcw className="w-4 h-4 mr-1" />Resetar
+          </Button>
+          <Button onClick={onSave}><Save className="w-4 h-4 mr-1" />Salvar</Button>
+        </div>
       </div>
 
       <ScrollArea className="h-[70vh] pr-3">
