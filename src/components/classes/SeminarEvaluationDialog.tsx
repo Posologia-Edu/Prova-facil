@@ -278,6 +278,7 @@ export function SeminarEvaluationDialog({
             onAnswer={(cid, v) => updateAnswer(activeStudent.id, cid, v)}
             onNotes={(n) => setEvaluations((p) => ({ ...p, [activeStudent.id]: { ...p[activeStudent.id], notes: n } }))}
             onSave={() => persistEvaluation(activeStudent.id)}
+            onReset={() => resetEvaluation(activeStudent.id)}
           />
         ) : (
           <Tabs defaultValue="students" className="flex-1 flex flex-col overflow-hidden">
