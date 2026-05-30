@@ -313,6 +313,22 @@ export function SeminarEvaluationDialog({
             <TabsContent value="rubric" className="flex-1 overflow-hidden">
               <ScrollArea className="h-[58vh] pr-3">
                 <div className="space-y-3">
+                  <Card className="border-amber-500/30 bg-amber-500/5">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Label className="text-sm font-medium whitespace-nowrap">Nota máxima da avaliação</Label>
+                      <Input
+                        type="number"
+                        min={0.1}
+                        step={0.1}
+                        value={rubric.scale ?? 10}
+                        onChange={(e) => setRubric((r) => ({ ...r, scale: Number(e.target.value) || 10 }))}
+                        className="w-24"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        A nota de cada aluno será calculada proporcionalmente a este valor.
+                      </span>
+                    </CardContent>
+                  </Card>
                   {rubric.dimensions.map((d, di) => (
                     <Card key={d.id}>
                       <CardContent className="p-4 space-y-3">
