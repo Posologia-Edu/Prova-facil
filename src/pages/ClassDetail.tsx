@@ -18,7 +18,7 @@ import {
 import {
   ArrowLeft, GraduationCap, Plus, Calendar, FileText, UserCog, Layers,
   Pencil, Trash2, Download, ExternalLink, Upload, Loader2, LayoutDashboard,
-  Users, BookOpenCheck, ClipboardCheck,
+  Users, BookOpenCheck, ClipboardCheck, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LessonDialog, LessonItem } from "@/components/classes/LessonDialog";
