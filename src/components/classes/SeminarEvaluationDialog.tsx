@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft, Plus, Trash2, Star, Save, Users, Settings2, Loader2, Calendar,
   Lightbulb, Presentation as PresentationIcon, MessagesSquare, Award, CircleDot,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
