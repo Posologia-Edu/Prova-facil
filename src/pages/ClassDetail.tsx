@@ -18,7 +18,7 @@ import {
 import {
   ArrowLeft, GraduationCap, Plus, Calendar, FileText, UserCog, Layers,
   Pencil, Trash2, Download, ExternalLink, Upload, Loader2, LayoutDashboard,
-  Users, BookOpenCheck, ClipboardCheck,
+  Users, BookOpenCheck, ClipboardCheck, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LessonDialog, LessonItem } from "@/components/classes/LessonDialog";
@@ -147,6 +147,46 @@ export default function ClassDetail() {
     toast.success("Semestre salvo");
     setSemDialog({ open: false });
     load();
+  }
+
+  async function duplicateSemester(src: Semester) {
+    const newLabel = window.prompt("Rótulo do novo semestre:", `${src.label} (cópia)`);
+    if (!newLabel?.trim()) return;
+    const tId = toast.loading("Duplicando semestre...");
+    try {
+      const { data: created, error: e1 } = await supabase
+        .from("class_semesters")
+        .insert({
+          class_id: classId,
+          label: newLabel.trim(),
+          start_date: null,
+          end_date: null,
+          is_active: true,
+          order_index: semesters.length,
+        })
+        .select()
+        .single();
+      if (e1 || !created) throw e1 || new Error("Falha ao criar semestre");
+
+      // Copy schedule items from source semester
+      const { data: items, error: e2 } = await supabase
+        .from("class_schedule_items")
+        .select("lesson_date,title,lesson_type,template_id,template_data,notes,status,order_index,rubric_json,rubric_id")
+        .eq("semester_id", src.id);
+      if (e2) throw e2;
+
+      if (items && items.length) {
+        const rows = items.map((it: any) => ({ ...it, semester_id: created.id }));
+        const { error: e3 } = await supabase.from("class_schedule_items").insert(rows);
+        if (e3) throw e3;
+      }
+
+      toast.success(`Semestre duplicado (${items?.length || 0} aulas copiadas). Professores e materiais são compartilhados pela turma.`, { id: tId });
+      setActiveSemesterId(created.id);
+      load();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao duplicar", { id: tId });
+    }
   }
 
   async function saveTeacher(form: Partial<Teacher>) {
@@ -397,10 +437,13 @@ export default function ClassDetail() {
                         {!s.is_active && <Badge variant="outline" className="mt-2">Arquivado</Badge>}
                       </div>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setSemDialog({ open: true, editing: s })}>
+                        <Button variant="ghost" size="icon" title="Duplicar (cronograma)" onClick={() => duplicateSemester(s)}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Editar" onClick={() => setSemDialog({ open: true, editing: s })}>
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({ kind: "semester", id: s.id, label: s.label })}>
+                        <Button variant="ghost" size="icon" title="Excluir" onClick={() => setConfirmDelete({ kind: "semester", id: s.id, label: s.label })}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
