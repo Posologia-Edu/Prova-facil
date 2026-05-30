@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft, Plus, Trash2, Star, Save, Users, Settings2, Loader2, Calendar,
   Lightbulb, Presentation as PresentationIcon, MessagesSquare, Award, CircleDot,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -127,6 +128,24 @@ export function SeminarEvaluationDialog({
     setSavingRubric(false);
     if (error) toast.error("Erro: " + error.message);
     else toast.success("Instrumento salvo");
+  }
+
+  async function resetEvaluation(studentId: string) {
+    if (!window.confirm("Tem certeza que deseja resetar esta avaliação? Os dados serão perdidos.")) return;
+    const { error } = await supabase.from("class_seminar_evaluations").delete()
+      .eq("lesson_id", lessonId).eq("student_id", studentId);
+    if (error) { toast.error(error.message); return; }
+    setEvaluations((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(studentId);
+      return next;
+    });
+    toast.success("Avaliação resetada");
   }
 
   function toggleStudent(id: string, on: boolean) {
@@ -259,6 +278,7 @@ export function SeminarEvaluationDialog({
             onAnswer={(cid, v) => updateAnswer(activeStudent.id, cid, v)}
             onNotes={(n) => setEvaluations((p) => ({ ...p, [activeStudent.id]: { ...p[activeStudent.id], notes: n } }))}
             onSave={() => persistEvaluation(activeStudent.id)}
+            onReset={() => resetEvaluation(activeStudent.id)}
           />
         ) : (
           <Tabs defaultValue="students" className="flex-1 flex flex-col overflow-hidden">
@@ -294,6 +314,11 @@ export function SeminarEvaluationDialog({
                                 </div>
                                 <div className="text-xs text-muted-foreground">{ev.percent.toFixed(0)}%</div>
                               </div>
+                            )}
+                            {ev && (
+                              <Button variant="ghost" size="icon" onClick={() => resetEvaluation(s.id)} className="text-destructive hover:bg-destructive/10">
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
                             )}
                             <Button
                               size="sm" variant={isSelected ? "default" : "outline"}
@@ -395,7 +420,7 @@ export function SeminarEvaluationDialog({
 }
 
 function StudentEvaluator({
-  student, evaluation, rubric, liveScore, onBack, onAnswer, onNotes, onSave,
+  student, evaluation, rubric, liveScore, onBack, onAnswer, onNotes, onSave, onReset,
 }: {
   student: Student;
   evaluation: Evaluation;
@@ -405,6 +430,7 @@ function StudentEvaluator({
   onAnswer: (criterionId: string, v: number) => void;
   onNotes: (n: string) => void;
   onSave: () => void;
+  onReset: () => void;
 }) {
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
@@ -420,7 +446,12 @@ function StudentEvaluator({
           </div>
           <div className="text-xs text-muted-foreground">{liveScore.totalPercent.toFixed(1)}%</div>
         </div>
-        <Button onClick={onSave}><Save className="w-4 h-4 mr-1" />Salvar</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onReset} className="text-destructive border-destructive/30 hover:bg-destructive/10">
+            <RotateCcw className="w-4 h-4 mr-1" />Resetar
+          </Button>
+          <Button onClick={onSave}><Save className="w-4 h-4 mr-1" />Salvar</Button>
+        </div>
       </div>
 
       <ScrollArea className="h-[70vh] pr-3">
