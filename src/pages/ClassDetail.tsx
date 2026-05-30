@@ -437,10 +437,13 @@ export default function ClassDetail() {
                         {!s.is_active && <Badge variant="outline" className="mt-2">Arquivado</Badge>}
                       </div>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setSemDialog({ open: true, editing: s })}>
+                        <Button variant="ghost" size="icon" title="Duplicar (cronograma)" onClick={() => duplicateSemester(s)}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Editar" onClick={() => setSemDialog({ open: true, editing: s })}>
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({ kind: "semester", id: s.id, label: s.label })}>
+                        <Button variant="ghost" size="icon" title="Excluir" onClick={() => setConfirmDelete({ kind: "semester", id: s.id, label: s.label })}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
