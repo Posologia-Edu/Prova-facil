@@ -16,39 +16,53 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const anonClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader || "" } } });
-    const { data: { user }, error: authErr } = await anonClient.auth.getUser();
-    if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    const { studentEmail, sessionIds, feedbackType } = await req.json();
+    const { studentEmail, sessionId, sessionIds, feedbackType } = await req.json();
     if (!studentEmail) {
       return new Response(JSON.stringify({ error: "studentEmail required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { data: sessions } = await supabase
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const anonClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader || "" } } });
+    const { data: { user }, error: authErr } = await anonClient.auth.getUser();
+    if ((authErr || !user) && !sessionId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const sessionQuery = supabase
       .from("exam_sessions")
       .select("id, total_score, max_score, status, finished_at, publication_id")
       .eq("student_email", studentEmail)
-      .eq("status", "graded")
+      .in("status", ["submitted", "graded"])
       .order("finished_at", { ascending: false })
       .limit(10);
+
+    if (sessionId) sessionQuery.eq("id", sessionId);
+    if (!sessionId && Array.isArray(sessionIds) && sessionIds.length > 0) sessionQuery.in("id", sessionIds);
+
+    const { data: sessions, error: sessionsErr } = await sessionQuery;
+    if (sessionsErr) throw sessionsErr;
+    if (sessionId && (!sessions || sessions.length === 0)) {
+      return new Response(JSON.stringify({ error: "Session not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const sessionData = sessions || [];
     let answersInfo: string[] = [];
 
     for (const sess of sessionData.slice(0, 5)) {
       const { data: answers } = await supabase
-        .from("session_answers")
-        .select("question_id, is_correct, points_earned, max_points, ai_feedback")
+        .from("student_answers")
+        .select("question_id, answer_text, answer_json, is_correct, points_earned, max_points, ai_feedback, teacher_feedback, question_bank(type, content_json)")
         .eq("session_id", sess.id);
 
-      const wrong = (answers || []).filter(a => a.is_correct === false);
-      if (wrong.length > 0) {
-        answersInfo.push(`Sessão ${sess.id.slice(0, 8)}: ${wrong.length} erros de ${(answers || []).length} questões. Nota: ${sess.total_score}/${sess.max_score}`);
-      }
+      const answerList = answers || [];
+      const wrong = answerList.filter(a => a.is_correct === false);
+      const pending = answerList.filter(a => a.is_correct === null);
+      answersInfo.push(`Sessão ${sess.id.slice(0, 8)} (${sess.status}): ${wrong.length} erros, ${pending.length} pendentes de correção em ${answerList.length} questões. Nota atual: ${sess.total_score ?? 0}/${sess.max_score ?? "a definir"}. Respostas: ${answerList.slice(0, 6).map((a: any, idx: number) => {
+        const content = a.question_bank?.content_json || {};
+        const statement = String(content.statement || content.title || `Questão ${idx + 1}`).slice(0, 220);
+        const answer = String(a.answer_text || a.answer_json?.selected || "Sem resposta").slice(0, 220);
+        return `Q${idx + 1}: ${statement} | resposta: ${answer}`;
+      }).join(" || ")}`);
     }
 
     const prompt = `Você é um tutor educacional especializado em ciências da saúde. Analise o desempenho do aluno e forneça feedback personalizado.
