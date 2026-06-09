@@ -761,6 +761,7 @@ export default function QuestionsPage() {
             <SelectItem value="true_false">{t("questions_true_false")}</SelectItem>
             <SelectItem value="open_ended">{t("questions_open_ended")}</SelectItem>
             <SelectItem value="matching">{t("questions_matching")}</SelectItem>
+            <SelectItem value="case_stem">Caso Clínico</SelectItem>
           </SelectContent>
         </Select>
         <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
