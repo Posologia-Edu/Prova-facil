@@ -82,7 +82,7 @@ interface QuestionOption {
 
 interface Question {
   id: string;
-  type: "multiple_choice" | "true_false" | "open_ended" | "matching";
+  type: "multiple_choice" | "true_false" | "open_ended" | "matching" | "case_stem";
   title: string;
   tags: string[];
   difficulty: "easy" | "medium" | "hard";
@@ -94,6 +94,8 @@ interface Question {
   expectedAnswer?: string;
   embedUrl?: string;
   images?: string[];
+  parentId?: string | null;
+  parentTitle?: string | null;
 }
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -101,6 +103,7 @@ const typeIcons: Record<string, React.ReactNode> = {
   true_false: <HelpCircle className="h-4 w-4" />,
   open_ended: <AlignLeft className="h-4 w-4" />,
   matching: <ArrowLeftRight className="h-4 w-4" />,
+  case_stem: <FileText className="h-4 w-4" />,
 };
 
 const typeLabels: Record<string, string> = {
@@ -108,6 +111,7 @@ const typeLabels: Record<string, string> = {
   true_false: "Verdadeiro/Falso",
   open_ended: "Dissertativa",
   matching: "Associação",
+  case_stem: "Caso Clínico",
 };
 
 const difficultyColors: Record<string, string> = {
