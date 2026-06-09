@@ -559,9 +559,35 @@ export default function QuestionsPage() {
                         <SelectItem value="true_false">Verdadeiro / Falso</SelectItem>
                         <SelectItem value="open_ended">Dissertativa</SelectItem>
                         <SelectItem value="matching">Associação de Colunas</SelectItem>
+                        <SelectItem value="case_stem">Caso Clínico (enunciado base)</SelectItem>
                       </SelectContent>
                     </Select>
+                    {newType === "case_stem" && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Um Caso Clínico é apenas um texto-base (sem alternativas). Depois, vincule outras questões a ele para que compartilhem este enunciado.
+                      </p>
+                    )}
                   </div>
+
+                  {/* Linkar a um caso clínico existente (quando não é case_stem) */}
+                  {newType !== "case_stem" && questions.some(q => q.type === "case_stem") && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5" /> Vincular a um Caso Clínico (opcional)
+                      </Label>
+                      <Select value={newParentId} onValueChange={setNewParentId}>
+                        <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum</SelectItem>
+                          {questions.filter(q => q.type === "case_stem").map(q => (
+                            <SelectItem key={q.id} value={q.id}>
+                              {q.title.length > 80 ? q.title.slice(0, 80) + "…" : q.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Texto da Questão</Label>
                     <div className="flex items-center gap-1 mb-1">
