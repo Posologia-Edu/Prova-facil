@@ -245,7 +245,25 @@ export default function StudentExam() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const currentQ = questions[currentIdx];
+  // Separate case_stem context blocks from answerable questions.
+  // Each answerable question is associated with the most recent preceding stem (within same section).
+  const answerableQuestions: Question[] = [];
+  const stemForQuestion: Record<string, Question | null> = {};
+  {
+    let lastStem: Question | null = null;
+    let lastStemSection: string | null = null;
+    for (const q of questions) {
+      if (q.type === "case_stem") {
+        lastStem = q;
+        lastStemSection = q.section_name;
+      } else {
+        stemForQuestion[q.id] = lastStem && lastStemSection === q.section_name ? lastStem : null;
+        answerableQuestions.push(q);
+      }
+    }
+  }
+  const currentQ = answerableQuestions[currentIdx];
+  const currentStem = currentQ ? stemForQuestion[currentQ.id] : null;
 
   // Keyboard shortcuts for accessibility
   useEffect(() => {
