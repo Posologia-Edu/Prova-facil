@@ -119,7 +119,7 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
       notes: form.notes,
       status: form.status,
       rubric_id: form.rubric_id ?? null,
-      rubric_json: (form.rubric_json ?? null) as any,
+      rubric_json: (form.rubric_json ?? {}) as any,
     };
     const { error } = lesson?.id
       ? await supabase.from("class_schedule_items").update(payload).eq("id", lesson.id)
