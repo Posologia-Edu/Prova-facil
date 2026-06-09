@@ -270,8 +270,8 @@ export default function ExamPDFExporter({
       pdf.setLineWidth(0.5);
       pdf.line(col1 - 2, y, 198, y);
       y += 7;
-      const totalPts = versionSections.reduce((s, sec) => s + sec.questions.reduce((qs, q) => qs + q.points, 0), 0);
-      const totalQ = versionSections.reduce((s, sec) => s + sec.questions.length, 0);
+      const totalPts = versionSections.reduce((s, sec) => s + sec.questions.filter(q => q.type !== "case_stem").reduce((qs, q) => qs + q.points, 0), 0);
+      const totalQ = versionSections.reduce((s, sec) => s + sec.questions.filter(q => q.type !== "case_stem").length, 0);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(9);
       pdf.text(`Total: ${totalQ} questões — ${totalPts} pontos`, col1, y);
