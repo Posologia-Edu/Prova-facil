@@ -428,13 +428,20 @@ export default function QuestionsPage() {
 
     const { data } = await supabase
       .from("question_bank")
-      .select("id, type, content_json, difficulty, tags, bloom_level, created_at, embed_url")
+      .select("id, type, content_json, difficulty, tags, bloom_level, created_at, embed_url, parent_id")
       .eq("user_id", userData.user.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
+    const rows = data || [];
+    const titleById = new Map<string, string>();
+    for (const q of rows) {
+      const cj = q.content_json as any;
+      titleById.set(q.id, cj?.question_text || cj?.title || "Questão");
+    }
+
     setQuestions(
-      (data || []).map((q) => {
+      rows.map((q: any) => {
         const cj = q.content_json as any;
         const options = cj?.options
           ? Object.entries(cj.options).map(([key, val]) => ({
@@ -459,6 +466,8 @@ export default function QuestionsPage() {
           expectedAnswer: cj?.expected_answer,
           embedUrl: q.embed_url || undefined,
           images: cj?.images || undefined,
+          parentId: q.parent_id || null,
+          parentTitle: q.parent_id ? titleById.get(q.parent_id) || null : null,
         };
       })
     );
