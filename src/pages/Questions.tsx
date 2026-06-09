@@ -596,7 +596,7 @@ export default function QuestionsPage() {
             <Sparkles className="h-4 w-4 mr-2 text-secondary" />
             {t("questions_generate_ai")}
           </Button>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { setEditingId(null); resetForm(); } }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -605,7 +605,7 @@ export default function QuestionsPage() {
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>{t("questions_create_title")}</DialogTitle>
+                <DialogTitle>{editingId ? "Editar Questão" : t("questions_create_title")}</DialogTitle>
               </DialogHeader>
               <Tabs defaultValue="manual" className="mt-2">
                 <TabsList className="w-full">
