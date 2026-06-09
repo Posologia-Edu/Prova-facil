@@ -794,8 +794,8 @@ export default function QuestionsPage() {
                 </TabsContent>
               </Tabs>
               <DialogFooter>
-                <Button variant="outline" onClick={() => { resetForm(); setCreateOpen(false); }}>{t("cancel")}</Button>
-                <Button onClick={handleCreateQuestion} disabled={saving}>{saving ? "Salvando..." : t("questions_new")}</Button>
+                <Button variant="outline" onClick={() => { resetForm(); setEditingId(null); setCreateOpen(false); }}>{t("cancel")}</Button>
+                <Button onClick={handleCreateQuestion} disabled={saving}>{saving ? "Salvando..." : (editingId ? "Salvar Alterações" : t("questions_new"))}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
