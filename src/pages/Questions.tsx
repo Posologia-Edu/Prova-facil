@@ -295,6 +295,7 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Manual creation form state
   const [newType, setNewType] = useState("multiple_choice");
