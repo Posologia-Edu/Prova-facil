@@ -412,6 +412,7 @@ export default function QuestionsPage() {
     setNewTags((data.tags || []).join(", "));
     setNewEmbed(data.embed_url || "");
     setNewParentId(data.parent_id || "none");
+    setNewAnswerKey(cj.answer_key || "");
     setNewImages(Array.isArray(cj.images) ? cj.images : []);
     setMedImagePreview(null);
     setMedImageDetails("");
