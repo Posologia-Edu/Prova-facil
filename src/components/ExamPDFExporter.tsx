@@ -336,6 +336,7 @@ export default function ExamPDFExporter({
       let num = 1;
       for (const section of versionSections) {
         for (const q of section.questions) {
+          if (q.type === "case_stem") continue;
           allQuestions.push({ num, type: q.type });
           num++;
         }
