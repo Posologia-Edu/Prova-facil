@@ -220,6 +220,7 @@ export default function ExamPDFExporter({
       let questionNum = 1;
       for (const section of versionSections) {
         for (const q of section.questions) {
+          if (q.type === "case_stem") continue;
           const typeLabel =
             q.type === "multiple_choice" ? "Múlt. Escolha" :
             q.type === "true_false" ? "V ou F" :
@@ -269,8 +270,8 @@ export default function ExamPDFExporter({
       pdf.setLineWidth(0.5);
       pdf.line(col1 - 2, y, 198, y);
       y += 7;
-      const totalPts = versionSections.reduce((s, sec) => s + sec.questions.reduce((qs, q) => qs + q.points, 0), 0);
-      const totalQ = versionSections.reduce((s, sec) => s + sec.questions.length, 0);
+      const totalPts = versionSections.reduce((s, sec) => s + sec.questions.filter(q => q.type !== "case_stem").reduce((qs, q) => qs + q.points, 0), 0);
+      const totalQ = versionSections.reduce((s, sec) => s + sec.questions.filter(q => q.type !== "case_stem").length, 0);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(9);
       pdf.text(`Total: ${totalQ} questões — ${totalPts} pontos`, col1, y);
@@ -335,6 +336,7 @@ export default function ExamPDFExporter({
       let num = 1;
       for (const section of versionSections) {
         for (const q of section.questions) {
+          if (q.type === "case_stem") continue;
           allQuestions.push({ num, type: q.type });
           num++;
         }
@@ -490,7 +492,15 @@ export default function ExamPDFExporter({
     `;
   }, []);
 
-  const buildQuestionHTML = useCallback((q: ExamQuestion, questionNum: number) => {
+  const buildQuestionHTML = useCallback((q: ExamQuestion, questionNum: number | null) => {
+    if (q.type === "case_stem") {
+      return `
+        <div style="padding:10px 12px;margin:6px 0 8px 0;background:#f5f1e8;border-left:4px solid #1a1a2e;border-radius:2px">
+          <p style="margin:0 0 4px 0;font-size:8px;font-weight:bold;text-transform:uppercase;letter-spacing:1.5px;color:#1a1a2e">Enunciado base</p>
+          <p style="margin:0;font-size:11px;line-height:1.55;white-space:pre-wrap">${q.title}</p>
+        </div>
+      `;
+    }
     let html = `
       <div style="padding:8px 0 10px 0;border-bottom:1px dotted #e0e0e0;margin-bottom:2px">
         <p style="margin:0 0 4px 0">
@@ -609,9 +619,10 @@ export default function ExamPDFExporter({
           blocks.push({ canvas: secCanvas, heightMM: pxToMM(secCanvas) });
 
           for (const q of section.questions) {
-            const qCanvas = await renderBlock(buildQuestionHTML(q, questionNum), CONTENT_WIDTH_PX);
+            const isStem = q.type === "case_stem";
+            const qCanvas = await renderBlock(buildQuestionHTML(q, isStem ? null : questionNum), CONTENT_WIDTH_PX);
             blocks.push({ canvas: qCanvas, heightMM: pxToMM(qCanvas) });
-            questionNum++;
+            if (!isStem) questionNum++;
           }
         }
 
