@@ -407,7 +407,8 @@ export default function QuestionsPage() {
       tags,
       embed_url: newEmbed || null,
       content_json: contentJson,
-    });
+      parent_id: newType === "case_stem" ? null : (newParentId && newParentId !== "none" ? newParentId : null),
+    } as any);
 
     setSaving(false);
     if (error) {
