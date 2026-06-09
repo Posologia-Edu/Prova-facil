@@ -219,6 +219,20 @@ export default function StudentResults() {
                     )}
                   </>
                 )}
+
+                {typeof content.answer_key === "string" && (content.answer_key as string).trim() && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                        <BookOpen className="h-3 w-3" /> Espelho de Resposta
+                      </p>
+                      <p className="text-sm bg-amber-50 dark:bg-amber-900/10 border border-amber-300/40 rounded p-2 whitespace-pre-wrap">
+                        {content.answer_key as string}
+                      </p>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           );
