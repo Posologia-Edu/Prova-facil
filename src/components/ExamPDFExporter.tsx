@@ -617,9 +617,10 @@ export default function ExamPDFExporter({
           blocks.push({ canvas: secCanvas, heightMM: pxToMM(secCanvas) });
 
           for (const q of section.questions) {
-            const qCanvas = await renderBlock(buildQuestionHTML(q, questionNum), CONTENT_WIDTH_PX);
+            const isStem = q.type === "case_stem";
+            const qCanvas = await renderBlock(buildQuestionHTML(q, isStem ? null : questionNum), CONTENT_WIDTH_PX);
             blocks.push({ canvas: qCanvas, heightMM: pxToMM(qCanvas) });
-            questionNum++;
+            if (!isStem) questionNum++;
           }
         }
 
