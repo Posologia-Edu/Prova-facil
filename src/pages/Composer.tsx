@@ -656,10 +656,35 @@ export default function ComposerPage() {
                 </div>
                 {!section.collapsed && (
                   <div className="space-y-4 pl-2">
-                    {section.questions.map((q, qi) => (
+                    {(() => {
+                      let displayNum = 0;
+                      return section.questions.map((q) => {
+                        const isStem = q.type === "case_stem";
+                        if (!isStem) displayNum++;
+                        if (isStem) {
+                          return (
+                            <div key={q.id} className="group rounded-md border-l-4 border-primary/60 bg-muted/40 px-3 py-2.5">
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1">
+                                  <p className="text-[10px] uppercase tracking-wider font-semibold text-primary/80 mb-1">Enunciado base</p>
+                                  <p className="text-sm whitespace-pre-wrap">{q.title}</p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                  onClick={() => removeQuestion(section.id, q.id)}
+                                >
+                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
                       <div key={q.id} className="flex items-start gap-2 group">
                         <GripVertical className="h-4 w-4 text-muted-foreground/40 mt-0.5 opacity-0 group-hover:opacity-100 cursor-grab transition-opacity" />
-                        <span className="font-semibold text-xs min-w-[24px]">{qi + 1}.</span>
+                        <span className="font-semibold text-xs min-w-[24px]">{displayNum}.</span>
                         <div className="flex-1">
                           <p className="text-sm">{q.title}</p>
                           {q.type === "multiple_choice" && (() => {
@@ -754,7 +779,9 @@ export default function ComposerPage() {
                           <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
                       </div>
-                    ))}
+                        );
+                      });
+                    })()}
                     {section.questions.length === 0 && (
                       <p className="text-xs text-muted-foreground italic py-4 text-center">
                         Clique nas questões do banco para adicioná-las aqui
