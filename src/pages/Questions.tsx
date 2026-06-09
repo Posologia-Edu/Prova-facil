@@ -90,6 +90,7 @@ interface Question {
   created_at: string;
   options?: QuestionOption[];
   explanation?: string;
+  answerKey?: string;
   matchingPairs?: { left: string; right: string }[];
   expectedAnswer?: string;
   embedUrl?: string;
