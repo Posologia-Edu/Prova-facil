@@ -4901,6 +4901,7 @@ export type Database = {
           embed_url: string | null
           id: string
           media_urls: string[] | null
+          parent_id: string | null
           tags: string[] | null
           type: string
           updated_at: string
@@ -4915,6 +4916,7 @@ export type Database = {
           embed_url?: string | null
           id?: string
           media_urls?: string[] | null
+          parent_id?: string | null
           tags?: string[] | null
           type?: string
           updated_at?: string
@@ -4929,12 +4931,21 @@ export type Database = {
           embed_url?: string | null
           id?: string
           media_urls?: string[] | null
+          parent_id?: string | null
           tags?: string[] | null
           type?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "question_bank_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "question_bank"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       question_competencies: {
         Row: {
