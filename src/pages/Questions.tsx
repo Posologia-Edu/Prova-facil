@@ -345,6 +345,7 @@ export default function QuestionsPage() {
     setNewTags("");
     setNewEmbed("");
     setNewParentId("none");
+    setNewAnswerKey("");
     setNewImages([]);
     setMedImagePreview(null);
     setMedImageDetails("");
