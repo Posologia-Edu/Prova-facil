@@ -220,6 +220,7 @@ export default function ExamPDFExporter({
       let questionNum = 1;
       for (const section of versionSections) {
         for (const q of section.questions) {
+          if (q.type === "case_stem") continue;
           const typeLabel =
             q.type === "multiple_choice" ? "Múlt. Escolha" :
             q.type === "true_false" ? "V ou F" :
