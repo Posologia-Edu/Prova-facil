@@ -340,7 +340,7 @@ export default function StudentExam() {
               <div>
                 <h1 className="font-semibold text-sm sm:text-base leading-tight">{examTitle}</h1>
                 <p className="text-[11px] text-muted-foreground">
-                  Questão {currentIdx + 1} de {questions.length}
+                  Questão {currentIdx + 1} de {answerableQuestions.length}
                 </p>
               </div>
             </div>
