@@ -1,0 +1,2 @@
+ALTER TABLE public.question_bank DROP CONSTRAINT IF EXISTS question_bank_type_check;
+ALTER TABLE public.question_bank ADD CONSTRAINT question_bank_type_check CHECK (type = ANY (ARRAY['multiple_choice'::text, 'true_false'::text, 'open_ended'::text, 'matching'::text, 'case_stem'::text]));
