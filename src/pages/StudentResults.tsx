@@ -121,7 +121,7 @@ export default function StudentResults() {
               const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-student-feedback`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-                body: JSON.stringify({ studentEmail, feedbackType: "exam" }),
+                body: JSON.stringify({ studentEmail, sessionId, feedbackType: "exam" }),
               });
               const data = await res.json();
               if (res.status === 429) { toast.error("Limite de uso atingido. Tente novamente mais tarde."); }
