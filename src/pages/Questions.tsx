@@ -897,7 +897,7 @@ export default function QuestionsPage() {
                     <Eye className="h-4 w-4 mr-2" />
                     Ver Detalhes
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditQuestion(q); }}>
                     <Pencil className="h-4 w-4 mr-2" />
                     {t("questions_edit")}
                   </DropdownMenuItem>
