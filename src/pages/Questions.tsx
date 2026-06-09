@@ -794,13 +794,25 @@ export default function QuestionsPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm leading-snug">{q.title}</p>
+                {q.parentId && q.parentTitle && (
+                  <p className="text-[11px] text-primary mt-1 flex items-center gap-1 truncate">
+                    <FileText className="h-3 w-3 shrink-0" />
+                    <span className="truncate">Caso: {q.parentTitle}</span>
+                  </p>
+                )}
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <Badge variant={q.difficulty} className="text-[11px]">
-                    {q.difficulty}
-                  </Badge>
+                  {q.type !== "case_stem" && (
+                    <Badge variant={q.difficulty} className="text-[11px]">
+                      {q.difficulty}
+                    </Badge>
+                  )}
                   <span className="text-xs text-muted-foreground">{typeLabels[q.type]}</span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs text-muted-foreground">{q.bloom_level}</span>
+                  {q.type !== "case_stem" && (
+                    <>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground">{q.bloom_level}</span>
+                    </>
+                  )}
                   {q.tags.map((tag) => (
                     <Badge key={tag} variant="outline" className="text-[11px]">{tag}</Badge>
                   ))}
