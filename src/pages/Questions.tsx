@@ -468,7 +468,7 @@ export default function QuestionsPage() {
       return;
     }
 
-    const contentJson: any = { question_text: newText.trim(), images: newImages.length > 0 ? newImages : undefined };
+    const contentJson: any = { question_text: newText.trim(), images: newImages.length > 0 ? newImages : undefined, answer_key: newAnswerKey.trim() || undefined };
     if (newType === "multiple_choice") {
       contentJson.options = { a: "", b: "", c: "", d: "" };
       contentJson.correct_answer = "a";
