@@ -245,6 +245,8 @@ export default function StudentExam() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  const isCaseStemQuestion = (q: Question) => q.type === "case_stem" || Number(q.points) === 0;
+
   // Separate case_stem context blocks from answerable questions.
   // Each answerable question is associated with the most recent preceding stem (within same section).
   const answerableQuestions: Question[] = [];
@@ -253,7 +255,7 @@ export default function StudentExam() {
     let lastStem: Question | null = null;
     let lastStemSection: string | null = null;
     for (const q of questions) {
-      if (q.type === "case_stem") {
+      if (isCaseStemQuestion(q)) {
         lastStem = q;
         lastStemSection = q.section_name;
       } else {
