@@ -583,13 +583,13 @@ export default function StudentExam() {
                 Anterior
               </Button>
               <span className="text-xs text-muted-foreground">
-                {answeredCount}/{questions.length} respondidas
+                {answeredCount}/{answerableQuestions.length} respondidas
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
-                disabled={currentIdx === questions.length - 1}
+                onClick={() => setCurrentIdx(Math.min(answerableQuestions.length - 1, currentIdx + 1))}
+                disabled={currentIdx === answerableQuestions.length - 1}
                 className="gap-1"
               >
                 Próxima
@@ -603,7 +603,7 @@ export default function StudentExam() {
             <div className="bg-card rounded-xl border shadow-sm p-4 sticky top-20">
               <p className="text-xs font-semibold text-muted-foreground mb-3">Navegação</p>
               <div className="grid grid-cols-5 gap-1.5">
-                {questions.map((q, i) => {
+                {answerableQuestions.map((q, i) => {
                   const answered = !!(answers[q.id]?.answer_text || (answers[q.id]?.answer_json as Record<string, string>)?.selected);
                   return (
                     <button
@@ -633,8 +633,8 @@ export default function StudentExam() {
           <AlertDialogHeader>
             <AlertDialogTitle>Entregar prova?</AlertDialogTitle>
             <AlertDialogDescription>
-              Você respondeu {answeredCount} de {questions.length} questões.
-              {answeredCount < questions.length && " Algumas questões não foram respondidas."}
+              Você respondeu {answeredCount} de {answerableQuestions.length} questões.
+              {answeredCount < answerableQuestions.length && " Algumas questões não foram respondidas."}
               {" "}Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
