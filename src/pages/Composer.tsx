@@ -225,7 +225,7 @@ export default function ComposerPage() {
                   questionId: question.id,
                   title: question.title,
                   type: question.type,
-                  points: 1,
+                  points: question.type === "case_stem" ? 0 : 1,
                   contentJson: question.contentJson,
                 },
               ],
