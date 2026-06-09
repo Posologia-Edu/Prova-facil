@@ -303,6 +303,7 @@ export default function QuestionsPage() {
   const [newBloom, setNewBloom] = useState("understanding");
   const [newTags, setNewTags] = useState("");
   const [newEmbed, setNewEmbed] = useState("");
+  const [newParentId, setNewParentId] = useState<string>("none");
   const [saving, setSaving] = useState(false);
   const [newImages, setNewImages] = useState<string[]>([]);
   const [medImageType, setMedImageType] = useState("radiography");
