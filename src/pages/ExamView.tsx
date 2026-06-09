@@ -302,17 +302,34 @@ export default function ExamViewPage() {
           {/* Sections */}
           {sections.map((section) => {
             let questionNum = 0;
+            const sectionPts = section.questions
+              .filter((q) => q.type !== "case_stem")
+              .reduce((s, q) => s + q.points, 0);
             return (
               <div key={section.id} className="mb-6">
                 <h4 className="font-bold text-sm uppercase tracking-wider mb-3 flex items-center justify-between">
                   {section.name}
                   <span className="text-xs text-muted-foreground font-normal">
-                    {section.questions.reduce((s, q) => s + q.points, 0)} pts
+                    {sectionPts} pts
                   </span>
                 </h4>
                 <div className="space-y-4 pl-2">
                   {section.questions.map((q) => {
-                    questionNum++;
+                    const isStem = q.type === "case_stem";
+                    if (!isStem) questionNum++;
+                    if (isStem) {
+                      return (
+                        <div
+                          key={q.id}
+                          className="px-3 py-2 my-2 rounded-sm border-l-4 border-foreground bg-muted/40"
+                        >
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-foreground mb-1">
+                            Enunciado base
+                          </p>
+                          <p className="text-sm whitespace-pre-wrap">{q.title}</p>
+                        </div>
+                      );
+                    }
                     return (
                       <div key={q.id}>
                         <p className="text-sm">
