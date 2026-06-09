@@ -275,6 +275,16 @@ function QuestionDetailContent({ question }: { question: Question }) {
         </div>
       )}
 
+      {/* Answer Key (Espelho de Resposta) */}
+      {question.answerKey && (
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Espelho de Resposta (Feedback ao Aluno)</Label>
+          <div className="mt-1.5 p-3 rounded-lg border border-amber-300/40 bg-amber-50/40 dark:bg-amber-900/10 text-sm leading-relaxed">
+            <RichTextRenderer text={question.answerKey} />
+          </div>
+        </div>
+      )}
+
       {/* Footer info */}
       <Separator />
       <div className="flex items-center justify-between text-xs text-muted-foreground">
