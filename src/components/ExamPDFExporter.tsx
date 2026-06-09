@@ -490,7 +490,15 @@ export default function ExamPDFExporter({
     `;
   }, []);
 
-  const buildQuestionHTML = useCallback((q: ExamQuestion, questionNum: number) => {
+  const buildQuestionHTML = useCallback((q: ExamQuestion, questionNum: number | null) => {
+    if (q.type === "case_stem") {
+      return `
+        <div style="padding:10px 12px;margin:6px 0 8px 0;background:#f5f1e8;border-left:4px solid #1a1a2e;border-radius:2px">
+          <p style="margin:0 0 4px 0;font-size:8px;font-weight:bold;text-transform:uppercase;letter-spacing:1.5px;color:#1a1a2e">Enunciado base</p>
+          <p style="margin:0;font-size:11px;line-height:1.55;white-space:pre-wrap">${q.title}</p>
+        </div>
+      `;
+    }
     let html = `
       <div style="padding:8px 0 10px 0;border-bottom:1px dotted #e0e0e0;margin-bottom:2px">
         <p style="margin:0 0 4px 0">
