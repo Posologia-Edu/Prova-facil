@@ -295,6 +295,7 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Manual creation form state
   const [newType, setNewType] = useState("multiple_choice");
@@ -379,6 +380,31 @@ export default function QuestionsPage() {
     }
   };
 
+  const openEditQuestion = async (q: Question) => {
+    const { data, error } = await supabase
+      .from("question_bank")
+      .select("type, difficulty, bloom_level, tags, embed_url, content_json, parent_id")
+      .eq("id", q.id)
+      .single();
+    if (error || !data) {
+      toast.error("Não foi possível carregar a questão para edição.");
+      return;
+    }
+    const cj: any = data.content_json || {};
+    setEditingId(q.id);
+    setNewType(data.type || "multiple_choice");
+    setNewText(cj.question_text || cj.title || "");
+    setNewDifficulty(data.difficulty || "medium");
+    setNewBloom(data.bloom_level || "understanding");
+    setNewTags((data.tags || []).join(", "));
+    setNewEmbed(data.embed_url || "");
+    setNewParentId(data.parent_id || "none");
+    setNewImages(Array.isArray(cj.images) ? cj.images : []);
+    setMedImagePreview(null);
+    setMedImageDetails("");
+    setCreateOpen(true);
+  };
+
   const handleCreateQuestion = async () => {
     if (!newText.trim()) {
       toast.error("Digite o texto da questão.");
@@ -388,6 +414,45 @@ export default function QuestionsPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setSaving(false); return; }
 
+    const tags = newTags.split(",").map(t => t.trim()).filter(Boolean);
+
+    if (editingId) {
+      // Preserve existing options/correct_answer/explanation etc; only patch question_text + images
+      const { data: existing } = await supabase
+        .from("question_bank")
+        .select("content_json")
+        .eq("id", editingId)
+        .single();
+      const baseCj: any = (existing?.content_json as any) || {};
+      const contentJson: any = {
+        ...baseCj,
+        question_text: newText.trim(),
+        images: newImages.length > 0 ? newImages : undefined,
+      };
+
+      const { error } = await supabase.from("question_bank").update({
+        type: newType,
+        difficulty: newDifficulty,
+        bloom_level: newBloom,
+        tags,
+        embed_url: newEmbed || null,
+        content_json: contentJson,
+        parent_id: newType === "case_stem" ? null : (newParentId && newParentId !== "none" ? newParentId : null),
+      } as any).eq("id", editingId);
+
+      setSaving(false);
+      if (error) {
+        toast.error("Erro ao salvar alterações.");
+        return;
+      }
+      toast.success("Questão atualizada.");
+      setEditingId(null);
+      resetForm();
+      setCreateOpen(false);
+      await loadQuestions();
+      return;
+    }
+
     const contentJson: any = { question_text: newText.trim(), images: newImages.length > 0 ? newImages : undefined };
     if (newType === "multiple_choice") {
       contentJson.options = { a: "", b: "", c: "", d: "" };
@@ -396,8 +461,6 @@ export default function QuestionsPage() {
       contentJson.options = { a: "Verdadeiro", b: "Falso" };
       contentJson.correct_answer = "a";
     }
-
-    const tags = newTags.split(",").map(t => t.trim()).filter(Boolean);
 
     const { error } = await supabase.from("question_bank").insert({
       user_id: userData.user.id,
@@ -533,7 +596,7 @@ export default function QuestionsPage() {
             <Sparkles className="h-4 w-4 mr-2 text-secondary" />
             {t("questions_generate_ai")}
           </Button>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { setEditingId(null); resetForm(); } }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -542,7 +605,7 @@ export default function QuestionsPage() {
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>{t("questions_create_title")}</DialogTitle>
+                <DialogTitle>{editingId ? "Editar Questão" : t("questions_create_title")}</DialogTitle>
               </DialogHeader>
               <Tabs defaultValue="manual" className="mt-2">
                 <TabsList className="w-full">
@@ -731,8 +794,8 @@ export default function QuestionsPage() {
                 </TabsContent>
               </Tabs>
               <DialogFooter>
-                <Button variant="outline" onClick={() => { resetForm(); setCreateOpen(false); }}>{t("cancel")}</Button>
-                <Button onClick={handleCreateQuestion} disabled={saving}>{saving ? "Salvando..." : t("questions_new")}</Button>
+                <Button variant="outline" onClick={() => { resetForm(); setEditingId(null); setCreateOpen(false); }}>{t("cancel")}</Button>
+                <Button onClick={handleCreateQuestion} disabled={saving}>{saving ? "Salvando..." : (editingId ? "Salvar Alterações" : t("questions_new"))}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -834,7 +897,7 @@ export default function QuestionsPage() {
                     <Eye className="h-4 w-4 mr-2" />
                     Ver Detalhes
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditQuestion(q); }}>
                     <Pencil className="h-4 w-4 mr-2" />
                     {t("questions_edit")}
                   </DropdownMenuItem>
