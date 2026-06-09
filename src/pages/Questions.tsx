@@ -144,9 +144,23 @@ function QuestionDetailContent({ question }: { question: Question }) {
 
       <Separator />
 
+      {/* Linked case stem */}
+      {question.parentId && question.parentTitle && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <Label className="text-xs text-primary uppercase tracking-wider flex items-center gap-1">
+            <FileText className="h-3.5 w-3.5" /> Caso Clínico Vinculado
+          </Label>
+          <div className="mt-1.5 text-sm leading-relaxed">
+            <RichTextRenderer text={question.parentTitle} />
+          </div>
+        </div>
+      )}
+
       {/* Question text */}
       <div>
-        <Label className="text-xs text-muted-foreground uppercase tracking-wider">Enunciado</Label>
+        <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+          {question.type === "case_stem" ? "Enunciado do Caso" : "Enunciado"}
+        </Label>
         <div className="mt-1.5 text-sm leading-relaxed font-medium">
           <RichTextRenderer text={question.title} />
         </div>
