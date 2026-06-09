@@ -792,6 +792,20 @@ export default function QuestionsPage() {
                       Incorpore ferramentas externas na versão digital da questão via iframe.
                     </p>
                   </div>
+                  {newType !== "case_stem" && (
+                    <div className="space-y-2">
+                      <Label>Espelho de Resposta (opcional)</Label>
+                      <Textarea
+                        placeholder="Descreva a resposta ideal / pontos esperados. Será exibido ao aluno como feedback após responder."
+                        value={newAnswerKey}
+                        onChange={(e) => setNewAnswerKey(e.target.value)}
+                        rows={4}
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Este texto será mostrado ao aluno como feedback após a entrega da prova.
+                      </p>
+                    </div>
+                  )}
                 </TabsContent>
                 <TabsContent value="import" className="space-y-4 pt-2">
                   <div className="border-2 border-dashed rounded-lg p-8 text-center">
