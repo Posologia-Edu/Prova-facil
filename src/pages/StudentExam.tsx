@@ -277,7 +277,7 @@ export default function StudentExam() {
         setCurrentIdx(prev => Math.max(0, prev - 1));
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1));
+        setCurrentIdx(prev => Math.min(answerableQuestions.length - 1, prev + 1));
       } else if (e.key === "r" || e.key === "R") {
         if (!("speechSynthesis" in window) || !currentQ) return;
         window.speechSynthesis.cancel();
