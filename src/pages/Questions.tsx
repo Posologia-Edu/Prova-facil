@@ -316,6 +316,7 @@ export default function QuestionsPage() {
   const [newTags, setNewTags] = useState("");
   const [newEmbed, setNewEmbed] = useState("");
   const [newParentId, setNewParentId] = useState<string>("none");
+  const [newAnswerKey, setNewAnswerKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [newImages, setNewImages] = useState<string[]>([]);
   const [medImageType, setMedImageType] = useState("radiography");
