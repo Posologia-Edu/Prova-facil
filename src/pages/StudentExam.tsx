@@ -388,6 +388,31 @@ export default function StudentExam() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
           {/* Question card */}
           <div className="space-y-4">
+            {currentStem && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-500 rounded-xl border shadow-sm overflow-hidden">
+                <div className="px-6 py-3 border-b border-amber-200/60 dark:border-amber-900/40 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+                  <span className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                    Enunciado base
+                  </span>
+                </div>
+                <div className="px-6 py-4">
+                  <div className="leading-relaxed text-foreground" style={{ fontSize: 'inherit' }}>
+                    <RichTextRenderer text={getStatement(currentStem.content_json || {})} />
+                  </div>
+                  {(() => {
+                    const imgs = (currentStem.content_json as Record<string, unknown>)?.images as string[] | undefined;
+                    return imgs && imgs.length > 0 ? (
+                      <div className="mt-3 flex gap-3 flex-wrap">
+                        {imgs.map((url, i) => (
+                          <img key={i} src={url} alt={`Imagem ${i + 1}`} className="max-h-60 w-auto rounded-lg border object-contain" />
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+            )}
             {currentQ && (
               <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                 <div className="px-6 py-4 bg-muted/30 border-b flex items-center justify-between">
