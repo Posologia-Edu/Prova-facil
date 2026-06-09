@@ -122,7 +122,7 @@ export default function ExamViewPage() {
             questionId: eq.question_id,
             title: cj?.question_text || cj?.title || "Questão",
             type: bq?.type || "multiple_choice",
-            points: Number(eq.points) || 1,
+            points: eq.points != null ? Number(eq.points) : 1,
             contentJson: cj,
           });
         }
