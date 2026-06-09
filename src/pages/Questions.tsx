@@ -442,6 +442,7 @@ export default function QuestionsPage() {
         ...baseCj,
         question_text: newText.trim(),
         images: newImages.length > 0 ? newImages : undefined,
+        answer_key: newAnswerKey.trim() || undefined,
       };
 
       const { error } = await supabase.from("question_bank").update({
