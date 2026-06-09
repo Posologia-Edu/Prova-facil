@@ -298,7 +298,7 @@ export default function StudentExam() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [loading, questions.length, currentQ]);
+  }, [loading, answerableQuestions.length, currentQ]);
 
   if (loading) {
     return (
