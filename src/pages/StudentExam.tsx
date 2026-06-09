@@ -245,7 +245,25 @@ export default function StudentExam() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const currentQ = questions[currentIdx];
+  // Separate case_stem context blocks from answerable questions.
+  // Each answerable question is associated with the most recent preceding stem (within same section).
+  const answerableQuestions: Question[] = [];
+  const stemForQuestion: Record<string, Question | null> = {};
+  {
+    let lastStem: Question | null = null;
+    let lastStemSection: string | null = null;
+    for (const q of questions) {
+      if (q.type === "case_stem") {
+        lastStem = q;
+        lastStemSection = q.section_name;
+      } else {
+        stemForQuestion[q.id] = lastStem && lastStemSection === q.section_name ? lastStem : null;
+        answerableQuestions.push(q);
+      }
+    }
+  }
+  const currentQ = answerableQuestions[currentIdx];
+  const currentStem = currentQ ? stemForQuestion[currentQ.id] : null;
 
   // Keyboard shortcuts for accessibility
   useEffect(() => {
@@ -259,7 +277,7 @@ export default function StudentExam() {
         setCurrentIdx(prev => Math.max(0, prev - 1));
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1));
+        setCurrentIdx(prev => Math.min(answerableQuestions.length - 1, prev + 1));
       } else if (e.key === "r" || e.key === "R") {
         if (!("speechSynthesis" in window) || !currentQ) return;
         window.speechSynthesis.cancel();
@@ -280,7 +298,7 @@ export default function StudentExam() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [loading, questions.length, currentQ]);
+  }, [loading, answerableQuestions.length, currentQ]);
 
   if (loading) {
     return (
@@ -296,12 +314,12 @@ export default function StudentExam() {
   const content = currentQ?.content_json || {};
   const statement = getStatement(content);
   const alternatives = getAlternatives(content);
-  const answeredCount = Object.keys(answers).filter(k => {
-    const a = answers[k];
-    return a.answer_text || (a.answer_json as Record<string, string>)?.selected;
+  const answeredCount = answerableQuestions.filter(q => {
+    const a = answers[q.id];
+    return a && (a.answer_text || (a.answer_json as Record<string, string>)?.selected);
   }).length;
   const isTimeLow = timeLeft !== null && timeLeft < 300;
-  const progressPercent = (answeredCount / questions.length) * 100;
+  const progressPercent = answerableQuestions.length > 0 ? (answeredCount / answerableQuestions.length) * 100 : 0;
 
   return (
     <ExamProctoring
@@ -322,7 +340,7 @@ export default function StudentExam() {
               <div>
                 <h1 className="font-semibold text-sm sm:text-base leading-tight">{examTitle}</h1>
                 <p className="text-[11px] text-muted-foreground">
-                  Questão {currentIdx + 1} de {questions.length}
+                  Questão {currentIdx + 1} de {answerableQuestions.length}
                 </p>
               </div>
             </div>
@@ -370,6 +388,31 @@ export default function StudentExam() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
           {/* Question card */}
           <div className="space-y-4">
+            {currentStem && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-500 rounded-xl border shadow-sm overflow-hidden">
+                <div className="px-6 py-3 border-b border-amber-200/60 dark:border-amber-900/40 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+                  <span className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                    Enunciado base
+                  </span>
+                </div>
+                <div className="px-6 py-4">
+                  <div className="leading-relaxed text-foreground" style={{ fontSize: 'inherit' }}>
+                    <RichTextRenderer text={getStatement(currentStem.content_json || {})} />
+                  </div>
+                  {(() => {
+                    const imgs = (currentStem.content_json as Record<string, unknown>)?.images as string[] | undefined;
+                    return imgs && imgs.length > 0 ? (
+                      <div className="mt-3 flex gap-3 flex-wrap">
+                        {imgs.map((url, i) => (
+                          <img key={i} src={url} alt={`Imagem ${i + 1}`} className="max-h-60 w-auto rounded-lg border object-contain" />
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+            )}
             {currentQ && (
               <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                 <div className="px-6 py-4 bg-muted/30 border-b flex items-center justify-between">
@@ -540,13 +583,13 @@ export default function StudentExam() {
                 Anterior
               </Button>
               <span className="text-xs text-muted-foreground">
-                {answeredCount}/{questions.length} respondidas
+                {answeredCount}/{answerableQuestions.length} respondidas
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
-                disabled={currentIdx === questions.length - 1}
+                onClick={() => setCurrentIdx(Math.min(answerableQuestions.length - 1, currentIdx + 1))}
+                disabled={currentIdx === answerableQuestions.length - 1}
                 className="gap-1"
               >
                 Próxima
@@ -560,7 +603,7 @@ export default function StudentExam() {
             <div className="bg-card rounded-xl border shadow-sm p-4 sticky top-20">
               <p className="text-xs font-semibold text-muted-foreground mb-3">Navegação</p>
               <div className="grid grid-cols-5 gap-1.5">
-                {questions.map((q, i) => {
+                {answerableQuestions.map((q, i) => {
                   const answered = !!(answers[q.id]?.answer_text || (answers[q.id]?.answer_json as Record<string, string>)?.selected);
                   return (
                     <button
@@ -590,8 +633,8 @@ export default function StudentExam() {
           <AlertDialogHeader>
             <AlertDialogTitle>Entregar prova?</AlertDialogTitle>
             <AlertDialogDescription>
-              Você respondeu {answeredCount} de {questions.length} questões.
-              {answeredCount < questions.length && " Algumas questões não foram respondidas."}
+              Você respondeu {answeredCount} de {answerableQuestions.length} questões.
+              {answeredCount < answerableQuestions.length && " Algumas questões não foram respondidas."}
               {" "}Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
