@@ -38,13 +38,16 @@ async function autoSubmitSession(supabase: any, sessionId: string, examId: strin
 
   for (const eq of examQuestions || []) {
     const bq = bankQuestions?.find((b: any) => b.id === eq.question_id);
-    const points = Number(eq.points) || 1;
+    const type = bq?.type || "open_ended";
+    const isCaseStem = type === "case_stem" || Number(eq.points) === 0;
+    if (isCaseStem) continue;
+
+    const points = eq.points != null ? Number(eq.points) : 1;
     maxScore += points;
 
     const ans = answersMap[eq.question_id];
     const answerJson = ans?.answer_json || {};
     const content = (bq?.content_json || {}) as Record<string, unknown>;
-    const type = bq?.type || "open_ended";
 
     let isCorrect: boolean | null = null;
     let pointsEarned = 0;
@@ -309,7 +312,7 @@ Deno.serve(async (req) => {
           type: bq?.type || "open_ended",
           content_json: content,
           position: eq.position,
-          points: Number(eq.points) || 1,
+          points: eq.points != null ? Number(eq.points) : 1,
           section_name: eq.section_name || "Geral",
         };
       });
@@ -469,7 +472,11 @@ Deno.serve(async (req) => {
 
       for (const eq of examQuestions || []) {
         const bq = bankQuestions?.find((b) => b.id === eq.question_id);
-        const points = Number(eq.points) || 1;
+        const type = bq?.type || "open_ended";
+        const isCaseStem = type === "case_stem" || Number(eq.points) === 0;
+        if (isCaseStem) continue;
+
+        const points = eq.points != null ? Number(eq.points) : 1;
         maxScore += points;
 
         const ans = answers?.[eq.question_id];
@@ -481,7 +488,6 @@ Deno.serve(async (req) => {
         let gradingStatus = "pending";
 
         const content = (bq?.content_json || {}) as Record<string, unknown>;
-        const type = bq?.type || "open_ended";
 
         if (type === "multiple_choice" || type === "true_false") {
           // Auto-grade
