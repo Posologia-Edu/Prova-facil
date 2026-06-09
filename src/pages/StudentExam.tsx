@@ -314,12 +314,12 @@ export default function StudentExam() {
   const content = currentQ?.content_json || {};
   const statement = getStatement(content);
   const alternatives = getAlternatives(content);
-  const answeredCount = Object.keys(answers).filter(k => {
-    const a = answers[k];
-    return a.answer_text || (a.answer_json as Record<string, string>)?.selected;
+  const answeredCount = answerableQuestions.filter(q => {
+    const a = answers[q.id];
+    return a && (a.answer_text || (a.answer_json as Record<string, string>)?.selected);
   }).length;
   const isTimeLow = timeLeft !== null && timeLeft < 300;
-  const progressPercent = (answeredCount / questions.length) * 100;
+  const progressPercent = answerableQuestions.length > 0 ? (answeredCount / answerableQuestions.length) * 100 : 0;
 
   return (
     <ExamProctoring
