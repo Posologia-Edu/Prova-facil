@@ -614,7 +614,7 @@ export default function ExamPDFExporter({
         let questionNum = 1;
         for (const section of versionSections) {
           // Section title
-          const totalPts = section.questions.reduce((s, q) => s + q.points, 0);
+          const totalPts = section.questions.filter(q => q.type !== "case_stem").reduce((s, q) => s + q.points, 0);
           const secCanvas = await renderBlock(buildSectionTitleHTML(section.name, totalPts), CONTENT_WIDTH_PX);
           blocks.push({ canvas: secCanvas, heightMM: pxToMM(secCanvas) });
 
