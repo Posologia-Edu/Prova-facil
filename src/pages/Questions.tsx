@@ -90,6 +90,7 @@ interface Question {
   created_at: string;
   options?: QuestionOption[];
   explanation?: string;
+  answerKey?: string;
   matchingPairs?: { left: string; right: string }[];
   expectedAnswer?: string;
   embedUrl?: string;
@@ -274,6 +275,16 @@ function QuestionDetailContent({ question }: { question: Question }) {
         </div>
       )}
 
+      {/* Answer Key (Espelho de Resposta) */}
+      {question.answerKey && (
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Espelho de Resposta (Feedback ao Aluno)</Label>
+          <div className="mt-1.5 p-3 rounded-lg border border-amber-300/40 bg-amber-50/40 dark:bg-amber-900/10 text-sm leading-relaxed">
+            <RichTextRenderer text={question.answerKey} />
+          </div>
+        </div>
+      )}
+
       {/* Footer info */}
       <Separator />
       <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -305,6 +316,7 @@ export default function QuestionsPage() {
   const [newTags, setNewTags] = useState("");
   const [newEmbed, setNewEmbed] = useState("");
   const [newParentId, setNewParentId] = useState<string>("none");
+  const [newAnswerKey, setNewAnswerKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [newImages, setNewImages] = useState<string[]>([]);
   const [medImageType, setMedImageType] = useState("radiography");
@@ -333,6 +345,7 @@ export default function QuestionsPage() {
     setNewTags("");
     setNewEmbed("");
     setNewParentId("none");
+    setNewAnswerKey("");
     setNewImages([]);
     setMedImagePreview(null);
     setMedImageDetails("");
@@ -399,6 +412,7 @@ export default function QuestionsPage() {
     setNewTags((data.tags || []).join(", "));
     setNewEmbed(data.embed_url || "");
     setNewParentId(data.parent_id || "none");
+    setNewAnswerKey(cj.answer_key || "");
     setNewImages(Array.isArray(cj.images) ? cj.images : []);
     setMedImagePreview(null);
     setMedImageDetails("");
@@ -428,6 +442,7 @@ export default function QuestionsPage() {
         ...baseCj,
         question_text: newText.trim(),
         images: newImages.length > 0 ? newImages : undefined,
+        answer_key: newAnswerKey.trim() || undefined,
       };
 
       const { error } = await supabase.from("question_bank").update({
@@ -453,7 +468,7 @@ export default function QuestionsPage() {
       return;
     }
 
-    const contentJson: any = { question_text: newText.trim(), images: newImages.length > 0 ? newImages : undefined };
+    const contentJson: any = { question_text: newText.trim(), images: newImages.length > 0 ? newImages : undefined, answer_key: newAnswerKey.trim() || undefined };
     if (newType === "multiple_choice") {
       contentJson.options = { a: "", b: "", c: "", d: "" };
       contentJson.correct_answer = "a";
@@ -525,6 +540,7 @@ export default function QuestionsPage() {
           created_at: q.created_at?.split("T")[0] || "",
           options,
           explanation: cj?.explanation,
+          answerKey: cj?.answer_key,
           matchingPairs,
           expectedAnswer: cj?.expected_answer,
           embedUrl: q.embed_url || undefined,
@@ -776,6 +792,20 @@ export default function QuestionsPage() {
                       Incorpore ferramentas externas na versão digital da questão via iframe.
                     </p>
                   </div>
+                  {newType !== "case_stem" && (
+                    <div className="space-y-2">
+                      <Label>Espelho de Resposta (opcional)</Label>
+                      <Textarea
+                        placeholder="Descreva a resposta ideal / pontos esperados. Será exibido ao aluno como feedback após responder."
+                        value={newAnswerKey}
+                        onChange={(e) => setNewAnswerKey(e.target.value)}
+                        rows={4}
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Este texto será mostrado ao aluno como feedback após a entrega da prova.
+                      </p>
+                    </div>
+                  )}
                 </TabsContent>
                 <TabsContent value="import" className="space-y-4 pt-2">
                   <div className="border-2 border-dashed rounded-lg p-8 text-center">
