@@ -540,6 +540,7 @@ export default function QuestionsPage() {
           created_at: q.created_at?.split("T")[0] || "",
           options,
           explanation: cj?.explanation,
+          answerKey: cj?.answer_key,
           matchingPairs,
           expectedAnswer: cj?.expected_answer,
           embedUrl: q.embed_url || undefined,
