@@ -20,6 +20,7 @@ import {
   Eye,
   Loader2,
   Stethoscope,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,7 +82,7 @@ interface QuestionOption {
 
 interface Question {
   id: string;
-  type: "multiple_choice" | "true_false" | "open_ended" | "matching";
+  type: "multiple_choice" | "true_false" | "open_ended" | "matching" | "case_stem";
   title: string;
   tags: string[];
   difficulty: "easy" | "medium" | "hard";
@@ -93,6 +94,8 @@ interface Question {
   expectedAnswer?: string;
   embedUrl?: string;
   images?: string[];
+  parentId?: string | null;
+  parentTitle?: string | null;
 }
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -100,6 +103,7 @@ const typeIcons: Record<string, React.ReactNode> = {
   true_false: <HelpCircle className="h-4 w-4" />,
   open_ended: <AlignLeft className="h-4 w-4" />,
   matching: <ArrowLeftRight className="h-4 w-4" />,
+  case_stem: <FileText className="h-4 w-4" />,
 };
 
 const typeLabels: Record<string, string> = {
@@ -107,6 +111,7 @@ const typeLabels: Record<string, string> = {
   true_false: "Verdadeiro/Falso",
   open_ended: "Dissertativa",
   matching: "Associação",
+  case_stem: "Caso Clínico",
 };
 
 const difficultyColors: Record<string, string> = {
@@ -139,9 +144,23 @@ function QuestionDetailContent({ question }: { question: Question }) {
 
       <Separator />
 
+      {/* Linked case stem */}
+      {question.parentId && question.parentTitle && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <Label className="text-xs text-primary uppercase tracking-wider flex items-center gap-1">
+            <FileText className="h-3.5 w-3.5" /> Caso Clínico Vinculado
+          </Label>
+          <div className="mt-1.5 text-sm leading-relaxed">
+            <RichTextRenderer text={question.parentTitle} />
+          </div>
+        </div>
+      )}
+
       {/* Question text */}
       <div>
-        <Label className="text-xs text-muted-foreground uppercase tracking-wider">Enunciado</Label>
+        <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+          {question.type === "case_stem" ? "Enunciado do Caso" : "Enunciado"}
+        </Label>
         <div className="mt-1.5 text-sm leading-relaxed font-medium">
           <RichTextRenderer text={question.title} />
         </div>
@@ -284,6 +303,7 @@ export default function QuestionsPage() {
   const [newBloom, setNewBloom] = useState("understanding");
   const [newTags, setNewTags] = useState("");
   const [newEmbed, setNewEmbed] = useState("");
+  const [newParentId, setNewParentId] = useState<string>("none");
   const [saving, setSaving] = useState(false);
   const [newImages, setNewImages] = useState<string[]>([]);
   const [medImageType, setMedImageType] = useState("radiography");
@@ -311,6 +331,7 @@ export default function QuestionsPage() {
     setNewBloom("understanding");
     setNewTags("");
     setNewEmbed("");
+    setNewParentId("none");
     setNewImages([]);
     setMedImagePreview(null);
     setMedImageDetails("");
@@ -386,7 +407,8 @@ export default function QuestionsPage() {
       tags,
       embed_url: newEmbed || null,
       content_json: contentJson,
-    });
+      parent_id: newType === "case_stem" ? null : (newParentId && newParentId !== "none" ? newParentId : null),
+    } as any);
 
     setSaving(false);
     if (error) {
@@ -406,13 +428,20 @@ export default function QuestionsPage() {
 
     const { data } = await supabase
       .from("question_bank")
-      .select("id, type, content_json, difficulty, tags, bloom_level, created_at, embed_url")
+      .select("id, type, content_json, difficulty, tags, bloom_level, created_at, embed_url, parent_id")
       .eq("user_id", userData.user.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
+    const rows = data || [];
+    const titleById = new Map<string, string>();
+    for (const q of rows) {
+      const cj = q.content_json as any;
+      titleById.set(q.id, cj?.question_text || cj?.title || "Questão");
+    }
+
     setQuestions(
-      (data || []).map((q) => {
+      rows.map((q: any) => {
         const cj = q.content_json as any;
         const options = cj?.options
           ? Object.entries(cj.options).map(([key, val]) => ({
@@ -437,6 +466,8 @@ export default function QuestionsPage() {
           expectedAnswer: cj?.expected_answer,
           embedUrl: q.embed_url || undefined,
           images: cj?.images || undefined,
+          parentId: q.parent_id || null,
+          parentTitle: q.parent_id ? titleById.get(q.parent_id) || null : null,
         };
       })
     );
@@ -528,9 +559,35 @@ export default function QuestionsPage() {
                         <SelectItem value="true_false">Verdadeiro / Falso</SelectItem>
                         <SelectItem value="open_ended">Dissertativa</SelectItem>
                         <SelectItem value="matching">Associação de Colunas</SelectItem>
+                        <SelectItem value="case_stem">Caso Clínico (enunciado base)</SelectItem>
                       </SelectContent>
                     </Select>
+                    {newType === "case_stem" && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Um Caso Clínico é apenas um texto-base (sem alternativas). Depois, vincule outras questões a ele para que compartilhem este enunciado.
+                      </p>
+                    )}
                   </div>
+
+                  {/* Linkar a um caso clínico existente (quando não é case_stem) */}
+                  {newType !== "case_stem" && questions.some(q => q.type === "case_stem") && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5" /> Vincular a um Caso Clínico (opcional)
+                      </Label>
+                      <Select value={newParentId} onValueChange={setNewParentId}>
+                        <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum</SelectItem>
+                          {questions.filter(q => q.type === "case_stem").map(q => (
+                            <SelectItem key={q.id} value={q.id}>
+                              {q.title.length > 80 ? q.title.slice(0, 80) + "…" : q.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Texto da Questão</Label>
                     <div className="flex items-center gap-1 mb-1">
@@ -704,6 +761,7 @@ export default function QuestionsPage() {
             <SelectItem value="true_false">{t("questions_true_false")}</SelectItem>
             <SelectItem value="open_ended">{t("questions_open_ended")}</SelectItem>
             <SelectItem value="matching">{t("questions_matching")}</SelectItem>
+            <SelectItem value="case_stem">Caso Clínico</SelectItem>
           </SelectContent>
         </Select>
         <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
@@ -736,13 +794,25 @@ export default function QuestionsPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm leading-snug">{q.title}</p>
+                {q.parentId && q.parentTitle && (
+                  <p className="text-[11px] text-primary mt-1 flex items-center gap-1 truncate">
+                    <FileText className="h-3 w-3 shrink-0" />
+                    <span className="truncate">Caso: {q.parentTitle}</span>
+                  </p>
+                )}
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <Badge variant={q.difficulty} className="text-[11px]">
-                    {q.difficulty}
-                  </Badge>
+                  {q.type !== "case_stem" && (
+                    <Badge variant={q.difficulty} className="text-[11px]">
+                      {q.difficulty}
+                    </Badge>
+                  )}
                   <span className="text-xs text-muted-foreground">{typeLabels[q.type]}</span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs text-muted-foreground">{q.bloom_level}</span>
+                  {q.type !== "case_stem" && (
+                    <>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground">{q.bloom_level}</span>
+                    </>
+                  )}
                   {q.tags.map((tag) => (
                     <Badge key={tag} variant="outline" className="text-[11px]">{tag}</Badge>
                   ))}
