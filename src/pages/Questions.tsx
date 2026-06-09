@@ -331,6 +331,7 @@ export default function QuestionsPage() {
     setNewBloom("understanding");
     setNewTags("");
     setNewEmbed("");
+    setNewParentId("none");
     setNewImages([]);
     setMedImagePreview(null);
     setMedImageDetails("");
