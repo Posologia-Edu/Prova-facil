@@ -360,16 +360,30 @@ export default function QuestionsPage() {
     if (html && /<table[\s>]/i.test(html)) {
       try {
         const doc = new DOMParser().parseFromString(html, "text/html");
-        const table = doc.querySelector("table");
-        if (table) {
+        // Substitui cada <table> por um marcador e converte para GFM, preservando o texto ao redor
+        const tables = Array.from(doc.querySelectorAll("table"));
+        const tableMds: string[] = tables.map(table => {
           const rows: string[][] = [];
           table.querySelectorAll("tr").forEach(tr => {
             const cells: string[] = [];
             tr.querySelectorAll("th,td").forEach(td => cells.push((td.textContent || "").trim()));
             if (cells.length) rows.push(cells);
           });
-          md = toGfm(rows);
-        }
+          return toGfm(rows);
+        });
+        tables.forEach((table, i) => {
+          const marker = doc.createTextNode(`\u0000TBL${i}\u0000`);
+          table.replaceWith(marker);
+        });
+        // Insere quebras de linha em elementos de bloco para preservar parágrafos
+        doc.querySelectorAll("p,div,br,li,h1,h2,h3,h4,h5,h6,tr").forEach(el => {
+          el.append(doc.createTextNode("\n"));
+        });
+        let plain = (doc.body.textContent || "").replace(/\r/g, "");
+        // Restaura tabelas
+        plain = plain.replace(/\u0000TBL(\d+)\u0000/g, (_, i) => "\n" + tableMds[Number(i)] + "\n");
+        // Normaliza espaços/linhas em branco excessivas
+        md = plain.split("\n").map(l => l.replace(/[ \t]+/g, " ").trimEnd()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
       } catch { /* fallback */ }
     }
     if (!md && text && text.includes("\t")) {
