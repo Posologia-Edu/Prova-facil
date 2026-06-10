@@ -676,6 +676,9 @@ export default function QuestionsPage() {
                       <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => insertAtCursor("```\n\n```")} title="Inserir bloco de código">
                         <Code className="h-3.5 w-3.5" /> Código
                       </Button>
+                      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => insertAtCursor("\n| Coluna 1 | Coluna 2 | Coluna 3 |\n| --- | --- | --- |\n| valor | valor | valor |\n| valor | valor | valor |\n")} title="Inserir tabela formatada">
+                        <TableIcon className="h-3.5 w-3.5" /> Tabela
+                      </Button>
                     </div>
                     <Textarea ref={textareaRef} placeholder="Digite a questão... Use $...$ para LaTeX inline, $$...$$ para LaTeX em bloco, ```lang...``` para código" rows={4} value={newText} onChange={(e) => setNewText(e.target.value)} />
                     <div className="flex items-start gap-2">
