@@ -73,7 +73,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import RichTextRenderer from "@/components/RichTextRenderer";
 import QuestionImageUploader from "@/components/QuestionImageUploader";
-import { ImagePlus, Code, Sigma } from "lucide-react";
+import { ImagePlus, Code, Sigma, Table as TableIcon } from "lucide-react";
 
 interface QuestionOption {
   text: string;
