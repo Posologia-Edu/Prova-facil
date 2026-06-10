@@ -680,7 +680,7 @@ export default function QuestionsPage() {
                         <TableIcon className="h-3.5 w-3.5" /> Tabela
                       </Button>
                     </div>
-                    <Textarea ref={textareaRef} placeholder="Digite a questão... Use $...$ para LaTeX, ```lang...``` para código, e | col | col | para tabelas (formato Markdown GFM)" rows={6} value={newText} onChange={(e) => setNewText(e.target.value)} />
+                    <Textarea ref={textareaRef} placeholder="Digite a questão... Use $...$ para LaTeX, ```lang...``` para código, e | col | col | para tabelas (formato Markdown GFM). Você também pode colar tabelas direto do Word/Excel/Google Docs." rows={6} value={newText} onChange={(e) => setNewText(e.target.value)} onPaste={(e) => handleTablePaste(e, setNewText)} />
                     <div className="flex items-start gap-2">
                       <div className="flex-1">
                         <QuestionImageUploader images={newImages} onChange={setNewImages} />
