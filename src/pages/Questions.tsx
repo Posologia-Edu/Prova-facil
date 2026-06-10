@@ -337,6 +337,58 @@ export default function QuestionsPage() {
     setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = start + template.length / 2; }, 50);
   };
 
+  // Converte tabela HTML (Word/Google Docs) ou TSV (Excel) em Markdown GFM ao colar
+  const handleTablePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>, setter: (v: string | ((p: string) => string)) => void) => {
+    const cd = e.clipboardData;
+    if (!cd) return;
+    const html = cd.getData("text/html");
+    const text = cd.getData("text/plain");
+
+    const cellToMd = (s: string) => s.replace(/\r?\n+/g, " ").replace(/\|/g, "\\|").trim();
+    const toGfm = (rows: string[][]) => {
+      if (!rows.length || !rows[0].length) return "";
+      const cols = Math.max(...rows.map(r => r.length));
+      const norm = rows.map(r => { const c = r.slice(); while (c.length < cols) c.push(""); return c.map(cellToMd); });
+      const header = norm[0];
+      const sep = new Array(cols).fill("---");
+      const body = norm.slice(1);
+      const fmt = (r: string[]) => "| " + r.join(" | ") + " |";
+      return ["", fmt(header), fmt(sep), ...body.map(fmt), ""].join("\n");
+    };
+
+    let md = "";
+    if (html && /<table[\s>]/i.test(html)) {
+      try {
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const table = doc.querySelector("table");
+        if (table) {
+          const rows: string[][] = [];
+          table.querySelectorAll("tr").forEach(tr => {
+            const cells: string[] = [];
+            tr.querySelectorAll("th,td").forEach(td => cells.push((td.textContent || "").trim()));
+            if (cells.length) rows.push(cells);
+          });
+          md = toGfm(rows);
+        }
+      } catch { /* fallback */ }
+    }
+    if (!md && text && text.includes("\t")) {
+      const lines = text.replace(/\r/g, "").split("\n").filter(l => l.length > 0);
+      if (lines.length >= 1 && lines.every(l => l.includes("\t"))) {
+        md = toGfm(lines.map(l => l.split("\t")));
+      }
+    }
+
+    if (md) {
+      e.preventDefault();
+      const ta = e.currentTarget;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      setter(prev => prev.slice(0, start) + md + prev.slice(end));
+      setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = start + md.length; }, 50);
+    }
+  };
+
   const resetForm = () => {
     setNewType("multiple_choice");
     setNewText("");
@@ -680,7 +732,7 @@ export default function QuestionsPage() {
                         <TableIcon className="h-3.5 w-3.5" /> Tabela
                       </Button>
                     </div>
-                    <Textarea ref={textareaRef} placeholder="Digite a questão... Use $...$ para LaTeX, ```lang...``` para código, e | col | col | para tabelas (formato Markdown GFM)" rows={6} value={newText} onChange={(e) => setNewText(e.target.value)} />
+                    <Textarea ref={textareaRef} placeholder="Digite a questão... Use $...$ para LaTeX, ```lang...``` para código, e | col | col | para tabelas (formato Markdown GFM). Você também pode colar tabelas direto do Word/Excel/Google Docs." rows={6} value={newText} onChange={(e) => setNewText(e.target.value)} onPaste={(e) => handleTablePaste(e, setNewText)} />
                     <div className="flex items-start gap-2">
                       <div className="flex-1">
                         <QuestionImageUploader images={newImages} onChange={setNewImages} />
