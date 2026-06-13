@@ -64,7 +64,7 @@ export function WeeklyScheduleEditor({ classId, initial, onSaved }: Props) {
           <h3 className="font-semibold">Grade semanal da disciplina</h3>
           <p className="text-sm text-muted-foreground">
             Use a notação brasileira: dia da semana (1=Dom, 2=Seg…7=Sáb), turno (M/T/N) e horários.
-            Ex.: <code className="px-1 bg-muted rounded">2T23</code>, <code className="px-1 bg-muted rounded">6T56</code>
+            Aceita múltiplos dias: ex. <code className="px-1 bg-muted rounded">245T12</code> (Seg, Qua e Qui à tarde, 1º/2º horários) e <code className="px-1 bg-muted rounded">6T56</code>.
           </p>
         </div>
 
