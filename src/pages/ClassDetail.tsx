@@ -39,6 +39,7 @@ interface ClassRow {
   name: string;
   description: string | null;
   user_id: string;
+  weekly_schedule?: WeeklySlot[];
 }
 interface Semester {
   id: string;
