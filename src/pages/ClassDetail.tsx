@@ -364,6 +364,7 @@ export default function ClassDetail() {
               <TabsTrigger value="semesters"><Layers className="w-4 h-4 mr-1" />Semestres</TabsTrigger>
               <TabsTrigger value="teachers"><UserCog className="w-4 h-4 mr-1" />Professores</TabsTrigger>
               <TabsTrigger value="documents"><FileText className="w-4 h-4 mr-1" />Materiais</TabsTrigger>
+              <TabsTrigger value="holidays"><CalendarOff className="w-4 h-4 mr-1" />Feriados</TabsTrigger>
             </TabsList>
           </div>
 
