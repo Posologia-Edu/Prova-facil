@@ -290,6 +290,7 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
               <Select
                 value={form.teacher_id ?? "__none__"}
                 onValueChange={(v) => setForm({ ...form, teacher_id: v === "__none__" ? null : v })}
+                disabled={teachers.length === 0}
               >
                 <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
@@ -297,6 +298,11 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
                   {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {teachers.length === 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Cadastre os professores na aba <b>Professores</b> para atribuí-los às aulas.
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Horário (notação)</Label>
