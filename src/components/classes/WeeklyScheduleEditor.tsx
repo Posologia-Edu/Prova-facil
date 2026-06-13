@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import {
-  WeeklySlot, Shift, DAY_LABELS, SHIFT_LABELS, formatSlot, formatSlots, parseSlot,
+  WeeklySlot, Shift, DAY_LABELS, SHIFT_LABELS, formatSlot, formatSlots, parseSlotsInput,
 } from "@/lib/class-schedule-notation";
 
 interface Props {
