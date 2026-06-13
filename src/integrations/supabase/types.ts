@@ -647,6 +647,47 @@ export type Database = {
           },
         ]
       }
+      class_holidays: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          holiday_date: string
+          id: string
+          name: string
+          recurring_yearly: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          holiday_date: string
+          id?: string
+          name: string
+          recurring_yearly?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          name?: string
+          recurring_yearly?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_holidays_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_lesson_templates: {
         Row: {
           created_at: string
@@ -679,6 +720,60 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      class_lesson_visits: {
+        Row: {
+          created_at: string
+          id: string
+          lesson_id: string
+          location: string | null
+          notes: string | null
+          order_index: number
+          student_ids: string[]
+          teacher_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lesson_id: string
+          location?: string | null
+          notes?: string | null
+          order_index?: number
+          student_ids?: string[]
+          teacher_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lesson_id?: string
+          location?: string | null
+          notes?: string | null
+          order_index?: number
+          student_ids?: string[]
+          teacher_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_lesson_visits_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "class_schedule_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_lesson_visits_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "class_teachers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       class_rubrics: {
         Row: {
@@ -716,7 +811,9 @@ export type Database = {
       class_schedule_items: {
         Row: {
           created_at: string
+          holiday_name: string | null
           id: string
+          is_holiday: boolean
           lesson_date: string | null
           lesson_type: string
           notes: string | null
@@ -725,14 +822,18 @@ export type Database = {
           rubric_json: Json
           semester_id: string
           status: string
+          teacher_id: string | null
           template_data: Json
           template_id: string | null
+          time_slot: string | null
           title: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          holiday_name?: string | null
           id?: string
+          is_holiday?: boolean
           lesson_date?: string | null
           lesson_type?: string
           notes?: string | null
@@ -741,14 +842,18 @@ export type Database = {
           rubric_json?: Json
           semester_id: string
           status?: string
+          teacher_id?: string | null
           template_data?: Json
           template_id?: string | null
+          time_slot?: string | null
           title: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          holiday_name?: string | null
           id?: string
+          is_holiday?: boolean
           lesson_date?: string | null
           lesson_type?: string
           notes?: string | null
@@ -757,8 +862,10 @@ export type Database = {
           rubric_json?: Json
           semester_id?: string
           status?: string
+          teacher_id?: string | null
           template_data?: Json
           template_id?: string | null
+          time_slot?: string | null
           title?: string
           updated_at?: string
         }
@@ -775,6 +882,13 @@ export type Database = {
             columns: ["semester_id"]
             isOneToOne: false
             referencedRelation: "class_semesters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_schedule_items_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "class_teachers"
             referencedColumns: ["id"]
           },
           {
@@ -1081,6 +1195,7 @@ export type Database = {
           student_count: number | null
           updated_at: string
           user_id: string
+          weekly_schedule: Json
         }
         Insert: {
           created_at?: string
@@ -1092,6 +1207,7 @@ export type Database = {
           student_count?: number | null
           updated_at?: string
           user_id: string
+          weekly_schedule?: Json
         }
         Update: {
           created_at?: string
@@ -1103,6 +1219,7 @@ export type Database = {
           student_count?: number | null
           updated_at?: string
           user_id?: string
+          weekly_schedule?: Json
         }
         Relationships: []
       }
