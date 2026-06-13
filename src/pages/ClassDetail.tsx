@@ -427,7 +427,12 @@ export default function ClassDetail() {
           </TabsContent>
 
           {/* SEMESTERS */}
-          <TabsContent value="semesters" className="space-y-3">
+          <TabsContent value="semesters" className="space-y-4">
+            <WeeklyScheduleEditor
+              classId={classId!}
+              initial={(klass.weekly_schedule as WeeklySlot[]) || []}
+              onSaved={(slots) => setKlass((k) => k ? { ...k, weekly_schedule: slots } : k)}
+            />
             <div className="flex justify-end">
               <Button onClick={() => setSemDialog({ open: true, editing: null })}>
                 <Plus className="w-4 h-4 mr-1" />Novo semestre
