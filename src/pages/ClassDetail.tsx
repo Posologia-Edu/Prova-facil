@@ -565,6 +565,11 @@ export default function ClassDetail() {
               </div>
             )}
           </TabsContent>
+
+          {/* HOLIDAYS */}
+          <TabsContent value="holidays" className="space-y-3">
+            <HolidaysTab classId={classId!} />
+          </TabsContent>
         </Tabs>
 
         <SemesterDialog state={semDialog} onClose={() => setSemDialog({ open: false })} onSave={saveSemester} />
