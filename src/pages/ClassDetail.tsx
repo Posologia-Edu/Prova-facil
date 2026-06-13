@@ -96,7 +96,7 @@ export default function ClassDetail() {
   async function load() {
     setLoading(true);
     const [c, sem, tch, doc] = await Promise.all([
-      supabase.from("classes").select("id,name,description,user_id").eq("id", classId!).single(),
+      supabase.from("classes").select("id,name,description,user_id,weekly_schedule").eq("id", classId!).single(),
       supabase.from("class_semesters").select("*").eq("class_id", classId!).order("order_index"),
       supabase.from("class_teachers").select("*").eq("class_id", classId!).order("order_index"),
       supabase.from("class_documents").select("*").eq("class_id", classId!).order("created_at", { ascending: false }),
