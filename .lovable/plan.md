@@ -1,113 +1,64 @@
-## Plano: Evolução do módulo "Turmas"
+# Cronograma — 4 melhorias
 
-Objetivo: elevar a experiência de gestão de turmas/avaliação ao nível das melhores plataformas (Google Classroom, Canvas LMS, Moodle, Schoology, Notion for Education), mantendo a identidade visual navy/gold + glassmorphism do sistema.
+## 1) Professor responsável por cada aula
+Quando a turma tem vários professores, permitir escolher qual é o responsável daquela aula específica.
 
-Escopo: apenas o módulo Turmas (`/classes`, `/classes/:id`) e seus componentes auxiliares. Não toca em Simulação, SOAP, Juri, VPs (apenas vínculos já existentes).
+- Nova coluna `teacher_user_id` em `class_schedule_items` (nullable, FK para `auth.users` via SET NULL).
+- No `LessonDialog`: select com os professores vinculados à turma (busca em `class_teachers` ou equivalente).
+- Em `ScheduleViews` (Lista/Timeline/Calendário): mostrar nome/iniciais do professor responsável ao lado do título.
 
----
+## 2) Horários semanais da disciplina (notação 2T23, 4T23, etc.)
+Cadastrar a grade semanal da disciplina e preencher automaticamente o horário ao criar uma aula.
 
-### 1. Hub de Turmas (`Classes.tsx`) — estética
+- Nova coluna `weekly_schedule` (JSONB) em `classes` — lista de slots: `{ dayOfWeek: 1-7, shift: "M"|"T"|"N", periods: [2,3] }`.
+- Nova aba/seção em `ClassDetail` (ou dentro de "Visão Geral") para cadastrar os slots usando inputs amigáveis + visualização da notação (ex.: `2T23, 4T23, 5T23, 6T56`).
+- Helper `src/lib/class-schedule-notation.ts` para converter entre objeto ↔ string.
+- Nova coluna `time_slot` (TEXT) em `class_schedule_items` para armazenar a notação da aula (ex.: `4T23`).
+- No `LessonDialog`: ao escolher uma data, sugerir automaticamente o(s) slot(s) que caem naquele dia da semana; se houver mais de um, listar para o professor escolher.
 
-Hoje: lista plana de cards com botões soltos. Misto de modos (exam vs vp) confunde.
+## 3) Visitas técnicas paralelas (mesma data/hora, professores diferentes)
+Permitir que uma mesma aula tenha múltiplas "trilhas" simultâneas, cada uma com seu professor e grupo.
 
-Mudanças:
-- **Header com KPIs**: total de disciplinas, semestres ativos, alunos matriculados, avaliações em andamento, próximas aulas (próximos 7 dias).
-- **Agrupamento por Disciplina → Semestre** já existe em backend; trazer essa hierarquia para a listagem (cards de disciplina expansíveis mostrando semestres como sub-itens com mini-badge "ativo").
-- **Cards redesenhados** estilo Canvas/Notion: thumbnail/ícone colorido por disciplina (gerado a partir do nome), barra de progresso do semestre (datas), contagem de alunos/aulas/avaliações, último acesso.
-- **Filtros e busca**: pill bar (Todas / Ativas / Arquivadas / Este semestre) + busca por nome ou aluno.
-- **View toggle**: Cards / Tabela / Calendário acadêmico (visão global de cronogramas).
-- **Quick actions** em hover: abrir, adicionar aluno, criar aula, gerar PIN.
+- Nova tabela `class_lesson_visits`:
+  - `id`, `lesson_id` (FK → `class_schedule_items` ON DELETE CASCADE)
+  - `teacher_user_id` (FK → auth.users SET NULL)
+  - `title` (ex.: "Visita Hospital X")
+  - `student_ids` (UUID[]) ou tabela ponte `class_lesson_visit_students`
+  - `notes`
+- No `LessonDialog`, para `lesson_type = 'technical_visit'` (novo tipo) ou via checkbox "Aula com visitas paralelas": gerenciar lista de visitas (adicionar/remover, atribuir professor e alunos).
+- Em `ScheduleViews`: indicador "N visitas" no card/linha, expandindo para mostrar cada visita.
 
-### 2. Página de Detalhe da Turma (`ClassDetail.tsx`)
+## 4) Feriados
+Cadastrar feriados; quando uma data do cronograma coincidir, exibir o nome do feriado em vez de uma aula.
 
-Hoje: 4 abas planas (Semestres, Cronograma, Professores, Documentos). Sem visão geral.
+- Nova tabela `class_holidays` (por usuário e/ou por turma):
+  - `id`, `user_id`, `class_id` (nullable — null = aplica a todas), `holiday_date`, `name`, `recurring_yearly` (bool).
+- Nova aba "Feriados" em `ClassDetail` (ou seção em Settings) com CRUD simples + presets de feriados nacionais BR.
+- Em `ScheduleViews`:
+  - Lista/Timeline: linhas especiais de "Feriado — Nome" (sem ações, estilo cinza).
+  - Calendário: célula marcada com badge do feriado.
+- No `LessonDialog`: ao escolher uma data que é feriado, alertar e oferecer "Marcar como feriado" em vez de criar aula.
 
-Mudanças:
-- **Hero da disciplina**: gradiente navy/gold, nome, semestre ativo em destaque, breadcrumbs Disciplina ▸ Semestre, switch rápido de semestre no topo (sempre visível).
-- **Nova aba Overview (default)**: dashboard do semestre — próximas aulas (timeline), entregas/avaliações pendentes, presença média, distribuição de notas, atividade recente.
-- **Reorganização de abas**: Overview · Cronograma · Alunos · Avaliações · Professores · Materiais · Notas.
-- **Aba Alunos**: tabela rica (foto inicial, nome, matrícula, e-mail, presença %, média geral, último envio, status), import CSV com preview, mover entre semestres, ações em lote.
-- **Aba Avaliações**: consolidação de provas, VPs, simulações vinculadas, com filtros por tipo e status.
-- **Aba Notas (novo)**: gradebook estilo Canvas — linhas = alunos, colunas = atividades do semestre (provas, VPs, simulações, seminários), célula colorida por nota, média ponderada configurável, export CSV/PDF.
-- **Aba Materiais**: documentos com preview inline (PDF), categorias com ícones, drag-and-drop de upload.
+## Detalhes técnicos
 
-### 3. Cronograma da disciplina
+- **Migrations** (uma única migração agrupada):
+  - `ALTER TABLE class_schedule_items ADD COLUMN teacher_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL, ADD COLUMN time_slot TEXT;`
+  - `ALTER TABLE classes ADD COLUMN weekly_schedule JSONB DEFAULT '[]'::jsonb;`
+  - `CREATE TABLE class_lesson_visits (...)` + GRANTs + RLS (dono da turma gerencia).
+  - `CREATE TABLE class_holidays (...)` + GRANTs + RLS.
+- **Frontend**:
+  - `src/lib/class-schedule-notation.ts` — parse/format `2T23`.
+  - `src/components/classes/WeeklyScheduleEditor.tsx` — editor da grade semanal.
+  - `src/components/classes/HolidaysTab.tsx` — CRUD de feriados.
+  - `src/components/classes/LessonVisitsEditor.tsx` — visitas paralelas dentro do `LessonDialog`.
+  - Atualizar `LessonDialog.tsx`, `ScheduleViews.tsx`, `ClassDetail.tsx`.
+- **Auto-preenchimento de horário**: no `LessonDialog`, hook que escuta `lesson_date` → calcula `dayOfWeek` → busca slots de `class.weekly_schedule` → preenche `time_slot`.
 
-Hoje: tabela simples com badges coloridos por tipo. Aulas tem rubrica só p/ seminário.
+## Ordem de implementação
+1. Migração do banco (tudo junto).
+2. Helpers de notação + editor da grade semanal (feature 2).
+3. Coluna professor responsável no `LessonDialog` + exibição (feature 1).
+4. Tab de feriados + integração com cronograma (feature 4).
+5. Visitas paralelas (feature 3).
 
-Mudanças:
-- **3 visualizações**: Lista (atual, melhorada), **Timeline vertical** estilo Linear/Notion (mês ▸ semana ▸ dia, dot colorido por tipo) e **Calendário mensal** com pílulas coloridas.
-- **Filtros**: por tipo, por status, intervalo de datas.
-- **Lesson Card aprimorado**: contadores ("3 anexos · 12 anotações · 1 avaliação"), botão "Marcar como realizada", "Duplicar para próxima semana".
-- **Drag-and-drop** para reordenar e mover entre datas.
-- **Notas por aula** (anotações pós-aula com timestamp, fotos, áudio curto).
-- **Templates reutilizáveis**: salvar uma aula como template pessoal/compartilhado.
-- **Sincronização opcional**: export ICS para Google Calendar.
-
-### 4. Avaliações & rubricas
-
-- Rubricas reutilizáveis ao nível da disciplina (não só dentro de uma aula).
-- Biblioteca de rubricas com clone/import.
-- Para cada avaliação: configurar peso na média do semestre.
-- Feedback do aluno (visualização do aluno futura — apenas estrutura por enquanto).
-
-### 5. Comunicação & engajamento
-
-- **Mural da turma** (Stream estilo Classroom): avisos do professor, anexos, alunos veem read-only (já protegido por PIN/email).
-- **Anotações compartilhadas entre professores** da mesma disciplina.
-
-### 6. Gestão de presença
-
-- Tabela rápida por aula: marcar presença em massa, justificativas, geração automática de % por aluno alimentando o gradebook.
-
-### 7. Documentos
-
-- Categorias com ícones distintos, preview inline para PDF/imagem, busca, versão/data, marcar como "obrigatório".
-
-### 8. Identidade visual & micro-interações
-
-- Tokens: usar `--primary` navy e `--accent` gold já existentes; novo gradient `--gradient-class-hero`.
-- Glassmorphism nos cards do hub (já é o padrão do projeto).
-- Skeletons reais por seção (substituir spinner único).
-- Empty states ilustrados (SVG inline) com CTA claro.
-- Toasts e confirmações padronizadas.
-- Atalhos de teclado (g+t = turmas, n = nova aula).
-- 100% responsivo mobile (cronograma vira lista, gradebook vira cards por aluno).
-
----
-
-### Implementação por fases
-
-**Fase 1 — Estética e navegação (sem backend novo)**
-- Redesign do hub `Classes.tsx` com KPIs, agrupamento, filtros, view toggle.
-- Redesign do `ClassDetail.tsx`: hero, switch de semestre, reorganização de abas, aba Overview com widgets a partir de dados existentes.
-- Lesson timeline e calendário no cronograma.
-- Skeletons, empty states, micro-interações.
-
-**Fase 2 — Gradebook e presença**
-- Migration: `class_grade_columns` (peso, tipo, vínculo opcional a exam/vp/simulation/seminar) e `class_attendance` (lesson_id, student_id, status, justification).
-- Aba Notas (gradebook) com cálculo de média ponderada e export.
-- UI de presença por aula.
-
-**Fase 3 — Comunicação e biblioteca de rubricas**
-- Migration: `class_announcements` e `class_rubrics` (rubricas reutilizáveis).
-- Mural na aba Overview.
-- Picker de rubrica ao criar/editar aulas e avaliações.
-
-**Fase 4 — Polimento**
-- Export ICS, drag-and-drop avançado, atalhos, otimizações mobile.
-
----
-
-### Detalhes técnicos (para referência)
-
-- Reaproveitar `Tabs`, `Card`, `Badge`, `Table` do design system; nenhum import externo novo.
-- Calendário: usar `react-day-picker` já presente (`components/ui/calendar`).
-- Timeline: implementada com flex + connector lines (sem libs).
-- Gradebook: tabela virtualizada com `@tanstack/react-virtual` apenas se >200 linhas (avaliar na fase 2).
-- Cores por tipo de aula: reusar `src/lib/lesson-type-style.ts`; estender para presença/avaliação.
-- Manter RLS atual; novas tabelas seguem padrão `user_id` do dono da turma + GRANTs explícitos.
-
----
-
-Posso começar pela **Fase 1** (puramente visual/estrutural, sem migrations) ou prefere que eu inclua a **Fase 2 (gradebook + presença)** já no primeiro ciclo?
+Confirma este plano para eu iniciar pela migração?
