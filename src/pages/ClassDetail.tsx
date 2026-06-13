@@ -383,6 +383,7 @@ export default function ClassDetail() {
                 </div>
                 <ScheduleViews
                   lessons={lessons as ScheduleLesson[]}
+                  teachers={teachers}
                   calendarName={`${klass.name}${activeSemester ? " - " + activeSemester.label : ""}`}
                   onOpenLesson={(l) => setLessonDialog({ open: true, editing: l as Lesson })}
                   onDeleteLesson={(l) => setConfirmDelete({ kind: "lesson", id: l.id, label: l.title })}
