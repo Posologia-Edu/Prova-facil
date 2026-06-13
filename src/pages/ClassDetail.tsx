@@ -553,6 +553,7 @@ export default function ClassDetail() {
           <LessonDialog
             open={lessonDialog.open}
             onOpenChange={(v) => setLessonDialog({ open: v })}
+            classId={classId!}
             semesterId={activeSemesterId}
             lesson={lessonDialog.editing ?? null}
             onSaved={() => loadLessons(activeSemesterId)}
