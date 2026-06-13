@@ -128,7 +128,18 @@ export default function ClassDetail() {
       .eq("semester_id", semId)
       .order("lesson_date", { ascending: true, nullsFirst: false })
       .order("order_index");
-    setLessons((data as any) || []);
+    const rows = (data as any[]) || [];
+    if (rows.length) {
+      const ids = rows.map((r) => r.id);
+      const { data: vc } = await supabase
+        .from("class_lesson_visits")
+        .select("lesson_id")
+        .in("lesson_id", ids);
+      const counts: Record<string, number> = {};
+      (vc || []).forEach((v: any) => { counts[v.lesson_id] = (counts[v.lesson_id] || 0) + 1; });
+      rows.forEach((r) => { r.visits_count = counts[r.id] || 0; });
+    }
+    setLessons(rows as any);
   }
 
   async function saveSemester(form: Partial<Semester>) {
