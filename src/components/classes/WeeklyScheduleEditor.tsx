@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import {
-  WeeklySlot, Shift, DAY_LABELS, SHIFT_LABELS, formatSlot, formatSlots, parseSlot,
+  WeeklySlot, Shift, DAY_LABELS, SHIFT_LABELS, formatSlot, formatSlots, parseSlotsInput,
 } from "@/lib/class-schedule-notation";
 
 interface Props {
@@ -36,18 +36,12 @@ export function WeeklyScheduleEditor({ classId, initial, onSaved }: Props) {
   }
 
   function importBulk() {
-    const parts = bulkInput.split(/[,\s]+/).filter(Boolean);
-    const next: WeeklySlot[] = [];
-    const invalid: string[] = [];
-    for (const p of parts) {
-      const s = parseSlot(p);
-      if (s) next.push(s); else invalid.push(p);
-    }
+    const { ok, invalid } = parseSlotsInput(bulkInput);
     if (invalid.length) toast.error(`Notação inválida: ${invalid.join(", ")}`);
-    if (next.length) {
-      setSlots([...slots, ...next]);
+    if (ok.length) {
+      setSlots([...slots, ...ok]);
       setBulkInput("");
-      toast.success(`${next.length} horário(s) importado(s)`);
+      toast.success(`${ok.length} horário(s) importado(s)`);
     }
   }
 
@@ -70,7 +64,7 @@ export function WeeklyScheduleEditor({ classId, initial, onSaved }: Props) {
           <h3 className="font-semibold">Grade semanal da disciplina</h3>
           <p className="text-sm text-muted-foreground">
             Use a notação brasileira: dia da semana (1=Dom, 2=Seg…7=Sáb), turno (M/T/N) e horários.
-            Ex.: <code className="px-1 bg-muted rounded">2T23</code>, <code className="px-1 bg-muted rounded">6T56</code>
+            Aceita múltiplos dias: ex. <code className="px-1 bg-muted rounded">245T12</code> (Seg, Qua e Qui à tarde, 1º/2º horários) e <code className="px-1 bg-muted rounded">6T56</code>.
           </p>
         </div>
 
@@ -78,7 +72,7 @@ export function WeeklyScheduleEditor({ classId, initial, onSaved }: Props) {
           <Input
             value={bulkInput}
             onChange={(e) => setBulkInput(e.target.value)}
-            placeholder="Cole vários horários: 2T23, 4T23, 5T23, 6T56"
+            placeholder="Cole vários horários: 245T12, 6T56"
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); importBulk(); } }}
           />
           <Button variant="outline" onClick={importBulk}>Importar</Button>
