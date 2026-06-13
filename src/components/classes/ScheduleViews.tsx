@@ -17,9 +17,17 @@ export interface ScheduleLesson {
   lesson_date: string | null;
   lesson_type: string;
   status: string;
+  teacher_id?: string | null;
+  time_slot?: string | null;
+  is_holiday?: boolean;
+  holiday_name?: string | null;
+  visits_count?: number;
 }
 
+interface Teacher { id: string; name: string }
+
 interface Props {
+  teachers?: Teacher[];
   lessons: ScheduleLesson[];
   onOpenLesson: (l: ScheduleLesson) => void;
   onDeleteLesson: (l: ScheduleLesson) => void;
@@ -34,7 +42,8 @@ function ptMonth(date: Date) {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
-export function ScheduleViews({ lessons, onOpenLesson, onDeleteLesson, onOpenSeminarEval, onReschedule, calendarName }: Props) {
+export function ScheduleViews({ lessons, teachers = [], onOpenLesson, onDeleteLesson, onOpenSeminarEval, onReschedule, calendarName }: Props) {
+  const teacherMap = new Map(teachers.map(t => [t.id, t.name]));
   const [view, setView] = useState<View>("list");
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -168,11 +177,30 @@ export function ScheduleViews({ lessons, onOpenLesson, onDeleteLesson, onOpenSem
               {filtered.map(l => {
                 const style = getLessonTypeStyle(l.lesson_type);
                 const Icon = style.icon;
+                const teacherName = l.teacher_id ? teacherMap.get(l.teacher_id) : null;
+                const isHoliday = l.is_holiday || l.lesson_type === "holiday";
                 return (
-                  <TableRow key={l.id} className={cn("cursor-pointer border-l-4", style.accent, style.rowBg)} onClick={() => onOpenLesson(l)}>
-                    <TableCell className="tabular-nums">{l.lesson_date ?? "—"}</TableCell>
-                    <TableCell className="font-medium">{l.title}</TableCell>
-                    <TableCell><Badge variant="outline" className={cn("gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge></TableCell>
+                  <TableRow key={l.id} className={cn("cursor-pointer border-l-4", style.accent, style.rowBg, isHoliday && "bg-amber-50/60")} onClick={() => onOpenLesson(l)}>
+                    <TableCell className="tabular-nums">
+                      <div>{l.lesson_date ?? "—"}</div>
+                      {l.time_slot && <div className="text-[10px] text-muted-foreground font-mono">{l.time_slot}</div>}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span>{l.title}</span>
+                        {!!l.visits_count && l.visits_count > 0 && (
+                          <Badge variant="secondary" className="text-[10px]">{l.visits_count} visita{l.visits_count > 1 ? "s" : ""}</Badge>
+                        )}
+                      </div>
+                      {teacherName && <div className="text-xs text-muted-foreground mt-0.5">Prof. {teacherName}</div>}
+                    </TableCell>
+                    <TableCell>
+                      {isHoliday ? (
+                        <Badge variant="outline" className="gap-1 bg-amber-100 text-amber-900 border-amber-300">Feriado</Badge>
+                      ) : (
+                        <Badge variant="outline" className={cn("gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
+                      )}
+                    </TableCell>
                     <TableCell><Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"}>
                       {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
                     </Badge></TableCell>

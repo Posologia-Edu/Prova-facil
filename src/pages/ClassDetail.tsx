@@ -18,7 +18,7 @@ import {
 import {
   ArrowLeft, GraduationCap, Plus, Calendar, FileText, UserCog, Layers,
   Pencil, Trash2, Download, ExternalLink, Upload, Loader2, LayoutDashboard,
-  Users, BookOpenCheck, ClipboardCheck, Copy,
+  Users, BookOpenCheck, ClipboardCheck, Copy, CalendarOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LessonDialog, LessonItem } from "@/components/classes/LessonDialog";
@@ -29,6 +29,9 @@ import { GradebookTab } from "@/components/classes/GradebookTab";
 import { AttendanceTab } from "@/components/classes/AttendanceTab";
 import { StudentsTab } from "@/components/classes/StudentsTab";
 import { ScheduleViews, ScheduleLesson } from "@/components/classes/ScheduleViews";
+import { WeeklyScheduleEditor } from "@/components/classes/WeeklyScheduleEditor";
+import { HolidaysTab } from "@/components/classes/HolidaysTab";
+import { WeeklySlot } from "@/lib/class-schedule-notation";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 interface ClassRow {
@@ -36,6 +39,7 @@ interface ClassRow {
   name: string;
   description: string | null;
   user_id: string;
+  weekly_schedule?: WeeklySlot[];
 }
 interface Semester {
   id: string;
@@ -92,7 +96,7 @@ export default function ClassDetail() {
   async function load() {
     setLoading(true);
     const [c, sem, tch, doc] = await Promise.all([
-      supabase.from("classes").select("id,name,description,user_id").eq("id", classId!).single(),
+      supabase.from("classes").select("id,name,description,user_id,weekly_schedule").eq("id", classId!).single(),
       supabase.from("class_semesters").select("*").eq("class_id", classId!).order("order_index"),
       supabase.from("class_teachers").select("*").eq("class_id", classId!).order("order_index"),
       supabase.from("class_documents").select("*").eq("class_id", classId!).order("created_at", { ascending: false }),
@@ -128,7 +132,18 @@ export default function ClassDetail() {
       .eq("semester_id", semId)
       .order("lesson_date", { ascending: true, nullsFirst: false })
       .order("order_index");
-    setLessons((data as any) || []);
+    const rows = (data as any[]) || [];
+    if (rows.length) {
+      const ids = rows.map((r) => r.id);
+      const { data: vc } = await supabase
+        .from("class_lesson_visits")
+        .select("lesson_id")
+        .in("lesson_id", ids);
+      const counts: Record<string, number> = {};
+      (vc || []).forEach((v: any) => { counts[v.lesson_id] = (counts[v.lesson_id] || 0) + 1; });
+      rows.forEach((r) => { r.visits_count = counts[r.id] || 0; });
+    }
+    setLessons(rows as any);
   }
 
   async function saveSemester(form: Partial<Semester>) {
@@ -349,6 +364,7 @@ export default function ClassDetail() {
               <TabsTrigger value="semesters"><Layers className="w-4 h-4 mr-1" />Semestres</TabsTrigger>
               <TabsTrigger value="teachers"><UserCog className="w-4 h-4 mr-1" />Professores</TabsTrigger>
               <TabsTrigger value="documents"><FileText className="w-4 h-4 mr-1" />Materiais</TabsTrigger>
+              <TabsTrigger value="holidays"><CalendarOff className="w-4 h-4 mr-1" />Feriados</TabsTrigger>
             </TabsList>
           </div>
 
@@ -372,6 +388,7 @@ export default function ClassDetail() {
                 </div>
                 <ScheduleViews
                   lessons={lessons as ScheduleLesson[]}
+                  teachers={teachers}
                   calendarName={`${klass.name}${activeSemester ? " - " + activeSemester.label : ""}`}
                   onOpenLesson={(l) => setLessonDialog({ open: true, editing: l as Lesson })}
                   onDeleteLesson={(l) => setConfirmDelete({ kind: "lesson", id: l.id, label: l.title })}
@@ -410,7 +427,12 @@ export default function ClassDetail() {
           </TabsContent>
 
           {/* SEMESTERS */}
-          <TabsContent value="semesters" className="space-y-3">
+          <TabsContent value="semesters" className="space-y-4">
+            <WeeklyScheduleEditor
+              classId={classId!}
+              initial={(klass.weekly_schedule as WeeklySlot[]) || []}
+              onSaved={(slots) => setKlass((k) => k ? { ...k, weekly_schedule: slots } : k)}
+            />
             <div className="flex justify-end">
               <Button onClick={() => setSemDialog({ open: true, editing: null })}>
                 <Plus className="w-4 h-4 mr-1" />Novo semestre
@@ -543,6 +565,11 @@ export default function ClassDetail() {
               </div>
             )}
           </TabsContent>
+
+          {/* HOLIDAYS */}
+          <TabsContent value="holidays" className="space-y-3">
+            <HolidaysTab classId={classId!} />
+          </TabsContent>
         </Tabs>
 
         <SemesterDialog state={semDialog} onClose={() => setSemDialog({ open: false })} onSave={saveSemester} />
@@ -553,6 +580,7 @@ export default function ClassDetail() {
           <LessonDialog
             open={lessonDialog.open}
             onOpenChange={(v) => setLessonDialog({ open: v })}
+            classId={classId!}
             semesterId={activeSemesterId}
             lesson={lessonDialog.editing ?? null}
             onSaved={() => loadLessons(activeSemesterId)}

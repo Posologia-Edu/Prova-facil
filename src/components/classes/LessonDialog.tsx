@@ -5,12 +5,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LessonTemplateRenderer, TemplateSchema } from "./LessonTemplateRenderer";
 import { RubricPicker } from "./RubricPicker";
+import { LessonVisitsEditor, LessonVisit } from "./LessonVisitsEditor";
+import { fetchHolidaysFor, holidayMatchingDate } from "./HolidaysTab";
 import { SeminarRubric } from "@/lib/seminar-rubric";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, CalendarOff } from "lucide-react";
+import {
+  WeeklySlot, slotsForDate, formatSlot, formatSlots,
+} from "@/lib/class-schedule-notation";
 
 export interface LessonTemplate {
   id: string;
@@ -33,6 +39,10 @@ export interface LessonItem {
   status: string;
   rubric_id?: string | null;
   rubric_json?: SeminarRubric | null;
+  teacher_id?: string | null;
+  time_slot?: string | null;
+  is_holiday?: boolean;
+  holiday_name?: string | null;
 }
 
 const LESSON_TYPES = [
@@ -41,6 +51,8 @@ const LESSON_TYPES = [
   { value: "simulation", label: "Simulação" },
   { value: "seminar", label: "Seminário / Caso clínico" },
   { value: "assessment", label: "Avaliação / Prova" },
+  { value: "technical_visit", label: "Visita técnica" },
+  { value: "holiday", label: "Feriado" },
   { value: "other", label: "Outro / Livre" },
 ];
 const STATUSES = [
@@ -52,13 +64,18 @@ const STATUSES = [
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  classId: string;
   semesterId: string;
   lesson?: LessonItem | null;
   onSaved: () => void;
 }
 
-export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }: Props) {
+export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, onSaved }: Props) {
   const [templates, setTemplates] = useState<LessonTemplate[]>([]);
+  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([]);
+  const [weeklySchedule, setWeeklySchedule] = useState<WeeklySlot[]>([]);
+  const [holidayHit, setHolidayHit] = useState<{ name: string } | null>(null);
+  const [visits, setVisits] = useState<LessonVisit[]>([]);
   const [form, setForm] = useState<LessonItem>({
     semester_id: semesterId,
     lesson_date: null,
@@ -70,20 +87,30 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
     status: "planned",
     rubric_id: null,
     rubric_json: null,
+    teacher_id: null,
+    time_slot: null,
+    is_holiday: false,
+    holiday_name: null,
   });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    supabase
-      .from("class_lesson_templates")
-      .select("*")
-      .order("is_system", { ascending: false })
-      .order("name")
+    supabase.from("class_lesson_templates").select("*").order("is_system", { ascending: false }).order("name")
       .then(({ data }) => setTemplates((data as any) || []));
+    supabase.from("class_teachers").select("id,name").eq("class_id", classId).order("order_index")
+      .then(({ data }) => setTeachers((data as any) || []));
+    supabase.from("classes").select("weekly_schedule").eq("id", classId).single()
+      .then(({ data }) => setWeeklySchedule(((data as any)?.weekly_schedule || []) as WeeklySlot[]));
 
     if (lesson) {
       setForm({ ...lesson, semester_id: semesterId });
+      if (lesson.id) {
+        supabase.from("class_lesson_visits").select("*").eq("lesson_id", lesson.id).order("order_index")
+          .then(({ data }) => setVisits(((data as any) || []) as LessonVisit[]));
+      } else {
+        setVisits([]);
+      }
     } else {
       setForm({
         semester_id: semesterId,
@@ -96,12 +123,47 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
         status: "planned",
         rubric_id: null,
         rubric_json: null,
+        teacher_id: null,
+        time_slot: null,
+        is_holiday: false,
+        holiday_name: null,
       });
+      setVisits([]);
     }
-  }, [open, lesson, semesterId]);
+  }, [open, lesson, semesterId, classId]);
+
+  // Auto-detect holiday + auto-fill time slot when date changes
+  useEffect(() => {
+    if (!form.lesson_date) { setHolidayHit(null); return; }
+    fetchHolidaysFor(classId).then((hs) => {
+      const hit = holidayMatchingDate(hs as any, form.lesson_date!);
+      setHolidayHit(hit ? { name: hit.name } : null);
+    });
+    // auto-fill time_slot from weekly schedule, only when not yet set or matches a previous slot for the previous day
+    if (weeklySchedule.length && !form.time_slot && !lesson?.id) {
+      const matches = slotsForDate(weeklySchedule, form.lesson_date);
+      if (matches.length === 1) {
+        setForm((f) => ({ ...f, time_slot: formatSlot(matches[0]) }));
+      }
+    }
+    // eslint-disable-next-line
+  }, [form.lesson_date, weeklySchedule, classId]);
 
   const filteredTemplates = templates.filter((t) => t.lesson_type === form.lesson_type);
   const activeTemplate = templates.find((t) => t.id === form.template_id);
+  const daySlotOptions = form.lesson_date ? slotsForDate(weeklySchedule, form.lesson_date) : [];
+
+  function applyHolidayPreset() {
+    if (!holidayHit) return;
+    setForm((f) => ({
+      ...f,
+      lesson_type: "holiday",
+      is_holiday: true,
+      holiday_name: holidayHit.name,
+      title: `Feriado — ${holidayHit.name}`,
+      status: "cancelled",
+    }));
+  }
 
   const handleSave = async () => {
     if (!form.title.trim()) {
@@ -120,19 +182,48 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
       status: form.status,
       rubric_id: form.rubric_id ?? null,
       rubric_json: (form.rubric_json ?? {}) as any,
+      teacher_id: form.teacher_id ?? null,
+      time_slot: form.time_slot ?? null,
+      is_holiday: form.lesson_type === "holiday" || !!form.is_holiday,
+      holiday_name: form.lesson_type === "holiday" ? (form.holiday_name || form.title.replace(/^Feriado\s*[—-]\s*/, "")) : null,
     };
-    const { error } = lesson?.id
-      ? await supabase.from("class_schedule_items").update(payload).eq("id", lesson.id)
-      : await supabase.from("class_schedule_items").insert(payload);
-    setSaving(false);
-    if (error) {
-      toast.error("Erro ao salvar aula: " + error.message);
-      return;
+    let lessonId = lesson?.id;
+    if (lessonId) {
+      const { error } = await supabase.from("class_schedule_items").update(payload).eq("id", lessonId);
+      if (error) { setSaving(false); toast.error("Erro ao salvar aula: " + error.message); return; }
+    } else {
+      const { data, error } = await supabase.from("class_schedule_items").insert(payload).select("id").single();
+      if (error || !data) { setSaving(false); toast.error("Erro ao salvar aula: " + (error?.message || "")); return; }
+      lessonId = data.id;
     }
+
+    // Sync visits
+    if (lessonId) {
+      // delete existing visits then re-insert (simplest)
+      await supabase.from("class_lesson_visits").delete().eq("lesson_id", lessonId);
+      if (visits.length > 0) {
+        const rows = visits.map((v, idx) => ({
+          lesson_id: lessonId!,
+          teacher_id: v.teacher_id,
+          title: v.title || `Visita ${idx + 1}`,
+          location: v.location,
+          notes: v.notes,
+          student_ids: v.student_ids,
+          order_index: idx,
+        }));
+        const { error: ve } = await supabase.from("class_lesson_visits").insert(rows);
+        if (ve) { setSaving(false); toast.error("Erro ao salvar visitas: " + ve.message); return; }
+      }
+    }
+
+    setSaving(false);
     toast.success(lesson?.id ? "Aula atualizada" : "Aula criada");
     onSaved();
     onOpenChange(false);
   };
+
+  const isVisitMode = form.lesson_type === "technical_visit";
+  const isHolidayMode = form.lesson_type === "holiday";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -150,6 +241,16 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
                 value={form.lesson_date ?? ""}
                 onChange={(e) => setForm({ ...form, lesson_date: e.target.value || null })}
               />
+              {holidayHit && !isHolidayMode && (
+                <div className="flex items-center justify-between gap-2 mt-1 p-2 rounded bg-amber-50 border border-amber-200 text-xs">
+                  <span className="flex items-center gap-1 text-amber-900">
+                    <CalendarOff className="h-3 w-3" />Esta data é feriado: <b>{holidayHit.name}</b>
+                  </span>
+                  <Button type="button" size="sm" variant="outline" className="h-7" onClick={applyHolidayPreset}>
+                    Marcar como feriado
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
@@ -167,11 +268,11 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
             <Input
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Ex.: Entendendo a dor e comorbidades"
+              placeholder={isHolidayMode ? "Ex.: Feriado — Tiradentes" : "Ex.: Entendendo a dor e comorbidades"}
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Tipo de aula</Label>
               <Select
@@ -184,6 +285,49 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Professor responsável</Label>
+              <Select
+                value={form.teacher_id ?? "__none__"}
+                onValueChange={(v) => setForm({ ...form, teacher_id: v === "__none__" ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Sem professor —</SelectItem>
+                  {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Horário (notação)</Label>
+              {daySlotOptions.length > 0 ? (
+                <Select
+                  value={form.time_slot ?? "__custom__"}
+                  onValueChange={(v) => setForm({ ...form, time_slot: v === "__custom__" ? form.time_slot : v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    {daySlotOptions.map((s) => {
+                      const code = formatSlot(s);
+                      return <SelectItem key={code} value={code}>{code}</SelectItem>;
+                    })}
+                    <SelectItem value="__custom__">Personalizado…</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={form.time_slot ?? ""}
+                  onChange={(e) => setForm({ ...form, time_slot: e.target.value || null })}
+                  placeholder="Ex.: 2T23"
+                />
+              )}
+              {weeklySchedule.length > 0 && (
+                <p className="text-[10px] text-muted-foreground font-mono">Grade: {formatSlots(weeklySchedule)}</p>
+              )}
+            </div>
+          </div>
+
+          {!isVisitMode && !isHolidayMode && (
             <div className="space-y-1.5">
               <Label>Template (opcional)</Label>
               <Select
@@ -203,7 +347,7 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          )}
 
           {activeTemplate && (
             <LessonTemplateRenderer
@@ -222,12 +366,32 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
             />
           )}
 
+          {isVisitMode && (
+            <LessonVisitsEditor
+              classId={classId}
+              semesterId={semesterId}
+              visits={visits}
+              onChange={setVisits}
+            />
+          )}
+
+          {isHolidayMode && (
+            <div className="space-y-1.5">
+              <Label>Nome do feriado</Label>
+              <Input
+                value={form.holiday_name ?? ""}
+                onChange={(e) => setForm({ ...form, holiday_name: e.target.value })}
+                placeholder="Ex.: Tiradentes"
+              />
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label>Anotações livres (markdown)</Label>
             <Textarea
               value={form.notes ?? ""}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              rows={5}
+              rows={4}
               placeholder="Observações pessoais, lembretes, links..."
             />
           </div>
@@ -244,4 +408,3 @@ export function LessonDialog({ open, onOpenChange, semesterId, lesson, onSaved }
     </Dialog>
   );
 }
-
