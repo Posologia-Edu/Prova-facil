@@ -72,7 +72,7 @@ export function WeeklyScheduleEditor({ classId, initial, onSaved }: Props) {
           <Input
             value={bulkInput}
             onChange={(e) => setBulkInput(e.target.value)}
-            placeholder="Cole vários horários: 2T23, 4T23, 5T23, 6T56"
+            placeholder="Cole vários horários: 245T12, 6T56"
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); importBulk(); } }}
           />
           <Button variant="outline" onClick={importBulk}>Importar</Button>
