@@ -29,6 +29,9 @@ import { GradebookTab } from "@/components/classes/GradebookTab";
 import { AttendanceTab } from "@/components/classes/AttendanceTab";
 import { StudentsTab } from "@/components/classes/StudentsTab";
 import { ScheduleViews, ScheduleLesson } from "@/components/classes/ScheduleViews";
+import { WeeklyScheduleEditor } from "@/components/classes/WeeklyScheduleEditor";
+import { HolidaysTab } from "@/components/classes/HolidaysTab";
+import { WeeklySlot } from "@/lib/class-schedule-notation";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 interface ClassRow {
