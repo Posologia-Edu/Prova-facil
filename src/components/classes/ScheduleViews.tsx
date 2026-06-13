@@ -17,9 +17,17 @@ export interface ScheduleLesson {
   lesson_date: string | null;
   lesson_type: string;
   status: string;
+  teacher_id?: string | null;
+  time_slot?: string | null;
+  is_holiday?: boolean;
+  holiday_name?: string | null;
+  visits_count?: number;
 }
 
+interface Teacher { id: string; name: string }
+
 interface Props {
+  teachers?: Teacher[];
   lessons: ScheduleLesson[];
   onOpenLesson: (l: ScheduleLesson) => void;
   onDeleteLesson: (l: ScheduleLesson) => void;
