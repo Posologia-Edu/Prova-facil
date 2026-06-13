@@ -36,18 +36,12 @@ export function WeeklyScheduleEditor({ classId, initial, onSaved }: Props) {
   }
 
   function importBulk() {
-    const parts = bulkInput.split(/[,\s]+/).filter(Boolean);
-    const next: WeeklySlot[] = [];
-    const invalid: string[] = [];
-    for (const p of parts) {
-      const s = parseSlot(p);
-      if (s) next.push(s); else invalid.push(p);
-    }
+    const { ok, invalid } = parseSlotsInput(bulkInput);
     if (invalid.length) toast.error(`Notação inválida: ${invalid.join(", ")}`);
-    if (next.length) {
-      setSlots([...slots, ...next]);
+    if (ok.length) {
+      setSlots([...slots, ...ok]);
       setBulkInput("");
-      toast.success(`${next.length} horário(s) importado(s)`);
+      toast.success(`${ok.length} horário(s) importado(s)`);
     }
   }
 
