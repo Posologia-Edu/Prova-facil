@@ -329,12 +329,15 @@ export function SeminarEvaluationDialog({
             evaluation={activeEval!}
             rubric={rubric}
             liveScore={liveScore!}
+            saveStatus={saveStatus}
             onBack={() => setActiveStudentId(null)}
             onAnswer={(cid, v) => updateAnswer(activeStudent.id, cid, v)}
             onNotes={(n) => setEvaluations((p) => ({ ...p, [activeStudent.id]: { ...p[activeStudent.id], notes: n } }))}
+            onTimeChange={(s) => setTimeSeconds(activeStudent.id, s)}
             onSave={() => persistEvaluation(activeStudent.id)}
             onReset={() => resetEvaluation(activeStudent.id)}
           />
+
         ) : (
           <Tabs defaultValue="students" className="flex-1 flex flex-col overflow-hidden">
             <TabsList>
