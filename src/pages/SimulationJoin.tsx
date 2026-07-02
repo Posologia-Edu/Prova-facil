@@ -1222,8 +1222,48 @@ export default function SimulationJoin() {
                 </p>
               </div>
             )}
+
+            {/* Reposição de anamnese — mesma sala */}
+            {isProfessor && hasCompletedRound && (
+              <div className="pt-2 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setMakeupDialogOpen(true)}
+                  className="w-full gap-2 border-blue-400/60 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                >
+                  <UserCog className="h-4 w-4" />
+                  Iniciar reposição de anamnese
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Cria novas rodadas nesta mesma sala para os alunos que faltaram.
+                  O SOAP continua puxando os dados desta única sala.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
+      )}
+
+      {isProfessor && room && (
+        <MakeupSetupDialog
+          open={makeupDialogOpen}
+          onOpenChange={setMakeupDialogOpen}
+          roomId={room.id}
+          allParticipants={allParticipants}
+          allRounds={allRounds}
+          allResponses={completedResponses}
+          numCases={clinicalCases.length}
+          onSaved={async () => {
+            const [{ data: rounds }, { data: participants }, { data: assignments }] = await Promise.all([
+              supabase.from("simulation_rounds").select("*").eq("room_id", room.id).order("round_number"),
+              supabase.from("simulation_participants").select("*").eq("room_id", room.id),
+              supabase.from("simulation_round_assignments").select("*, simulation_rounds!inner(room_id)").eq("simulation_rounds.room_id", room.id),
+            ]);
+            setAllRounds(rounds || []);
+            setAllParticipants(participants || []);
+            setAllAssignments(assignments || []);
+          }}
+        />
       )}
 
       {/* Waiting state for students */}
