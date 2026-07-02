@@ -149,6 +149,24 @@ export default function Simulations() {
   const [shareRoomId, setShareRoomId] = useState<string | null>(null);
   const [shareRoomTitle, setShareRoomTitle] = useState("");
   const [shareModuleType, setShareModuleType] = useState("");
+  const [archiveFilter, setArchiveFilter] = useState<"active" | "archived">("active");
+
+  const archiveMutation = useMutation({
+    mutationFn: async ({ table, id, archived }: { table: "simulation_rooms" | "soap_rooms" | "reconciliation_rooms" | "documentation_rooms"; id: string; archived: boolean }) => {
+      const { error } = await supabase.from(table).update({ is_archived: archived } as any).eq("id", id);
+      if (error) throw error;
+      return { table, archived };
+    },
+    onSuccess: ({ table, archived }) => {
+      const key = table === "simulation_rooms" ? "simulation-rooms"
+        : table === "soap_rooms" ? "soap-rooms-list"
+        : table === "reconciliation_rooms" ? "reconciliation-rooms-list"
+        : "documentation-rooms-list";
+      queryClient.invalidateQueries({ queryKey: [key] });
+      toast({ title: archived ? "Sala arquivada" : "Sala reativada" });
+    },
+    onError: () => toast({ title: "Erro", description: "Não foi possível atualizar a sala.", variant: "destructive" }),
+  });
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["simulation-rooms"],
