@@ -67,6 +67,7 @@ export default function SimulationJoin() {
   const [studentsReady, setStudentsReady] = useState<string[]>([]);
   const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
+  const [makeupDialogOpen, setMakeupDialogOpen] = useState(false);
 
   const pauseSimulation = async () => {
     if (!room?.id) return;
