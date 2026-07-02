@@ -33,6 +33,7 @@ import {
 import SimulationPausedView from "@/components/simulation/SimulationPausedView";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+import MakeupSetupDialog from "@/components/simulation/MakeupSetupDialog";
 
 
 // FormField type imported from @/components/forms/types
@@ -66,6 +67,7 @@ export default function SimulationJoin() {
   const [studentsReady, setStudentsReady] = useState<string[]>([]);
   const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
+  const [makeupDialogOpen, setMakeupDialogOpen] = useState(false);
 
   const pauseSimulation = async () => {
     if (!room?.id) return;
@@ -408,7 +410,8 @@ export default function SimulationJoin() {
       answers_json: { ...answers, _feedback: feedback },
       score,
       submitted_at: new Date().toISOString(),
-    });
+      is_makeup: !!activeRound.is_makeup,
+    } as any);
 
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
@@ -942,7 +945,8 @@ export default function SimulationJoin() {
   const RoleIcon = assignment ? roleIcons[assignment.assigned_role] || Users : Users;
   const form = getFormForRole();
   const isActive = !!activeRound;
-  const canFill = isActive && !submitted && assignment?.assigned_role !== "patient";
+  const isReusedRole = !!assignment?.is_reused_role;
+  const canFill = isActive && !submitted && assignment?.assigned_role !== "patient" && !isReusedRole;
   const completedRoundsList = allRounds.filter((r: any) => r.status === "completed");
   const allRoundsCompleted = allRounds.length > 0 && allRounds.every((round: any) => round.status === "completed");
   const isPaused = room?.status === "paused";
@@ -1219,8 +1223,48 @@ export default function SimulationJoin() {
                 </p>
               </div>
             )}
+
+            {/* Reposição de anamnese — mesma sala */}
+            {isProfessor && hasCompletedRound && (
+              <div className="pt-2 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setMakeupDialogOpen(true)}
+                  className="w-full gap-2 border-blue-400/60 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                >
+                  <UserCog className="h-4 w-4" />
+                  Iniciar reposição de anamnese
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Cria novas rodadas nesta mesma sala para os alunos que faltaram.
+                  O SOAP continua puxando os dados desta única sala.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
+      )}
+
+      {isProfessor && room && (
+        <MakeupSetupDialog
+          open={makeupDialogOpen}
+          onOpenChange={setMakeupDialogOpen}
+          roomId={room.id}
+          allParticipants={allParticipants}
+          allRounds={allRounds}
+          allResponses={completedResponses}
+          numCases={clinicalCases.length}
+          onSaved={async () => {
+            const [{ data: rounds }, { data: participants }, { data: assignments }] = await Promise.all([
+              supabase.from("simulation_rounds").select("*").eq("room_id", room.id).order("round_number"),
+              supabase.from("simulation_participants").select("*").eq("room_id", room.id),
+              supabase.from("simulation_round_assignments").select("*, simulation_rounds!inner(room_id)").eq("simulation_rounds.room_id", room.id),
+            ]);
+            setAllRounds(rounds || []);
+            setAllParticipants(participants || []);
+            setAllAssignments(assignments || []);
+          }}
+        />
       )}
 
       {/* Waiting state for students */}

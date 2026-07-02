@@ -1,64 +1,50 @@
-# Cronograma — 4 melhorias
 
-## 1) Professor responsável por cada aula
-Quando a turma tem vários professores, permitir escolher qual é o responsável daquela aula específica.
+## Objetivo
 
-- Nova coluna `teacher_user_id` em `class_schedule_items` (nullable, FK para `auth.users` via SET NULL).
-- No `LessonDialog`: select com os professores vinculados à turma (busca em `class_teachers` ou equivalente).
-- Em `ScheduleViews` (Lista/Timeline/Calendário): mostrar nome/iniciais do professor responsável ao lado do título.
+Permitir realizar uma **reposição de anamnese** dentro da **mesma sala** já usada no dia original, para que o SOAP possa continuar vinculado a uma única sala de anamnese. Alunos que já fizeram anamnese ficam "arquivados" (dados preservados) e uma nova rodada de reposição é gerada apenas para os faltantes, permitindo reutilizar alunos já anamnesados como paciente/observador quando não houver alunos suficientes.
 
-## 2) Horários semanais da disciplina (notação 2T23, 4T23, etc.)
-Cadastrar a grade semanal da disciplina e preencher automaticamente o horário ao criar uma aula.
+## Como vai funcionar (visão do usuário)
 
-- Nova coluna `weekly_schedule` (JSONB) em `classes` — lista de slots: `{ dayOfWeek: 1-7, shift: "M"|"T"|"N", periods: [2,3] }`.
-- Nova aba/seção em `ClassDetail` (ou dentro de "Visão Geral") para cadastrar os slots usando inputs amigáveis + visualização da notação (ex.: `2T23, 4T23, 5T23, 6T56`).
-- Helper `src/lib/class-schedule-notation.ts` para converter entre objeto ↔ string.
-- Nova coluna `time_slot` (TEXT) em `class_schedule_items` para armazenar a notação da aula (ex.: `4T23`).
-- No `LessonDialog`: ao escolher uma data, sugerir automaticamente o(s) slot(s) que caem naquele dia da semana; se houver mais de um, listar para o professor escolher.
+Na tela de controle da sala de anamnese, após concluir o dia principal, o professor terá um novo botão **"Iniciar reposição"** com este fluxo:
 
-## 3) Visitas técnicas paralelas (mesma data/hora, professores diferentes)
-Permitir que uma mesma aula tenha múltiplas "trilhas" simultâneas, cada uma com seu professor e grupo.
+1. **Selecionar quem fará a reposição** — lista todos os participantes da sala, com um checkbox "Fazer anamnese na reposição" (por padrão marcados os que aparecem como faltantes/sem resposta). O sistema calcula automaticamente as duplas necessárias entre eles.
+2. **Completar papéis quando faltar gente** — se o número de alunos da reposição não permitir gerar observador/paciente automaticamente (ex.: 1 aluno solo, ou dupla sem observador possível), aparece um painel de "Papéis a preencher" onde o professor escolhe manualmente, entre os alunos **que já fizeram anamnese na sala principal**, quem atuará como:
+   - Paciente simulado (para uma dupla incompleta / aluno solo)
+   - Observador
+   Esses alunos "reaproveitados" não geram nova resposta — só cumprem o papel na reposição.
+3. **Gerar rodadas de reposição** — o sistema cria novas `simulation_rounds` marcadas como `is_makeup = true`, com numeração continuando após as rodadas originais, e novas `simulation_round_assignments` incluindo os papéis manuais.
+4. **Executar normalmente** — o professor libera materiais e roda as rodadas de reposição pelo mesmo painel de controle atual. Os alunos da reposição entram com o mesmo PIN e caem direto nas rodadas ativas.
+5. **Dados preservados** — as respostas do dia original permanecem intactas; as novas respostas ficam identificadas como reposição (novo campo `is_makeup` em `simulation_responses`) para não sobrescrever nada.
 
-- Nova tabela `class_lesson_visits`:
-  - `id`, `lesson_id` (FK → `class_schedule_items` ON DELETE CASCADE)
-  - `teacher_user_id` (FK → auth.users SET NULL)
-  - `title` (ex.: "Visita Hospital X")
-  - `student_ids` (UUID[]) ou tabela ponte `class_lesson_visit_students`
-  - `notes`
-- No `LessonDialog`, para `lesson_type = 'technical_visit'` (novo tipo) ou via checkbox "Aula com visitas paralelas": gerenciar lista de visitas (adicionar/remover, atribuir professor e alunos).
-- Em `ScheduleViews`: indicador "N visitas" no card/linha, expandindo para mostrar cada visita.
-
-## 4) Feriados
-Cadastrar feriados; quando uma data do cronograma coincidir, exibir o nome do feriado em vez de uma aula.
-
-- Nova tabela `class_holidays` (por usuário e/ou por turma):
-  - `id`, `user_id`, `class_id` (nullable — null = aplica a todas), `holiday_date`, `name`, `recurring_yearly` (bool).
-- Nova aba "Feriados" em `ClassDetail` (ou seção em Settings) com CRUD simples + presets de feriados nacionais BR.
-- Em `ScheduleViews`:
-  - Lista/Timeline: linhas especiais de "Feriado — Nome" (sem ações, estilo cinza).
-  - Calendário: célula marcada com badge do feriado.
-- No `LessonDialog`: ao escolher uma data que é feriado, alertar e oferecer "Marcar como feriado" em vez de criar aula.
+Na tela do SOAP, ao vincular "sala de anamnese", o professor continua escolhendo **uma única sala**, e o SOAP passa a enxergar respostas do dia principal + da reposição automaticamente.
 
 ## Detalhes técnicos
 
-- **Migrations** (uma única migração agrupada):
-  - `ALTER TABLE class_schedule_items ADD COLUMN teacher_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL, ADD COLUMN time_slot TEXT;`
-  - `ALTER TABLE classes ADD COLUMN weekly_schedule JSONB DEFAULT '[]'::jsonb;`
-  - `CREATE TABLE class_lesson_visits (...)` + GRANTs + RLS (dono da turma gerencia).
-  - `CREATE TABLE class_holidays (...)` + GRANTs + RLS.
-- **Frontend**:
-  - `src/lib/class-schedule-notation.ts` — parse/format `2T23`.
-  - `src/components/classes/WeeklyScheduleEditor.tsx` — editor da grade semanal.
-  - `src/components/classes/HolidaysTab.tsx` — CRUD de feriados.
-  - `src/components/classes/LessonVisitsEditor.tsx` — visitas paralelas dentro do `LessonDialog`.
-  - Atualizar `LessonDialog.tsx`, `ScheduleViews.tsx`, `ClassDetail.tsx`.
-- **Auto-preenchimento de horário**: no `LessonDialog`, hook que escuta `lesson_date` → calcula `dayOfWeek` → busca slots de `class.weekly_schedule` → preenche `time_slot`.
+### Banco (nova migration)
+- `simulation_participants`: adicionar coluna `makeup_status text` (`null` | `'included'` | `'reused_as_patient'` | `'reused_as_observer'`) — controla o papel na reposição sem apagar `status` original.
+- `simulation_rounds`: adicionar `is_makeup boolean default false` e `makeup_batch int default 0` (para identificar levas de reposição).
+- `simulation_round_assignments`: adicionar `is_reused_role boolean default false` — indica quando o participante está apenas cumprindo papel (não gera resposta obrigatória).
+- `simulation_responses`: adicionar `is_makeup boolean default false`.
+- Backfill: registros existentes ficam `false`/`null`.
 
-## Ordem de implementação
-1. Migração do banco (tudo junto).
-2. Helpers de notação + editor da grade semanal (feature 2).
-3. Coluna professor responsável no `LessonDialog` + exibição (feature 1).
-4. Tab de feriados + integração com cronograma (feature 4).
-5. Visitas paralelas (feature 3).
+### Frontend
 
-Confirma este plano para eu iniciar pela migração?
+- `src/lib/simulation-distribution.ts` — nova função `generateMakeupRounds(pairs, reusedProfiles, numCases, startingRoundNumber)`:
+  - Recebe pares de alunos da reposição + array de perfis reaproveitáveis (id, papel escolhido: "patient" ou "observer", ligado a que par).
+  - Gera rodadas continuando a numeração, marcando `is_makeup=true`. Solo com paciente reaproveitado vira dupla lógica; observador reaproveitado entra como assignment normal com `is_reused_role=true`.
+- `src/components/MakeupSetupDialog.tsx` (novo) — diálogo com:
+  - Passo 1: checkboxes de quem faz reposição.
+  - Passo 2: preview de duplas geradas + slots vermelhos "sem paciente" / "sem observador" com combobox para escolher entre alunos já anamnesados.
+  - Passo 3: confirmar e gerar rodadas.
+- `src/pages/SimulationJoin.tsx` (painel de controle) — adicionar botão "Iniciar reposição" (visível quando `status === 'active'` ou após a primeira leva concluída); listar rodadas separadas por leva (Principal / Reposição 1…) no painel de progresso.
+- `src/pages/SoapEditor.tsx` — ao carregar respostas da sala de anamnese vinculada, não filtrar por `is_makeup`: pega todas. Se um aluno tiver resposta principal e de reposição, prioriza a mais recente.
+- `src/components/simulation/SimulationProgressPanel.tsx` — agrupar rodadas por leva com header "Reposição".
+
+### Regras
+- Reposição só pode ser iniciada quando não houver rodada `active` pendente da leva anterior.
+- Alunos reaproveitados como paciente/observador não têm formulário exigido; se abrirem a sala, veem "Você já concluiu a anamnese; nesta rodada seu papel é apenas ajudar".
+- Múltiplas levas de reposição são permitidas (`makeup_batch` incremental).
+
+## Fora do escopo
+- Alterar mecânica dos módulos SOAP/Reconciliação/Documentação (só o SOAP passa a ler automaticamente respostas de reposição da mesma sala).
+- Notificações por e-mail aos alunos da reposição.

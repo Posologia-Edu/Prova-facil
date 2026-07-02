@@ -5600,6 +5600,7 @@ export type Database = {
           assigned_role: string
           created_at: string
           id: string
+          makeup_status: string | null
           pair_index: number
           pair_position: string
           participant_role: string
@@ -5612,6 +5613,7 @@ export type Database = {
           assigned_role?: string
           created_at?: string
           id?: string
+          makeup_status?: string | null
           pair_index?: number
           pair_position?: string
           participant_role?: string
@@ -5624,6 +5626,7 @@ export type Database = {
           assigned_role?: string
           created_at?: string
           id?: string
+          makeup_status?: string | null
           pair_index?: number
           pair_position?: string
           participant_role?: string
@@ -5648,6 +5651,7 @@ export type Database = {
           created_at: string
           form_id: string
           id: string
+          is_makeup: boolean
           participant_id: string
           round_id: string
           score: number | null
@@ -5658,6 +5662,7 @@ export type Database = {
           created_at?: string
           form_id: string
           id?: string
+          is_makeup?: boolean
           participant_id: string
           round_id: string
           score?: number | null
@@ -5668,6 +5673,7 @@ export type Database = {
           created_at?: string
           form_id?: string
           id?: string
+          is_makeup?: boolean
           participant_id?: string
           round_id?: string
           score?: number | null
@@ -5748,6 +5754,7 @@ export type Database = {
           case_index: number | null
           created_at: string
           id: string
+          is_reused_role: boolean
           pair_index: number
           participant_id: string
           round_id: string
@@ -5757,6 +5764,7 @@ export type Database = {
           case_index?: number | null
           created_at?: string
           id?: string
+          is_reused_role?: boolean
           pair_index?: number
           participant_id: string
           round_id: string
@@ -5766,6 +5774,7 @@ export type Database = {
           case_index?: number | null
           created_at?: string
           id?: string
+          is_reused_role?: boolean
           pair_index?: number
           participant_id?: string
           round_id?: string
@@ -5793,6 +5802,8 @@ export type Database = {
           cycle: number
           finished_at: string | null
           id: string
+          is_makeup: boolean
+          makeup_batch: number
           materials_released: boolean
           released_by: string | null
           room_id: string
@@ -5805,6 +5816,8 @@ export type Database = {
           cycle?: number
           finished_at?: string | null
           id?: string
+          is_makeup?: boolean
+          makeup_batch?: number
           materials_released?: boolean
           released_by?: string | null
           room_id: string
@@ -5817,6 +5830,8 @@ export type Database = {
           cycle?: number
           finished_at?: string | null
           id?: string
+          is_makeup?: boolean
+          makeup_batch?: number
           materials_released?: boolean
           released_by?: string | null
           room_id?: string
