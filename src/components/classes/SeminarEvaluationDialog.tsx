@@ -482,27 +482,124 @@ export function SeminarEvaluationDialog({
   );
 }
 
+function formatTime(total: number): string {
+  const s = Math.max(0, Math.floor(total));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
+function SaveIndicator({ status }: { status: "idle" | "saving" | "saved" | "error" }) {
+  if (status === "saving") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        <Loader2 className="w-3 h-3 animate-spin" /> Salvando…
+      </span>
+    );
+  }
+  if (status === "saved") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-green-600">
+        <Check className="w-3 h-3" /> Salvo automaticamente
+      </span>
+    );
+  }
+  if (status === "error") {
+    return <span className="text-xs text-destructive">Falha ao salvar</span>;
+  }
+  return <span className="text-xs text-muted-foreground/70">Salvamento automático ativo</span>;
+}
+
+function PresentationTimer({
+  seconds, onChange,
+}: { seconds: number; onChange: (s: number) => void; }) {
+  const [running, setRunning] = useState(false);
+  const startRef = useRef<number | null>(null);
+  const baseRef = useRef<number>(seconds);
+  const [tick, setTick] = useState(0);
+
+  // Sync base when external value changes and timer is not running
+  useEffect(() => {
+    if (!running) baseRef.current = seconds;
+  }, [seconds, running]);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => setTick((t) => t + 1), 250);
+    return () => clearInterval(id);
+  }, [running]);
+
+  const display = running && startRef.current
+    ? baseRef.current + Math.floor((Date.now() - startRef.current) / 1000)
+    : seconds;
+
+  function start() {
+    baseRef.current = seconds;
+    startRef.current = Date.now();
+    setRunning(true);
+  }
+  function pause() {
+    if (startRef.current) {
+      const elapsed = Math.floor((Date.now() - startRef.current) / 1000);
+      onChange(baseRef.current + elapsed);
+    }
+    startRef.current = null;
+    setRunning(false);
+  }
+  function reset() {
+    startRef.current = null;
+    baseRef.current = 0;
+    setRunning(false);
+    onChange(0);
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1">
+      <Timer className="w-4 h-4 text-primary" />
+      <span className="font-mono text-base tabular-nums min-w-[52px] text-center">
+        {formatTime(display)}
+      </span>
+      {running ? (
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={pause} aria-label="Pausar">
+          <Pause className="w-3.5 h-3.5" />
+        </Button>
+      ) : (
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={start} aria-label="Iniciar">
+          <Play className="w-3.5 h-3.5" />
+        </Button>
+      )}
+      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={reset} aria-label="Zerar">
+        <RotateCcw className="w-3.5 h-3.5" />
+      </Button>
+    </div>
+  );
+}
+
 function StudentEvaluator({
-  student, evaluation, rubric, liveScore, onBack, onAnswer, onNotes, onSave, onReset,
+  student, evaluation, rubric, liveScore, saveStatus, onBack, onAnswer, onNotes, onTimeChange, onSave, onReset,
 }: {
   student: Student;
   evaluation: Evaluation;
   rubric: SeminarRubric;
   liveScore: ReturnType<typeof scoreRubric>;
+  saveStatus: "idle" | "saving" | "saved" | "error";
   onBack: () => void;
   onAnswer: (criterionId: string, v: number) => void;
   onNotes: (n: string) => void;
+  onTimeChange: (seconds: number) => void;
   onSave: () => void;
   onReset: () => void;
 }) {
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
-      <div className="flex items-center gap-3 pb-3 border-b">
+      <div className="flex items-center gap-3 pb-3 border-b flex-wrap">
         <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" />Voltar</Button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-[160px]">
           <div className="font-semibold">{student.student_name}</div>
           {student.student_email && <div className="text-xs text-muted-foreground">{student.student_email}</div>}
+          <div className="mt-1"><SaveIndicator status={saveStatus} /></div>
         </div>
+        <PresentationTimer seconds={evaluation.time_seconds ?? 0} onChange={onTimeChange} />
         <div className="text-right">
           <div className="text-2xl font-bold text-amber-600">
             {liveScore.finalScore.toFixed(2)}<span className="text-sm text-muted-foreground">/{liveScore.scale}</span>
