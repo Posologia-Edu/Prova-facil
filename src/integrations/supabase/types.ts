@@ -1934,6 +1934,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_archived: boolean
           reconciliation_room_id: string | null
           status: string
           title: string
@@ -1946,6 +1947,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_archived?: boolean
           reconciliation_room_id?: string | null
           status?: string
           title?: string
@@ -1958,6 +1960,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_archived?: boolean
           reconciliation_room_id?: string | null
           status?: string
           title?: string
@@ -5298,6 +5301,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_archived: boolean
           soap_room_id: string | null
           status: string
           title: string
@@ -5310,6 +5314,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_archived?: boolean
           soap_room_id?: string | null
           status?: string
           title?: string
@@ -5322,6 +5327,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_archived?: boolean
           soap_room_id?: string | null
           status?: string
           title?: string
@@ -5713,6 +5719,7 @@ export type Database = {
           description: string | null
           duration_minutes: number
           id: string
+          is_archived: boolean
           status: string
           title: string
           updated_at: string
@@ -5727,6 +5734,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           id?: string
+          is_archived?: boolean
           status?: string
           title?: string
           updated_at?: string
@@ -5741,6 +5749,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           id?: string
+          is_archived?: boolean
           status?: string
           title?: string
           updated_at?: string
@@ -6248,6 +6257,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_archived: boolean
           status: string
           title: string
           updated_at: string
@@ -6260,6 +6270,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_archived?: boolean
           status?: string
           title?: string
           updated_at?: string
@@ -6272,6 +6283,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_archived?: boolean
           status?: string
           title?: string
           updated_at?: string
