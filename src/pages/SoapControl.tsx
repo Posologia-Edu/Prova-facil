@@ -228,6 +228,15 @@ export default function SoapControl() {
     );
   };
 
+  const clearAbsentFlagsForPairedParticipants = async (ids: string[]) => {
+    if (!ids.length) return;
+    await supabase
+      .from("soap_responses")
+      .update({ needs_teacher_peer_eval: false } as any)
+      .in("participant_id", ids)
+      .is("target_participant_id", null);
+  };
+
   const formPairsAuto = async () => {
     if (unpaired.length < 2) {
       toast({ title: "Insuficiente", description: "Precisa de pelo menos 2 alunos sem dupla.", variant: "destructive" });
@@ -235,12 +244,22 @@ export default function SoapControl() {
     }
     const maxPairIdx = Math.max(0, ...paired.map((p) => p.pair_index));
     let pairIdx = paired.length > 0 ? maxPairIdx + 1 : 0;
+    const newlyPairedIds: string[] = [];
     for (let i = 0; i < unpaired.length - 1; i += 2) {
       await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "A" }).eq("id", unpaired[i].id);
       await supabase.from("soap_participants").update({ pair_index: pairIdx, pair_position: "B" }).eq("id", unpaired[i + 1].id);
+      newlyPairedIds.push(unpaired[i].id, unpaired[i + 1].id);
       pairIdx++;
     }
+    // Any SOAP submitted before pairing was flagged as "partner absent" — clear that now.
+    await clearAbsentFlagsForPairedParticipants(newlyPairedIds);
+    // Also clear the flag for already-paired participants whose partner is now present.
+    const stillFlagged = soapResponses
+      .filter((r: any) => r.needs_teacher_peer_eval)
+      .map((r: any) => r.participant_id);
+    await clearAbsentFlagsForPairedParticipants(stillFlagged);
     refetchParticipants();
+    queryClient.invalidateQueries({ queryKey: ["soap-responses", roomId] });
     toast({ title: "Duplas formadas!" });
   };
 
