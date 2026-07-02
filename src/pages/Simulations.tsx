@@ -689,19 +689,21 @@ export default function Simulations() {
             </Dialog>
           </div>
 
+          <ArchiveFilterBar activeCount={(rooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(rooms || []).filter((r: any) => r.is_archived).length} />
+
           {isLoading ? (
             <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !rooms?.length ? (
+          ) : !filteredRooms.length ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">{t("sim_empty")}</h3>
-                <p className="text-muted-foreground mb-4">{t("sim_empty_hint")}</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala inativa" : t("sim_empty")}</h3>
+                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : t("sim_empty_hint")}</p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {rooms.map((room) => {
+              {filteredRooms.map((room) => {
                 const studentCount = participantCounts?.[room.id] || 0;
                 return (
                   <Card key={room.id} className="hover:shadow-md transition-shadow">
