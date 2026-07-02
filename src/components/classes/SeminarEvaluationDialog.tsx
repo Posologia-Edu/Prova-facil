@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft, Plus, Trash2, Star, Save, Users, Settings2, Loader2, Calendar,
   Lightbulb, Presentation as PresentationIcon, MessagesSquare, Award, CircleDot,
-  RotateCcw,
+  RotateCcw, Play, Pause, Timer, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -32,6 +32,7 @@ interface Evaluation {
   max_score: number;
   percent: number;
   notes: string | null;
+  time_seconds: number;
 }
 
 interface Props {
@@ -113,6 +114,7 @@ export function SeminarEvaluationDialog({
         id: e.id, student_id: e.student_id, answers: e.answers || {},
         total_score: Number(e.total_score) || 0, max_score: Number(e.max_score) || 0,
         percent: Number(e.percent) || 0, notes: e.notes,
+        time_seconds: Number(e.time_seconds) || 0,
       };
       sel.add(e.student_id);
     });
@@ -156,12 +158,12 @@ export function SeminarEvaluationDialog({
     });
     if (on && !evaluations[id]) {
       setEvaluations((prev) => ({
-        ...prev, [id]: { student_id: id, answers: {}, total_score: 0, max_score: 0, percent: 0, notes: "" },
+        ...prev, [id]: { student_id: id, answers: {}, total_score: 0, max_score: 0, percent: 0, notes: "", time_seconds: 0 },
       }));
     }
   }
 
-  async function persistEvaluation(studentId: string) {
+  async function persistEvaluation(studentId: string, opts?: { silent?: boolean }) {
     const ev = evaluations[studentId];
     if (!ev) return;
     const sc = scoreRubric(rubric, ev.answers);
@@ -173,10 +175,11 @@ export function SeminarEvaluationDialog({
       max_score: sc.scale,
       percent: sc.totalPercent,
       notes: ev.notes,
+      time_seconds: ev.time_seconds ?? 0,
     };
     const { data, error } = await supabase
       .from("class_seminar_evaluations")
-      .upsert(payload, { onConflict: "lesson_id,student_id" })
+      .upsert(payload as any, { onConflict: "lesson_id,student_id" })
       .select().single();
     if (error) { toast.error(error.message); return; }
     setEvaluations((prev) => ({
@@ -186,12 +189,12 @@ export function SeminarEvaluationDialog({
         total_score: sc.finalScore, max_score: sc.scale, percent: sc.totalPercent,
       },
     }));
-    toast.success("Avaliação salva");
+    if (!opts?.silent) toast.success("Avaliação salva");
   }
 
   function updateAnswer(studentId: string, criterionId: string, value: number) {
     setEvaluations((prev) => {
-      const cur = prev[studentId] || { student_id: studentId, answers: {}, total_score: 0, max_score: 0, percent: 0, notes: "" };
+      const cur: Evaluation = prev[studentId] || { student_id: studentId, answers: {}, total_score: 0, max_score: 0, percent: 0, notes: "", time_seconds: 0 };
       const answers = { ...cur.answers, [criterionId]: value };
       const sc = scoreRubric(rubric, answers);
       return {
@@ -207,6 +210,58 @@ export function SeminarEvaluationDialog({
     () => (activeEval ? scoreRubric(rubric, activeEval.answers) : null),
     [activeEval, rubric]
   );
+
+  // ============ Autosave ============
+  type SaveStatus = "idle" | "saving" | "saved" | "error";
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipFirstAutosave = useRef<string | null>(null);
+
+  // Track which student was just activated so we don't autosave immediately on open
+  useEffect(() => {
+    skipFirstAutosave.current = activeStudentId;
+  }, [activeStudentId]);
+
+  // Serializable snapshot used to detect meaningful changes
+  const evalSignature = useMemo(() => {
+    if (!activeStudentId || !activeEval) return "";
+    return JSON.stringify({
+      a: activeEval.answers,
+      n: activeEval.notes,
+      t: activeEval.time_seconds,
+    });
+  }, [activeStudentId, activeEval]);
+
+  useEffect(() => {
+    if (!activeStudentId || !activeEval) return;
+    if (skipFirstAutosave.current === activeStudentId) {
+      skipFirstAutosave.current = null;
+      return;
+    }
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setSaveStatus("saving");
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await persistEvaluation(activeStudentId, { silent: true });
+        setSaveStatus("saved");
+      } catch {
+        setSaveStatus("error");
+      }
+    }, 800);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+    // eslint-disable-next-line
+  }, [evalSignature]);
+
+  function setTimeSeconds(studentId: string, seconds: number) {
+    setEvaluations((prev) => {
+      const cur = prev[studentId];
+      if (!cur) return prev;
+      return { ...prev, [studentId]: { ...cur, time_seconds: Math.max(0, Math.floor(seconds)) } };
+    });
+  }
+
 
   // ============ Rubric editor helpers ============
   function updateDim(idx: number, patch: Partial<RubricDimension>) {
@@ -274,12 +329,15 @@ export function SeminarEvaluationDialog({
             evaluation={activeEval!}
             rubric={rubric}
             liveScore={liveScore!}
+            saveStatus={saveStatus}
             onBack={() => setActiveStudentId(null)}
             onAnswer={(cid, v) => updateAnswer(activeStudent.id, cid, v)}
             onNotes={(n) => setEvaluations((p) => ({ ...p, [activeStudent.id]: { ...p[activeStudent.id], notes: n } }))}
+            onTimeChange={(s) => setTimeSeconds(activeStudent.id, s)}
             onSave={() => persistEvaluation(activeStudent.id)}
             onReset={() => resetEvaluation(activeStudent.id)}
           />
+
         ) : (
           <Tabs defaultValue="students" className="flex-1 flex flex-col overflow-hidden">
             <TabsList>
@@ -312,7 +370,12 @@ export function SeminarEvaluationDialog({
                                 <div className="text-lg font-bold text-amber-600">
                                   {ev.total_score.toFixed(1)}<span className="text-xs text-muted-foreground">/{ev.max_score}</span>
                                 </div>
-                                <div className="text-xs text-muted-foreground">{ev.percent.toFixed(0)}%</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {ev.percent.toFixed(0)}%
+                                  {ev.time_seconds > 0 && (
+                                    <> · <Timer className="inline w-3 h-3 -mt-0.5" /> {formatTime(ev.time_seconds)}</>
+                                  )}
+                                </div>
                               </div>
                             )}
                             {ev && (
@@ -419,27 +482,124 @@ export function SeminarEvaluationDialog({
   );
 }
 
+function formatTime(total: number): string {
+  const s = Math.max(0, Math.floor(total));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
+function SaveIndicator({ status }: { status: "idle" | "saving" | "saved" | "error" }) {
+  if (status === "saving") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        <Loader2 className="w-3 h-3 animate-spin" /> Salvando…
+      </span>
+    );
+  }
+  if (status === "saved") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-green-600">
+        <Check className="w-3 h-3" /> Salvo automaticamente
+      </span>
+    );
+  }
+  if (status === "error") {
+    return <span className="text-xs text-destructive">Falha ao salvar</span>;
+  }
+  return <span className="text-xs text-muted-foreground/70">Salvamento automático ativo</span>;
+}
+
+function PresentationTimer({
+  seconds, onChange,
+}: { seconds: number; onChange: (s: number) => void; }) {
+  const [running, setRunning] = useState(false);
+  const startRef = useRef<number | null>(null);
+  const baseRef = useRef<number>(seconds);
+  const [tick, setTick] = useState(0);
+
+  // Sync base when external value changes and timer is not running
+  useEffect(() => {
+    if (!running) baseRef.current = seconds;
+  }, [seconds, running]);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => setTick((t) => t + 1), 250);
+    return () => clearInterval(id);
+  }, [running]);
+
+  const display = running && startRef.current
+    ? baseRef.current + Math.floor((Date.now() - startRef.current) / 1000)
+    : seconds;
+
+  function start() {
+    baseRef.current = seconds;
+    startRef.current = Date.now();
+    setRunning(true);
+  }
+  function pause() {
+    if (startRef.current) {
+      const elapsed = Math.floor((Date.now() - startRef.current) / 1000);
+      onChange(baseRef.current + elapsed);
+    }
+    startRef.current = null;
+    setRunning(false);
+  }
+  function reset() {
+    startRef.current = null;
+    baseRef.current = 0;
+    setRunning(false);
+    onChange(0);
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1">
+      <Timer className="w-4 h-4 text-primary" />
+      <span className="font-mono text-base tabular-nums min-w-[52px] text-center">
+        {formatTime(display)}
+      </span>
+      {running ? (
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={pause} aria-label="Pausar">
+          <Pause className="w-3.5 h-3.5" />
+        </Button>
+      ) : (
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={start} aria-label="Iniciar">
+          <Play className="w-3.5 h-3.5" />
+        </Button>
+      )}
+      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={reset} aria-label="Zerar">
+        <RotateCcw className="w-3.5 h-3.5" />
+      </Button>
+    </div>
+  );
+}
+
 function StudentEvaluator({
-  student, evaluation, rubric, liveScore, onBack, onAnswer, onNotes, onSave, onReset,
+  student, evaluation, rubric, liveScore, saveStatus, onBack, onAnswer, onNotes, onTimeChange, onSave, onReset,
 }: {
   student: Student;
   evaluation: Evaluation;
   rubric: SeminarRubric;
   liveScore: ReturnType<typeof scoreRubric>;
+  saveStatus: "idle" | "saving" | "saved" | "error";
   onBack: () => void;
   onAnswer: (criterionId: string, v: number) => void;
   onNotes: (n: string) => void;
+  onTimeChange: (seconds: number) => void;
   onSave: () => void;
   onReset: () => void;
 }) {
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
-      <div className="flex items-center gap-3 pb-3 border-b">
+      <div className="flex items-center gap-3 pb-3 border-b flex-wrap">
         <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" />Voltar</Button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-[160px]">
           <div className="font-semibold">{student.student_name}</div>
           {student.student_email && <div className="text-xs text-muted-foreground">{student.student_email}</div>}
+          <div className="mt-1"><SaveIndicator status={saveStatus} /></div>
         </div>
+        <PresentationTimer seconds={evaluation.time_seconds ?? 0} onChange={onTimeChange} />
         <div className="text-right">
           <div className="text-2xl font-bold text-amber-600">
             {liveScore.finalScore.toFixed(2)}<span className="text-sm text-muted-foreground">/{liveScore.scale}</span>

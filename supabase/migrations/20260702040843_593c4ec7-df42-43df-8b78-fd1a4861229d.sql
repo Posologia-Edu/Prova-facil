@@ -1,0 +1,1 @@
+ALTER TABLE public.class_seminar_evaluations ADD COLUMN IF NOT EXISTS time_seconds INTEGER;

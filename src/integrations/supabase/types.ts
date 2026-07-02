@@ -954,6 +954,7 @@ export type Database = {
           notes: string | null
           percent: number
           student_id: string
+          time_seconds: number | null
           total_score: number
           updated_at: string
         }
@@ -966,6 +967,7 @@ export type Database = {
           notes?: string | null
           percent?: number
           student_id: string
+          time_seconds?: number | null
           total_score?: number
           updated_at?: string
         }
@@ -978,6 +980,7 @@ export type Database = {
           notes?: string | null
           percent?: number
           student_id?: string
+          time_seconds?: number | null
           total_score?: number
           updated_at?: string
         }
