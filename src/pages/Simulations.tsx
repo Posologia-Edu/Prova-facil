@@ -1020,6 +1020,9 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("documentation"); }} title="Enviar para professor">
                         <Share2 className="h-3.5 w-3.5" />
                       </Button>
+                      <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ table: "documentation_rooms", id: room.id, archived: !(room as any).is_archived })} title={(room as any).is_archived ? "Reativar sala" : "Arquivar sala"}>
+                        {(room as any).is_archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => deleteDocumentationRoom.mutate(room.id)} title="Excluir">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
