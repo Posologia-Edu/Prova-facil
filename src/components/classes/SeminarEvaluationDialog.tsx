@@ -163,7 +163,7 @@ export function SeminarEvaluationDialog({
     }
   }
 
-  async function persistEvaluation(studentId: string) {
+  async function persistEvaluation(studentId: string, opts?: { silent?: boolean }) {
     const ev = evaluations[studentId];
     if (!ev) return;
     const sc = scoreRubric(rubric, ev.answers);
@@ -175,10 +175,11 @@ export function SeminarEvaluationDialog({
       max_score: sc.scale,
       percent: sc.totalPercent,
       notes: ev.notes,
+      time_seconds: ev.time_seconds ?? 0,
     };
     const { data, error } = await supabase
       .from("class_seminar_evaluations")
-      .upsert(payload, { onConflict: "lesson_id,student_id" })
+      .upsert(payload as any, { onConflict: "lesson_id,student_id" })
       .select().single();
     if (error) { toast.error(error.message); return; }
     setEvaluations((prev) => ({
@@ -188,7 +189,7 @@ export function SeminarEvaluationDialog({
         total_score: sc.finalScore, max_score: sc.scale, percent: sc.totalPercent,
       },
     }));
-    toast.success("Avaliação salva");
+    if (!opts?.silent) toast.success("Avaliação salva");
   }
 
   function updateAnswer(studentId: string, criterionId: string, value: number) {
