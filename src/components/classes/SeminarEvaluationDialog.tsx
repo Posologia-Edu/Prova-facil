@@ -32,6 +32,7 @@ interface Evaluation {
   max_score: number;
   percent: number;
   notes: string | null;
+  time_seconds: number;
 }
 
 interface Props {
