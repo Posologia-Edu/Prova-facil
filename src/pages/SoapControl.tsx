@@ -111,9 +111,18 @@ export default function SoapControl() {
   const peerResponses = responses.filter((r: any) => r.target_participant_id);
 
   // SOAPs flagged as needing teacher peer-eval (partner absent), with no peer eval yet.
+  // Extra safety: only consider truly absent when the submitter has no present paired partner right now.
   const pendingTeacherPeerEvals = soapResponses.filter((r: any) => {
     if (!r.needs_teacher_peer_eval) return false;
-    return !peerResponses.some((pe: any) => pe.target_participant_id === r.participant_id);
+    if (peerResponses.some((pe: any) => pe.target_participant_id === r.participant_id)) return false;
+    const submitter = participants.find((p) => p.id === r.participant_id);
+    if (!submitter) return true;
+    if (submitter.pair_position === "S" || submitter.pair_index < 0) return true;
+    const partner = participants.find(
+      (p) => p.pair_index === submitter.pair_index && p.id !== submitter.id,
+    );
+    // If a partner is now present in the room, the pair can do peer eval — not absent anymore.
+    return !partner;
   });
 
   const fieldLabels = useMemo(() => {
