@@ -756,6 +756,7 @@ export default function Simulations() {
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ table: "simulation_rooms", id: room.id, archived: !room.is_archived })} title={room.is_archived ? "Reativar sala" : "Arquivar sala"}>
                           {room.is_archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
