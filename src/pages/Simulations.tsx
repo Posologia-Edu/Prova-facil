@@ -529,6 +529,21 @@ export default function Simulations() {
     completed: t("sim_status_completed"),
   };
 
+  const showArchived = archiveFilter === "archived";
+  const filteredRooms = (rooms || []).filter((r: any) => !!r.is_archived === showArchived);
+  const filteredSoapRooms = (soapRooms || []).filter((r: any) => !!r.is_archived === showArchived);
+  const filteredReconciliationRooms = (reconciliationRooms || []).filter((r: any) => !!r.is_archived === showArchived);
+  const filteredDocumentationRooms = (documentationRooms || []).filter((r: any) => !!r.is_archived === showArchived);
+
+  const ArchiveFilterBar = ({ activeCount, archivedCount }: { activeCount: number; archivedCount: number }) => (
+    <Tabs value={archiveFilter} onValueChange={(v) => setArchiveFilter(v as "active" | "archived")}>
+      <TabsList>
+        <TabsTrigger value="active">Ativas ({activeCount})</TabsTrigger>
+        <TabsTrigger value="archived">Inativas ({archivedCount})</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
