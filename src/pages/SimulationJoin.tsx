@@ -33,6 +33,7 @@ import {
 import SimulationPausedView from "@/components/simulation/SimulationPausedView";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+import MakeupSetupDialog from "@/components/simulation/MakeupSetupDialog";
 
 
 // FormField type imported from @/components/forms/types
