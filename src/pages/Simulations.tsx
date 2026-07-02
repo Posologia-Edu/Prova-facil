@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy, Heart, Activity, Dumbbell, Microscope, ArrowLeft, Share2 } from "lucide-react";
+import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy, Heart, Activity, Dumbbell, Microscope, ArrowLeft, Share2, Archive, ArchiveRestore } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import SplitRoomDialog from "@/components/SplitRoomDialog";
 import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
@@ -149,6 +149,24 @@ export default function Simulations() {
   const [shareRoomId, setShareRoomId] = useState<string | null>(null);
   const [shareRoomTitle, setShareRoomTitle] = useState("");
   const [shareModuleType, setShareModuleType] = useState("");
+  const [archiveFilter, setArchiveFilter] = useState<"active" | "archived">("active");
+
+  const archiveMutation = useMutation({
+    mutationFn: async ({ table, id, archived }: { table: "simulation_rooms" | "soap_rooms" | "reconciliation_rooms" | "documentation_rooms"; id: string; archived: boolean }) => {
+      const { error } = await supabase.from(table).update({ is_archived: archived } as any).eq("id", id);
+      if (error) throw error;
+      return { table, archived };
+    },
+    onSuccess: ({ table, archived }) => {
+      const key = table === "simulation_rooms" ? "simulation-rooms"
+        : table === "soap_rooms" ? "soap-rooms-list"
+        : table === "reconciliation_rooms" ? "reconciliation-rooms-list"
+        : "documentation-rooms-list";
+      queryClient.invalidateQueries({ queryKey: [key] });
+      toast({ title: archived ? "Sala arquivada" : "Sala reativada" });
+    },
+    onError: () => toast({ title: "Erro", description: "Não foi possível atualizar a sala.", variant: "destructive" }),
+  });
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["simulation-rooms"],
@@ -511,6 +529,21 @@ export default function Simulations() {
     completed: t("sim_status_completed"),
   };
 
+  const showArchived = archiveFilter === "archived";
+  const filteredRooms = (rooms || []).filter((r: any) => !!r.is_archived === showArchived);
+  const filteredSoapRooms = (soapRooms || []).filter((r: any) => !!r.is_archived === showArchived);
+  const filteredReconciliationRooms = (reconciliationRooms || []).filter((r: any) => !!r.is_archived === showArchived);
+  const filteredDocumentationRooms = (documentationRooms || []).filter((r: any) => !!r.is_archived === showArchived);
+
+  const ArchiveFilterBar = ({ activeCount, archivedCount }: { activeCount: number; archivedCount: number }) => (
+    <Tabs value={archiveFilter} onValueChange={(v) => setArchiveFilter(v as "active" | "archived")}>
+      <TabsList>
+        <TabsTrigger value="active">Ativas ({activeCount})</TabsTrigger>
+        <TabsTrigger value="archived">Inativas ({archivedCount})</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -656,19 +689,21 @@ export default function Simulations() {
             </Dialog>
           </div>
 
+          <ArchiveFilterBar activeCount={(rooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(rooms || []).filter((r: any) => r.is_archived).length} />
+
           {isLoading ? (
             <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !rooms?.length ? (
+          ) : !filteredRooms.length ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">{t("sim_empty")}</h3>
-                <p className="text-muted-foreground mb-4">{t("sim_empty_hint")}</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala inativa" : t("sim_empty")}</h3>
+                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : t("sim_empty_hint")}</p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {rooms.map((room) => {
+              {filteredRooms.map((room) => {
                 const studentCount = participantCounts?.[room.id] || 0;
                 return (
                   <Card key={room.id} className="hover:shadow-md transition-shadow">
@@ -719,6 +754,9 @@ export default function Simulations() {
                         <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("simulation"); }} title="Enviar para professor">
                           <Share2 className="h-3.5 w-3.5" />
                         </Button>
+                        <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ table: "simulation_rooms", id: room.id, archived: !room.is_archived })} title={room.is_archived ? "Reativar sala" : "Arquivar sala"}>
+                          {room.is_archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -738,19 +776,20 @@ export default function Simulations() {
               <Plus className="h-4 w-4 mr-2" />Nova Sala SOAP
             </Button>
           </div>
+          <ArchiveFilterBar activeCount={(soapRooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(soapRooms || []).filter((r: any) => r.is_archived).length} />
           {soapLoading ? (
             <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !soapRooms?.length ? (
+          ) : !filteredSoapRooms.length ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala SOAP</h3>
-                <p className="text-muted-foreground mb-4">Crie uma sala SOAP a partir do módulo.</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala SOAP inativa" : "Nenhuma sala SOAP"}</h3>
+                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : "Crie uma sala SOAP a partir do módulo."}</p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {soapRooms.map((room) => {
+              {filteredSoapRooms.map((room) => {
                 const soapForms = soapFormsByRoom?.[room.id] || [];
                 const peerForm = soapForms.find((f: any) => f.form_type === "peer_evaluation");
                 let peerTotal = 0;
@@ -818,6 +857,9 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("soap"); }} title="Enviar para professor">
                         <Share2 className="h-3.5 w-3.5" />
                       </Button>
+                      <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ table: "soap_rooms", id: room.id, archived: !(room as any).is_archived })} title={(room as any).is_archived ? "Reativar sala" : "Arquivar sala"}>
+                        {(room as any).is_archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => deleteSoapRoom.mutate(room.id)} title="Excluir">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -837,19 +879,20 @@ export default function Simulations() {
               <Plus className="h-4 w-4 mr-2" />Nova Sala de Reconciliação
             </Button>
           </div>
+          <ArchiveFilterBar activeCount={(reconciliationRooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(reconciliationRooms || []).filter((r: any) => r.is_archived).length} />
           {reconciliationLoading ? (
             <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !reconciliationRooms?.length ? (
+          ) : !filteredReconciliationRooms.length ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Handshake className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala de Reconciliação</h3>
-                <p className="text-muted-foreground mb-4">Crie uma sala de Reconciliação a partir do módulo.</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala de Reconciliação inativa" : "Nenhuma sala de Reconciliação"}</h3>
+                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : "Crie uma sala de Reconciliação a partir do módulo."}</p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {reconciliationRooms.map((room) => (
+              {filteredReconciliationRooms.map((room) => (
                 <Card key={room.id} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
@@ -896,6 +939,9 @@ export default function Simulations() {
                       <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("reconciliation"); }} title="Enviar para professor">
                         <Share2 className="h-3.5 w-3.5" />
                       </Button>
+                      <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ table: "reconciliation_rooms", id: room.id, archived: !(room as any).is_archived })} title={(room as any).is_archived ? "Reativar sala" : "Arquivar sala"}>
+                        {(room as any).is_archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => deleteReconciliationRoom.mutate(room.id)} title="Excluir">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -914,19 +960,20 @@ export default function Simulations() {
               <Plus className="h-4 w-4 mr-2" />Nova Sala de Documentação
             </Button>
           </div>
+          <ArchiveFilterBar activeCount={(documentationRooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(documentationRooms || []).filter((r: any) => r.is_archived).length} />
           {documentationLoading ? (
             <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !documentationRooms?.length ? (
+          ) : !filteredDocumentationRooms.length ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala de Documentação</h3>
-                <p className="text-muted-foreground mb-4">Crie uma sala de Documentação a partir do módulo.</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala de Documentação inativa" : "Nenhuma sala de Documentação"}</h3>
+                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : "Crie uma sala de Documentação a partir do módulo."}</p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {documentationRooms.map((room) => (
+              {filteredDocumentationRooms.map((room) => (
                 <Card key={room.id} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
@@ -972,6 +1019,9 @@ export default function Simulations() {
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("documentation"); }} title="Enviar para professor">
                         <Share2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ table: "documentation_rooms", id: room.id, archived: !(room as any).is_archived })} title={(room as any).is_archived ? "Reativar sala" : "Arquivar sala"}>
+                        {(room as any).is_archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => deleteDocumentationRoom.mutate(room.id)} title="Excluir">
                         <Trash2 className="h-3.5 w-3.5" />
