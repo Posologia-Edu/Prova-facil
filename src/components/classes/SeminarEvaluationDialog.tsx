@@ -114,6 +114,7 @@ export function SeminarEvaluationDialog({
         id: e.id, student_id: e.student_id, answers: e.answers || {},
         total_score: Number(e.total_score) || 0, max_score: Number(e.max_score) || 0,
         percent: Number(e.percent) || 0, notes: e.notes,
+        time_seconds: Number(e.time_seconds) || 0,
       };
       sel.add(e.student_id);
     });
