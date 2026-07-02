@@ -158,7 +158,7 @@ export function SeminarEvaluationDialog({
     });
     if (on && !evaluations[id]) {
       setEvaluations((prev) => ({
-        ...prev, [id]: { student_id: id, answers: {}, total_score: 0, max_score: 0, percent: 0, notes: "" },
+        ...prev, [id]: { student_id: id, answers: {}, total_score: 0, max_score: 0, percent: 0, notes: "", time_seconds: 0 },
       }));
     }
   }
