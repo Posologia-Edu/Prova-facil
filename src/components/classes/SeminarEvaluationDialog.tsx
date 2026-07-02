@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft, Plus, Trash2, Star, Save, Users, Settings2, Loader2, Calendar,
   Lightbulb, Presentation as PresentationIcon, MessagesSquare, Award, CircleDot,
-  RotateCcw,
+  RotateCcw, Play, Pause, Timer, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
