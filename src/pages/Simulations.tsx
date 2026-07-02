@@ -776,19 +776,20 @@ export default function Simulations() {
               <Plus className="h-4 w-4 mr-2" />Nova Sala SOAP
             </Button>
           </div>
+          <ArchiveFilterBar activeCount={(soapRooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(soapRooms || []).filter((r: any) => r.is_archived).length} />
           {soapLoading ? (
             <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !soapRooms?.length ? (
+          ) : !filteredSoapRooms.length ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala SOAP</h3>
-                <p className="text-muted-foreground mb-4">Crie uma sala SOAP a partir do módulo.</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala SOAP inativa" : "Nenhuma sala SOAP"}</h3>
+                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : "Crie uma sala SOAP a partir do módulo."}</p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {soapRooms.map((room) => {
+              {filteredSoapRooms.map((room) => {
                 const soapForms = soapFormsByRoom?.[room.id] || [];
                 const peerForm = soapForms.find((f: any) => f.form_type === "peer_evaluation");
                 let peerTotal = 0;
