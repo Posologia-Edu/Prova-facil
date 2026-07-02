@@ -385,6 +385,7 @@ export default function SimulationJoin() {
 
 
   const submitForm = async () => {
+    if (!window.confirm("Tem certeza que deseja enviar o formulário? Após o envio não será possível editar.")) return;
     if (!activeRound || !participant || !assignment) return;
     const form = getFormForRole();
     if (!form) return;

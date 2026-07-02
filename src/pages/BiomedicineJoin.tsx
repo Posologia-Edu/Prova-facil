@@ -58,6 +58,7 @@ export default function BiomedicineJoin() {
   };
 
   const handleSubmit = async () => {
+    if (!window.confirm("Tem certeza que deseja enviar o formulário? Após o envio não será possível editar.")) return;
     if (!room || !participant || !standardForm) return;
     await supabase.from("biomedicine_responses").insert({
       room_id: room.id, pair_index: participant.pair_index, form_id: standardForm.id,

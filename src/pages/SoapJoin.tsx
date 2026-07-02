@@ -372,6 +372,7 @@ export default function SoapJoin() {
   }, [phase, room, participant]);
 
   const submitSoap = async () => {
+    if (!window.confirm("Tem certeza que deseja enviar o SOAP? Após o envio não será possível editar.")) return;
     if (!soapForm || !participant || !room) return;
     if (submittingSoap) return;
     setSubmittingSoap(true);
@@ -461,6 +462,7 @@ export default function SoapJoin() {
   };
 
   const submitPeerEval = async () => {
+    if (!window.confirm("Tem certeza que deseja enviar a avaliação? Após o envio não será possível editar.")) return;
     if (!peerForm || !participant || !partner || !room) return;
     if (submittingPeer) return;
     setSubmittingPeer(true);
