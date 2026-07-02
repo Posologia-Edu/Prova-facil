@@ -370,7 +370,12 @@ export function SeminarEvaluationDialog({
                                 <div className="text-lg font-bold text-amber-600">
                                   {ev.total_score.toFixed(1)}<span className="text-xs text-muted-foreground">/{ev.max_score}</span>
                                 </div>
-                                <div className="text-xs text-muted-foreground">{ev.percent.toFixed(0)}%</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {ev.percent.toFixed(0)}%
+                                  {ev.time_seconds > 0 && (
+                                    <> · <Timer className="inline w-3 h-3 -mt-0.5" /> {formatTime(ev.time_seconds)}</>
+                                  )}
+                                </div>
                               </div>
                             )}
                             {ev && (
