@@ -211,6 +211,58 @@ export function SeminarEvaluationDialog({
     [activeEval, rubric]
   );
 
+  // ============ Autosave ============
+  type SaveStatus = "idle" | "saving" | "saved" | "error";
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipFirstAutosave = useRef<string | null>(null);
+
+  // Track which student was just activated so we don't autosave immediately on open
+  useEffect(() => {
+    skipFirstAutosave.current = activeStudentId;
+  }, [activeStudentId]);
+
+  // Serializable snapshot used to detect meaningful changes
+  const evalSignature = useMemo(() => {
+    if (!activeStudentId || !activeEval) return "";
+    return JSON.stringify({
+      a: activeEval.answers,
+      n: activeEval.notes,
+      t: activeEval.time_seconds,
+    });
+  }, [activeStudentId, activeEval]);
+
+  useEffect(() => {
+    if (!activeStudentId || !activeEval) return;
+    if (skipFirstAutosave.current === activeStudentId) {
+      skipFirstAutosave.current = null;
+      return;
+    }
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setSaveStatus("saving");
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await persistEvaluation(activeStudentId, { silent: true });
+        setSaveStatus("saved");
+      } catch {
+        setSaveStatus("error");
+      }
+    }, 800);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+    // eslint-disable-next-line
+  }, [evalSignature]);
+
+  function setTimeSeconds(studentId: string, seconds: number) {
+    setEvaluations((prev) => {
+      const cur = prev[studentId];
+      if (!cur) return prev;
+      return { ...prev, [studentId]: { ...cur, time_seconds: Math.max(0, Math.floor(seconds)) } };
+    });
+  }
+
+
   // ============ Rubric editor helpers ============
   function updateDim(idx: number, patch: Partial<RubricDimension>) {
     setRubric((r) => {
