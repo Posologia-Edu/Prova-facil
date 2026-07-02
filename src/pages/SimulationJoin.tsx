@@ -410,7 +410,8 @@ export default function SimulationJoin() {
       answers_json: { ...answers, _feedback: feedback },
       score,
       submitted_at: new Date().toISOString(),
-    });
+      is_makeup: !!activeRound.is_makeup,
+    } as any);
 
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
