@@ -130,6 +130,7 @@ export default function DocumentationJoin() {
   }, [referralAnswers, medRows, draftKey, draftLoaded, submitted, saveDraft]);
 
   const handleSubmit = async () => {
+    if (!window.confirm("Tem certeza que deseja enviar o formulário? Após o envio não será possível editar.")) return;
     if (!room || !participant) return;
 
     // Look up any existing (possibly reopened) response rows for this pair

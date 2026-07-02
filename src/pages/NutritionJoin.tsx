@@ -46,6 +46,7 @@ export default function NutritionJoin() {
   };
 
   const handleSubmit = async () => {
+    if (!window.confirm("Tem certeza que deseja enviar o formulário? Após o envio não será possível editar.")) return;
     if (!room || !participant || !standardForm) return;
     await supabase.from("nutrition_responses").insert({ room_id: room.id, pair_index: participant.pair_index, form_id: standardForm.id, clinical_case_id: clinicalCase?.id || null, answers_json: answers as any, submitted_at: new Date().toISOString() });
     await supabase.from("nutrition_participants").update({ status: "done" }).eq("room_id", room.id).eq("pair_index", participant.pair_index);

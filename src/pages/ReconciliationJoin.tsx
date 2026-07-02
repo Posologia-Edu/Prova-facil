@@ -148,6 +148,7 @@ export default function ReconciliationJoin() {
   }, [answers, draftKey, draftLoaded, submitted, saveDraft]);
 
   const handleSubmit = async () => {
+    if (!window.confirm("Tem certeza que deseja enviar o formulário? Após o envio não será possível editar.")) return;
     if (!room || !participant || !form) return;
 
     const { error } = await supabase.from("reconciliation_responses").insert({
