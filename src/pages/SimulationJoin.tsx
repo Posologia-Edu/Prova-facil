@@ -945,7 +945,8 @@ export default function SimulationJoin() {
   const RoleIcon = assignment ? roleIcons[assignment.assigned_role] || Users : Users;
   const form = getFormForRole();
   const isActive = !!activeRound;
-  const canFill = isActive && !submitted && assignment?.assigned_role !== "patient";
+  const isReusedRole = !!assignment?.is_reused_role;
+  const canFill = isActive && !submitted && assignment?.assigned_role !== "patient" && !isReusedRole;
   const completedRoundsList = allRounds.filter((r: any) => r.status === "completed");
   const allRoundsCompleted = allRounds.length > 0 && allRounds.every((round: any) => round.status === "completed");
   const isPaused = room?.status === "paused";
