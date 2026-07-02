@@ -879,19 +879,20 @@ export default function Simulations() {
               <Plus className="h-4 w-4 mr-2" />Nova Sala de Reconciliação
             </Button>
           </div>
+          <ArchiveFilterBar activeCount={(reconciliationRooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(reconciliationRooms || []).filter((r: any) => r.is_archived).length} />
           {reconciliationLoading ? (
             <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !reconciliationRooms?.length ? (
+          ) : !filteredReconciliationRooms.length ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Handshake className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala de Reconciliação</h3>
-                <p className="text-muted-foreground mb-4">Crie uma sala de Reconciliação a partir do módulo.</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala de Reconciliação inativa" : "Nenhuma sala de Reconciliação"}</h3>
+                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : "Crie uma sala de Reconciliação a partir do módulo."}</p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {reconciliationRooms.map((room) => (
+              {filteredReconciliationRooms.map((room) => (
                 <Card key={room.id} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
