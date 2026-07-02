@@ -193,7 +193,7 @@ export function SeminarEvaluationDialog({
 
   function updateAnswer(studentId: string, criterionId: string, value: number) {
     setEvaluations((prev) => {
-      const cur = prev[studentId] || { student_id: studentId, answers: {}, total_score: 0, max_score: 0, percent: 0, notes: "" };
+      const cur: Evaluation = prev[studentId] || { student_id: studentId, answers: {}, total_score: 0, max_score: 0, percent: 0, notes: "", time_seconds: 0 };
       const answers = { ...cur.answers, [criterionId]: value };
       const sc = scoreRubric(rubric, answers);
       return {
