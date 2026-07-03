@@ -210,6 +210,7 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
           notes: v.notes,
           student_ids: v.student_ids,
           order_index: idx,
+          time_slot: v.time_slot ?? null,
         }));
         const { error: ve } = await supabase.from("class_lesson_visits").insert(rows);
         if (ve) { setSaving(false); toast.error("Erro ao salvar visitas: " + ve.message); return; }
