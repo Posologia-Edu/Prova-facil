@@ -379,6 +379,9 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
               semesterId={semesterId}
               visits={visits}
               onChange={setVisits}
+              weeklySchedule={weeklySchedule}
+              lessonDate={form.lesson_date}
+              defaultTimeSlot={form.time_slot}
             />
           )}
 
