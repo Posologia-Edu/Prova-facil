@@ -100,7 +100,7 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div className="space-y-1">
                   <Label className="text-xs">Professor responsável</Label>
                   <Select
@@ -113,6 +113,31 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
                       {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1"><Clock className="h-3 w-3" />Horário</Label>
+                  {daySlotOptions.length > 0 ? (
+                    <Select
+                      value={v.time_slot ?? "__none__"}
+                      onValueChange={(val) => update(i, { time_slot: val === "__none__" ? null : val })}
+                    >
+                      <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Herda da aula —</SelectItem>
+                        {daySlotOptions.map((s) => {
+                          const code = formatSlot(s);
+                          return <SelectItem key={code} value={code}>{code}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={v.time_slot ?? ""}
+                      onChange={(e) => update(i, { time_slot: e.target.value || null })}
+                      placeholder="Ex.: 6M234"
+                      className="h-9"
+                    />
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" />Local</Label>
