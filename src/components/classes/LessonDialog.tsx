@@ -13,7 +13,7 @@ import { LessonVisitsEditor, LessonVisit } from "./LessonVisitsEditor";
 import { fetchHolidaysFor, holidayMatchingDate } from "./HolidaysTab";
 import { SeminarRubric } from "@/lib/seminar-rubric";
 import { toast } from "sonner";
-import { Loader2, CalendarOff } from "lucide-react";
+import { Loader2, CalendarOff, Plus, X } from "lucide-react";
 import {
   WeeklySlot, slotsForDate, formatSlot, formatSlots,
 } from "@/lib/class-schedule-notation";
