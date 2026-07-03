@@ -292,91 +292,18 @@ export default function SoapControl() {
       // Get this student's participant info
       const studentParticipant = participants.find(p => p.id === selectedResponse.participant_id);
       const studentName = studentParticipant?.student_name || "";
+      const studentEmail = studentParticipant?.student_email || "";
       const patientName = (patientNames as Record<string, string>)[selectedResponse.participant_id] || "";
 
-      // Try to fetch anamnesis data
-      let anamnesisAnswers: Record<string, any> = {};
+      // Fetch anamnesis via unified lookup (uses email as unique ID)
+      const { fetchAnamnesisAnswersForStudent } = await import("@/lib/soap-anamnesis-lookup");
+      const anamnesisAnswers = await fetchAnamnesisAnswersForStudent({
+        studentEmail,
+        studentName,
+        anamnesisParticipantId: studentParticipant?.anamnesis_participant_id || null,
+        anamnesisRoomId: room?.anamnesis_room_id || null,
+      });
 
-      const normalize = (s: string) =>
-        (s || "")
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-
-      const loadAnamnesisFromRoom = async (anamRoomId: string, participantId?: string | null, studentNameToMatch?: string) => {
-        const { data: anamForms } = await supabase
-          .from("simulation_forms")
-          .select("*")
-          .eq("room_id", anamRoomId)
-          .in("form_type", ["anamnesis", "standard"]);
-        const anamForm = anamForms?.find((form: any) => form.form_type === "anamnesis") || anamForms?.[0];
-        if (!anamForm) return false;
-
-        let anamResponse: any = null;
-        if (participantId) {
-          const { data: byPair } = await (supabase.from("simulation_responses") as any)
-            .select("answers_json, participant_id, submitted_at, created_at")
-            .eq("form_id", anamForm.id)
-            .eq("participant_id", participantId)
-            .not("submitted_at", "is", null)
-            .order("submitted_at", { ascending: false })
-            .limit(1);
-          anamResponse = byPair?.[0] || null;
-        }
-
-        if (!anamResponse && studentNameToMatch) {
-          // Find by student name match across this anamnesis room
-          const { data: anamPs } = await supabase
-            .from("simulation_participants")
-            .select("id, pair_index, student_name")
-            .eq("room_id", anamRoomId);
-          const target = (anamPs || []).find((p: any) => normalize(p.student_name) === normalize(studentNameToMatch));
-          if (target) {
-            const { data: byPid } = await (supabase.from("simulation_responses") as any)
-              .select("answers_json, submitted_at, created_at")
-              .eq("form_id", anamForm.id)
-              .eq("participant_id", target.id)
-              .not("submitted_at", "is", null)
-              .order("submitted_at", { ascending: false })
-              .limit(1);
-            anamResponse = byPid?.[0] || null;
-          }
-        }
-
-        if (!anamResponse?.answers_json) return false;
-        const anamFields = Array.isArray(anamForm.content_json) ? (anamForm.content_json as any[]) : [];
-        const answers = anamResponse.answers_json as Record<string, any>;
-        for (const [key, value] of Object.entries(answers)) {
-          if (key === "_feedback") continue;
-          const field = anamFields.find((f: any) => f.id === key);
-          const label = field?.label || key;
-          anamnesisAnswers[label] = value;
-        }
-        return Object.keys(anamnesisAnswers).length > 0;
-      };
-
-      // 1) Try the explicitly linked anamnesis participant
-      if (studentParticipant?.anamnesis_participant_id && room?.anamnesis_room_id) {
-        const { data: anamnesisParticipant } = await supabase
-          .from("simulation_participants")
-          .select("pair_index, student_name")
-          .eq("id", studentParticipant.anamnesis_participant_id)
-          .maybeSingle();
-        if (anamnesisParticipant) {
-          await loadAnamnesisFromRoom(
-            room.anamnesis_room_id,
-            studentParticipant.anamnesis_participant_id,
-            anamnesisParticipant.student_name || studentName
-          );
-        }
-      }
-
-      // 2) Fallback: linked anamnesis room but no link — match by student name
-      if (Object.keys(anamnesisAnswers).length === 0 && room?.anamnesis_room_id && studentName) {
-        await loadAnamnesisFromRoom(room.anamnesis_room_id, null, studentName);
-      }
 
 
       // Get SOAP form fields

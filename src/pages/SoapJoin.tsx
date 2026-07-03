@@ -35,40 +35,15 @@ export default function SoapJoin() {
         .limit(1);
       if (!soapResps?.length) return;
 
-      // Build anamnesis answers with labels
-      let anamAnswers: Record<string, any> = {};
-      if (participantData.anamnesis_participant_id && roomData.anamnesis_room_id) {
-        const { data: anamP } = await supabase
-          .from("simulation_participants")
-          .select("pair_index")
-          .eq("id", participantData.anamnesis_participant_id)
-          .single();
-        if (anamP) {
-          const { data: anamForms } = await supabase
-            .from("simulation_forms")
-            .select("*")
-            .eq("room_id", roomData.anamnesis_room_id)
-            .in("form_type", ["anamnesis", "standard"]);
-          const anamForm = anamForms?.find((form: any) => form.form_type === "anamnesis") || anamForms?.[0];
-          if (anamForm) {
-            const { data: anamResps } = await (supabase.from("simulation_responses") as any)
-              .select("answers_json")
-              .eq("form_id", anamForm.id)
-              .eq("participant_id", participantData.anamnesis_participant_id)
-              .not("submitted_at", "is", null)
-              .order("submitted_at", { ascending: false })
-              .limit(1);
-            if (anamResps?.[0]?.answers_json) {
-              const fields = Array.isArray(anamForm.content_json) ? (anamForm.content_json as any[]) : [];
-              for (const [key, value] of Object.entries(anamResps[0].answers_json as Record<string, any>)) {
-                if (key === "_feedback") continue;
-                const field = fields.find((f: any) => f.id === key);
-                anamAnswers[field?.label || key] = value;
-              }
-            }
-          }
-        }
-      }
+      // Build anamnesis answers with labels (uses email as unique ID)
+      const { fetchAnamnesisAnswersForStudent } = await import("@/lib/soap-anamnesis-lookup");
+      const anamAnswers = await fetchAnamnesisAnswersForStudent({
+        studentEmail: participantData.student_email || "",
+        studentName: participantData.student_name || "",
+        anamnesisParticipantId: participantData.anamnesis_participant_id || null,
+        anamnesisRoomId: roomData.anamnesis_room_id || null,
+      });
+
 
       const soapFormFields = soapFormData ? (Array.isArray(soapFormData.content_json) ? soapFormData.content_json : []) : [];
 
