@@ -37,7 +37,15 @@ interface Props {
   calendarName?: string;
 }
 
-type View = "list" | "timeline" | "calendar";
+type View = "list" | "shifts" | "timeline" | "calendar";
+
+function shiftOf(l: ScheduleLesson): "M" | "T" | "N" | null {
+  const s = (l.time_slot || "").toUpperCase();
+  const parsed = parseSlot(s);
+  if (parsed[0]) return parsed[0].shift;
+  const m = /[MTN]/.exec(s);
+  return (m?.[0] as any) ?? null;
+}
 
 function ptMonth(date: Date) {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
