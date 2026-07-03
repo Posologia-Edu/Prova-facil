@@ -174,20 +174,31 @@ export function ScheduleViews({ lessons, teachers = [], onOpenLesson, onDeleteLe
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(l => {
+              {filtered.map((l, idx) => {
                 const style = getLessonTypeStyle(l.lesson_type);
                 const Icon = style.icon;
                 const teacherName = l.teacher_id ? teacherMap.get(l.teacher_id) : null;
                 const isHoliday = l.is_holiday || l.lesson_type === "holiday";
+                const prev = filtered[idx - 1];
+                const sameAsPrev = !!prev && (prev.lesson_date || "—") === (l.lesson_date || "—");
+                let rowSpan = 1;
+                if (!sameAsPrev) {
+                  for (let j = idx + 1; j < filtered.length; j++) {
+                    if ((filtered[j].lesson_date || "—") === (l.lesson_date || "—")) rowSpan++;
+                    else break;
+                  }
+                }
                 return (
-                  <TableRow key={l.id} className={cn("cursor-pointer border-l-4", style.accent, style.rowBg, isHoliday && "bg-amber-50/60")} onClick={() => onOpenLesson(l)}>
-                    <TableCell className="tabular-nums">
-                      <div>{l.lesson_date ?? "—"}</div>
-                      {l.time_slot && <div className="text-[10px] text-muted-foreground font-mono">{l.time_slot}</div>}
-                    </TableCell>
+                  <TableRow key={l.id} className={cn("cursor-pointer border-l-4", style.accent, style.rowBg, isHoliday && "bg-amber-50/60", sameAsPrev && "border-t-0")} onClick={() => onOpenLesson(l)}>
+                    {!sameAsPrev && (
+                      <TableCell className="tabular-nums align-top" rowSpan={rowSpan}>
+                        <div>{l.lesson_date ?? "—"}</div>
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span>{l.title}</span>
+                        {l.time_slot && <Badge variant="outline" className="text-[10px] font-mono">{l.time_slot}</Badge>}
                         {!!l.visits_count && l.visits_count > 0 && (
                           <Badge variant="secondary" className="text-[10px]">{l.visits_count} visita{l.visits_count > 1 ? "s" : ""}</Badge>
                         )}
