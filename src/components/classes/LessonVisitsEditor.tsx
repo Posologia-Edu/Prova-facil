@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, MapPin, Users as UsersIcon } from "lucide-react";
+import { Plus, Trash2, MapPin, Users as UsersIcon, Clock } from "lucide-react";
+import { WeeklySlot, slotsForDate, formatSlot } from "@/lib/class-schedule-notation";
 
 export interface LessonVisit {
   id?: string;
@@ -18,6 +19,7 @@ export interface LessonVisit {
   notes: string | null;
   student_ids: string[];
   order_index: number;
+  time_slot?: string | null;
 }
 
 interface Teacher { id: string; name: string; }
@@ -28,9 +30,12 @@ interface Props {
   semesterId: string;
   visits: LessonVisit[];
   onChange: (v: LessonVisit[]) => void;
+  weeklySchedule?: WeeklySlot[];
+  lessonDate?: string | null;
+  defaultTimeSlot?: string | null;
 }
 
-export function LessonVisitsEditor({ classId, semesterId, visits, onChange }: Props) {
+export function LessonVisitsEditor({ classId, semesterId, visits, onChange, weeklySchedule = [], lessonDate = null, defaultTimeSlot = null }: Props) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
 
@@ -41,10 +46,12 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange }: Pr
       .then(({ data }) => setStudents((data as any) || []));
   }, [classId, semesterId]);
 
+  const daySlotOptions = lessonDate ? slotsForDate(weeklySchedule, lessonDate) : [];
+
   function add() {
     onChange([
       ...visits,
-      { teacher_id: null, title: "", location: null, notes: null, student_ids: [], order_index: visits.length },
+      { teacher_id: null, title: "", location: null, notes: null, student_ids: [], order_index: visits.length, time_slot: defaultTimeSlot ?? null },
     ]);
   }
   function update(i: number, patch: Partial<LessonVisit>) {
