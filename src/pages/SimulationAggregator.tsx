@@ -164,7 +164,7 @@ export default function SimulationAggregator() {
         const roomResponses = responses.filter(r => r.room_id === roomId);
         const soapResponses = roomResponses.filter(r => !r.target_participant_id);
         const peerResponses = roomResponses.filter(r => r.target_participant_id);
-        const evalForm = forms.find(f => f.room_id === roomId && f.form_type === "peer_eval");
+        const evalForm = forms.find(f => f.room_id === roomId && (f.form_type === "peer_evaluation" || f.form_type === "peer_eval"));
         const evalFields: any[] = evalForm && Array.isArray(evalForm.content_json) ? (evalForm.content_json as any[]) : [];
         const allStudents = roomParticipants.filter(p => p.participant_role !== "teacher");
         const students = allStudents.map(student => {
