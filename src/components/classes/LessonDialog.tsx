@@ -13,7 +13,7 @@ import { LessonVisitsEditor, LessonVisit } from "./LessonVisitsEditor";
 import { fetchHolidaysFor, holidayMatchingDate } from "./HolidaysTab";
 import { SeminarRubric } from "@/lib/seminar-rubric";
 import { toast } from "sonner";
-import { Loader2, CalendarOff } from "lucide-react";
+import { Loader2, CalendarOff, Plus, X } from "lucide-react";
 import {
   WeeklySlot, slotsForDate, formatSlot, formatSlots,
 } from "@/lib/class-schedule-notation";
@@ -76,6 +76,7 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySlot[]>([]);
   const [holidayHit, setHolidayHit] = useState<{ name: string } | null>(null);
   const [visits, setVisits] = useState<LessonVisit[]>([]);
+  const [extraSlots, setExtraSlots] = useState<Array<{ time_slot: string | null; teacher_id: string | null }>>([]);
   const [form, setForm] = useState<LessonItem>({
     semester_id: semesterId,
     lesson_date: null,
@@ -111,6 +112,7 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
       } else {
         setVisits([]);
       }
+      setExtraSlots([]);
     } else {
       setForm({
         semester_id: semesterId,
@@ -129,6 +131,7 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
         holiday_name: null,
       });
       setVisits([]);
+      setExtraSlots([]);
     }
   }, [open, lesson, semesterId, classId]);
 
@@ -196,6 +199,19 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
       if (error || !data) { setSaving(false); toast.error("Erro ao salvar aula: " + (error?.message || "")); return; }
       lessonId = data.id;
     }
+
+    // Insert additional lesson entries (same date/title/type, different time_slot/teacher)
+    if (!lesson?.id && extraSlots.length > 0 && !isHolidayMode) {
+      const extraRows = extraSlots
+        .filter((s) => s.time_slot || s.teacher_id)
+        .map((s) => ({ ...payload, time_slot: s.time_slot ?? null, teacher_id: s.teacher_id ?? null }));
+      if (extraRows.length > 0) {
+        const { error: ee } = await supabase.from("class_schedule_items").insert(extraRows);
+        if (ee) { setSaving(false); toast.error("Erro ao salvar entradas adicionais: " + ee.message); return; }
+      }
+    }
+
+
 
     // Sync visits
     if (lessonId) {
@@ -383,6 +399,77 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
               lessonDate={form.lesson_date}
               defaultTimeSlot={form.time_slot}
             />
+          )}
+
+          {!lesson?.id && !isVisitMode && !isHolidayMode && (
+            <div className="space-y-2 rounded-md border border-dashed p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">Horários adicionais (mesma data)</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Crie várias entradas de uma vez (ex.: turma manhã e noite) sem reabrir o formulário.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                  onClick={() => setExtraSlots((s) => [...s, { time_slot: null, teacher_id: form.teacher_id ?? null }])}
+                >
+                  <Plus className="h-3 w-3 mr-1" />Adicionar
+                </Button>
+              </div>
+              {extraSlots.length > 0 && (
+                <div className="space-y-2">
+                  {extraSlots.map((row, idx) => (
+                    <div key={idx} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                      {daySlotOptions.length > 0 ? (
+                        <Select
+                          value={row.time_slot ?? "__custom__"}
+                          onValueChange={(v) => setExtraSlots((s) => s.map((r, i) => i === idx ? { ...r, time_slot: v === "__custom__" ? r.time_slot : v } : r))}
+                        >
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Horário" /></SelectTrigger>
+                          <SelectContent>
+                            {daySlotOptions.map((s) => {
+                              const code = formatSlot(s);
+                              return <SelectItem key={code} value={code}>{code}</SelectItem>;
+                            })}
+                            <SelectItem value="__custom__">Personalizado…</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          className="h-9"
+                          value={row.time_slot ?? ""}
+                          onChange={(e) => setExtraSlots((s) => s.map((r, i) => i === idx ? { ...r, time_slot: e.target.value || null } : r))}
+                          placeholder="Horário (ex.: 6N234)"
+                        />
+                      )}
+                      <Select
+                        value={row.teacher_id ?? "__none__"}
+                        onValueChange={(v) => setExtraSlots((s) => s.map((r, i) => i === idx ? { ...r, teacher_id: v === "__none__" ? null : v } : r))}
+                      >
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Professor" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— Sem professor —</SelectItem>
+                          {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => setExtraSlots((s) => s.filter((_, i) => i !== idx))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {isHolidayMode && (
