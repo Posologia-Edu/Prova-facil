@@ -73,6 +73,11 @@ export function ScheduleViews({ lessons, teachers = [], onOpenLesson, onDeleteLe
       if (statusFilter !== "all" && l.status !== statusFilter) return false;
       if (query && !l.title.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
+    }).sort((a, b) => {
+      const da = a.lesson_date || "";
+      const db = b.lesson_date || "";
+      if (da !== db) return da.localeCompare(db);
+      return (a.time_slot || "").localeCompare(b.time_slot || "");
     });
   }, [lessons, query, typeFilter, statusFilter]);
 
