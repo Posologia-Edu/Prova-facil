@@ -731,6 +731,7 @@ export type Database = {
           order_index: number
           student_ids: string[]
           teacher_id: string | null
+          time_slot: string | null
           title: string
           updated_at: string
         }
@@ -743,6 +744,7 @@ export type Database = {
           order_index?: number
           student_ids?: string[]
           teacher_id?: string | null
+          time_slot?: string | null
           title: string
           updated_at?: string
         }
@@ -755,6 +757,7 @@ export type Database = {
           order_index?: number
           student_ids?: string[]
           teacher_id?: string | null
+          time_slot?: string | null
           title?: string
           updated_at?: string
         }

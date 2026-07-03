@@ -1,0 +1,1 @@
+ALTER TABLE public.class_lesson_visits ADD COLUMN IF NOT EXISTS time_slot text;
