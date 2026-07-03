@@ -250,6 +250,114 @@ export function ScheduleViews({ lessons, teachers = [], onOpenLesson, onDeleteLe
             </TableBody>
           </Table>
         </Card>
+      ) : view === "shifts" ? (
+        (() => {
+          // Group by date, then by shift
+          const dateOrder: string[] = [];
+          const byDateShift = new Map<string, Record<"M" | "T" | "N" | "X", ScheduleLesson[]>>();
+          filtered.forEach((l) => {
+            const key = l.lesson_date || "—";
+            if (!byDateShift.has(key)) {
+              dateOrder.push(key);
+              byDateShift.set(key, { M: [], T: [], N: [], X: [] });
+            }
+            const sh = shiftOf(l) ?? "X";
+            byDateShift.get(key)![sh].push(l);
+          });
+          const shiftsPresent: Array<"M" | "T" | "N"> = (["M", "T", "N"] as const).filter((s) =>
+            filtered.some((l) => shiftOf(l) === s)
+          );
+          const showUnassigned = filtered.some((l) => shiftOf(l) === null);
+          const shiftLabels: Record<"M" | "T" | "N" | "X", string> = { M: "Manhã", T: "Tarde", N: "Noite", X: "Sem turno" };
+
+          const renderCell = (items: ScheduleLesson[]) => {
+            if (!items.length) return <span className="text-muted-foreground/50">—</span>;
+            return (
+              <div className="space-y-1.5">
+                {items.map((l) => {
+                  const style = getLessonTypeStyle(l.lesson_type);
+                  const Icon = style.icon;
+                  const teacherName = l.teacher_id ? teacherMap.get(l.teacher_id) : null;
+                  const isHoliday = l.is_holiday || l.lesson_type === "holiday";
+                  return (
+                    <div
+                      key={l.id}
+                      className={cn(
+                        "group cursor-pointer rounded-md border border-l-4 px-2 py-1.5 hover:bg-muted/40 transition-colors",
+                        style.accent,
+                        isHoliday && "bg-amber-50/60"
+                      )}
+                      onClick={() => onOpenLesson(l)}
+                    >
+                      <div className="flex items-start justify-between gap-1">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <Icon className="h-3 w-3 shrink-0" />
+                            <span className="text-sm font-medium truncate">{l.title}</span>
+                          </div>
+                          {teacherName && (
+                            <div className="text-xs text-muted-foreground mt-0.5 truncate">Prof. {teacherName}</div>
+                          )}
+                          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                            {l.time_slot && (
+                              <Badge variant="outline" className="text-[9px] font-mono h-4 px-1">
+                                {l.time_slot}
+                              </Badge>
+                            )}
+                            {l.status === "cancelled" && (
+                              <Badge variant="destructive" className="text-[9px] h-4 px-1">Cancelada</Badge>
+                            )}
+                            {l.status === "done" && (
+                              <Badge className="text-[9px] h-4 px-1">Realizada</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDeleteLesson(l); }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          };
+
+          const cols: Array<"M" | "T" | "N" | "X"> = [...shiftsPresent, ...(showUnassigned ? (["X"] as const) : [])];
+
+          return (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-28 align-middle">Data</TableHead>
+                    {cols.map((s) => (
+                      <TableHead key={s} className="text-center">{shiftLabels[s]}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dateOrder.map((iso) => {
+                    const row = byDateShift.get(iso)!;
+                    const dateLabel = iso === "—" ? "—" : new Date(iso + "T00:00:00").toLocaleDateString("pt-BR");
+                    return (
+                      <TableRow key={iso} className="align-top">
+                        <TableCell className="tabular-nums font-medium">{dateLabel}</TableCell>
+                        {cols.map((s) => (
+                          <TableCell key={s} className="p-2">{renderCell(row[s])}</TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+          );
+        })()
       ) : view === "timeline" ? (
         <div className="space-y-6">
           {grouped.map(([month, items]) => (
