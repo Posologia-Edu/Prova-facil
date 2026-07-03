@@ -112,6 +112,7 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
       } else {
         setVisits([]);
       }
+      setExtraSlots([]);
     } else {
       setForm({
         semester_id: semesterId,
@@ -130,6 +131,7 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
         holiday_name: null,
       });
       setVisits([]);
+      setExtraSlots([]);
     }
   }, [open, lesson, semesterId, classId]);
 
