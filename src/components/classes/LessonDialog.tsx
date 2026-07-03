@@ -209,6 +209,9 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
         const { error: ee } = await supabase.from("class_schedule_items").insert(extraRows);
         if (ee) { setSaving(false); toast.error("Erro ao salvar entradas adicionais: " + ee.message); return; }
       }
+    }
+
+
 
     // Sync visits
     if (lessonId) {
