@@ -1,7 +1,7 @@
 import { computeFieldScore, type FormField } from "@/components/forms/types";
 
 type SoapResponseLike = {
-  answers_json?: Record<string, unknown> | null;
+  answers_json?: unknown;
   admin_score?: number | string | null;
   ai_score?: number | string | null;
 };
@@ -33,7 +33,10 @@ export function calculateSoapPeerScore(
   for (const field of evaluationFields) {
     if (!field.max_score) continue;
     totalMax += field.max_score;
-    const answer = peerEvaluation.answers_json?.[field.id];
+    const answers = peerEvaluation.answers_json;
+    const answer = answers && typeof answers === "object" && !Array.isArray(answers)
+      ? (answers as Record<string, unknown>)[field.id]
+      : undefined;
     totalScore += computeFieldScore(field, answer);
   }
 

@@ -159,7 +159,7 @@ export default function SimulationAggregator() {
       if (!roomIds.length) return [];
       const { data: participants } = await supabase.from("soap_participants").select("id, student_email, student_name, room_id, participant_role, pair_position").in("room_id", roomIds);
       const { data: responses } = await supabase.from("soap_responses").select("id, participant_id, target_participant_id, admin_score, ai_score, answers_json, room_id, form_id").in("room_id", roomIds);
-      const { data: forms } = await supabase.from("soap_forms").select("id, form_type, content_json, room_id").in("room_id", roomIds);
+      const { data: forms } = await supabase.from("soap_forms").select("id, title, form_type, content_json, room_id").in("room_id", roomIds);
       if (!participants || !responses || !forms) return [];
       return roomIds.map(roomId => {
         const roomParticipants = participants.filter(p => p.room_id === roomId);
