@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, MapPin, Users as UsersIcon } from "lucide-react";
+import { Plus, Trash2, MapPin, Users as UsersIcon, Clock } from "lucide-react";
+import { WeeklySlot, slotsForDate, formatSlot } from "@/lib/class-schedule-notation";
 
 export interface LessonVisit {
   id?: string;
@@ -18,6 +19,7 @@ export interface LessonVisit {
   notes: string | null;
   student_ids: string[];
   order_index: number;
+  time_slot?: string | null;
 }
 
 interface Teacher { id: string; name: string; }
@@ -28,9 +30,12 @@ interface Props {
   semesterId: string;
   visits: LessonVisit[];
   onChange: (v: LessonVisit[]) => void;
+  weeklySchedule?: WeeklySlot[];
+  lessonDate?: string | null;
+  defaultTimeSlot?: string | null;
 }
 
-export function LessonVisitsEditor({ classId, semesterId, visits, onChange }: Props) {
+export function LessonVisitsEditor({ classId, semesterId, visits, onChange, weeklySchedule = [], lessonDate = null, defaultTimeSlot = null }: Props) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
 
@@ -41,10 +46,12 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange }: Pr
       .then(({ data }) => setStudents((data as any) || []));
   }, [classId, semesterId]);
 
+  const daySlotOptions = lessonDate ? slotsForDate(weeklySchedule, lessonDate) : [];
+
   function add() {
     onChange([
       ...visits,
-      { teacher_id: null, title: "", location: null, notes: null, student_ids: [], order_index: visits.length },
+      { teacher_id: null, title: "", location: null, notes: null, student_ids: [], order_index: visits.length, time_slot: defaultTimeSlot ?? null },
     ]);
   }
   function update(i: number, patch: Partial<LessonVisit>) {
@@ -67,7 +74,8 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange }: Pr
           <div>
             <h4 className="font-semibold">Visitas técnicas paralelas</h4>
             <p className="text-xs text-muted-foreground">
-              Vários professores no mesmo horário, cada um com um grupo diferente de alunos.
+              Vários professores no mesmo horário — ou em turnos diferentes na mesma data (manhã e noite) —
+              cada um com um grupo diferente de alunos. O mesmo professor pode ser reutilizado em horários diferentes.
             </p>
           </div>
           <Button size="sm" variant="outline" onClick={add}>
@@ -92,7 +100,7 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange }: Pr
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div className="space-y-1">
                   <Label className="text-xs">Professor responsável</Label>
                   <Select
@@ -105,6 +113,31 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange }: Pr
                       {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1"><Clock className="h-3 w-3" />Horário</Label>
+                  {daySlotOptions.length > 0 ? (
+                    <Select
+                      value={v.time_slot ?? "__none__"}
+                      onValueChange={(val) => update(i, { time_slot: val === "__none__" ? null : val })}
+                    >
+                      <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Herda da aula —</SelectItem>
+                        {daySlotOptions.map((s) => {
+                          const code = formatSlot(s);
+                          return <SelectItem key={code} value={code}>{code}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={v.time_slot ?? ""}
+                      onChange={(e) => update(i, { time_slot: e.target.value || null })}
+                      placeholder="Ex.: 6M234"
+                      className="h-9"
+                    />
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" />Local</Label>
