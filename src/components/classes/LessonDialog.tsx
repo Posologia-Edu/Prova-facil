@@ -200,6 +200,16 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
       lessonId = data.id;
     }
 
+    // Insert additional lesson entries (same date/title/type, different time_slot/teacher)
+    if (!lesson?.id && extraSlots.length > 0 && !isHolidayMode) {
+      const extraRows = extraSlots
+        .filter((s) => s.time_slot || s.teacher_id)
+        .map((s) => ({ ...payload, time_slot: s.time_slot ?? null, teacher_id: s.teacher_id ?? null }));
+      if (extraRows.length > 0) {
+        const { error: ee } = await supabase.from("class_schedule_items").insert(extraRows);
+        if (ee) { setSaving(false); toast.error("Erro ao salvar entradas adicionais: " + ee.message); return; }
+      }
+
     // Sync visits
     if (lessonId) {
       // delete existing visits then re-insert (simplest)
