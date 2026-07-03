@@ -14,6 +14,7 @@ import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trop
 import { computeFieldScore, FormField } from "@/components/forms/types";
 import FormRenderer from "@/components/forms/FormRenderer";
 import { SimulationReportGenerator, type PairReport, type ReportSection } from "@/components/SimulationReportGenerator";
+import { calculateSoapStudentGrade } from "@/lib/soap-grades";
 
 export default function SoapControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -754,45 +755,24 @@ export default function SoapControl() {
             for (const student of allStudents) {
               // Peer score: find peer evaluation targeting this student
               const peerEval = peerResponses.find((r: any) => r.target_participant_id === student.id);
-              let peerScore: number | null = null;
-              let peerMaxScore = 0;
               const isSolo = student.pair_position === "S";
-
-              if (peerEval && evalFields.length > 0) {
-                let totalScore = 0;
-                let totalMax = 0;
-                for (const field of evalFields) {
-                  if (!field.max_score) continue;
-                  totalMax += field.max_score;
-                  const answer = (peerEval.answers_json as Record<string, any>)?.[field.id];
-                  totalScore += computeFieldScore(field, answer);
-                }
-                peerMaxScore = totalMax;
-                // Normalize to 0-10
-                peerScore = totalMax > 0 ? (totalScore / totalMax) * 10 : 0;
-              }
 
               // Admin score & AI score: somente da SOAP submetida pelo próprio aluno.
               // Cada aluno é responsável por submeter seu próprio SOAP; se não submeteu, não recebe nota do professor/IA.
               const soapResp = soapResponses.find((r: any) => r.participant_id === student.id);
-              const adminSc = soapResp?.admin_score != null ? Number(soapResp.admin_score) : null;
-              const aiSc = soapResp?.ai_score != null ? Number(soapResp.ai_score) : null;
-
-              // For solo students without peer evaluation, use AI score as peer score
-              if (isSolo && peerScore == null && aiSc != null) {
-                peerScore = aiSc;
-              }
-
-              // Final: average of available scores
-              const scores = [peerScore, adminSc].filter((s): s is number => s != null);
-              const finalScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+              const { peerScore, peerMaxScore, adminScore, finalScore } = calculateSoapStudentGrade({
+                peerEvaluation: peerEval,
+                soapResponse: soapResp,
+                evaluationFields: evalFields,
+                isSolo,
+              });
 
               studentGrades.push({
                 id: student.id,
                 name: student.student_name,
                 peerScore,
                 peerMaxScore,
-                adminScore: adminSc,
+                adminScore,
                 finalScore,
                 isSolo,
               });
