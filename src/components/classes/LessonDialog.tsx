@@ -76,6 +76,7 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySlot[]>([]);
   const [holidayHit, setHolidayHit] = useState<{ name: string } | null>(null);
   const [visits, setVisits] = useState<LessonVisit[]>([]);
+  const [extraSlots, setExtraSlots] = useState<Array<{ time_slot: string | null; teacher_id: string | null }>>([]);
   const [form, setForm] = useState<LessonItem>({
     semester_id: semesterId,
     lesson_date: null,
