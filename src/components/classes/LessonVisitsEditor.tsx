@@ -74,7 +74,8 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
           <div>
             <h4 className="font-semibold">Visitas técnicas paralelas</h4>
             <p className="text-xs text-muted-foreground">
-              Vários professores no mesmo horário, cada um com um grupo diferente de alunos.
+              Vários professores no mesmo horário — ou em turnos diferentes na mesma data (manhã e noite) —
+              cada um com um grupo diferente de alunos. O mesmo professor pode ser reutilizado em horários diferentes.
             </p>
           </div>
           <Button size="sm" variant="outline" onClick={add}>
