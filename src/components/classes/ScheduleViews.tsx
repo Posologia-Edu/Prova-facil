@@ -138,6 +138,9 @@ export function ScheduleViews({ lessons, teachers = [], onOpenLesson, onDeleteLe
             <Button variant={view === "list" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setView("list")}>
               <LayoutList className="h-4 w-4 mr-1" />Lista
             </Button>
+            <Button variant={view === "shifts" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setView("shifts")}>
+              <Columns3 className="h-4 w-4 mr-1" />Turnos
+            </Button>
             <Button variant={view === "timeline" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setView("timeline")}>
               <GitBranch className="h-4 w-4 mr-1" />Timeline
             </Button>
