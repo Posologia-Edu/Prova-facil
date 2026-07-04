@@ -304,7 +304,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                             <div>{l.lesson_date ?? "—"}</div>
                           </TableCell>
                         )}
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium" colSpan={isVisit ? 5 : 1}>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span>{l.title}</span>
                             {!!l.visits_count && l.visits_count > 0 && (
