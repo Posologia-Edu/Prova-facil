@@ -63,7 +63,7 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
   function add() {
     onChange([
       ...visits,
-      { teacher_id: null, title: "", location: null, notes: null, student_ids: [], order_index: visits.length, time_slot: defaultTimeSlot ?? null, preceptor_name: null, preceptor_phone: null },
+      { teacher_id: null, title: "", location: null, notes: null, student_ids: [], order_index: visits.length, time_slot: defaultTimeSlot ?? null, preceptor_name: null, preceptor_phone: null, template_id: null },
     ]);
   }
   function update(i: number, patch: Partial<LessonVisit>) {
@@ -77,6 +77,42 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
     update(i, {
       student_ids: cur.includes(studentId) ? cur.filter((x) => x !== studentId) : [...cur, studentId],
     });
+  }
+  function applyTemplate(i: number, templateId: string) {
+    if (templateId === "__none__") {
+      update(i, { template_id: null });
+      return;
+    }
+    const t = templates.find((x) => x.id === templateId);
+    if (!t) return;
+    update(i, {
+      template_id: t.id,
+      title: t.title,
+      location: t.location,
+      preceptor_name: t.preceptor_name,
+      preceptor_phone: t.preceptor_phone,
+      notes: t.notes,
+      student_ids: [...(t.default_student_ids || [])],
+    });
+  }
+  function addFromTemplate(templateId: string) {
+    const t = templates.find((x) => x.id === templateId);
+    if (!t) return;
+    onChange([
+      ...visits,
+      {
+        teacher_id: null,
+        title: t.title,
+        location: t.location,
+        notes: t.notes,
+        student_ids: [...(t.default_student_ids || [])],
+        order_index: visits.length,
+        time_slot: defaultTimeSlot ?? null,
+        preceptor_name: t.preceptor_name,
+        preceptor_phone: t.preceptor_phone,
+        template_id: t.id,
+      },
+    ]);
   }
 
   return (
