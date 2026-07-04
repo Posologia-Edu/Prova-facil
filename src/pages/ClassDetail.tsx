@@ -82,6 +82,7 @@ export default function ClassDetail() {
   const [documents, setDocuments] = useState<DocItem[]>([]);
   const [activeSemesterId, setActiveSemesterId] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [semesterStudents, setSemesterStudents] = useState<{ id: string; student_name: string }[]>([]);
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   const [semDialog, setSemDialog] = useState<{ open: boolean; editing?: Semester | null }>({ open: false });
