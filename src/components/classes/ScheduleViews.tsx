@@ -310,6 +310,22 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                             {!!l.visits_count && l.visits_count > 0 && (
                               <Badge variant="secondary" className="text-[10px]">{l.visits_count} visita{l.visits_count > 1 ? "s" : ""}</Badge>
                             )}
+                            {isVisit && (
+                              <>
+                                <Badge variant="outline" className={cn("gap-1 ml-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
+                                <Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"} className="text-[10px]">
+                                  {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 ml-auto"
+                                  onClick={(e) => { e.stopPropagation(); onDeleteLesson(l); }}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                           {!isVisit && teacherName && (
                             <div className="text-xs text-muted-foreground mt-0.5">Prof. {teacherName}</div>
