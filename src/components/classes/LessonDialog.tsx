@@ -14,6 +14,7 @@ import { fetchHolidaysFor, holidayMatchingDate } from "./HolidaysTab";
 import { SeminarRubric } from "@/lib/seminar-rubric";
 import { toast } from "sonner";
 import { Loader2, CalendarOff, Plus, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   WeeklySlot, slotsForDate, formatSlot, formatSlots,
 } from "@/lib/class-schedule-notation";
