@@ -314,36 +314,69 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                           {!isVisit && teacherName && (
                             <div className="text-xs text-muted-foreground mt-0.5">Prof. {teacherName}</div>
                           )}
-                          {isVisit && (l.visits?.length ?? 0) > 0 && (
-                            <div className="mt-2 space-y-1.5">
-                              {l.visits!.map((v, i) => {
-                                const vTeacher = v.teacher_id ? teacherMap.get(v.teacher_id) : null;
-                                return (
-                                  <div key={v.id ?? i} className="text-xs bg-muted/40 rounded-md px-2 py-1.5 border">
-                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                      <span className="font-medium">{v.title || `Visita ${i + 1}`}</span>
-                                      {v.time_slot && <Badge variant="outline" className="text-[9px] font-mono h-4 px-1">{v.time_slot}</Badge>}
-                                      {vTeacher && <span className="text-muted-foreground">Prof. {vTeacher}</span>}
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-muted-foreground">
-                                      {v.location && (
-                                        <a href={v.location} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-primary hover:underline">
-                                          <MapPin className="h-3 w-3" />Local
-                                        </a>
-                                      )}
-                                      {v.preceptor_name && (
-                                        <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" />{v.preceptor_name}</span>
-                                      )}
-                                      {v.preceptor_phone && (
-                                        <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{v.preceptor_phone}</span>
-                                      )}
-                                      <span>{(v.student_ids || []).length} aluno{(v.student_ids || []).length === 1 ? "" : "s"}</span>
-                                    </div>
+                          {isVisit && (l.visits?.length ?? 0) > 0 && (() => {
+                            const shiftOfVisit = (ts: string | null | undefined): "M" | "T" | "N" | null => {
+                              const s = (ts || "").toUpperCase();
+                              const parsed = parseSlot(s);
+                              if (parsed[0]) return parsed[0].shift;
+                              const mm = /[MTN]/.exec(s);
+                              return (mm?.[0] as any) ?? null;
+                            };
+                            const morning = l.visits!.filter((v) => shiftOfVisit(v.time_slot) === "M");
+                            const night = l.visits!.filter((v) => shiftOfVisit(v.time_slot) === "N");
+                            const others = l.visits!.filter((v) => {
+                              const sh = shiftOfVisit(v.time_slot);
+                              return sh !== "M" && sh !== "N";
+                            });
+                            const renderVisit = (v: ScheduleVisit, i: number) => {
+                              const vTeacher = v.teacher_id ? teacherMap.get(v.teacher_id) : null;
+                              return (
+                                <div key={v.id ?? i} className="text-xs bg-muted/40 rounded-md px-2 py-1.5 border">
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                    <span className="font-medium">{v.title || `Visita ${i + 1}`}</span>
+                                    {v.time_slot && <Badge variant="outline" className="text-[9px] font-mono h-4 px-1">{v.time_slot}</Badge>}
+                                    {vTeacher && <span className="text-muted-foreground">Prof. {vTeacher}</span>}
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-muted-foreground">
+                                    {v.location && (
+                                      <a href={v.location} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-primary hover:underline">
+                                        <MapPin className="h-3 w-3" />Local
+                                      </a>
+                                    )}
+                                    {v.preceptor_name && (
+                                      <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" />{v.preceptor_name}</span>
+                                    )}
+                                    {v.preceptor_phone && (
+                                      <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{v.preceptor_phone}</span>
+                                    )}
+                                    <span>{(v.student_ids || []).length} aluno{(v.student_ids || []).length === 1 ? "" : "s"}</span>
+                                  </div>
+                                </div>
+                              );
+                            };
+                            return (
+                              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <div className="space-y-1.5">
+                                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Matutino ({morning.length})</div>
+                                  {morning.length === 0 ? (
+                                    <div className="text-xs text-muted-foreground italic">—</div>
+                                  ) : morning.map(renderVisit)}
+                                </div>
+                                <div className="space-y-1.5">
+                                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Noturno ({night.length})</div>
+                                  {night.length === 0 ? (
+                                    <div className="text-xs text-muted-foreground italic">—</div>
+                                  ) : night.map(renderVisit)}
+                                </div>
+                                {others.length > 0 && (
+                                  <div className="space-y-1.5 md:col-span-2">
+                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Outros ({others.length})</div>
+                                    {others.map(renderVisit)}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
