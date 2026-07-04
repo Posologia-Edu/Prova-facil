@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { buildIcs, downloadIcs } from "@/lib/ics-export";
 import { exportScheduleToExcel, exportScheduleToPdf, ScheduleExportLesson } from "@/lib/schedule-export";
 import { exportOficiosZip, lookupObjective, OficioGroup } from "@/lib/oficio-export";
+import { exportRequisicaoDocx, RequisicaoVisitRow } from "@/lib/requisicao-export";
 import { toast } from "sonner";
 
 export interface ScheduleVisit {
@@ -185,6 +186,33 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
     }
   }
 
+  async function handleExportRequisicao() {
+    if (!hasVisits) { toast.error("Nenhuma visita técnica cadastrada."); return; }
+    const rows: RequisicaoVisitRow[] = [];
+    filtered.forEach((l) => {
+      (l.visits || []).forEach((v) => {
+        const title = (v.title || "").trim();
+        if (!title) return;
+        rows.push({ title, date: l.lesson_date, time_slot: v.time_slot || l.time_slot || null });
+      });
+    });
+    const proponent = window.prompt(
+      "Nome do proponente (docente responsável) para constar na requisição:",
+      teachers[0]?.name || ""
+    );
+    if (proponent === null) { toast.info("Exportação cancelada."); return; }
+    try {
+      await exportRequisicaoDocx({
+        className: calendarName || "Cronograma",
+        proponentName: proponent.trim() || "—",
+        visits: rows,
+      });
+      toast.success("Requisição exportada");
+    } catch (e: any) {
+      toast.error("Falha ao gerar requisição: " + (e?.message || String(e)));
+    }
+  }
+
   const grouped = useMemo(() => {
     const map = new Map<string, ScheduleLesson[]>();
     filtered.forEach(l => {
@@ -283,6 +311,10 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                 <DropdownMenuItem onClick={handleExportOficios} disabled={!hasVisits}>
                   <FileTextIcon className="h-4 w-4 mr-2" />
                   Ofícios de visitas (.docx){!hasVisits ? " — sem visitas" : ` (${visitGroups.length})`}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportRequisicao} disabled={!hasVisits}>
+                  <FileTextIcon className="h-4 w-4 mr-2" />
+                  Requisição de atividade de campo (.docx){!hasVisits ? " — sem visitas" : ""}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
