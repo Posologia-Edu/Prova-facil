@@ -12,6 +12,7 @@ import { getLessonTypeStyle, LESSON_TYPE_STYLE } from "@/lib/lesson-type-style";
 import { cn } from "@/lib/utils";
 import { buildIcs, downloadIcs } from "@/lib/ics-export";
 import { exportScheduleToExcel, exportScheduleToPdf, ScheduleExportLesson } from "@/lib/schedule-export";
+import { exportOficiosZip, lookupObjective, OficioGroup } from "@/lib/oficio-export";
 import { toast } from "sonner";
 
 export interface ScheduleVisit {
