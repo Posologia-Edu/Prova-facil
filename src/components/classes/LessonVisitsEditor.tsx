@@ -41,12 +41,20 @@ interface Props {
 export function LessonVisitsEditor({ classId, semesterId, visits, onChange, weeklySchedule = [], lessonDate = null, defaultTimeSlot = null }: Props) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [templates, setTemplates] = useState<VisitTemplate[]>([]);
+  const [managerOpen, setManagerOpen] = useState(false);
+
+  async function loadTemplates() {
+    const { data } = await supabase.from("class_visit_templates" as any).select("*").eq("class_id", classId).order("title");
+    setTemplates(((data as any) || []).map((x: any) => ({ ...x, default_student_ids: x.default_student_ids || [] })));
+  }
 
   useEffect(() => {
     supabase.from("class_teachers").select("id,name").eq("class_id", classId).order("order_index")
       .then(({ data }) => setTeachers((data as any) || []));
     supabase.from("class_students").select("id,student_name").eq("semester_id", semesterId).order("student_name")
       .then(({ data }) => setStudents((data as any) || []));
+    loadTemplates();
   }, [classId, semesterId]);
 
   const daySlotOptions = lessonDate ? slotsForDate(weeklySchedule, lessonDate) : [];
