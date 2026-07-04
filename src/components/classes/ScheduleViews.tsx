@@ -440,39 +440,43 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                             );
                           })()}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {m.time_slots.length === 0 ? (
-                              <span className="text-xs text-muted-foreground">—</span>
-                            ) : (
-                              m.time_slots.map((ts) => (
-                                <Badge key={ts} variant="outline" className="text-[10px] font-mono">{ts}</Badge>
-                              ))
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {isHoliday ? (
-                            <Badge variant="outline" className="gap-1 bg-amber-100 text-amber-900 border-amber-300">Feriado</Badge>
-                          ) : (
-                            <Badge variant="outline" className={cn("gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell><Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"}>
-                          {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
-                        </Badge></TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <div className="flex justify-end gap-1">
-                            {l.lesson_type === "seminar" && onOpenSeminarEval && (
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onOpenSeminarEval(l)} title="Avaliar alunos">
-                                <ClipboardList className="h-4 w-4 text-amber-600" />
-                              </Button>
-                            )}
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDeleteLesson(l)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                        {!isVisit && (
+                          <>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {m.time_slots.length === 0 ? (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                ) : (
+                                  m.time_slots.map((ts) => (
+                                    <Badge key={ts} variant="outline" className="text-[10px] font-mono">{ts}</Badge>
+                                  ))
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {isHoliday ? (
+                                <Badge variant="outline" className="gap-1 bg-amber-100 text-amber-900 border-amber-300">Feriado</Badge>
+                              ) : (
+                                <Badge variant="outline" className={cn("gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell><Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"}>
+                              {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
+                            </Badge></TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <div className="flex justify-end gap-1">
+                                {l.lesson_type === "seminar" && onOpenSeminarEval && (
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onOpenSeminarEval(l)} title="Avaliar alunos">
+                                    <ClipboardList className="h-4 w-4 text-amber-600" />
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDeleteLesson(l)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </>
+                        )}
                       </TableRow>
                     );
                   })}
