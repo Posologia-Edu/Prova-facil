@@ -95,6 +95,38 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
     toast.success("Arquivo ICS exportado");
   }
 
+  function toExportRows(): ScheduleExportLesson[] {
+    return filtered.map((l) => ({
+      lesson_date: l.lesson_date,
+      title: l.title,
+      lesson_type: getLessonTypeStyle(l.lesson_type).label,
+      status: l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada",
+      teacher_name: l.teacher_id ? teacherMap.get(l.teacher_id) ?? null : null,
+      time_slot: l.time_slot ?? null,
+      notes: l.notes ?? null,
+      visits: (l.visits || []).map((v) => ({
+        title: v.title,
+        location: v.location,
+        teacher_name: v.teacher_id ? teacherMap.get(v.teacher_id) ?? null : null,
+        time_slot: v.time_slot,
+        preceptor_name: v.preceptor_name ?? null,
+        preceptor_phone: v.preceptor_phone ?? null,
+        students: (v.student_ids || []).map((id) => studentMap.get(id) || id),
+      })),
+    }));
+  }
+
+  function handleExportExcel() {
+    if (filtered.length === 0) { toast.error("Nada para exportar."); return; }
+    exportScheduleToExcel(calendarName || "Cronograma", toExportRows());
+    toast.success("Arquivo Excel exportado");
+  }
+  function handleExportPdf() {
+    if (filtered.length === 0) { toast.error("Nada para exportar."); return; }
+    exportScheduleToPdf(calendarName || "Cronograma", toExportRows());
+    toast.success("PDF exportado");
+  }
+
   const filtered = useMemo(() => {
     return lessons.filter(l => {
       if (typeFilter !== "all" && l.lesson_type !== typeFilter) return false;
