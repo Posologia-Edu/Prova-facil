@@ -14,6 +14,18 @@ import { buildIcs, downloadIcs } from "@/lib/ics-export";
 import { exportScheduleToExcel, exportScheduleToPdf, ScheduleExportLesson } from "@/lib/schedule-export";
 import { toast } from "sonner";
 
+export interface ScheduleVisit {
+  id?: string;
+  title: string;
+  location: string | null;
+  notes: string | null;
+  teacher_id: string | null;
+  time_slot: string | null;
+  student_ids: string[];
+  preceptor_name?: string | null;
+  preceptor_phone?: string | null;
+}
+
 export interface ScheduleLesson {
   id: string;
   title: string;
@@ -25,9 +37,12 @@ export interface ScheduleLesson {
   is_holiday?: boolean;
   holiday_name?: string | null;
   visits_count?: number;
+  visits?: ScheduleVisit[];
+  notes?: string | null;
 }
 
 interface Teacher { id: string; name: string }
+interface Student { id: string; student_name: string }
 
 interface Props {
   teachers?: Teacher[];
