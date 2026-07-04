@@ -137,11 +137,18 @@ export default function ClassDetail() {
       const ids = rows.map((r) => r.id);
       const { data: vc } = await supabase
         .from("class_lesson_visits")
-        .select("lesson_id")
-        .in("lesson_id", ids);
-      const counts: Record<string, number> = {};
-      (vc || []).forEach((v: any) => { counts[v.lesson_id] = (counts[v.lesson_id] || 0) + 1; });
-      rows.forEach((r) => { r.visits_count = counts[r.id] || 0; });
+        .select("*")
+        .in("lesson_id", ids)
+        .order("order_index");
+      const byLesson: Record<string, any[]> = {};
+      (vc || []).forEach((v: any) => {
+        if (!byLesson[v.lesson_id]) byLesson[v.lesson_id] = [];
+        byLesson[v.lesson_id].push(v);
+      });
+      rows.forEach((r) => {
+        r.visits = byLesson[r.id] || [];
+        r.visits_count = r.visits.length;
+      });
     }
     setLessons(rows as any);
   }
