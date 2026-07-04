@@ -53,7 +53,7 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
   function add() {
     onChange([
       ...visits,
-      { teacher_id: null, title: "", location: null, notes: null, student_ids: [], order_index: visits.length, time_slot: defaultTimeSlot ?? null },
+      { teacher_id: null, title: "", location: null, notes: null, student_ids: [], order_index: visits.length, time_slot: defaultTimeSlot ?? null, preceptor_name: null, preceptor_phone: null },
     ]);
   }
   function update(i: number, patch: Partial<LessonVisit>) {
