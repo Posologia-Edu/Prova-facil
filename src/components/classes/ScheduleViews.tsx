@@ -220,9 +220,24 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
             </SelectContent>
           </Select>
           <div className="ml-auto">
-            <Button variant="outline" size="sm" className="h-9" onClick={handleExportIcs} title="Exportar para Google/Outlook/Apple Calendar">
-              <Download className="h-4 w-4 mr-1" />Exportar ICS
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9">
+                  <Download className="h-4 w-4 mr-1" />Exportar<ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPdf}>
+                  <FileTextIcon className="h-4 w-4 mr-2" />PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportIcs}>
+                  <CalendarDays className="h-4 w-4 mr-2" />Calendário (ICS)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </Card>
