@@ -128,6 +128,20 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
     toast.success("PDF exportado");
   }
 
+  const filtered = useMemo(() => {
+    return lessons.filter(l => {
+      if (typeFilter !== "all" && l.lesson_type !== typeFilter) return false;
+      if (statusFilter !== "all" && l.status !== statusFilter) return false;
+      if (query && !l.title.toLowerCase().includes(query.toLowerCase())) return false;
+      return true;
+    }).sort((a, b) => {
+      const da = a.lesson_date || "";
+      const db = b.lesson_date || "";
+      if (da !== db) return da.localeCompare(db);
+      return (a.time_slot || "").localeCompare(b.time_slot || "");
+    });
+  }, [lessons, query, typeFilter, statusFilter]);
+
   const visitGroups = useMemo<OficioGroup[]>(() => {
     const map = new Map<string, OficioGroup>();
     filtered.forEach((l) => {
@@ -170,20 +184,6 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
       toast.error("Falha ao gerar ofícios: " + (e?.message || String(e)));
     }
   }
-
-  const filtered = useMemo(() => {
-    return lessons.filter(l => {
-      if (typeFilter !== "all" && l.lesson_type !== typeFilter) return false;
-      if (statusFilter !== "all" && l.status !== statusFilter) return false;
-      if (query && !l.title.toLowerCase().includes(query.toLowerCase())) return false;
-      return true;
-    }).sort((a, b) => {
-      const da = a.lesson_date || "";
-      const db = b.lesson_date || "";
-      if (da !== db) return da.localeCompare(db);
-      return (a.time_slot || "").localeCompare(b.time_slot || "");
-    });
-  }, [lessons, query, typeFilter, statusFilter]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, ScheduleLesson[]>();
