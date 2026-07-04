@@ -5,11 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LayoutList, GitBranch, CalendarDays, Search, ClipboardList, Trash2, Download, Columns3 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LayoutList, GitBranch, CalendarDays, Search, ClipboardList, Trash2, Download, Columns3, MapPin, Phone, User as UserIcon, FileSpreadsheet, FileText as FileTextIcon, ChevronDown } from "lucide-react";
 import { parseSlot } from "@/lib/class-schedule-notation";
 import { getLessonTypeStyle, LESSON_TYPE_STYLE } from "@/lib/lesson-type-style";
 import { cn } from "@/lib/utils";
 import { buildIcs, downloadIcs } from "@/lib/ics-export";
+import { exportScheduleToExcel, exportScheduleToPdf, ScheduleExportLesson } from "@/lib/schedule-export";
 import { toast } from "sonner";
 
 export interface ScheduleLesson {
