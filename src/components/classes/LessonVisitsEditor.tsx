@@ -118,18 +118,37 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
   return (
     <Card>
       <CardContent className="p-4 space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-2">
           <div>
             <h4 className="font-semibold">Visitas técnicas paralelas</h4>
             <p className="text-xs text-muted-foreground">
-              Vários professores no mesmo horário — ou em turnos diferentes na mesma data (manhã e noite) —
-              cada um com um grupo diferente de alunos. O mesmo professor pode ser reutilizado em horários diferentes.
+              Vários professores no mesmo horário — ou em turnos diferentes na mesma data — cada um com um grupo diferente de alunos.
+              Use o catálogo para cadastrar cada local uma única vez e apenas selecioná-lo nas datas em que ele ocorrer.
             </p>
           </div>
-          <Button size="sm" variant="outline" onClick={add}>
-            <Plus className="h-4 w-4 mr-1" />Adicionar visita
-          </Button>
+          <div className="flex flex-col gap-1 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => setManagerOpen(true)}>
+              <Settings2 className="h-4 w-4 mr-1" />Catálogo
+            </Button>
+            <Button size="sm" variant="outline" onClick={add}>
+              <Plus className="h-4 w-4 mr-1" />Vazia
+            </Button>
+          </div>
         </div>
+
+        {templates.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap p-2 rounded-md bg-muted/40 border border-dashed">
+            <BookMarked className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Adicionar do catálogo:</span>
+            <Select value="__pick__" onValueChange={(val) => { if (val !== "__pick__") addFromTemplate(val); }}>
+              <SelectTrigger className="h-8 w-64"><SelectValue placeholder="Selecione uma visita" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__pick__">— Selecione —</SelectItem>
+                {templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {visits.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">Nenhuma visita paralela.</p>
@@ -138,6 +157,13 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
             <div key={i} className="border rounded-md p-3 space-y-2">
               <div className="flex items-center gap-2">
                 <Badge variant="outline">#{i + 1}</Badge>
+                <Select value={v.template_id ?? "__none__"} onValueChange={(val) => applyTemplate(i, val)}>
+                  <SelectTrigger className="h-9 w-56"><SelectValue placeholder="Do catálogo…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Sem catálogo —</SelectItem>
+                    {templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <Input
                   value={v.title}
                   onChange={(e) => update(i, { title: e.target.value })}
