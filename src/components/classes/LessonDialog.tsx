@@ -291,7 +291,7 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className={cn("grid grid-cols-1 gap-3", isVisitMode ? "md:grid-cols-1" : "md:grid-cols-3")}>
             <div className="space-y-1.5">
               <Label>Tipo de aula</Label>
               <Select
@@ -303,53 +303,62 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
                   {LESSON_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Professor responsável</Label>
-              <Select
-                value={form.teacher_id ?? "__none__"}
-                onValueChange={(v) => setForm({ ...form, teacher_id: v === "__none__" ? null : v })}
-                disabled={teachers.length === 0}
-              >
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Sem professor —</SelectItem>
-                  {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {teachers.length === 0 && (
+              {isVisitMode && (
                 <p className="text-[11px] text-muted-foreground">
-                  Cadastre os professores na aba <b>Professores</b> para atribuí-los às aulas.
+                  Professor e horário são definidos em cada visita abaixo.
                 </p>
               )}
             </div>
-            <div className="space-y-1.5">
-              <Label>Horário (notação)</Label>
-              {daySlotOptions.length > 0 ? (
-                <Select
-                  value={form.time_slot ?? "__custom__"}
-                  onValueChange={(v) => setForm({ ...form, time_slot: v === "__custom__" ? form.time_slot : v })}
-                >
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                  <SelectContent>
-                    {daySlotOptions.map((s) => {
-                      const code = formatSlot(s);
-                      return <SelectItem key={code} value={code}>{code}</SelectItem>;
-                    })}
-                    <SelectItem value="__custom__">Personalizado…</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  value={form.time_slot ?? ""}
-                  onChange={(e) => setForm({ ...form, time_slot: e.target.value || null })}
-                  placeholder="Ex.: 2T23"
-                />
-              )}
-              {weeklySchedule.length > 0 && (
-                <p className="text-[10px] text-muted-foreground font-mono">Grade: {formatSlots(weeklySchedule)}</p>
-              )}
-            </div>
+            {!isVisitMode && (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Professor responsável</Label>
+                  <Select
+                    value={form.teacher_id ?? "__none__"}
+                    onValueChange={(v) => setForm({ ...form, teacher_id: v === "__none__" ? null : v })}
+                    disabled={teachers.length === 0}
+                  >
+                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— Sem professor —</SelectItem>
+                      {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {teachers.length === 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Cadastre os professores na aba <b>Professores</b> para atribuí-los às aulas.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Horário (notação)</Label>
+                  {daySlotOptions.length > 0 ? (
+                    <Select
+                      value={form.time_slot ?? "__custom__"}
+                      onValueChange={(v) => setForm({ ...form, time_slot: v === "__custom__" ? form.time_slot : v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        {daySlotOptions.map((s) => {
+                          const code = formatSlot(s);
+                          return <SelectItem key={code} value={code}>{code}</SelectItem>;
+                        })}
+                        <SelectItem value="__custom__">Personalizado…</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={form.time_slot ?? ""}
+                      onChange={(e) => setForm({ ...form, time_slot: e.target.value || null })}
+                      placeholder="Ex.: 2T23"
+                    />
+                  )}
+                  {weeklySchedule.length > 0 && (
+                    <p className="text-[10px] text-muted-foreground font-mono">Grade: {formatSlots(weeklySchedule)}</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {!isVisitMode && !isHolidayMode && (
