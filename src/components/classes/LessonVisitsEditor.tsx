@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, MapPin, Users as UsersIcon, Clock, User, Phone } from "lucide-react";
+import { Plus, Trash2, MapPin, Users as UsersIcon, Clock, User, Phone, BookMarked, Settings2 } from "lucide-react";
 import { WeeklySlot, slotsForDate, formatSlot } from "@/lib/class-schedule-notation";
+import { VisitTemplateManager, VisitTemplate } from "./VisitTemplateManager";
 
 export interface LessonVisit {
   id?: string;
