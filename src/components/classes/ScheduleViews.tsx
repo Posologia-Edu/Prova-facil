@@ -128,6 +128,49 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
     toast.success("PDF exportado");
   }
 
+  const visitGroups = useMemo<OficioGroup[]>(() => {
+    const map = new Map<string, OficioGroup>();
+    filtered.forEach((l) => {
+      (l.visits || []).forEach((v) => {
+        const key = (v.title || "").trim();
+        if (!key) return;
+        if (!map.has(key)) map.set(key, { title: key, entries: [], objective: "" });
+        map.get(key)!.entries.push({
+          date: l.lesson_date,
+          time_slot: v.time_slot || l.time_slot || null,
+          teacher_name: v.teacher_id ? teacherMap.get(v.teacher_id) ?? null : (l.teacher_id ? teacherMap.get(l.teacher_id) ?? null : null),
+        });
+      });
+    });
+    return Array.from(map.values());
+  }, [filtered, teachers]);
+
+  const hasVisits = visitGroups.length > 0;
+
+  async function handleExportOficios() {
+    if (!hasVisits) { toast.error("Nenhuma visita técnica cadastrada."); return; }
+    const groups: OficioGroup[] = [];
+    for (const g of visitGroups) {
+      const known = lookupObjective(g.title);
+      let objective = known;
+      if (!objective) {
+        const input = window.prompt(
+          `Local "${g.title}" não está no catálogo padrão.\n\nDigite o objetivo da visita (será inserido no ofício):`,
+          "Conhecer o âmbito da profissão farmacêutica em ..."
+        );
+        if (input === null) { toast.info("Exportação cancelada."); return; }
+        objective = input.trim() || "Conhecer o âmbito da profissão farmacêutica.";
+      }
+      groups.push({ ...g, objective });
+    }
+    try {
+      await exportOficiosZip(calendarName || "Cronograma", groups);
+      toast.success(`${groups.length} ofício(s) exportado(s)`);
+    } catch (e: any) {
+      toast.error("Falha ao gerar ofícios: " + (e?.message || String(e)));
+    }
+  }
+
   const filtered = useMemo(() => {
     return lessons.filter(l => {
       if (typeFilter !== "all" && l.lesson_type !== typeFilter) return false;
