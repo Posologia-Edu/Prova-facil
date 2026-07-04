@@ -280,6 +280,10 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                 <DropdownMenuItem onClick={handleExportIcs}>
                   <CalendarDays className="h-4 w-4 mr-2" />Calendário (ICS)
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportOficios} disabled={!hasVisits}>
+                  <FileTextIcon className="h-4 w-4 mr-2" />
+                  Ofícios de visitas (.docx){!hasVisits ? " — sem visitas" : ` (${visitGroups.length})`}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
