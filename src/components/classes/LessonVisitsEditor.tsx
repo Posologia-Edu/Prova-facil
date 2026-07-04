@@ -23,6 +23,7 @@ export interface LessonVisit {
   time_slot?: string | null;
   preceptor_name?: string | null;
   preceptor_phone?: string | null;
+  template_id?: string | null;
 }
 
 interface Teacher { id: string; name: string; }
