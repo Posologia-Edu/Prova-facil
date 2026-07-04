@@ -69,8 +69,9 @@ function ptMonth(date: Date) {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
-export function ScheduleViews({ lessons, teachers = [], onOpenLesson, onDeleteLesson, onOpenSeminarEval, onReschedule, calendarName }: Props) {
+export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLesson, onDeleteLesson, onOpenSeminarEval, onReschedule, calendarName }: Props) {
   const teacherMap = new Map(teachers.map(t => [t.id, t.name]));
+  const studentMap = new Map(students.map(s => [s.id, s.student_name]));
   const [view, setView] = useState<View>("list");
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
