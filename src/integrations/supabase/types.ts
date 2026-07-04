@@ -733,6 +733,7 @@ export type Database = {
           preceptor_phone: string | null
           student_ids: string[]
           teacher_id: string | null
+          template_id: string | null
           time_slot: string | null
           title: string
           updated_at: string
@@ -748,6 +749,7 @@ export type Database = {
           preceptor_phone?: string | null
           student_ids?: string[]
           teacher_id?: string | null
+          template_id?: string | null
           time_slot?: string | null
           title: string
           updated_at?: string
@@ -763,6 +765,7 @@ export type Database = {
           preceptor_phone?: string | null
           student_ids?: string[]
           teacher_id?: string | null
+          template_id?: string | null
           time_slot?: string | null
           title?: string
           updated_at?: string
@@ -780,6 +783,13 @@ export type Database = {
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "class_teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_lesson_visits_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "class_visit_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1140,6 +1150,53 @@ export type Database = {
             columns: ["semester_id"]
             isOneToOne: false
             referencedRelation: "class_semesters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_visit_templates: {
+        Row: {
+          class_id: string
+          created_at: string
+          default_student_ids: string[]
+          id: string
+          location: string | null
+          notes: string | null
+          preceptor_name: string | null
+          preceptor_phone: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          default_student_ids?: string[]
+          id?: string
+          location?: string | null
+          notes?: string | null
+          preceptor_name?: string | null
+          preceptor_phone?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          default_student_ids?: string[]
+          id?: string
+          location?: string | null
+          notes?: string | null
+          preceptor_name?: string | null
+          preceptor_phone?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_visit_templates_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
         ]
