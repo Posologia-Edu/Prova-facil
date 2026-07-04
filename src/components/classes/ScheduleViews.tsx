@@ -5,12 +5,26 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LayoutList, GitBranch, CalendarDays, Search, ClipboardList, Trash2, Download, Columns3 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LayoutList, GitBranch, CalendarDays, Search, ClipboardList, Trash2, Download, Columns3, MapPin, Phone, User as UserIcon, FileSpreadsheet, FileText as FileTextIcon, ChevronDown } from "lucide-react";
 import { parseSlot } from "@/lib/class-schedule-notation";
 import { getLessonTypeStyle, LESSON_TYPE_STYLE } from "@/lib/lesson-type-style";
 import { cn } from "@/lib/utils";
 import { buildIcs, downloadIcs } from "@/lib/ics-export";
+import { exportScheduleToExcel, exportScheduleToPdf, ScheduleExportLesson } from "@/lib/schedule-export";
 import { toast } from "sonner";
+
+export interface ScheduleVisit {
+  id?: string;
+  title: string;
+  location: string | null;
+  notes: string | null;
+  teacher_id: string | null;
+  time_slot: string | null;
+  student_ids: string[];
+  preceptor_name?: string | null;
+  preceptor_phone?: string | null;
+}
 
 export interface ScheduleLesson {
   id: string;
@@ -23,12 +37,16 @@ export interface ScheduleLesson {
   is_holiday?: boolean;
   holiday_name?: string | null;
   visits_count?: number;
+  visits?: ScheduleVisit[];
+  notes?: string | null;
 }
 
 interface Teacher { id: string; name: string }
+interface Student { id: string; student_name: string }
 
 interface Props {
   teachers?: Teacher[];
+  students?: Student[];
   lessons: ScheduleLesson[];
   onOpenLesson: (l: ScheduleLesson) => void;
   onDeleteLesson: (l: ScheduleLesson) => void;
@@ -51,8 +69,9 @@ function ptMonth(date: Date) {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
-export function ScheduleViews({ lessons, teachers = [], onOpenLesson, onDeleteLesson, onOpenSeminarEval, onReschedule, calendarName }: Props) {
+export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLesson, onDeleteLesson, onOpenSeminarEval, onReschedule, calendarName }: Props) {
   const teacherMap = new Map(teachers.map(t => [t.id, t.name]));
+  const studentMap = new Map(students.map(s => [s.id, s.student_name]));
   const [view, setView] = useState<View>("list");
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -74,6 +93,38 @@ export function ScheduleViews({ lessons, teachers = [], onOpenLesson, onDeleteLe
     })));
     downloadIcs(`${(calendarName || "cronograma").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.ics`, ics);
     toast.success("Arquivo ICS exportado");
+  }
+
+  function toExportRows(): ScheduleExportLesson[] {
+    return filtered.map((l) => ({
+      lesson_date: l.lesson_date,
+      title: l.title,
+      lesson_type: getLessonTypeStyle(l.lesson_type).label,
+      status: l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada",
+      teacher_name: l.teacher_id ? teacherMap.get(l.teacher_id) ?? null : null,
+      time_slot: l.time_slot ?? null,
+      notes: l.notes ?? null,
+      visits: (l.visits || []).map((v) => ({
+        title: v.title,
+        location: v.location,
+        teacher_name: v.teacher_id ? teacherMap.get(v.teacher_id) ?? null : null,
+        time_slot: v.time_slot,
+        preceptor_name: v.preceptor_name ?? null,
+        preceptor_phone: v.preceptor_phone ?? null,
+        students: (v.student_ids || []).map((id) => studentMap.get(id) || id),
+      })),
+    }));
+  }
+
+  function handleExportExcel() {
+    if (filtered.length === 0) { toast.error("Nada para exportar."); return; }
+    exportScheduleToExcel(calendarName || "Cronograma", toExportRows());
+    toast.success("Arquivo Excel exportado");
+  }
+  function handleExportPdf() {
+    if (filtered.length === 0) { toast.error("Nada para exportar."); return; }
+    exportScheduleToPdf(calendarName || "Cronograma", toExportRows());
+    toast.success("PDF exportado");
   }
 
   const filtered = useMemo(() => {
@@ -169,9 +220,24 @@ export function ScheduleViews({ lessons, teachers = [], onOpenLesson, onDeleteLe
             </SelectContent>
           </Select>
           <div className="ml-auto">
-            <Button variant="outline" size="sm" className="h-9" onClick={handleExportIcs} title="Exportar para Google/Outlook/Apple Calendar">
-              <Download className="h-4 w-4 mr-1" />Exportar ICS
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9">
+                  <Download className="h-4 w-4 mr-1" />Exportar<ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPdf}>
+                  <FileTextIcon className="h-4 w-4 mr-2" />PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportIcs}>
+                  <CalendarDays className="h-4 w-4 mr-2" />Calendário (ICS)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </Card>
@@ -179,77 +245,147 @@ export function ScheduleViews({ lessons, teachers = [], onOpenLesson, onDeleteLe
       {filtered.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhuma aula corresponde aos filtros.</CardContent></Card>
       ) : view === "list" ? (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-32">Data</TableHead>
-                <TableHead>Aula</TableHead>
-                <TableHead className="w-44">Tipo</TableHead>
-                <TableHead className="w-32">Status</TableHead>
-                <TableHead className="w-28"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((l, idx) => {
-                const style = getLessonTypeStyle(l.lesson_type);
-                const Icon = style.icon;
-                const teacherName = l.teacher_id ? teacherMap.get(l.teacher_id) : null;
-                const isHoliday = l.is_holiday || l.lesson_type === "holiday";
-                const prev = filtered[idx - 1];
-                const sameAsPrev = !!prev && (prev.lesson_date || "—") === (l.lesson_date || "—");
-                let rowSpan = 1;
-                if (!sameAsPrev) {
-                  for (let j = idx + 1; j < filtered.length; j++) {
-                    if ((filtered[j].lesson_date || "—") === (l.lesson_date || "—")) rowSpan++;
-                    else break;
-                  }
-                }
-                return (
-                  <TableRow key={l.id} className={cn("cursor-pointer border-l-4", style.accent, style.rowBg, isHoliday && "bg-amber-50/60", sameAsPrev && "border-t-0")} onClick={() => onOpenLesson(l)}>
-                    {!sameAsPrev && (
-                      <TableCell className="tabular-nums align-top" rowSpan={rowSpan}>
-                        <div>{l.lesson_date ?? "—"}</div>
-                      </TableCell>
-                    )}
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span>{l.title}</span>
-                        {l.time_slot && <Badge variant="outline" className="text-[10px] font-mono">{l.time_slot}</Badge>}
-                        {!!l.visits_count && l.visits_count > 0 && (
-                          <Badge variant="secondary" className="text-[10px]">{l.visits_count} visita{l.visits_count > 1 ? "s" : ""}</Badge>
-                        )}
-                      </div>
-                      {teacherName && <div className="text-xs text-muted-foreground mt-0.5">Prof. {teacherName}</div>}
-                    </TableCell>
-                    <TableCell>
-                      {isHoliday ? (
-                        <Badge variant="outline" className="gap-1 bg-amber-100 text-amber-900 border-amber-300">Feriado</Badge>
-                      ) : (
-                        <Badge variant="outline" className={cn("gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell><Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"}>
-                      {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
-                    </Badge></TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-1">
-                        {l.lesson_type === "seminar" && onOpenSeminarEval && (
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onOpenSeminarEval(l)} title="Avaliar alunos">
-                            <ClipboardList className="h-4 w-4 text-amber-600" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDeleteLesson(l)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
+        (() => {
+          // Merge lessons that share (date, title, teacher_id, lesson_type, status) — differ only by time_slot.
+          // Visit lessons (technical_visit) are NOT merged since each has its own visit set.
+          type Merged = { ids: string[]; base: ScheduleLesson; time_slots: string[] };
+          const merged: Merged[] = [];
+          filtered.forEach((l) => {
+            const isVisit = l.lesson_type === "technical_visit";
+            if (!isVisit) {
+              const key = [l.lesson_date, l.title, l.teacher_id || "", l.lesson_type, l.status].join("|");
+              const found = merged.find((m) =>
+                !((m.base.lesson_type === "technical_visit") || (m.base.id === l.id)) &&
+                [m.base.lesson_date, m.base.title, m.base.teacher_id || "", m.base.lesson_type, m.base.status].join("|") === key
+              );
+              if (found) {
+                found.ids.push(l.id);
+                if (l.time_slot && !found.time_slots.includes(l.time_slot)) found.time_slots.push(l.time_slot);
+                return;
+              }
+            }
+            merged.push({ ids: [l.id], base: l, time_slots: l.time_slot ? [l.time_slot] : [] });
+          });
+
+          return (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-32">Data</TableHead>
+                    <TableHead>Aula</TableHead>
+                    <TableHead className="w-40">Turnos</TableHead>
+                    <TableHead className="w-44">Tipo</TableHead>
+                    <TableHead className="w-32">Status</TableHead>
+                    <TableHead className="w-28"></TableHead>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {merged.map((m, idx) => {
+                    const l = m.base;
+                    const style = getLessonTypeStyle(l.lesson_type);
+                    const Icon = style.icon;
+                    const teacherName = l.teacher_id ? teacherMap.get(l.teacher_id) : null;
+                    const isHoliday = l.is_holiday || l.lesson_type === "holiday";
+                    const isVisit = l.lesson_type === "technical_visit";
+                    const prev = merged[idx - 1];
+                    const sameAsPrev = !!prev && (prev.base.lesson_date || "—") === (l.lesson_date || "—");
+                    let rowSpan = 1;
+                    if (!sameAsPrev) {
+                      for (let j = idx + 1; j < merged.length; j++) {
+                        if ((merged[j].base.lesson_date || "—") === (l.lesson_date || "—")) rowSpan++;
+                        else break;
+                      }
+                    }
+                    return (
+                      <TableRow key={m.ids.join("+")} className={cn("cursor-pointer border-l-4 align-top", style.accent, style.rowBg, isHoliday && "bg-amber-50/60", sameAsPrev && "border-t-0")} onClick={() => onOpenLesson(l)}>
+                        {!sameAsPrev && (
+                          <TableCell className="tabular-nums align-top" rowSpan={rowSpan}>
+                            <div>{l.lesson_date ?? "—"}</div>
+                          </TableCell>
+                        )}
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span>{l.title}</span>
+                            {!!l.visits_count && l.visits_count > 0 && (
+                              <Badge variant="secondary" className="text-[10px]">{l.visits_count} visita{l.visits_count > 1 ? "s" : ""}</Badge>
+                            )}
+                          </div>
+                          {!isVisit && teacherName && (
+                            <div className="text-xs text-muted-foreground mt-0.5">Prof. {teacherName}</div>
+                          )}
+                          {isVisit && (l.visits?.length ?? 0) > 0 && (
+                            <div className="mt-2 space-y-1.5">
+                              {l.visits!.map((v, i) => {
+                                const vTeacher = v.teacher_id ? teacherMap.get(v.teacher_id) : null;
+                                return (
+                                  <div key={v.id ?? i} className="text-xs bg-muted/40 rounded-md px-2 py-1.5 border">
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                      <span className="font-medium">{v.title || `Visita ${i + 1}`}</span>
+                                      {v.time_slot && <Badge variant="outline" className="text-[9px] font-mono h-4 px-1">{v.time_slot}</Badge>}
+                                      {vTeacher && <span className="text-muted-foreground">Prof. {vTeacher}</span>}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-muted-foreground">
+                                      {v.location && (
+                                        <a href={v.location} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-primary hover:underline">
+                                          <MapPin className="h-3 w-3" />Local
+                                        </a>
+                                      )}
+                                      {v.preceptor_name && (
+                                        <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" />{v.preceptor_name}</span>
+                                      )}
+                                      {v.preceptor_phone && (
+                                        <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{v.preceptor_phone}</span>
+                                      )}
+                                      <span>{(v.student_ids || []).length} aluno{(v.student_ids || []).length === 1 ? "" : "s"}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {m.time_slots.length === 0 ? (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            ) : (
+                              m.time_slots.map((ts) => (
+                                <Badge key={ts} variant="outline" className="text-[10px] font-mono">{ts}</Badge>
+                              ))
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {isHoliday ? (
+                            <Badge variant="outline" className="gap-1 bg-amber-100 text-amber-900 border-amber-300">Feriado</Badge>
+                          ) : (
+                            <Badge variant="outline" className={cn("gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell><Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"}>
+                          {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
+                        </Badge></TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end gap-1">
+                            {l.lesson_type === "seminar" && onOpenSeminarEval && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onOpenSeminarEval(l)} title="Avaliar alunos">
+                                <ClipboardList className="h-4 w-4 text-amber-600" />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDeleteLesson(l)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+          );
+        })()
       ) : view === "shifts" ? (
         (() => {
           // Group by date, then by shift

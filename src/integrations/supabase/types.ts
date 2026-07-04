@@ -729,6 +729,8 @@ export type Database = {
           location: string | null
           notes: string | null
           order_index: number
+          preceptor_name: string | null
+          preceptor_phone: string | null
           student_ids: string[]
           teacher_id: string | null
           time_slot: string | null
@@ -742,6 +744,8 @@ export type Database = {
           location?: string | null
           notes?: string | null
           order_index?: number
+          preceptor_name?: string | null
+          preceptor_phone?: string | null
           student_ids?: string[]
           teacher_id?: string | null
           time_slot?: string | null
@@ -755,6 +759,8 @@ export type Database = {
           location?: string | null
           notes?: string | null
           order_index?: number
+          preceptor_name?: string | null
+          preceptor_phone?: string | null
           student_ids?: string[]
           teacher_id?: string | null
           time_slot?: string | null

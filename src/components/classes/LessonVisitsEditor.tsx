@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, MapPin, Users as UsersIcon, Clock } from "lucide-react";
+import { Plus, Trash2, MapPin, Users as UsersIcon, Clock, User, Phone } from "lucide-react";
 import { WeeklySlot, slotsForDate, formatSlot } from "@/lib/class-schedule-notation";
 
 export interface LessonVisit {
@@ -20,6 +20,8 @@ export interface LessonVisit {
   student_ids: string[];
   order_index: number;
   time_slot?: string | null;
+  preceptor_name?: string | null;
+  preceptor_phone?: string | null;
 }
 
 interface Teacher { id: string; name: string; }
@@ -51,7 +53,7 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
   function add() {
     onChange([
       ...visits,
-      { teacher_id: null, title: "", location: null, notes: null, student_ids: [], order_index: visits.length, time_slot: defaultTimeSlot ?? null },
+      { teacher_id: null, title: "", location: null, notes: null, student_ids: [], order_index: visits.length, time_slot: defaultTimeSlot ?? null, preceptor_name: null, preceptor_phone: null },
     ]);
   }
   function update(i: number, patch: Partial<LessonVisit>) {
@@ -139,9 +141,19 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
                     />
                   )}
                 </div>
+                <div className="space-y-1 md:col-span-1">
+                  <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" />Local (URL do Google Maps)</Label>
+                  <Input value={v.location ?? ""} onChange={(e) => update(i, { location: e.target.value })} className="h-9" placeholder="https://maps.google.com/..." />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" />Local</Label>
-                  <Input value={v.location ?? ""} onChange={(e) => update(i, { location: e.target.value })} className="h-9" />
+                  <Label className="text-xs flex items-center gap-1"><User className="h-3 w-3" />Preceptor</Label>
+                  <Input value={v.preceptor_name ?? ""} onChange={(e) => update(i, { preceptor_name: e.target.value || null })} className="h-9" placeholder="Nome do preceptor" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1"><Phone className="h-3 w-3" />Telefone</Label>
+                  <Input value={v.preceptor_phone ?? ""} onChange={(e) => update(i, { preceptor_phone: e.target.value || null })} className="h-9" placeholder="(00) 00000-0000" />
                 </div>
               </div>
               <div className="space-y-1">

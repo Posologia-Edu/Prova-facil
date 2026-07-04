@@ -82,6 +82,7 @@ export default function ClassDetail() {
   const [documents, setDocuments] = useState<DocItem[]>([]);
   const [activeSemesterId, setActiveSemesterId] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [semesterStudents, setSemesterStudents] = useState<{ id: string; student_name: string }[]>([]);
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   const [semDialog, setSemDialog] = useState<{ open: boolean; editing?: Semester | null }>({ open: false });
@@ -123,7 +124,12 @@ export default function ClassDetail() {
     setLoading(false);
   }
 
-  useEffect(() => { if (activeSemesterId) loadLessons(activeSemesterId); }, [activeSemesterId]);
+  useEffect(() => {
+    if (!activeSemesterId) { setSemesterStudents([]); return; }
+    loadLessons(activeSemesterId);
+    supabase.from("class_students").select("id,student_name").eq("semester_id", activeSemesterId).order("student_name")
+      .then(({ data }) => setSemesterStudents((data as any) || []));
+  }, [activeSemesterId]);
 
   async function loadLessons(semId: string) {
     const { data } = await supabase
@@ -137,11 +143,18 @@ export default function ClassDetail() {
       const ids = rows.map((r) => r.id);
       const { data: vc } = await supabase
         .from("class_lesson_visits")
-        .select("lesson_id")
-        .in("lesson_id", ids);
-      const counts: Record<string, number> = {};
-      (vc || []).forEach((v: any) => { counts[v.lesson_id] = (counts[v.lesson_id] || 0) + 1; });
-      rows.forEach((r) => { r.visits_count = counts[r.id] || 0; });
+        .select("*")
+        .in("lesson_id", ids)
+        .order("order_index");
+      const byLesson: Record<string, any[]> = {};
+      (vc || []).forEach((v: any) => {
+        if (!byLesson[v.lesson_id]) byLesson[v.lesson_id] = [];
+        byLesson[v.lesson_id].push(v);
+      });
+      rows.forEach((r) => {
+        r.visits = byLesson[r.id] || [];
+        r.visits_count = r.visits.length;
+      });
     }
     setLessons(rows as any);
   }
@@ -389,6 +402,7 @@ export default function ClassDetail() {
                 <ScheduleViews
                   lessons={lessons as ScheduleLesson[]}
                   teachers={teachers}
+                  students={semesterStudents}
                   calendarName={`${klass.name}${activeSemester ? " - " + activeSemester.label : ""}`}
                   onOpenLesson={(l) => setLessonDialog({ open: true, editing: l as Lesson })}
                   onDeleteLesson={(l) => setConfirmDelete({ kind: "lesson", id: l.id, label: l.title })}
