@@ -124,7 +124,12 @@ export default function ClassDetail() {
     setLoading(false);
   }
 
-  useEffect(() => { if (activeSemesterId) loadLessons(activeSemesterId); }, [activeSemesterId]);
+  useEffect(() => {
+    if (!activeSemesterId) { setSemesterStudents([]); return; }
+    loadLessons(activeSemesterId);
+    supabase.from("class_students").select("id,student_name").eq("semester_id", activeSemesterId).order("student_name")
+      .then(({ data }) => setSemesterStudents((data as any) || []));
+  }, [activeSemesterId]);
 
   async function loadLessons(semId: string) {
     const { data } = await supabase
