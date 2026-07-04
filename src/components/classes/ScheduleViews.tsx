@@ -328,50 +328,112 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                               const sh = shiftOfVisit(v.time_slot);
                               return sh !== "M" && sh !== "N";
                             });
-                            const renderVisit = (v: ScheduleVisit, i: number) => {
+                            const renderVisit = (
+                              v: ScheduleVisit,
+                              i: number,
+                              accent: { bar: string; chipText: string; chipBg: string }
+                            ) => {
                               const vTeacher = v.teacher_id ? teacherMap.get(v.teacher_id) : null;
+                              const studentCount = (v.student_ids || []).length;
                               return (
-                                <div key={v.id ?? i} className="text-xs bg-muted/40 rounded-md px-2 py-1.5 border">
-                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                    <span className="font-medium">{v.title || `Visita ${i + 1}`}</span>
-                                    {v.time_slot && <Badge variant="outline" className="text-[9px] font-mono h-4 px-1">{v.time_slot}</Badge>}
-                                    {vTeacher && <span className="text-muted-foreground">Prof. {vTeacher}</span>}
+                                <div
+                                  key={v.id ?? i}
+                                  className="group/visit relative bg-card border border-border/60 rounded-2xl pl-5 pr-4 py-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
+                                >
+                                  <span className={cn("absolute left-0 top-3.5 bottom-3.5 w-1 rounded-r-full", accent.bar)} />
+                                  <div className="flex items-start justify-between gap-3 mb-2">
+                                    <div className="min-w-0">
+                                      <h4 className="text-sm font-semibold text-foreground leading-tight truncate">
+                                        {v.title || `Visita ${i + 1}`}
+                                      </h4>
+                                      {vTeacher && (
+                                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Prof. {vTeacher}</p>
+                                      )}
+                                    </div>
+                                    {v.time_slot && (
+                                      <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-muted/60 text-muted-foreground text-[10px] font-medium border border-border/60 font-mono tracking-tight">
+                                        {v.time_slot}
+                                      </span>
+                                    )}
                                   </div>
-                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-muted-foreground">
-                                    {v.location && (
-                                      <a href={v.location} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-primary hover:underline">
-                                        <MapPin className="h-3 w-3" />Local
+                                  <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-[11px]">
+                                    {v.location ? (
+                                      <a
+                                        href={v.location}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="flex items-center gap-1.5 text-primary hover:underline min-w-0"
+                                      >
+                                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                        <span className="truncate">Local</span>
                                       </a>
+                                    ) : (
+                                      <span className="flex items-center gap-1.5 text-muted-foreground/60 min-w-0">
+                                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                        <span className="truncate">—</span>
+                                      </span>
                                     )}
-                                    {v.preceptor_name && (
-                                      <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" />{v.preceptor_name}</span>
-                                    )}
-                                    {v.preceptor_phone && (
-                                      <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{v.preceptor_phone}</span>
-                                    )}
-                                    <span>{(v.student_ids || []).length} aluno{(v.student_ids || []).length === 1 ? "" : "s"}</span>
+                                    {v.preceptor_name ? (
+                                      <span className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+                                        <UserIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                                        <span className="truncate">{v.preceptor_name}</span>
+                                      </span>
+                                    ) : <span />}
+                                    {v.preceptor_phone ? (
+                                      <span className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+                                        <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                                        <span className="truncate">{v.preceptor_phone}</span>
+                                      </span>
+                                    ) : <span />}
+                                    <span className={cn("inline-flex items-center gap-1 justify-self-start px-2 py-0.5 rounded-md text-[10px] font-semibold w-fit", accent.chipBg, accent.chipText)}>
+                                      {studentCount} {studentCount === 1 ? "aluno" : "alunos"}
+                                    </span>
                                   </div>
                                 </div>
                               );
                             };
+                            const morningAccent = { bar: "bg-indigo-500", chipText: "text-indigo-600", chipBg: "bg-indigo-50" };
+                            const nightAccent = { bar: "bg-violet-600", chipText: "text-violet-600", chipBg: "bg-violet-50" };
+                            const otherAccent = { bar: "bg-muted-foreground/40", chipText: "text-muted-foreground", chipBg: "bg-muted" };
+                            const ColumnHeader = ({ label, count, dotClass }: { label: string; count: number; dotClass: string }) => (
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className={cn("w-1.5 h-1.5 rounded-full", dotClass)} />
+                                <h5 className={cn("text-[11px] font-bold uppercase tracking-[0.14em]",
+                                  dotClass === "bg-indigo-500" ? "text-indigo-600"
+                                  : dotClass === "bg-violet-600" ? "text-violet-700"
+                                  : "text-muted-foreground")}>
+                                  {label}
+                                </h5>
+                                <span className="text-[11px] font-medium text-muted-foreground/70 normal-case">
+                                  ({count} {count === 1 ? "unidade" : "unidades"})
+                                </span>
+                              </div>
+                            );
                             return (
-                              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <div className="space-y-1.5">
-                                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Matutino ({morning.length})</div>
-                                  {morning.length === 0 ? (
-                                    <div className="text-xs text-muted-foreground italic">—</div>
-                                  ) : morning.map(renderVisit)}
+                              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                <div>
+                                  <ColumnHeader label="Matutino" count={morning.length} dotClass="bg-indigo-500" />
+                                  <div className="space-y-2.5">
+                                    {morning.length === 0 ? (
+                                      <div className="text-xs text-muted-foreground/70 italic px-1">Sem visitas</div>
+                                    ) : morning.map((v, i) => renderVisit(v, i, morningAccent))}
+                                  </div>
                                 </div>
-                                <div className="space-y-1.5">
-                                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Noturno ({night.length})</div>
-                                  {night.length === 0 ? (
-                                    <div className="text-xs text-muted-foreground italic">—</div>
-                                  ) : night.map(renderVisit)}
+                                <div>
+                                  <ColumnHeader label="Noturno" count={night.length} dotClass="bg-violet-600" />
+                                  <div className="space-y-2.5">
+                                    {night.length === 0 ? (
+                                      <div className="text-xs text-muted-foreground/70 italic px-1">Sem visitas</div>
+                                    ) : night.map((v, i) => renderVisit(v, i, nightAccent))}
+                                  </div>
                                 </div>
                                 {others.length > 0 && (
-                                  <div className="space-y-1.5 md:col-span-2">
-                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Outros ({others.length})</div>
-                                    {others.map(renderVisit)}
+                                  <div className="md:col-span-2">
+                                    <ColumnHeader label="Outros" count={others.length} dotClass="bg-muted-foreground/40" />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5">
+                                      {others.map((v, i) => renderVisit(v, i, otherAccent))}
+                                    </div>
                                   </div>
                                 )}
                               </div>
