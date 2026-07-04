@@ -46,6 +46,7 @@ interface Student { id: string; student_name: string }
 
 interface Props {
   teachers?: Teacher[];
+  students?: Student[];
   lessons: ScheduleLesson[];
   onOpenLesson: (l: ScheduleLesson) => void;
   onDeleteLesson: (l: ScheduleLesson) => void;
