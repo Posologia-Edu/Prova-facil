@@ -312,6 +312,10 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                   <FileTextIcon className="h-4 w-4 mr-2" />
                   Ofícios de visitas (.docx){!hasVisits ? " — sem visitas" : ` (${visitGroups.length})`}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportRequisicao} disabled={!hasVisits}>
+                  <FileTextIcon className="h-4 w-4 mr-2" />
+                  Requisição de atividade de campo (.docx){!hasVisits ? " — sem visitas" : ""}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
