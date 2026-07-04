@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, MapPin, Users as UsersIcon, Clock } from "lucide-react";
+import { Plus, Trash2, MapPin, Users as UsersIcon, Clock, User, Phone } from "lucide-react";
 import { WeeklySlot, slotsForDate, formatSlot } from "@/lib/class-schedule-notation";
 
 export interface LessonVisit {
@@ -20,6 +20,8 @@ export interface LessonVisit {
   student_ids: string[];
   order_index: number;
   time_slot?: string | null;
+  preceptor_name?: string | null;
+  preceptor_phone?: string | null;
 }
 
 interface Teacher { id: string; name: string; }
