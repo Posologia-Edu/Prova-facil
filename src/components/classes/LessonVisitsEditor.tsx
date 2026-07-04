@@ -250,6 +250,13 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
           ))
         )}
       </CardContent>
+      <VisitTemplateManager
+        open={managerOpen}
+        onOpenChange={setManagerOpen}
+        classId={classId}
+        semesterId={semesterId}
+        onChanged={loadTemplates}
+      />
     </Card>
   );
 }
