@@ -186,6 +186,33 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
     }
   }
 
+  async function handleExportRequisicao() {
+    if (!hasVisits) { toast.error("Nenhuma visita técnica cadastrada."); return; }
+    const rows: RequisicaoVisitRow[] = [];
+    filtered.forEach((l) => {
+      (l.visits || []).forEach((v) => {
+        const title = (v.title || "").trim();
+        if (!title) return;
+        rows.push({ title, date: l.lesson_date, time_slot: v.time_slot || l.time_slot || null });
+      });
+    });
+    const proponent = window.prompt(
+      "Nome do proponente (docente responsável) para constar na requisição:",
+      teachers[0]?.name || ""
+    );
+    if (proponent === null) { toast.info("Exportação cancelada."); return; }
+    try {
+      await exportRequisicaoDocx({
+        className: calendarName || "Cronograma",
+        proponentName: proponent.trim() || "—",
+        visits: rows,
+      });
+      toast.success("Requisição exportada");
+    } catch (e: any) {
+      toast.error("Falha ao gerar requisição: " + (e?.message || String(e)));
+    }
+  }
+
   const grouped = useMemo(() => {
     const map = new Map<string, ScheduleLesson[]>();
     filtered.forEach(l => {
