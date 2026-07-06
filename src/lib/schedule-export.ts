@@ -135,8 +135,16 @@ export function exportScheduleToPdf(name: string, lessons: ScheduleExportLesson[
       headStyles: { fillColor: [30, 58, 138], textColor: 255 },
       alternateRowStyles: { fillColor: [245, 247, 250] },
       columnStyles: {
-        7: { cellWidth: 120 },
+        7: { cellWidth: 120, textColor: [30, 64, 175] },
         8: { cellWidth: 150 },
+      },
+      didDrawCell: (data) => {
+        if (data.section === "body" && data.column.index === 7) {
+          const url = String(data.cell.raw ?? "").trim();
+          if (url && /^https?:\/\//i.test(url)) {
+            doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url });
+          }
+        }
       },
     });
   }
