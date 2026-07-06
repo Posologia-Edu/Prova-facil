@@ -73,6 +73,12 @@ export function exportScheduleToExcel(name: string, lessons: ScheduleExportLesso
   XLSX.writeFile(wb, `${slugify(name)}.xlsx`);
 }
 
+function formatDateBR(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : iso;
+}
+
 export function exportScheduleToPdf(name: string, lessons: ScheduleExportLesson[]) {
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -89,7 +95,7 @@ export function exportScheduleToPdf(name: string, lessons: ScheduleExportLesson[
     startY: 70,
     head: [["Data", "Aula", "Tipo", "Turno", "Professor", "Status", "Visitas"]],
     body: lessons.map((l) => [
-      l.lesson_date ?? "",
+      formatDateBR(l.lesson_date),
       l.title,
       l.lesson_type,
       l.time_slot ?? "",
@@ -110,20 +116,54 @@ export function exportScheduleToPdf(name: string, lessons: ScheduleExportLesson[
     doc.setFont("helvetica", "bold");
     doc.text("Visitas técnicas", 40, 40);
 
-    const visitRows: any[] = [];
+    // Group visits by date, then by lesson title (rowSpan merges)
+    type Item = { lesson: ScheduleExportLesson; visit: ScheduleExportVisit };
+    const dateOrder: string[] = [];
+    const byDate = new Map<string, Item[]>();
     visitLessons.forEach((l) => {
       l.visits.forEach((v) => {
-        visitRows.push([
-          l.lesson_date ?? "",
-          l.title,
-          v.title,
-          v.time_slot ?? "",
-          v.teacher_name ?? "",
-          v.preceptor_name ?? "",
-          v.preceptor_phone ?? "",
-          v.location ?? "",
-          `${v.students.length} aluno(s)${v.students.length ? ": " + v.students.join(", ") : ""}`,
-        ]);
+        const d = l.lesson_date ?? "";
+        if (!byDate.has(d)) { byDate.set(d, []); dateOrder.push(d); }
+        byDate.get(d)!.push({ lesson: l, visit: v });
+      });
+    });
+
+    // Alternating group colors per date (so consecutive dates are visually distinct)
+    const groupColors: [number, number, number][] = [
+      [219, 234, 254], // blue-100
+      [254, 243, 199], // amber-100
+    ];
+    const rowGroup: number[] = []; // group index per body row
+
+    const visitRows: any[] = [];
+    dateOrder.forEach((d, gi) => {
+      const items = byDate.get(d)!;
+      // sub-groups by consecutive same lesson title
+      const titleSpans: { title: string; count: number; startIdx: number }[] = [];
+      items.forEach((it, i) => {
+        const last = titleSpans[titleSpans.length - 1];
+        if (last && last.title === it.lesson.title) last.count++;
+        else titleSpans.push({ title: it.lesson.title, count: 1, startIdx: i });
+      });
+      const titleAtIdx = new Map<number, { title: string; span: number }>();
+      titleSpans.forEach((s) => titleAtIdx.set(s.startIdx, { title: s.title, span: s.count }));
+
+      items.forEach((it, i) => {
+        const row: any[] = [];
+        if (i === 0) row.push({ content: formatDateBR(d), rowSpan: items.length, styles: { valign: "middle", halign: "center", fontStyle: "bold" } });
+        const t = titleAtIdx.get(i);
+        if (t) row.push({ content: t.title, rowSpan: t.span, styles: { valign: "middle", fontStyle: "bold" } });
+        row.push(
+          it.visit.title,
+          it.visit.time_slot ?? "",
+          it.visit.teacher_name ?? "",
+          it.visit.preceptor_name ?? "",
+          it.visit.preceptor_phone ?? "",
+          it.visit.location ?? "",
+          `${it.visit.students.length} aluno(s)${it.visit.students.length ? ": " + it.visit.students.join(", ") : ""}`,
+        );
+        rowGroup.push(gi % groupColors.length);
+        visitRows.push(row);
       });
     });
 
@@ -131,12 +171,17 @@ export function exportScheduleToPdf(name: string, lessons: ScheduleExportLesson[
       startY: 55,
       head: [["Data", "Aula", "Visita", "Turno", "Prof.", "Preceptor", "Telefone", "Local (URL)", "Alunos"]],
       body: visitRows,
-      styles: { fontSize: 7, cellPadding: 3, overflow: "linebreak" },
+      styles: { fontSize: 7, cellPadding: 3, overflow: "linebreak", lineColor: [180, 190, 210], lineWidth: 0.4 },
       headStyles: { fillColor: [30, 58, 138], textColor: 255 },
-      alternateRowStyles: { fillColor: [245, 247, 250] },
       columnStyles: {
         7: { cellWidth: 120, textColor: [30, 64, 175] },
         8: { cellWidth: 150 },
+      },
+      didParseCell: (data) => {
+        if (data.section === "body") {
+          const gi = rowGroup[data.row.index];
+          if (gi != null) data.cell.styles.fillColor = groupColors[gi];
+        }
       },
       didDrawCell: (data) => {
         if (data.section === "body" && data.column.index === 7) {
