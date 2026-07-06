@@ -24,7 +24,7 @@ const KNOWN_OBJECTIVES: Array<{ match: RegExp; text: string }> = [
   { match: /lab(orat[óo]rio)?\.?\s*(do\s*)?huol/i, text: "Conhecer o âmbito da profissão farmacêutica nas análises clínicas." },
   { match: /farm[áa]cia\s*(do\s*)?huol/i, text: "Conhecer o âmbito da profissão farmacêutica na Farmácia Hospitalar." },
   { match: /farmaf[óo]rmula/i, text: "Conhecer o âmbito da profissão farmacêutica na Farmácia Magistral." },
-  { match: /\biep\b/i, text: "Conhecer o âmbito da profissão farmacêutica na área da perícia criminal e forense." },
+  { match: /\bi?tep\b|\biep\b/i, text: "Conhecer o âmbito da profissão farmacêutica na área da perícia criminal e forense." },
   { match: /nuplam/i, text: "Conhecer o âmbito da indústria farmacêutica." },
   { match: /pague\s*menos/i, text: "Conhecer o âmbito da profissão farmacêutica na farmácia comunitária." },
   { match: /unicat/i, text: "Conhecer o âmbito da profissão farmacêutica na Assistência farmacêutica." },
