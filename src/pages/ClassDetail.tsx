@@ -28,6 +28,7 @@ import { OverviewTab } from "@/components/classes/OverviewTab";
 import { GradebookTab } from "@/components/classes/GradebookTab";
 import { AttendanceTab } from "@/components/classes/AttendanceTab";
 import { StudentsTab } from "@/components/classes/StudentsTab";
+import { ClassMaterialsGrid } from "@/components/classes/ClassMaterialsGrid";
 import { ScheduleViews, ScheduleLesson } from "@/components/classes/ScheduleViews";
 import { WeeklyScheduleEditor } from "@/components/classes/WeeklyScheduleEditor";
 import { HolidaysTab } from "@/components/classes/HolidaysTab";
@@ -53,7 +54,7 @@ interface Semester {
 interface Teacher { id: string; name: string; email: string | null; role: string; }
 interface DocItem {
   id: string; title: string; category: string; description: string | null;
-  file_path: string | null; link_url: string | null;
+  file_path: string | null; link_url: string | null; updated_at: string;
 }
 interface Lesson extends LessonItem { id: string; rubric_json?: SeminarRubric | null; }
 
@@ -536,48 +537,13 @@ export default function ClassDetail() {
 
           {/* DOCUMENTS */}
           <TabsContent value="documents" className="space-y-3">
-            <div className="flex justify-end">
-              <Button onClick={() => setDocDialog({ open: true, editing: null })}>
-                <Plus className="w-4 h-4 mr-1" />Novo documento
-              </Button>
-            </div>
-            {documents.length === 0 ? (
-              <Card><CardContent className="py-10 text-center text-muted-foreground">
-                Faça upload do calendário acadêmico, regulamento, ementa, etc.
-              </CardContent></Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {documents.map((d) => (
-                  <Card key={d.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 flex justify-between items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-primary shrink-0" />
-                          <span className="font-medium truncate">{d.title}</span>
-                        </div>
-                        <Badge variant="outline" className="mt-1">
-                          {DOC_CATEGORIES.find((c) => c.value === d.category)?.label ?? d.category}
-                        </Badge>
-                        {d.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{d.description}</p>}
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {(d.file_path || d.link_url) && (
-                          <Button variant="ghost" size="icon" onClick={() => downloadDoc(d)}>
-                            {d.link_url ? <ExternalLink className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" onClick={() => setDocDialog({ open: true, editing: d })}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({ kind: "document", id: d.id, label: d.title })}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+            <ClassMaterialsGrid
+              documents={documents}
+              onNew={() => setDocDialog({ open: true, editing: null })}
+              onEdit={(d) => setDocDialog({ open: true, editing: d })}
+              onDelete={(d) => setConfirmDelete({ kind: "document", id: d.id, label: d.title })}
+              onOpen={(d) => downloadDoc(d)}
+            />
           </TabsContent>
 
           {/* HOLIDAYS */}
