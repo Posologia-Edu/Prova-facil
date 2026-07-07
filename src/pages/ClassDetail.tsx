@@ -28,6 +28,7 @@ import { OverviewTab } from "@/components/classes/OverviewTab";
 import { GradebookTab } from "@/components/classes/GradebookTab";
 import { AttendanceTab } from "@/components/classes/AttendanceTab";
 import { StudentsTab } from "@/components/classes/StudentsTab";
+import { ClassMaterialsGrid } from "@/components/classes/ClassMaterialsGrid";
 import { ScheduleViews, ScheduleLesson } from "@/components/classes/ScheduleViews";
 import { WeeklyScheduleEditor } from "@/components/classes/WeeklyScheduleEditor";
 import { HolidaysTab } from "@/components/classes/HolidaysTab";
