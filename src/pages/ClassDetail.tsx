@@ -54,7 +54,7 @@ interface Semester {
 interface Teacher { id: string; name: string; email: string | null; role: string; }
 interface DocItem {
   id: string; title: string; category: string; description: string | null;
-  file_path: string | null; link_url: string | null;
+  file_path: string | null; link_url: string | null; updated_at: string;
 }
 interface Lesson extends LessonItem { id: string; rubric_json?: SeminarRubric | null; }
 
