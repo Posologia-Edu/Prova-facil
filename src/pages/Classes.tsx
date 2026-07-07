@@ -325,15 +325,92 @@ export default function ClassesPage() {
   const handleDuplicateClass = async (cls: ClassItem) => {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return;
-    const { error } = await supabase.from("classes").insert({
-      user_id: user.user.id,
-      name: `${cls.name} (cópia)`,
-      semester: cls.semester,
-      description: cls.description,
-    });
-    if (error) { toast.error("Erro ao duplicar."); return; }
-    toast.success("Turma duplicada.");
-    fetchClasses();
+    const tId = toast.loading("Duplicando turma...");
+    try {
+      const { data: newClass, error } = await supabase.from("classes").insert({
+        user_id: user.user.id,
+        name: `${cls.name} (cópia)`,
+        semester: cls.semester,
+        description: cls.description,
+      }).select().single();
+      if (error || !newClass) throw error || new Error("Falha ao duplicar");
+
+      // 1. Duplicate teachers (build id map)
+      const teacherIdMap: Record<string, string> = {};
+      const { data: teachers } = await supabase.from("class_teachers").select("*").eq("class_id", cls.id);
+      if (teachers?.length) {
+        for (const t of teachers as any[]) {
+          const { data: nt } = await supabase.from("class_teachers").insert({
+            class_id: newClass.id,
+            name: t.name,
+            email: t.email,
+            role: t.role,
+            order_index: t.order_index,
+          }).select().single();
+          if (nt) teacherIdMap[t.id] = nt.id;
+        }
+      }
+
+      // 2. Duplicate materials (documents)
+      const { data: docs } = await supabase.from("class_documents").select("*").eq("class_id", cls.id);
+      if (docs?.length) {
+        await supabase.from("class_documents").insert((docs as any[]).map(d => ({
+          class_id: newClass.id,
+          title: d.title,
+          category: d.category,
+          description: d.description,
+          file_path: d.file_path,
+          link_url: d.link_url,
+        })));
+      }
+
+      // 3. Duplicate visit templates
+      const { data: visits } = await supabase.from("class_visit_templates").select("*").eq("class_id", cls.id);
+      if (visits?.length) {
+        await supabase.from("class_visit_templates").insert((visits as any[]).map(v => ({
+          class_id: newClass.id,
+          title: v.title,
+          location: v.location,
+          preceptor_name: v.preceptor_name,
+          preceptor_phone: v.preceptor_phone,
+          notes: v.notes,
+          default_student_ids: v.default_student_ids,
+        })));
+      }
+
+      // 4. Duplicate semesters + schedule items (map semester + teacher IDs)
+      const { data: semesters } = await supabase.from("class_semesters").select("*").eq("class_id", cls.id).order("order_index");
+      if (semesters?.length) {
+        for (const s of semesters as any[]) {
+          const { data: newSem } = await supabase.from("class_semesters").insert({
+            class_id: newClass.id,
+            label: s.label,
+            start_date: s.start_date,
+            end_date: s.end_date,
+            is_active: s.is_active,
+            order_index: s.order_index,
+          }).select().single();
+          if (!newSem) continue;
+          const { data: items } = await supabase.from("class_schedule_items")
+            .select("lesson_date,title,lesson_type,template_id,template_data,notes,status,order_index,rubric_json,rubric_id,teacher_id,time_slot,is_holiday,holiday_name")
+            .eq("semester_id", s.id);
+          if (items?.length) {
+            const rows = (items as any[]).map(it => ({
+              ...it,
+              semester_id: newSem.id,
+              teacher_id: it.teacher_id ? (teacherIdMap[it.teacher_id] || null) : null,
+              // Skip holiday-only rows (user requested holidays not duplicated)
+            })).filter(it => !it.is_holiday);
+            if (rows.length) await supabase.from("class_schedule_items").insert(rows);
+          }
+        }
+      }
+
+      toast.success("Turma duplicada com cronograma, professores e materiais.", { id: tId });
+      fetchClasses();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao duplicar.", { id: tId });
+    }
   };
 
   const openClassDetail = async (cls: ClassItem) => {
