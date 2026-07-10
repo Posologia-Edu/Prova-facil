@@ -13,6 +13,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, ChevronDown, ChevronRight, Lock } from "lucide-react";
 import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
+import { ModuleControlHeader } from "@/components/simulation/ModuleControlHeader";
+import { Pill } from "lucide-react";
 
 type FormField = {
   id: string;
@@ -234,18 +236,14 @@ export default function ReconciliationControl() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate(`/simulations/reconciliation/editor/${roomId}`)}>
-          <ArrowLeft className="h-4 w-4 mr-1" />Voltar
-        </Button>
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs bg-chart-3/10 text-chart-3 border-chart-3/30">Reconciliação</Badge>
-            <h1 className="text-xl font-bold">{room?.title} — Controle</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">PIN: {room?.access_code}</p>
-        </div>
-      </div>
+      <ModuleControlHeader
+        accent="reconciliacao"
+        moduleLabel="Reconciliação"
+        moduleIcon={Pill}
+        title={`${room?.title || ""} — Controle`}
+        pin={room?.access_code}
+        backTo={`/simulations/reconciliation/editor/${roomId}`}
+      />
 
       {/* Report Generator */}
       {responses.length > 0 && (

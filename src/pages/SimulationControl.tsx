@@ -11,6 +11,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap, Play, BookOpen, Square, PauseCircle, PlayCircle, SkipForward, UserCog } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SimulationReportGenerator, type PairReport, type ReportSection } from "@/components/SimulationReportGenerator";
+import { ModuleControlHeader } from "@/components/simulation/ModuleControlHeader";
+import { MessageSquareText } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SimulationProgressPanel } from "@/components/simulation/SimulationProgressPanel";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -429,23 +431,24 @@ export default function SimulationControl() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/simulations")}>
-            <ArrowLeft className="h-4 w-4 mr-1" />{t("pricing_back")}
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground"><span className="text-xs font-normal bg-primary/10 text-primary border border-primary/30 rounded px-1.5 py-0.5 mr-2">Anamnese</span>{room?.title} — {t("sim_control")}</h1>
-            <p className="text-sm text-muted-foreground">PIN: <span className="font-mono">{room?.access_code}</span></p>
-          </div>
-        </div>
-        {timeLeft !== null && (
-          <div className={`text-3xl font-mono font-bold ${timeLeft <= 60 ? "text-destructive" : "text-foreground"}`}>
-            <Clock className="h-5 w-5 inline mr-2" />
+      <ModuleControlHeader
+        accent="anamnese"
+        moduleLabel="Anamnese"
+        moduleIcon={MessageSquareText}
+        title={`${room?.title || ""} — ${t("sim_control")}`}
+        pin={room?.access_code}
+        backTo="/simulations"
+        rightSlot={timeLeft !== null ? (
+          <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-xl font-bold tabular-nums ${
+            timeLeft <= 60
+              ? "bg-red-500/20 text-red-100 ring-1 ring-red-300/40"
+              : "bg-white/10 text-white ring-1 ring-white/20"
+          }`}>
+            <Clock className="h-4 w-4" />
             {formatTime(timeLeft)}
           </div>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
