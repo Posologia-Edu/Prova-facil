@@ -13,6 +13,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, ChevronDown, ChevronRight, Lock } from "lucide-react";
 import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
+import { ModuleControlHeader } from "@/components/simulation/ModuleControlHeader";
+import { Pill } from "lucide-react";
 
 type FormField = {
   id: string;
