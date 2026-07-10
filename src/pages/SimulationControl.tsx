@@ -11,6 +11,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap, Play, BookOpen, Square, PauseCircle, PlayCircle, SkipForward, UserCog } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SimulationReportGenerator, type PairReport, type ReportSection } from "@/components/SimulationReportGenerator";
+import { ModuleControlHeader } from "@/components/simulation/ModuleControlHeader";
+import { MessageSquareText } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SimulationProgressPanel } from "@/components/simulation/SimulationProgressPanel";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
