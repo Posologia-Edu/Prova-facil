@@ -159,17 +159,50 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Clone forms
+    // Clone clinical cases FIRST so we can build old→new ID map for case_answers remap
+    const caseIdMap: Record<string, string> = {};
+    if (config.clinical_cases) {
+      const { data: cases } = await adminClient.from(config.clinical_cases).select("*").eq("room_id", roomId).order("position", { ascending: true });
+      if (cases?.length) {
+        const insertPayload = cases.map((c: any) => ({
+          room_id: newRoom.id,
+          title: c.title,
+          content: c.content,
+          position: c.position,
+        }));
+        const { data: newCases } = await adminClient.from(config.clinical_cases).insert(insertPayload).select("id, position, title");
+        if (newCases) {
+          for (const oldCase of cases) {
+            const match = newCases.find((nc: any) => nc.position === oldCase.position && nc.title === oldCase.title)
+              || newCases.find((nc: any) => nc.title === oldCase.title);
+            if (match) caseIdMap[oldCase.id] = match.id;
+          }
+        }
+      }
+    }
+
+    // Clone forms, remapping case_answers keys with caseIdMap
     const { data: forms } = await adminClient.from(config.forms).select("*").eq("room_id", roomId);
     if (forms?.length) {
-      const newForms = forms.map((f: any) => ({
-        room_id: newRoom.id,
-        title: f.title,
-        form_type: f.form_type,
-        content_json: f.content_json,
-        ...(f.target_role !== undefined ? { target_role: f.target_role } : {}),
-        ...(f.fields_json !== undefined ? { fields_json: f.fields_json } : {}),
-      }));
+      const newForms = forms.map((f: any) => {
+        let contentJson: any = f.content_json;
+        if (contentJson && typeof contentJson === "object" && !Array.isArray(contentJson) && contentJson.case_answers && typeof contentJson.case_answers === "object") {
+          const oldAnswers = contentJson.case_answers as Record<string, unknown>;
+          const newAnswers: Record<string, unknown> = {};
+          for (const [oldId, val] of Object.entries(oldAnswers)) {
+            newAnswers[caseIdMap[oldId] || oldId] = val;
+          }
+          contentJson = { ...contentJson, case_answers: newAnswers };
+        }
+        return {
+          room_id: newRoom.id,
+          title: f.title,
+          form_type: f.form_type,
+          content_json: contentJson,
+          ...(f.target_role !== undefined ? { target_role: f.target_role } : {}),
+          ...(f.fields_json !== undefined ? { fields_json: f.fields_json } : {}),
+        };
+      });
       await adminClient.from(config.forms).insert(newForms);
     }
 
@@ -186,20 +219,6 @@ Deno.serve(async (req) => {
         ...(p.assigned_role !== undefined ? { assigned_role: p.assigned_role } : {}),
       }));
       await adminClient.from(config.participants).insert(newParticipants);
-    }
-
-    // Clone clinical cases
-    if (config.clinical_cases) {
-      const { data: cases } = await adminClient.from(config.clinical_cases).select("*").eq("room_id", roomId);
-      if (cases?.length) {
-        const newCases = cases.map((c: any) => ({
-          room_id: newRoom.id,
-          title: c.title,
-          content: c.content,
-          position: c.position,
-        }));
-        await adminClient.from(config.clinical_cases).insert(newCases);
-      }
     }
 
     return new Response(JSON.stringify({ success: true, roomId: newRoom.id }), {

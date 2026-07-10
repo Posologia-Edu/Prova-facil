@@ -61,8 +61,17 @@ serve(async (req) => {
       let keyFields: any[] = [];
       if (referral_answer_key.case_answers) {
         const caseId = referral_response.clinical_case_id;
-        if (caseId && referral_answer_key.case_answers[caseId]) keyFields = referral_answer_key.case_answers[caseId];
-        else { const firstKey = Object.keys(referral_answer_key.case_answers)[0]; if (firstKey) keyFields = referral_answer_key.case_answers[firstKey]; }
+        const answers = referral_answer_key.case_answers as Record<string, any>;
+        const keys = Object.keys(answers);
+        if (caseId && answers[caseId]) {
+          keyFields = answers[caseId];
+        } else if (keys.length === 1) {
+          keyFields = answers[keys[0]];
+        } else {
+          return new Response(JSON.stringify({
+            error: `Espelho de encaminhamento não encontrado para o caso clínico "${caseId}". Verifique se os casos clínicos e os espelhos da sala estão sincronizados (edite o espelho e associe-o aos casos atuais).`,
+          }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
       } else if (Array.isArray(referral_answer_key)) { keyFields = referral_answer_key; }
 
       const fields = Array.isArray(referral_fields) ? referral_fields : [];
@@ -129,9 +138,18 @@ serve(async (req) => {
 
       if (med_answer_key.case_answers) {
         const caseId = med_response.clinical_case_id;
+        const answers = med_answer_key.case_answers as Record<string, any>;
+        const keys = Object.keys(answers);
         let caseData: any = null;
-        if (caseId && med_answer_key.case_answers[caseId]) caseData = med_answer_key.case_answers[caseId];
-        else { const firstKey = Object.keys(med_answer_key.case_answers)[0]; if (firstKey) caseData = med_answer_key.case_answers[firstKey]; }
+        if (caseId && answers[caseId]) {
+          caseData = answers[caseId];
+        } else if (keys.length === 1) {
+          caseData = answers[keys[0]];
+        } else {
+          return new Response(JSON.stringify({
+            error: `Espelho do quadro resumo não encontrado para o caso clínico "${caseId}". Verifique se os casos clínicos e os espelhos da sala estão sincronizados (edite o espelho e associe-o aos casos atuais).`,
+          }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
         if (caseData) { keyColumns = caseData.columns || []; expectedRows = caseData.answer_rows || []; rowScore = caseData.rows_score || 1; }
       } else {
         keyColumns = med_answer_key.columns || [];
