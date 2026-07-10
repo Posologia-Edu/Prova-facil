@@ -359,20 +359,20 @@ export default function SoapControl() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/simulations/soap")}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold"><span className="text-xs font-normal bg-chart-2/10 text-chart-2 border border-chart-2/30 rounded px-1.5 py-0.5 mr-2">SOAP</span>{room.title} — Controle</h1>
-          <p className="text-muted-foreground text-sm">PIN: {room.access_code} • {studentsOnly.length} alunos</p>
-        </div>
-        {room.status === "active" && (
-          <Button variant="outline" onClick={completeRoom}>
+      <ModuleControlHeader
+        accent="soap"
+        moduleLabel="SOAP"
+        moduleIcon={ClipboardList}
+        title={`${room.title} — Controle`}
+        pin={room.access_code}
+        backTo="/simulations/soap"
+        meta={<span>{studentsOnly.length} alunos</span>}
+        rightSlot={room.status === "active" ? (
+          <Button variant="outline" size="sm" onClick={completeRoom} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
             <CheckCircle className="h-4 w-4 mr-2" />Concluir Sala
           </Button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
