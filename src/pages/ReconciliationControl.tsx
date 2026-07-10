@@ -128,9 +128,11 @@ export default function ReconciliationControl() {
     if (content && typeof content === "object" && !Array.isArray(content) && (content as any).case_answers) {
       const caseAnswers = (content as any).case_answers;
       if (caseId && caseAnswers[caseId]) return caseAnswers[caseId];
-      // Fallback: first case
-      const firstKey = Object.keys(caseAnswers)[0];
-      return firstKey ? caseAnswers[firstKey] : [];
+      // Backwards-compat: if only one case exists, use it. Otherwise return empty
+      // to avoid silently grading against the wrong mirror when IDs are out of sync.
+      const keys = Object.keys(caseAnswers);
+      if (keys.length === 1) return caseAnswers[keys[0]];
+      return [];
     }
     // Legacy: flat array
     if (Array.isArray(content)) return content as FormField[];
