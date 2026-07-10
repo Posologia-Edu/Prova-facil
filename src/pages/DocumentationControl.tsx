@@ -24,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
+import { ModuleControlHeader } from "@/components/simulation/ModuleControlHeader";
 
 type FormField = { id: string; label: string; type: string; options?: string[]; max_score?: number };
 type MedColumn = { id: string; label: string };
