@@ -14,6 +14,8 @@ import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trop
 import { computeFieldScore, FormField } from "@/components/forms/types";
 import FormRenderer from "@/components/forms/FormRenderer";
 import { SimulationReportGenerator, type PairReport, type ReportSection } from "@/components/SimulationReportGenerator";
+import { ModuleControlHeader } from "@/components/simulation/ModuleControlHeader";
+import { ClipboardList } from "lucide-react";
 import { calculateSoapStudentGrade } from "@/lib/soap-grades";
 
 export default function SoapControl() {
