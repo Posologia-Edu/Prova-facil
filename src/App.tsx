@@ -112,6 +112,7 @@ import VirtualPatientChat from "./pages/VirtualPatientChat";
 import VirtualPatientRoom from "./pages/VirtualPatientRoom";
 import VirtualPatientFeedback from "./pages/VirtualPatientFeedback";
 import VPAnalytics from "./pages/VPAnalytics";
+import VPResearch from "./pages/VPResearch";
 import Features from "./pages/Features";
 import PublicPricing from "./pages/PublicPricing";
 import PublicContact from "./pages/PublicContact";
@@ -499,6 +500,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><VPAnalytics /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/virtual-patients/research"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><VPResearch /></AppLayout>
                 </ProtectedRoute>
               }
             />

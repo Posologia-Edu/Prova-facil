@@ -437,8 +437,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startedAt = Date.now();
   try {
-    const { patientId, messages, encounter } = await req.json();
+    const { patientId, messages, encounter, sessionId } = await req.json();
 
     const patient = PATIENTS[patientId] || (await loadCustomPatient(patientId));
     if (!patient) {
@@ -586,9 +587,30 @@ REGRAS:
     });
 
     if (!response.ok) {
+      // Record operational failure
+      if (sessionId) {
+        try {
+          const admin = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          );
+          const { data: cur } = await admin
+            .from("virtual_patient_sessions")
+            .select("operational_failures")
+            .eq("id", sessionId)
+            .maybeSingle();
+          if (cur) {
+            await admin
+              .from("virtual_patient_sessions")
+              .update({ operational_failures: (cur.operational_failures || 0) + 1 })
+              .eq("id", sessionId);
+          }
+        } catch (_) { /* silent */ }
+      }
+
       const errorText = await response.text();
       console.error("AI error:", response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }), {
           status: 429,
@@ -610,6 +632,38 @@ REGRAS:
 
     const data = await response.json();
     const reply = data.choices?.[0]?.message?.content || "Desculpe, não consegui responder.";
+
+    // Record technical metrics for research
+    if (sessionId) {
+      try {
+        const latencyMs = Date.now() - startedAt;
+        const tokens =
+          data.usage?.total_tokens ??
+          data.usageMetadata?.totalTokenCount ??
+          Math.ceil(reply.length / 4);
+        const admin = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        const { data: current } = await admin
+          .from("virtual_patient_sessions")
+          .select("total_tokens, total_latency_ms, total_interactions")
+          .eq("id", sessionId)
+          .maybeSingle();
+        if (current) {
+          await admin
+            .from("virtual_patient_sessions")
+            .update({
+              total_tokens: (current.total_tokens || 0) + Number(tokens || 0),
+              total_latency_ms: (current.total_latency_ms || 0) + latencyMs,
+              total_interactions: (current.total_interactions || 0) + 1,
+            })
+            .eq("id", sessionId);
+        }
+      } catch (e) {
+        console.error("metrics update failed", e);
+      }
+    }
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

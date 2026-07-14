@@ -335,7 +335,7 @@ export default function VirtualPatientRoom() {
       const aiMessages = messages.concat(userMsg).map((m) => ({ role: m.role, content: m.content }));
 
       const response = await supabase.functions.invoke("virtual-patient-chat", {
-        body: { patientId, messages: aiMessages, encounter },
+        body: { patientId, messages: aiMessages, encounter, sessionId },
       });
 
       if (response.error) throw new Error(response.error.message);
