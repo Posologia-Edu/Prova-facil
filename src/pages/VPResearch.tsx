@@ -32,7 +32,9 @@ interface SessionRow {
   operational_failures: number | null;
   status: string | null;
   created_at: string;
+  research_consent: boolean | null;
 }
+
 
 interface UnsafeConduct { description: string; severity: 1 | 2 | 3; }
 interface MetricRow {
