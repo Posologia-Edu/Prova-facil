@@ -458,6 +458,10 @@ export type Database = {
       }
       class_attendance: {
         Row: {
+          checkin_at: string | null
+          checkin_lat: number | null
+          checkin_lng: number | null
+          checkin_method: string | null
           created_at: string
           id: string
           justification: string | null
@@ -467,6 +471,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          checkin_at?: string | null
+          checkin_lat?: number | null
+          checkin_lng?: number | null
+          checkin_method?: string | null
           created_at?: string
           id?: string
           justification?: string | null
@@ -476,6 +484,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          checkin_at?: string | null
+          checkin_lat?: number | null
+          checkin_lng?: number | null
+          checkin_method?: string | null
           created_at?: string
           id?: string
           justification?: string | null
@@ -829,6 +841,11 @@ export type Database = {
       }
       class_schedule_items: {
         Row: {
+          checkin_geo_lat: number | null
+          checkin_geo_lng: number | null
+          checkin_geo_radius_m: number | null
+          checkin_open: boolean
+          checkin_opened_at: string | null
           created_at: string
           holiday_name: string | null
           id: string
@@ -849,6 +866,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          checkin_geo_lat?: number | null
+          checkin_geo_lng?: number | null
+          checkin_geo_radius_m?: number | null
+          checkin_open?: boolean
+          checkin_opened_at?: string | null
           created_at?: string
           holiday_name?: string | null
           id?: string
@@ -869,6 +891,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          checkin_geo_lat?: number | null
+          checkin_geo_lng?: number | null
+          checkin_geo_radius_m?: number | null
+          checkin_open?: boolean
+          checkin_opened_at?: string | null
           created_at?: string
           holiday_name?: string | null
           id?: string
@@ -1025,6 +1052,8 @@ export type Database = {
           class_id: string
           created_at: string
           id: string
+          pin_hash: string | null
+          pin_last_sent_at: string | null
           semester_id: string | null
           student_email: string | null
           student_name: string
@@ -1034,6 +1063,8 @@ export type Database = {
           class_id: string
           created_at?: string
           id?: string
+          pin_hash?: string | null
+          pin_last_sent_at?: string | null
           semester_id?: string | null
           student_email?: string | null
           student_name: string
@@ -1043,6 +1074,8 @@ export type Database = {
           class_id?: string
           created_at?: string
           id?: string
+          pin_hash?: string | null
+          pin_last_sent_at?: string | null
           semester_id?: string | null
           student_email?: string | null
           student_name?: string
