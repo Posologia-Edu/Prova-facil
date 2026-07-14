@@ -433,12 +433,34 @@ export default function VPResearch() {
               {classes.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={runCoherence} disabled={computingSim || !sessions.length}>
+          <Button
+            variant={onlyConsented ? "default" : "outline"}
+            onClick={() => setOnlyConsented((v) => !v)}
+            title="Somente sessões com consentimento LGPD (art. 7º da Lei 13.709/2018)"
+          >
+            <ShieldCheck className="h-4 w-4 mr-1.5" />
+            {onlyConsented ? "Somente consentidas" : "Todas as sessões"}
+          </Button>
+          <Button variant="outline" onClick={runCoherence} disabled={computingSim || !filteredSessions.length}>
             {computingSim ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
             Recalcular coerência
           </Button>
-          <Button onClick={exportPdf} disabled={!sessions.length}>
-            <FileDown className="h-4 w-4 mr-1.5" /> Exportar relatório PDF
+          <Button
+            variant="outline"
+            onClick={() => runAiIdcg(filteredSessions.map((s) => s.id), "bulk")}
+            disabled={aiGrading !== null || !filteredSessions.length}
+          >
+            {aiGrading === "bulk" ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Bot className="h-4 w-4 mr-1.5" />}
+            Avaliar IDCG com IA (rubrica)
+          </Button>
+          <Button variant="outline" onClick={exportCsv} disabled={!filteredSessions.length}>
+            <FileDown className="h-4 w-4 mr-1.5" /> CSV (SPSS/R)
+          </Button>
+          <Button variant="outline" onClick={exportXlsx} disabled={!filteredSessions.length}>
+            <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Excel
+          </Button>
+          <Button onClick={exportPdf} disabled={!filteredSessions.length}>
+            <FileDown className="h-4 w-4 mr-1.5" /> Relatório PDF
           </Button>
         </div>
       </div>
@@ -447,16 +469,21 @@ export default function VPResearch() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      ) : sessions.length === 0 ? (
+      ) : filteredSessions.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Nenhuma sessão de paciente virtual encontrada para esta turma.
+            {sessions.length === 0
+              ? "Nenhuma sessão de paciente virtual encontrada para esta turma."
+              : "Nenhuma sessão com consentimento LGPD registrado. Alterne o filtro para ver todas."}
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Sessões ({sessions.length})</CardTitle>
+            <CardTitle className="text-base">
+              Sessões ({filteredSessions.length}
+              {sessions.length !== filteredSessions.length && ` de ${sessions.length}`})
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -464,16 +491,17 @@ export default function VPResearch() {
                 <TableRow>
                   <TableHead>Grupo / Aluno</TableHead>
                   <TableHead>Paciente</TableHead>
+                  <TableHead className="text-center">LGPD</TableHead>
                   <TableHead className="text-center">Interações</TableHead>
                   <TableHead className="text-center">Latência méd.</TableHead>
                   <TableHead className="text-center">Coerência</TableHead>
                   <TableHead className="text-center">IDCG</TableHead>
                   <TableHead className="text-center">ISC</TableHead>
-                  <TableHead className="text-right">Ação</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sessions.map((s) => {
+                {filteredSessions.map((s) => {
                   const m = metrics[s.id];
                   const cvp = cvpLookup[s.class_virtual_patient_id || ""];
                   const pat = patientLookup[s.patient_id];
@@ -489,6 +517,15 @@ export default function VPResearch() {
                       <TableCell>
                         <div className="text-sm">{pat?.name || s.patient_id}</div>
                         {pat?.module && <div className="text-xs text-muted-foreground">{pat.module}</div>}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {s.research_consent === true ? (
+                          <Badge variant="secondary" className="gap-1"><ShieldCheck className="h-3 w-3" /> Sim</Badge>
+                        ) : s.research_consent === false ? (
+                          <Badge variant="destructive" className="gap-1"><ShieldX className="h-3 w-3" /> Não</Badge>
+                        ) : (
+                          <Badge variant="outline">Pendente</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">{s.total_interactions ?? "—"}</TableCell>
                       <TableCell className="text-center">{avgLat}</TableCell>
@@ -510,14 +547,26 @@ export default function VPResearch() {
                         ) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => openEdit(s)}>
-                          {m ? "Editar" : "Avaliar"}
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => runAiIdcg([s.id], s.id)}
+                            disabled={aiGrading !== null || s.research_consent === false}
+                            title="Calcular IDCG automaticamente com IA usando a rubrica"
+                          >
+                            {aiGrading === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => openEdit(s)}>
+                            {m ? "Editar" : "Avaliar"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
+
             </Table>
           </CardContent>
         </Card>
