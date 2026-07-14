@@ -11,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  ArrowLeft, Loader2, FlaskConical, FileDown, Save, RefreshCw, Trash2, Plus, ShieldAlert, Sparkles,
+  ArrowLeft, Loader2, FlaskConical, FileDown, Save, RefreshCw, Trash2, Plus, ShieldAlert, Sparkles, Bot, FileSpreadsheet, ShieldCheck, ShieldX,
 } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import { generateVPResearchReport, type VPResearchRow } from "@/lib/vp-research-report";
+
 
 interface ClassOption { id: string; name: string; }
 interface SessionRow {
@@ -30,7 +32,9 @@ interface SessionRow {
   operational_failures: number | null;
   status: string | null;
   created_at: string;
+  research_consent: boolean | null;
 }
+
 
 interface UnsafeConduct { description: string; severity: 1 | 2 | 3; }
 interface MetricRow {
@@ -105,8 +109,11 @@ export default function VPResearch() {
   const [cvpLookup, setCvpLookup] = useState<Record<string, { group_label: string | null; class_id: string }>>({});
   const [loading, setLoading] = useState(true);
   const [computingSim, setComputingSim] = useState(false);
+  const [aiGrading, setAiGrading] = useState<string | null>(null); // sessionId being graded, or "bulk"
   const [editing, setEditing] = useState<{ session: SessionRow; metric: MetricRow } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [onlyConsented, setOnlyConsented] = useState(true);
+
 
   useEffect(() => { loadClasses(); }, []);
   useEffect(() => { loadSessions(); }, [selectedClass]);
@@ -137,9 +144,10 @@ export default function VPResearch() {
 
     const { data: sess } = await supabase
       .from("virtual_patient_sessions")
-      .select("id, patient_id, student_email, student_name, group_id, class_virtual_patient_id, total_tokens, total_latency_ms, total_interactions, operational_failures, status, created_at")
+      .select("id, patient_id, student_email, student_name, group_id, class_virtual_patient_id, total_tokens, total_latency_ms, total_interactions, operational_failures, status, created_at, research_consent")
       .in("class_virtual_patient_id", cvpIds)
       .order("created_at", { ascending: false });
+
     setSessions((sess as SessionRow[]) || []);
 
     // Custom patients (name/description)
@@ -196,6 +204,28 @@ export default function VPResearch() {
     }
   };
 
+  const runAiIdcg = async (sessionIds: string[], scope: string) => {
+    if (!sessionIds.length) { toast.error("Nenhuma sessão"); return; }
+    setAiGrading(scope);
+    try {
+      const { data, error } = await supabase.functions.invoke("vp-ai-idcg", {
+        body: { sessionIds },
+      });
+      if (error) throw new Error(error.message);
+      const okCount = data?.results ? Object.keys(data.results).length : 0;
+      const errCount = data?.errors ? Object.keys(data.errors).length : 0;
+      if (okCount) toast.success(`IDCG calculado automaticamente para ${okCount} sessão(ões)`);
+      if (errCount) toast.warning(`${errCount} sessão(ões) não puderam ser avaliadas pela IA`);
+      await loadSessions();
+    } catch (e: any) {
+      toast.error(e.message || "Falha na avaliação por IA");
+    } finally {
+      setAiGrading(null);
+    }
+  };
+
+
+
   const openEdit = (s: SessionRow) => {
     const cur = metrics[s.id] || empty(s.id);
     setEditing({ session: s, metric: { ...cur, unsafe_conducts: [...(cur.unsafe_conducts || [])] } });
@@ -250,8 +280,13 @@ export default function VPResearch() {
     await loadSessions();
   };
 
+  const filteredSessions = useMemo(
+    () => onlyConsented ? sessions.filter((s) => s.research_consent === true) : sessions,
+    [sessions, onlyConsented]
+  );
+
   const rowsForReport: VPResearchRow[] = useMemo(() => {
-    return sessions.map((s) => {
+    return filteredSessions.map((s) => {
       const m = metrics[s.id];
       const cvp = cvpLookup[s.class_virtual_patient_id || ""];
       const pat = patientLookup[s.patient_id];
@@ -291,7 +326,72 @@ export default function VPResearch() {
         qualitative_notes: m?.qualitative_notes ?? null,
       };
     });
-  }, [sessions, metrics, cvpLookup, patientLookup]);
+  }, [filteredSessions, metrics, cvpLookup, patientLookup]);
+
+  // Flat data set for statistical software (SPSS/R). Uses dot as decimal
+  // separator, ASCII field names, no accents. One row per session.
+  const statsRows = useMemo(() => {
+    return rowsForReport.map((r, i) => ({
+      row_id: i + 1,
+      group: r.group_label,
+      clinical_context: r.clinical_context,
+      patient: r.patient_name,
+      student_name: r.student_name || "",
+      student_email: r.student_email || "",
+      idcg_empathy: r.idcg_empathy,
+      idcg_active_listening: r.idcg_active_listening,
+      idcg_reasoning: r.idcg_reasoning,
+      idcg_conduct: r.idcg_conduct,
+      idcg_safety: r.idcg_safety,
+      idcg_score: r.idcg_score,
+      isc_total: r.isc_total,
+      isc_count: r.isc_count,
+      isc_score: r.isc_score,
+      isc_risk: r.isc_risk_class || "",
+      unsafe_conducts_desc: (r.unsafe_conducts || []).map((u: any) => `${u.description}(${u.severity})`).join(" | "),
+      qr_pairs: r.qr_pairs,
+      comparable_pairs: r.comparable_pairs,
+      semantic_sim_mean: r.semantic_similarity_mean,
+      semantic_sim_std: r.semantic_similarity_std,
+      same_stage_sim: r.same_stage_similarity,
+      between_stages_sim: r.between_stages_similarity,
+      total_tokens: r.total_tokens,
+      total_latency_ms: r.total_latency_ms,
+      avg_latency_ms: r.total_latency_ms && r.total_interactions ? Math.round(r.total_latency_ms / r.total_interactions) : null,
+      total_interactions: r.total_interactions,
+      operational_failures: r.operational_failures,
+      realism_score: r.realism_score,
+      empathy_verbal_score: r.empathy_verbal_score,
+      clinical_adequacy_score: r.clinical_adequacy_score,
+      naturalness_score: r.naturalness_score,
+      rag_accuracy: r.rag_accuracy,
+      behavioral_stability_pct: r.behavioral_stability_pct,
+      qualitative_notes: (r.qualitative_notes || "").replace(/[\r\n]+/g, " "),
+    }));
+  }, [rowsForReport]);
+
+  const exportCsv = () => {
+    if (!statsRows.length) { toast.error("Sem dados para exportar"); return; }
+    const cls = classes.find((c) => c.id === selectedClass);
+    const ws = XLSX.utils.json_to_sheet(statsRows);
+    const csv = XLSX.utils.sheet_to_csv(ws, { FS: "," });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pesquisa-vp-${cls?.name || "geral"}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportXlsx = () => {
+    if (!statsRows.length) { toast.error("Sem dados para exportar"); return; }
+    const cls = classes.find((c) => c.id === selectedClass);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(statsRows), "sessoes");
+    XLSX.writeFile(wb, `pesquisa-vp-${cls?.name || "geral"}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
 
   const exportPdf = async () => {
     const { data: user } = await supabase.auth.getUser();
@@ -333,12 +433,34 @@ export default function VPResearch() {
               {classes.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={runCoherence} disabled={computingSim || !sessions.length}>
+          <Button
+            variant={onlyConsented ? "default" : "outline"}
+            onClick={() => setOnlyConsented((v) => !v)}
+            title="Somente sessões com consentimento LGPD (art. 7º da Lei 13.709/2018)"
+          >
+            <ShieldCheck className="h-4 w-4 mr-1.5" />
+            {onlyConsented ? "Somente consentidas" : "Todas as sessões"}
+          </Button>
+          <Button variant="outline" onClick={runCoherence} disabled={computingSim || !filteredSessions.length}>
             {computingSim ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
             Recalcular coerência
           </Button>
-          <Button onClick={exportPdf} disabled={!sessions.length}>
-            <FileDown className="h-4 w-4 mr-1.5" /> Exportar relatório PDF
+          <Button
+            variant="outline"
+            onClick={() => runAiIdcg(filteredSessions.map((s) => s.id), "bulk")}
+            disabled={aiGrading !== null || !filteredSessions.length}
+          >
+            {aiGrading === "bulk" ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Bot className="h-4 w-4 mr-1.5" />}
+            Avaliar IDCG com IA (rubrica)
+          </Button>
+          <Button variant="outline" onClick={exportCsv} disabled={!filteredSessions.length}>
+            <FileDown className="h-4 w-4 mr-1.5" /> CSV (SPSS/R)
+          </Button>
+          <Button variant="outline" onClick={exportXlsx} disabled={!filteredSessions.length}>
+            <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Excel
+          </Button>
+          <Button onClick={exportPdf} disabled={!filteredSessions.length}>
+            <FileDown className="h-4 w-4 mr-1.5" /> Relatório PDF
           </Button>
         </div>
       </div>
@@ -347,16 +469,21 @@ export default function VPResearch() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      ) : sessions.length === 0 ? (
+      ) : filteredSessions.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Nenhuma sessão de paciente virtual encontrada para esta turma.
+            {sessions.length === 0
+              ? "Nenhuma sessão de paciente virtual encontrada para esta turma."
+              : "Nenhuma sessão com consentimento LGPD registrado. Alterne o filtro para ver todas."}
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Sessões ({sessions.length})</CardTitle>
+            <CardTitle className="text-base">
+              Sessões ({filteredSessions.length}
+              {sessions.length !== filteredSessions.length && ` de ${sessions.length}`})
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -364,16 +491,17 @@ export default function VPResearch() {
                 <TableRow>
                   <TableHead>Grupo / Aluno</TableHead>
                   <TableHead>Paciente</TableHead>
+                  <TableHead className="text-center">LGPD</TableHead>
                   <TableHead className="text-center">Interações</TableHead>
                   <TableHead className="text-center">Latência méd.</TableHead>
                   <TableHead className="text-center">Coerência</TableHead>
                   <TableHead className="text-center">IDCG</TableHead>
                   <TableHead className="text-center">ISC</TableHead>
-                  <TableHead className="text-right">Ação</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sessions.map((s) => {
+                {filteredSessions.map((s) => {
                   const m = metrics[s.id];
                   const cvp = cvpLookup[s.class_virtual_patient_id || ""];
                   const pat = patientLookup[s.patient_id];
@@ -389,6 +517,15 @@ export default function VPResearch() {
                       <TableCell>
                         <div className="text-sm">{pat?.name || s.patient_id}</div>
                         {pat?.module && <div className="text-xs text-muted-foreground">{pat.module}</div>}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {s.research_consent === true ? (
+                          <Badge variant="secondary" className="gap-1"><ShieldCheck className="h-3 w-3" /> Sim</Badge>
+                        ) : s.research_consent === false ? (
+                          <Badge variant="destructive" className="gap-1"><ShieldX className="h-3 w-3" /> Não</Badge>
+                        ) : (
+                          <Badge variant="outline">Pendente</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">{s.total_interactions ?? "—"}</TableCell>
                       <TableCell className="text-center">{avgLat}</TableCell>
@@ -410,14 +547,26 @@ export default function VPResearch() {
                         ) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => openEdit(s)}>
-                          {m ? "Editar" : "Avaliar"}
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => runAiIdcg([s.id], s.id)}
+                            disabled={aiGrading !== null || s.research_consent === false}
+                            title="Calcular IDCG automaticamente com IA usando a rubrica"
+                          >
+                            {aiGrading === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => openEdit(s)}>
+                            {m ? "Editar" : "Avaliar"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
+
             </Table>
           </CardContent>
         </Card>

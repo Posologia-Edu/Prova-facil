@@ -4,11 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users, Activity } from "lucide-react";
+import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users, Activity, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { VirtualPatientMAI } from "@/components/VirtualPatientMAI";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+
+const RESEARCH_CONSENT_VERSION = "1.0";
+
 
 interface Message {
   role: "user" | "assistant";
@@ -60,6 +64,10 @@ export default function VirtualPatientRoom() {
   const sessionIdRef = useRef<string>("");
   const encounterRef = useRef<number>(1);
   const seenMsgKeysRef = useRef<Set<string>>(new Set());
+  const [consentState, setConsentState] = useState<null | boolean>(null);
+  const [showConsent, setShowConsent] = useState(false);
+  const [savingConsent, setSavingConsent] = useState(false);
+
 
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
   useEffect(() => { encounterRef.current = encounter; }, [encounter]);
@@ -300,6 +308,21 @@ export default function VirtualPatientRoom() {
     }
 
     setInitialLoading(false);
+
+    // Check consent using latest session id (deferred by microtask)
+    setTimeout(async () => {
+      const sid = sessionIdRef.current;
+      if (!sid) return;
+      const { data } = await supabase
+        .from("virtual_patient_sessions")
+        .select("research_consent")
+        .eq("id", sid)
+        .maybeSingle();
+      const rc = (data as any)?.research_consent ?? null;
+      setConsentState(rc);
+      if (rc === null) setShowConsent(true);
+    }, 50);
+
   };
 
   const sendMessage = async () => {
@@ -497,6 +520,28 @@ export default function VirtualPatientRoom() {
     }
   };
 
+  const saveConsent = async (accept: boolean) => {
+    if (!sessionId) return;
+    setSavingConsent(true);
+    const idsToUpdate = isGroupSession && groupSessionIds.length > 0 ? groupSessionIds : [sessionId];
+    const payload = {
+      research_consent: accept,
+      research_consent_at: new Date().toISOString(),
+      research_consent_version: RESEARCH_CONSENT_VERSION,
+    };
+    const { error } = await supabase
+      .from("virtual_patient_sessions")
+      .update(payload)
+      .in("id", idsToUpdate);
+    setSavingConsent(false);
+    if (error) { toast.error("Não foi possível registrar sua resposta."); return; }
+    setConsentState(accept);
+    setShowConsent(false);
+    toast.success(accept ? "Consentimento registrado. Obrigado!" : "Preferência registrada. Sua sessão não será usada no estudo.");
+  };
+
+
+
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -635,6 +680,41 @@ export default function VirtualPatientRoom() {
         sessionId={sessionId}
         onComplete={handleMAIComplete}
       />
+
+      <Dialog open={showConsent} onOpenChange={(o) => { if (!o && consentState !== null) setShowConsent(false); }}>
+        <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" /> Consentimento para uso científico (LGPD)
+            </DialogTitle>
+            <DialogDescription className="text-left space-y-3 pt-2">
+              <p>
+                Esta atividade faz parte de um estudo educacional sobre uso de <strong>LLM e RAG em simulações clínicas</strong>.
+                Solicitamos sua autorização para utilizar, de forma <strong>anonimizada</strong>, os dados desta sessão
+                (transcript da conversa, tempos de resposta e indicadores de desempenho) em análises e publicações científicas.
+              </p>
+              <p>
+                Seus dados pessoais (nome, e-mail) <strong>não serão divulgados</strong>. Sua decisão <strong>não interfere</strong>
+                na sua nota, no acesso à plataforma ou na correção da atividade. Você pode revogar este consentimento a qualquer
+                momento entrando em contato com o docente responsável.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Base legal: art. 7º, I e IX, e art. 11, II, "c" da LGPD (Lei nº 13.709/2018). Versão do termo: {RESEARCH_CONSENT_VERSION}.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => saveConsent(false)} disabled={savingConsent}>
+              Não autorizo
+            </Button>
+            <Button onClick={() => saveConsent(true)} disabled={savingConsent}>
+              {savingConsent ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1.5" />}
+              Autorizo o uso científico
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

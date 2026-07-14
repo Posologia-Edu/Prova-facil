@@ -6784,6 +6784,10 @@ export type Database = {
           module: string
           operational_failures: number
           patient_id: string
+          research_consent: boolean | null
+          research_consent_at: string | null
+          research_consent_ip: string | null
+          research_consent_version: string | null
           status: string
           student_email: string | null
           student_name: string | null
@@ -6803,6 +6807,10 @@ export type Database = {
           module?: string
           operational_failures?: number
           patient_id: string
+          research_consent?: boolean | null
+          research_consent_at?: string | null
+          research_consent_ip?: string | null
+          research_consent_version?: string | null
           status?: string
           student_email?: string | null
           student_name?: string | null
@@ -6822,6 +6830,10 @@ export type Database = {
           module?: string
           operational_failures?: number
           patient_id?: string
+          research_consent?: boolean | null
+          research_consent_at?: string | null
+          research_consent_ip?: string | null
+          research_consent_version?: string | null
           status?: string
           student_email?: string | null
           student_name?: string | null
