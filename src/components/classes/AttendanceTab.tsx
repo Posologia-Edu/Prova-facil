@@ -224,6 +224,21 @@ export function AttendanceTab({ semesterId }: Props) {
           </Table>
         </Card>
       )}
+
+      {activeLesson && (
+        <QrCheckinDialog
+          open={qrOpen}
+          onOpenChange={setQrOpen}
+          lessonId={activeLesson.id}
+          lessonTitle={`${activeLesson.lesson_date ?? ""} · ${activeLesson.title}`}
+          onClosed={async () => {
+            const { data } = await supabase.from("class_attendance").select("*").eq("lesson_id", activeLesson.id);
+            const map: Record<string, AttendanceRow> = {};
+            (data as AttendanceRow[] || []).forEach(r => { map[r.student_id] = r; });
+            setRows(map);
+          }}
+        />
+      )}
     </div>
   );
 }
