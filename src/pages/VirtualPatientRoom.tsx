@@ -64,6 +64,10 @@ export default function VirtualPatientRoom() {
   const sessionIdRef = useRef<string>("");
   const encounterRef = useRef<number>(1);
   const seenMsgKeysRef = useRef<Set<string>>(new Set());
+  const [consentState, setConsentState] = useState<null | boolean>(null);
+  const [showConsent, setShowConsent] = useState(false);
+  const [savingConsent, setSavingConsent] = useState(false);
+
 
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
   useEffect(() => { encounterRef.current = encounter; }, [encounter]);
