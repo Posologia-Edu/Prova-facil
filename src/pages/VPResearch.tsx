@@ -204,6 +204,28 @@ export default function VPResearch() {
     }
   };
 
+  const runAiIdcg = async (sessionIds: string[], scope: string) => {
+    if (!sessionIds.length) { toast.error("Nenhuma sessão"); return; }
+    setAiGrading(scope);
+    try {
+      const { data, error } = await supabase.functions.invoke("vp-ai-idcg", {
+        body: { sessionIds },
+      });
+      if (error) throw new Error(error.message);
+      const okCount = data?.results ? Object.keys(data.results).length : 0;
+      const errCount = data?.errors ? Object.keys(data.errors).length : 0;
+      if (okCount) toast.success(`IDCG calculado automaticamente para ${okCount} sessão(ões)`);
+      if (errCount) toast.warning(`${errCount} sessão(ões) não puderam ser avaliadas pela IA`);
+      await loadSessions();
+    } catch (e: any) {
+      toast.error(e.message || "Falha na avaliação por IA");
+    } finally {
+      setAiGrading(null);
+    }
+  };
+
+
+
   const openEdit = (s: SessionRow) => {
     const cur = metrics[s.id] || empty(s.id);
     setEditing({ session: s, metric: { ...cur, unsafe_conducts: [...(cur.unsafe_conducts || [])] } });
