@@ -242,7 +242,7 @@ export default function VPResearch() {
     };
     const { error } = await supabase
       .from("vp_research_metrics")
-      .upsert(payload, { onConflict: "session_id,evaluator_id" });
+      .upsert([payload], { onConflict: "session_id,evaluator_id" });
     setSaving(false);
     if (error) { toast.error("Erro ao salvar: " + error.message); return; }
     toast.success("Avaliação registrada");
