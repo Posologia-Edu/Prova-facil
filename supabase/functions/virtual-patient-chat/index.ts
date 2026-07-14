@@ -594,11 +594,17 @@ REGRAS:
             Deno.env.get("SUPABASE_URL")!,
             Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
           );
-          await admin.rpc("exec_sql" as any, {}); // no-op fallback; use update instead below
-          await admin
+          const { data: cur } = await admin
             .from("virtual_patient_sessions")
-            .update({ operational_failures: (undefined as any) })
-            .eq("id", sessionId);
+            .select("operational_failures")
+            .eq("id", sessionId)
+            .maybeSingle();
+          if (cur) {
+            await admin
+              .from("virtual_patient_sessions")
+              .update({ operational_failures: (cur.operational_failures || 0) + 1 })
+              .eq("id", sessionId);
+          }
         } catch (_) { /* silent */ }
       }
 
