@@ -151,6 +151,9 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={!students.length}>
             <Download className="h-4 w-4 mr-1" />Exportar
           </Button>
+          <Button variant="outline" size="sm" onClick={() => sendPins(false)} disabled={!students.length || busy}>
+            <KeyRound className="h-4 w-4 mr-1" />Enviar PINs
+          </Button>
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <UserPlus className="h-4 w-4 mr-1" />Adicionar
           </Button>
