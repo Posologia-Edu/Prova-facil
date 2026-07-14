@@ -1,71 +1,96 @@
 
-# Check-in de presença por QR Code
+## Objetivo
 
-Automatiza a marcação de presença por aula usando um QR code exibido pelo professor. O aluno escaneia, informa e-mail + PIN pessoal, e o sistema registra automaticamente **presente**, **atrasado** ou **ausente** de acordo com o horário do check-in.
+Adicionar aos Pacientes Virtuais um **módulo de coleta e análise de dados científicos** alinhado ao artigo "Integração de LLM e RAG para Simulações Clínicas". O sistema capturará automaticamente indicadores durante as sessões (que já existem em `virtual_patient_sessions` + `virtual_patient_messages`) e gerará um relatório PDF premium com todas as métricas descritas no artigo.
 
-## Regras (definidas pelo usuário)
+## Escopo
 
-- **Identificação do aluno**: e-mail cadastrado na turma + PIN pessoal de 6 dígitos.
-- **QR code**: token curto rotativo (novo a cada ~20s) + validação **opcional** de geolocalização configurada pelo professor.
-- **Janela padrão fixa**: até 15 min após início da aula = **presente**; entre 15 e 30 min = **atrasado**; depois = **ausente** (sem registro).
-- **Abertura**: automática no horário do cronograma **e** botão manual "Abrir/Fechar check-in" pelo professor. Reabertura permitida.
+### 1. Captura automática de dados por sessão
 
-## Fluxo do professor
+Estender `virtual_patient_sessions` para armazenar métricas técnicas por sessão:
+- `total_tokens` (tokens consumidos)
+- `avg_latency_ms` (latência média da IA)
+- `total_interactions` (pares Q→R)
+- `operational_failures` (falhas/timeouts)
 
-1. Na aba **Presença** da turma, ao lado do seletor de aula: botão **"Abrir check-in por QR"**.
-2. Modal em tela cheia mostra:
-   - QR code grande (rotaciona a cada 20s com contador visual).
-   - PIN de sala curto abaixo (fallback caso o aluno não consiga escanear).
-   - Lista lateral em tempo real: alunos que já fizeram check-in, com hora e status (Presente/Atrasado).
-   - Toggle "Exigir geolocalização" + botão "Definir local atual" (grava lat/lng + raio de 150m).
-3. Ao fechar, alunos sem registro permanecem "Não marcado" (o professor pode marcá-los manualmente como falta — comportamento atual preservado).
-4. Na aba Alunos, botão **"Gerar/reenviar PINs pessoais"** que cria PINs de 6 dígitos e envia por e-mail via Resend (opcional, um por aluno).
+A edge function `virtual-patient-chat` passa a registrar tokens (via `usage` do Gemini) e latência a cada turno.
 
-## Fluxo do aluno
+### 2. Nova tabela `vp_research_metrics`
 
-1. Aluno abre a câmera do celular e escaneia o QR → link público `/checkin/:token`.
-2. Página pede **e-mail** + **PIN pessoal** (armazenado no cadastro do aluno na turma).
-3. Se a aula exigir geolocalização, o navegador pede permissão e envia coordenadas.
-4. Backend valida → mostra confirmação com nome, aula, status (Presente/Atrasado) e horário.
+Métricas calculadas por sessão (ou por grupo/turma) para o estudo:
 
-## Segurança
+```
+- session_id / class_id / group_id
+- idcg_score (1-5, média das 5 dimensões)
+- idcg_dimensions (jsonb: empatia, escuta, raciocínio, conduta, segurança)
+- isc_score (soma_ponderada / n)
+- unsafe_conducts (jsonb: [{descrição, gravidade: 1|2|3}])
+- semantic_coherence (cosine sim. média entre respostas equivalentes)
+- rag_accuracy (0-1, avaliação do professor)
+- realism_score (Likert 1-5)
+- empathy_score / clinical_adequacy_score
+- qualitative_notes (texto)
+- evaluator_id, evaluated_at
+```
 
-- Token do QR = JWT curto (~30s) assinado com `CHECKIN_JWT_SECRET` (gerado automaticamente), contendo `lesson_id`, `nonce`, `exp`. Impossível reusar após expirar.
-- Rate limit por IP e por e-mail na edge function.
-- Validação do PIN com bcrypt (armazenado como hash, nunca em texto puro).
-- Geolocalização opcional: se ativada e o aluno estiver fora do raio, check-in bloqueia com mensagem clara.
-- Uma sessão de check-in por aluno por aula (idempotente — reescaneios não duplicam).
+Com RLS + GRANTs padrão.
 
-## Alterações técnicas
+### 3. Formulário de avaliação IDCG + ISC (professor)
 
-### Banco de dados (migration)
+Nova página `/pacientes-virtuais/pesquisa/:sessionId` acessível a partir do card do paciente no VP Analytics. Formulário com:
 
-- `class_students`: adicionar `pin_hash text`, `pin_last_sent_at timestamptz`.
-- `class_schedule_items`: adicionar `checkin_open boolean default false`, `checkin_opened_at timestamptz`, `checkin_geo_lat double precision`, `checkin_geo_lng double precision`, `checkin_geo_radius_m int`.
-- `class_attendance`: adicionar `checkin_method text` (`qr` | `manual`), `checkin_at timestamptz`, `checkin_lat double precision`, `checkin_lng double precision`.
-- GRANTs padrão + RLS mantendo o modelo atual (professor dono da turma).
+- **IDCG**: 5 sliders Likert 1-5 (empatia, escuta ativa, raciocínio clínico, conduta terapêutica, segurança) → média automática
+- **ISC**: lista dinâmica de "condutas inseguras identificadas" com gravidade (leve/moderada/grave) → cálculo automático
+- **Realismo do agente**: Likert 1-5 (empatia verbal, adequação clínica, naturalidade)
+- **Precisão RAG**: % de respostas farmacologicamente corretas (revisão do transcript)
+- **Notas qualitativas**: campo livre para interpretação de padrões, momentos-chave
 
-### Edge functions (novas)
+### 4. Cálculo automático de coerência semântica
 
-- `checkin-qr-token` (GET, auth): retorna JWT rotativo para a aula ativa.
-- `checkin-submit` (POST, público): valida token, e-mail, PIN, geo → calcula status pela janela padrão → grava em `class_attendance`.
-- `checkin-send-pins` (POST, auth): gera PINs, salva hash e envia e-mail via Resend já configurado.
+Nova edge function `vp-compute-coherence`:
+- Recebe `session_id`
+- Extrai pares Q→R do `virtual_patient_messages`
+- Calcula similaridade TF-IDF entre perguntas para identificar equivalentes (≥ 0,35)
+- Calcula cosseno médio entre respostas equivalentes
+- Devolve `semantic_coherence`, `q_r_pairs`, `comparable_pairs`, `same_stage`/`between_stages`
+- Persiste em `vp_research_metrics`
 
-### Frontend
+### 5. Dashboard de pesquisa
 
-- `src/components/classes/AttendanceTab.tsx`: botão "Abrir check-in por QR" + modal de sessão ao vivo com Realtime na `class_attendance` filtrada por `lesson_id`.
-- `src/components/classes/QrCheckinDialog.tsx` (novo): QR rotativo, contador, lista ao vivo, controles de geo.
-- `src/components/classes/StudentsTab.tsx`: botão "Gerar/reenviar PINs".
-- `src/pages/StudentCheckin.tsx` (novo, rota pública `/checkin/:token`): formulário e-mail + PIN + captura de geo.
-- Bibliotecas: `qrcode.react` para renderizar o QR.
+Nova aba **"Pesquisa Científica"** em `VPAnalytics.tsx`:
+- Tabela por grupo/caso (moldes das Tabelas 1-5 do artigo)
+- Gráfico de dispersão IDCG × ISC (Recharts) — reproduz Figura 4
+- Cards de robustez operacional (latência, tokens médios, conexões, taxa RAG)
+- Filtros por turma, período, contexto clínico (dor/inflamação/etc)
 
-## Fora de escopo (não será feito agora)
+### 6. Relatório PDF Premium
 
-- Login persistente do aluno / app dedicado.
-- Reconhecimento facial ou biometria.
-- Sincronização com sistemas externos de biometria da instituição.
+Novo componente `VPResearchReport.tsx` (baseado no padrão navy/gold já usado em `SimulationReportGenerator`) gerando PDF via jsPDF com:
 
-## Segredos necessários
+1. **Capa** — título do estudo, turma, período, logo
+2. **Sumário executivo** — n de sessões, IDCG médio, ISC médio, coerência média
+3. **Tabela 1** — Coerência semântica por grupo (Q→R, pares, sim. média, DP)
+4. **Tabela 2** — Estabilidade comportamental, latência, realismo
+5. **Tabela 3** — IDCG por grupo/caso
+6. **Tabela 4** — ISC por grupo/caso com classificação de risco
+7. **Figura** — dispersão IDCG × ISC renderizada como imagem
+8. **Tabela 5** — Robustez operacional e consistência informacional
+9. **Análise qualitativa** — compilação das notas dos avaliadores
+10. **Legendas e metodologia** conforme o artigo
 
-- `CHECKIN_JWT_SECRET`: gerado automaticamente (secret aleatório, nunca exposto).
-- `RESEND_API_KEY`: já existe no projeto.
+Estética: capa navy com faixa dourada, cabeçalhos das tabelas em navy, alternância de linhas, tipografia serifada para títulos.
+
+## Detalhes técnicos
+
+- Backend: 1 migration (nova tabela + colunas em `virtual_patient_sessions`), 1 edge function nova (`vp-compute-coherence`), 1 edge function ajustada (`virtual-patient-chat` para logar tokens/latência).
+- Frontend: formulário de avaliação (shadcn + FormRenderer), aba nova em VPAnalytics, componente PDF, botão "Gerar Relatório de Pesquisa".
+- Similaridade TF-IDF/cosseno feita em Deno puro (sem libs pesadas).
+- Reaproveita `competency_scores` só como referência — as métricas de pesquisa vivem em tabela própria para não misturar avaliação formativa com dados científicos.
+
+## Fora do escopo (perguntar depois se quiser)
+
+- Consentimento eletrônico do estudante (LGPD) para uso em publicação
+- Exportação CSV/Excel dos dados brutos para SPSS/R
+- Cálculo automático do IDCG a partir de rubrica pré-configurada aplicada ao transcript pela IA (hoje a nota vem do professor)
+
+Confirma que sigo com essa estrutura?
