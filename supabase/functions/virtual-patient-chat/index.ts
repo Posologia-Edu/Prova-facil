@@ -437,8 +437,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startedAt = Date.now();
   try {
-    const { patientId, messages, encounter } = await req.json();
+    const { patientId, messages, encounter, sessionId } = await req.json();
 
     const patient = PATIENTS[patientId] || (await loadCustomPatient(patientId));
     if (!patient) {
