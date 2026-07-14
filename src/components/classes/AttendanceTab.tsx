@@ -145,6 +145,9 @@ export function AttendanceTab({ semesterId }: Props) {
           {style && <Badge variant="outline" className={cn("gap-1", style.badge)}><style.icon className="h-3 w-3" />{style.label}</Badge>}
         </div>
         <div className="flex gap-1">
+          <Button size="sm" onClick={() => setQrOpen(true)} disabled={!activeLessonId} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white">
+            <QrCode className="h-4 w-4 mr-1" />Check-in por QR
+          </Button>
           <Button size="sm" variant="outline" onClick={() => markAll("present")} disabled={saving === "__all__"}>Todos presentes</Button>
           <Button size="sm" variant="outline" onClick={() => markAll("absent")} disabled={saving === "__all__"}>Todos ausentes</Button>
         </div>
