@@ -141,9 +141,10 @@ export default function VPResearch() {
 
     const { data: sess } = await supabase
       .from("virtual_patient_sessions")
-      .select("id, patient_id, student_email, student_name, group_id, class_virtual_patient_id, total_tokens, total_latency_ms, total_interactions, operational_failures, status, created_at")
+      .select("id, patient_id, student_email, student_name, group_id, class_virtual_patient_id, total_tokens, total_latency_ms, total_interactions, operational_failures, status, created_at, research_consent")
       .in("class_virtual_patient_id", cvpIds)
       .order("created_at", { ascending: false });
+
     setSessions((sess as SessionRow[]) || []);
 
     // Custom patients (name/description)
