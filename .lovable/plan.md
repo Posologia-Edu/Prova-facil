@@ -1,59 +1,71 @@
 
-## Diagnóstico
+# Check-in de presença por QR Code
 
-Confirmei o problema investigando a sala **T4 - Profa. Ivonete | 2026.1**:
+Automatiza a marcação de presença por aula usando um QR code exibido pelo professor. O aluno escaneia, informa e-mail + PIN pessoal, e o sistema registra automaticamente **presente**, **atrasado** ou **ausente** de acordo com o horário do check-in.
 
-- Os casos clínicos atuais da sala têm IDs `edb0cc5a…`, `0527f226…`, `172baa32…`, `47a65b8d…`, `c1a65313…` (Caso 1 a Caso 5).
-- Mas os espelhos de resposta (`referral_answer_key` e `medication_answer_key`) tinham `case_answers` chaveado por IDs de OUTRA sala (`c98f184b…`, `fdc0a973…`, `22c8e207…`, `4e751c6f…`, `393403c6…`) — sala fonte `d29e4378…`, com os mesmos títulos de casos.
-- Como o `grade-documentation` não achava o `clinical_case_id` do aluno dentro do `case_answers`, ele silenciosamente usava a **primeira** entrada (Caso 1 - Ana Lúcia) para TODAS as duplas — por isso a dupla do "Caso 2 - Carlos Henrique" foi corrigida contra o espelho errado.
+## Regras (definidas pelo usuário)
 
-**Causa raiz:** ao **compartilhar** uma sala (`supabase/functions/share-room/index.ts`), os casos clínicos são clonados com novos IDs, mas o `content_json.case_answers` dos formulários é copiado sem remapear as chaves. A duplicação em `DocumentationRooms.tsx` já faz o remap corretamente; o `share-room` não fazia.
+- **Identificação do aluno**: e-mail cadastrado na turma + PIN pessoal de 6 dígitos.
+- **QR code**: token curto rotativo (novo a cada ~20s) + validação **opcional** de geolocalização configurada pelo professor.
+- **Janela padrão fixa**: até 15 min após início da aula = **presente**; entre 15 e 30 min = **atrasado**; depois = **ausente** (sem registro).
+- **Abertura**: automática no horário do cronograma **e** botão manual "Abrir/Fechar check-in" pelo professor. Reabertura permitida.
 
-## Correção (3 partes)
+## Fluxo do professor
 
-### 1. Dados — Correção imediata da sala T4 (já executável)
-Reescrever as chaves de `case_answers` nos dois espelhos da T4 usando o mapeamento por título:
+1. Na aba **Presença** da turma, ao lado do seletor de aula: botão **"Abrir check-in por QR"**.
+2. Modal em tela cheia mostra:
+   - QR code grande (rotaciona a cada 20s com contador visual).
+   - PIN de sala curto abaixo (fallback caso o aluno não consiga escanear).
+   - Lista lateral em tempo real: alunos que já fizeram check-in, com hora e status (Presente/Atrasado).
+   - Toggle "Exigir geolocalização" + botão "Definir local atual" (grava lat/lng + raio de 150m).
+3. Ao fechar, alunos sem registro permanecem "Não marcado" (o professor pode marcá-los manualmente como falta — comportamento atual preservado).
+4. Na aba Alunos, botão **"Gerar/reenviar PINs pessoais"** que cria PINs de 6 dígitos e envia por e-mail via Resend (opcional, um por aluno).
 
-```
-c98f184b → edb0cc5a  (Caso 1 - Ana Lúcia)
-fdc0a973 → 0527f226  (Caso 2 - Carlos Henrique)
-22c8e207 → 172baa32  (Caso 3 - Maria Eduarda)
-4e751c6f → 47a65b8d  (Caso 4 - João Guilherme)
-393403c6 → c1a65313  (Caso 5 - Larissa Monteiro)
-```
+## Fluxo do aluno
 
-*(Este UPDATE já foi validado como bem sucedido durante a investigação.)*
+1. Aluno abre a câmera do celular e escaneia o QR → link público `/checkin/:token`.
+2. Página pede **e-mail** + **PIN pessoal** (armazenado no cadastro do aluno na turma).
+3. Se a aula exigir geolocalização, o navegador pede permissão e envia coordenadas.
+4. Backend valida → mostra confirmação com nome, aula, status (Presente/Atrasado) e horário.
 
-Depois da correção, você precisa reabrir cada dupla e clicar em **"Corrigir com IA"** novamente para regravar as notas com o espelho certo.
+## Segurança
 
-### 2. Código — `supabase/functions/share-room/index.ts`
-Reordenar a lógica de clonagem para:
-1. Clonar os `clinical_cases` **primeiro**, retornando os novos IDs.
-2. Construir um `caseIdMap` old→new (match por `position` + `title`, com fallback por `title`).
-3. Ao clonar os `forms`, se `content_json.case_answers` existir, remapear as chaves usando o `caseIdMap`.
+- Token do QR = JWT curto (~30s) assinado com `CHECKIN_JWT_SECRET` (gerado automaticamente), contendo `lesson_id`, `nonce`, `exp`. Impossível reusar após expirar.
+- Rate limit por IP e por e-mail na edge function.
+- Validação do PIN com bcrypt (armazenado como hash, nunca em texto puro).
+- Geolocalização opcional: se ativada e o aluno estiver fora do raio, check-in bloqueia com mensagem clara.
+- Uma sessão de check-in por aluno por aula (idempotente — reescaneios não duplicam).
 
-Isso resolve o problema para todos os módulos compartilháveis (documentation, reconciliation, nursing, medicine, dentistry, nutrition, physiotherapy, biomedicine).
+## Alterações técnicas
 
-### 3. Código — `supabase/functions/grade-documentation/index.ts`
-Endurecer o lookup de espelho:
-- Se `referral_response.clinical_case_id` **não está** presente em `referral_answer_key.case_answers`, **rejeitar** com erro claro (`"Espelho não encontrado para o caso clínico X. Verifique se os casos e os espelhos estão sincronizados."`) em vez de silenciosamente pegar a primeira entrada.
-- Mesmo comportamento para `med_answer_key`.
-- Manter o fallback silencioso apenas quando existir exatamente **1** entrada em `case_answers` (retrocompatibilidade com salas de caso único).
+### Banco de dados (migration)
 
-Isso impede que o problema volte a passar despercebido.
+- `class_students`: adicionar `pin_hash text`, `pin_last_sent_at timestamptz`.
+- `class_schedule_items`: adicionar `checkin_open boolean default false`, `checkin_opened_at timestamptz`, `checkin_geo_lat double precision`, `checkin_geo_lng double precision`, `checkin_geo_radius_m int`.
+- `class_attendance`: adicionar `checkin_method text` (`qr` | `manual`), `checkin_at timestamptz`, `checkin_lat double precision`, `checkin_lng double precision`.
+- GRANTs padrão + RLS mantendo o modelo atual (professor dono da turma).
 
-## Escopo explícito (o que NÃO muda)
+### Edge functions (novas)
 
-- Nada é alterado na lógica de correção da IA (rubrica, prompts, pesos).
-- Nada muda no fluxo do aluno em `DocumentationJoin.tsx`.
-- Não é criada UI nova de "remapeamento manual" — a correção de dados via título cobre o caso presente e o fix de código previne recorrência.
+- `checkin-qr-token` (GET, auth): retorna JWT rotativo para a aula ativa.
+- `checkin-submit` (POST, público): valida token, e-mail, PIN, geo → calcula status pela janela padrão → grava em `class_attendance`.
+- `checkin-send-pins` (POST, auth): gera PINs, salva hash e envia e-mail via Resend já configurado.
 
-## Arquivos afetados
+### Frontend
 
-- `supabase/functions/share-room/index.ts` (edit)
-- `supabase/functions/grade-documentation/index.ts` (edit)
-- Migração de dados aplicada na sala T4 (2 registros em `documentation_forms`)
+- `src/components/classes/AttendanceTab.tsx`: botão "Abrir check-in por QR" + modal de sessão ao vivo com Realtime na `class_attendance` filtrada por `lesson_id`.
+- `src/components/classes/QrCheckinDialog.tsx` (novo): QR rotativo, contador, lista ao vivo, controles de geo.
+- `src/components/classes/StudentsTab.tsx`: botão "Gerar/reenviar PINs".
+- `src/pages/StudentCheckin.tsx` (novo, rota pública `/checkin/:token`): formulário e-mail + PIN + captura de geo.
+- Bibliotecas: `qrcode.react` para renderizar o QR.
 
-## Ação depois do build
+## Fora de escopo (não será feito agora)
 
-Na T4, reabrir cada dupla e clicar em **"Corrigir com IA"** para regravar as notas usando o espelho correto de cada caso.
+- Login persistente do aluno / app dedicado.
+- Reconhecimento facial ou biometria.
+- Sincronização com sistemas externos de biometria da instituição.
+
+## Segredos necessários
+
+- `CHECKIN_JWT_SECRET`: gerado automaticamente (secret aleatório, nunca exposto).
+- `RESEND_API_KEY`: já existe no projeto.
