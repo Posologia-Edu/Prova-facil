@@ -685,6 +685,41 @@ export default function VirtualPatientRoom() {
         sessionId={sessionId}
         onComplete={handleMAIComplete}
       />
+
+      <Dialog open={showConsent} onOpenChange={(o) => { if (!o && consentState !== null) setShowConsent(false); }}>
+        <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" /> Consentimento para uso científico (LGPD)
+            </DialogTitle>
+            <DialogDescription className="text-left space-y-3 pt-2">
+              <p>
+                Esta atividade faz parte de um estudo educacional sobre uso de <strong>LLM e RAG em simulações clínicas</strong>.
+                Solicitamos sua autorização para utilizar, de forma <strong>anonimizada</strong>, os dados desta sessão
+                (transcript da conversa, tempos de resposta e indicadores de desempenho) em análises e publicações científicas.
+              </p>
+              <p>
+                Seus dados pessoais (nome, e-mail) <strong>não serão divulgados</strong>. Sua decisão <strong>não interfere</strong>
+                na sua nota, no acesso à plataforma ou na correção da atividade. Você pode revogar este consentimento a qualquer
+                momento entrando em contato com o docente responsável.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Base legal: art. 7º, I e IX, e art. 11, II, "c" da LGPD (Lei nº 13.709/2018). Versão do termo: {RESEARCH_CONSENT_VERSION}.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => saveConsent(false)} disabled={savingConsent}>
+              Não autorizo
+            </Button>
+            <Button onClick={() => saveConsent(true)} disabled={savingConsent}>
+              {savingConsent ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1.5" />}
+              Autorizo o uso científico
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
