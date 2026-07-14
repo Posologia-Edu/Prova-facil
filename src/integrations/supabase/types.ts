@@ -6782,10 +6782,14 @@ export type Database = {
           id: string
           mai_answers_json: Json | null
           module: string
+          operational_failures: number
           patient_id: string
           status: string
           student_email: string | null
           student_name: string | null
+          total_interactions: number
+          total_latency_ms: number
+          total_tokens: number
           updated_at: string
           user_id: string | null
         }
@@ -6797,10 +6801,14 @@ export type Database = {
           id?: string
           mai_answers_json?: Json | null
           module?: string
+          operational_failures?: number
           patient_id: string
           status?: string
           student_email?: string | null
           student_name?: string | null
+          total_interactions?: number
+          total_latency_ms?: number
+          total_tokens?: number
           updated_at?: string
           user_id?: string | null
         }
@@ -6812,10 +6820,14 @@ export type Database = {
           id?: string
           mai_answers_json?: Json | null
           module?: string
+          operational_failures?: number
           patient_id?: string
           status?: string
           student_email?: string | null
           student_name?: string | null
+          total_interactions?: number
+          total_latency_ms?: number
+          total_tokens?: number
           updated_at?: string
           user_id?: string | null
         }
@@ -6825,6 +6837,131 @@ export type Database = {
             columns: ["class_virtual_patient_id"]
             isOneToOne: false
             referencedRelation: "class_virtual_patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vp_research_metrics: {
+        Row: {
+          behavioral_stability_pct: number | null
+          between_stages_similarity: number | null
+          class_virtual_patient_id: string | null
+          clinical_adequacy_score: number | null
+          clinical_context: string | null
+          comparable_pairs: number | null
+          created_at: string
+          empathy_verbal_score: number | null
+          evaluated_at: string
+          evaluator_id: string
+          group_id: string | null
+          id: string
+          idcg_active_listening: number | null
+          idcg_conduct: number | null
+          idcg_empathy: number | null
+          idcg_reasoning: number | null
+          idcg_safety: number | null
+          idcg_score: number | null
+          isc_count: number | null
+          isc_risk_class: string | null
+          isc_score: number | null
+          isc_total: number | null
+          naturalness_score: number | null
+          patient_id: string | null
+          qr_pairs: number | null
+          qualitative_notes: string | null
+          rag_accuracy: number | null
+          realism_score: number | null
+          same_stage_similarity: number | null
+          semantic_similarity_mean: number | null
+          semantic_similarity_std: number | null
+          session_id: string | null
+          student_email: string | null
+          student_name: string | null
+          unsafe_conducts: Json
+          updated_at: string
+        }
+        Insert: {
+          behavioral_stability_pct?: number | null
+          between_stages_similarity?: number | null
+          class_virtual_patient_id?: string | null
+          clinical_adequacy_score?: number | null
+          clinical_context?: string | null
+          comparable_pairs?: number | null
+          created_at?: string
+          empathy_verbal_score?: number | null
+          evaluated_at?: string
+          evaluator_id: string
+          group_id?: string | null
+          id?: string
+          idcg_active_listening?: number | null
+          idcg_conduct?: number | null
+          idcg_empathy?: number | null
+          idcg_reasoning?: number | null
+          idcg_safety?: number | null
+          idcg_score?: number | null
+          isc_count?: number | null
+          isc_risk_class?: string | null
+          isc_score?: number | null
+          isc_total?: number | null
+          naturalness_score?: number | null
+          patient_id?: string | null
+          qr_pairs?: number | null
+          qualitative_notes?: string | null
+          rag_accuracy?: number | null
+          realism_score?: number | null
+          same_stage_similarity?: number | null
+          semantic_similarity_mean?: number | null
+          semantic_similarity_std?: number | null
+          session_id?: string | null
+          student_email?: string | null
+          student_name?: string | null
+          unsafe_conducts?: Json
+          updated_at?: string
+        }
+        Update: {
+          behavioral_stability_pct?: number | null
+          between_stages_similarity?: number | null
+          class_virtual_patient_id?: string | null
+          clinical_adequacy_score?: number | null
+          clinical_context?: string | null
+          comparable_pairs?: number | null
+          created_at?: string
+          empathy_verbal_score?: number | null
+          evaluated_at?: string
+          evaluator_id?: string
+          group_id?: string | null
+          id?: string
+          idcg_active_listening?: number | null
+          idcg_conduct?: number | null
+          idcg_empathy?: number | null
+          idcg_reasoning?: number | null
+          idcg_safety?: number | null
+          idcg_score?: number | null
+          isc_count?: number | null
+          isc_risk_class?: string | null
+          isc_score?: number | null
+          isc_total?: number | null
+          naturalness_score?: number | null
+          patient_id?: string | null
+          qr_pairs?: number | null
+          qualitative_notes?: string | null
+          rag_accuracy?: number | null
+          realism_score?: number | null
+          same_stage_similarity?: number | null
+          semantic_similarity_mean?: number | null
+          semantic_similarity_std?: number | null
+          session_id?: string | null
+          student_email?: string | null
+          student_name?: string | null
+          unsafe_conducts?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vp_research_metrics_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_patient_sessions"
             referencedColumns: ["id"]
           },
         ]
