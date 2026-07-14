@@ -307,7 +307,27 @@ export default function VirtualPatientRoom() {
       if (msgs) setMessages(msgs as Message[]);
     }
 
+    // LGPD research consent — check on the primary session
+    try {
+      const primaryId = isGroup ? (sessionIdRef.current || undefined) : undefined;
+      const checkId = primaryId; // filled after setSessionId propagates; fallback below
+    } catch {}
+
     setInitialLoading(false);
+    // Check consent using latest session id (deferred by microtask)
+    setTimeout(async () => {
+      const sid = sessionIdRef.current;
+      if (!sid) return;
+      const { data } = await supabase
+        .from("virtual_patient_sessions")
+        .select("research_consent")
+        .eq("id", sid)
+        .maybeSingle();
+      const rc = (data as any)?.research_consent ?? null;
+      setConsentState(rc);
+      if (rc === null) setShowConsent(true);
+    }, 50);
+
   };
 
   const sendMessage = async () => {
