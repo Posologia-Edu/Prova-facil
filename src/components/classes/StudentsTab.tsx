@@ -123,6 +123,9 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
       toast.success(`${data.sent} PIN(s) enviados por e-mail. ${data.skipped ? `${data.skipped} sem e-mail.` : ""}`);
     }
     load();
+  }
+
+
 
   function exportCsv() {
     const rows = [["Nome", "Email", "Matrícula"], ...students.map(s => [s.student_name, s.student_email || "", s.student_registration || ""])];
