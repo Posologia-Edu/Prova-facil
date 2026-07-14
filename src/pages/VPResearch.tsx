@@ -109,8 +109,11 @@ export default function VPResearch() {
   const [cvpLookup, setCvpLookup] = useState<Record<string, { group_label: string | null; class_id: string }>>({});
   const [loading, setLoading] = useState(true);
   const [computingSim, setComputingSim] = useState(false);
+  const [aiGrading, setAiGrading] = useState<string | null>(null); // sessionId being graded, or "bulk"
   const [editing, setEditing] = useState<{ session: SessionRow; metric: MetricRow } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [onlyConsented, setOnlyConsented] = useState(true);
+
 
   useEffect(() => { loadClasses(); }, []);
   useEffect(() => { loadSessions(); }, [selectedClass]);
