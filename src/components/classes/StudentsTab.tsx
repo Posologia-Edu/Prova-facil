@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, Upload, Search, Trash2, Loader2, Download } from "lucide-react";
+import { Users, UserPlus, Upload, Search, Trash2, Loader2, Download, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 export interface SemesterStudent {
@@ -105,6 +105,28 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
     load(); onChanged?.();
   }
 
+  async function sendPins(regenerate: boolean) {
+    if (!students.length) return;
+    if (regenerate && !confirm("Regenerar todos os PINs? Os PINs anteriores deixarão de funcionar.")) return;
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke("checkin-send-pins", { body: { semesterId, regenerate } });
+    setBusy(false);
+    if (error) return toast.error("Erro ao enviar PINs.");
+    if (data?.canEmail === false) {
+      toast.warning(`${data.generated} PIN(s) gerados. E-mail não configurado — baixe a lista.`);
+      const csv = ["Nome,Email,PIN", ...data.results.filter((r: {pin?: string}) => r.pin).map((r: {name: string; email: string; pin: string}) => `"${r.name}","${r.email}","${r.pin}"`)].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "pins-alunos.csv"; a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      toast.success(`${data.sent} PIN(s) enviados por e-mail. ${data.skipped ? `${data.skipped} sem e-mail.` : ""}`);
+    }
+    load();
+  }
+
+
+
   function exportCsv() {
     const rows = [["Nome", "Email", "Matrícula"], ...students.map(s => [s.student_name, s.student_email || "", s.student_registration || ""])];
     const csv = rows.map(r => r.map(c => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -128,6 +150,9 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={!students.length}>
             <Download className="h-4 w-4 mr-1" />Exportar
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => sendPins(false)} disabled={!students.length || busy}>
+            <KeyRound className="h-4 w-4 mr-1" />Enviar PINs
           </Button>
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <UserPlus className="h-4 w-4 mr-1" />Adicionar

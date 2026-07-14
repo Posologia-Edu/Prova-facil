@@ -20,6 +20,7 @@ import Analytics from "./pages/Analytics";
 import Admin from "./pages/Admin";
 import Pricing from "./pages/Pricing";
 import StudentAuth from "./pages/StudentAuth";
+import StudentCheckin from "./pages/StudentCheckin";
 import StudentDashboard from "./pages/StudentDashboard";
 import StudentExam from "./pages/StudentExam";
 import StudentResults from "./pages/StudentResults";
@@ -143,6 +144,7 @@ const App = () => (
 
             {/* Student routes */}
             <Route path="/student/auth" element={<StudentAuth />} />
+            <Route path="/checkin/:token" element={<StudentCheckin />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/exam/:sessionId" element={<StudentExam />} />
             <Route path="/student/results/:sessionId" element={<StudentResults />} />

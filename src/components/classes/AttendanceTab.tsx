@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, XCircle, Clock, FileText, Calendar, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, FileText, Calendar, Loader2, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { getLessonTypeStyle } from "@/lib/lesson-type-style";
 import { cn } from "@/lib/utils";
+import { QrCheckinDialog } from "./QrCheckinDialog";
 
 interface Lesson {
   id: string;
@@ -43,6 +44,7 @@ export function AttendanceTab({ semesterId }: Props) {
   const [rows, setRows] = useState<Record<string, AttendanceRow>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -143,6 +145,9 @@ export function AttendanceTab({ semesterId }: Props) {
           {style && <Badge variant="outline" className={cn("gap-1", style.badge)}><style.icon className="h-3 w-3" />{style.label}</Badge>}
         </div>
         <div className="flex gap-1">
+          <Button size="sm" onClick={() => setQrOpen(true)} disabled={!activeLessonId} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white">
+            <QrCode className="h-4 w-4 mr-1" />Check-in por QR
+          </Button>
           <Button size="sm" variant="outline" onClick={() => markAll("present")} disabled={saving === "__all__"}>Todos presentes</Button>
           <Button size="sm" variant="outline" onClick={() => markAll("absent")} disabled={saving === "__all__"}>Todos ausentes</Button>
         </div>
@@ -218,6 +223,21 @@ export function AttendanceTab({ semesterId }: Props) {
             </TableBody>
           </Table>
         </Card>
+      )}
+
+      {activeLesson && (
+        <QrCheckinDialog
+          open={qrOpen}
+          onOpenChange={setQrOpen}
+          lessonId={activeLesson.id}
+          lessonTitle={`${activeLesson.lesson_date ?? ""} · ${activeLesson.title}`}
+          onClosed={async () => {
+            const { data } = await supabase.from("class_attendance").select("*").eq("lesson_id", activeLesson.id);
+            const map: Record<string, AttendanceRow> = {};
+            (data as AttendanceRow[] || []).forEach(r => { map[r.student_id] = r; });
+            setRows(map);
+          }}
+        />
       )}
     </div>
   );
