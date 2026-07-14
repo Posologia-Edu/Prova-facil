@@ -307,13 +307,8 @@ export default function VirtualPatientRoom() {
       if (msgs) setMessages(msgs as Message[]);
     }
 
-    // LGPD research consent — check on the primary session
-    try {
-      const primaryId = isGroup ? (sessionIdRef.current || undefined) : undefined;
-      const checkId = primaryId; // filled after setSessionId propagates; fallback below
-    } catch {}
-
     setInitialLoading(false);
+
     // Check consent using latest session id (deferred by microtask)
     setTimeout(async () => {
       const sid = sessionIdRef.current;
