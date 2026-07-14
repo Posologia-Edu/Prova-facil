@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, XCircle, Clock, FileText, Calendar, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, FileText, Calendar, Loader2, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { getLessonTypeStyle } from "@/lib/lesson-type-style";
 import { cn } from "@/lib/utils";
+import { QrCheckinDialog } from "./QrCheckinDialog";
 
 interface Lesson {
   id: string;
