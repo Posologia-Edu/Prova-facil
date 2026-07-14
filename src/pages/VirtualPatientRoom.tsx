@@ -525,6 +525,28 @@ export default function VirtualPatientRoom() {
     }
   };
 
+  const saveConsent = async (accept: boolean) => {
+    if (!sessionId) return;
+    setSavingConsent(true);
+    const idsToUpdate = isGroupSession && groupSessionIds.length > 0 ? groupSessionIds : [sessionId];
+    const payload = {
+      research_consent: accept,
+      research_consent_at: new Date().toISOString(),
+      research_consent_version: RESEARCH_CONSENT_VERSION,
+    };
+    const { error } = await supabase
+      .from("virtual_patient_sessions")
+      .update(payload)
+      .in("id", idsToUpdate);
+    setSavingConsent(false);
+    if (error) { toast.error("Não foi possível registrar sua resposta."); return; }
+    setConsentState(accept);
+    setShowConsent(false);
+    toast.success(accept ? "Consentimento registrado. Obrigado!" : "Preferência registrada. Sua sessão não será usada no estudo.");
+  };
+
+
+
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
