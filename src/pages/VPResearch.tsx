@@ -280,8 +280,13 @@ export default function VPResearch() {
     await loadSessions();
   };
 
+  const filteredSessions = useMemo(
+    () => onlyConsented ? sessions.filter((s) => s.research_consent === true) : sessions,
+    [sessions, onlyConsented]
+  );
+
   const rowsForReport: VPResearchRow[] = useMemo(() => {
-    return sessions.map((s) => {
+    return filteredSessions.map((s) => {
       const m = metrics[s.id];
       const cvp = cvpLookup[s.class_virtual_patient_id || ""];
       const pat = patientLookup[s.patient_id];
@@ -321,7 +326,72 @@ export default function VPResearch() {
         qualitative_notes: m?.qualitative_notes ?? null,
       };
     });
-  }, [sessions, metrics, cvpLookup, patientLookup]);
+  }, [filteredSessions, metrics, cvpLookup, patientLookup]);
+
+  // Flat data set for statistical software (SPSS/R). Uses dot as decimal
+  // separator, ASCII field names, no accents. One row per session.
+  const statsRows = useMemo(() => {
+    return rowsForReport.map((r, i) => ({
+      row_id: i + 1,
+      group: r.group_label,
+      clinical_context: r.clinical_context,
+      patient: r.patient_name,
+      student_name: r.student_name || "",
+      student_email: r.student_email || "",
+      idcg_empathy: r.idcg_empathy,
+      idcg_active_listening: r.idcg_active_listening,
+      idcg_reasoning: r.idcg_reasoning,
+      idcg_conduct: r.idcg_conduct,
+      idcg_safety: r.idcg_safety,
+      idcg_score: r.idcg_score,
+      isc_total: r.isc_total,
+      isc_count: r.isc_count,
+      isc_score: r.isc_score,
+      isc_risk: r.isc_risk_class || "",
+      unsafe_conducts_desc: (r.unsafe_conducts || []).map((u: any) => `${u.description}(${u.severity})`).join(" | "),
+      qr_pairs: r.qr_pairs,
+      comparable_pairs: r.comparable_pairs,
+      semantic_sim_mean: r.semantic_similarity_mean,
+      semantic_sim_std: r.semantic_similarity_std,
+      same_stage_sim: r.same_stage_similarity,
+      between_stages_sim: r.between_stages_similarity,
+      total_tokens: r.total_tokens,
+      total_latency_ms: r.total_latency_ms,
+      avg_latency_ms: r.total_latency_ms && r.total_interactions ? Math.round(r.total_latency_ms / r.total_interactions) : null,
+      total_interactions: r.total_interactions,
+      operational_failures: r.operational_failures,
+      realism_score: r.realism_score,
+      empathy_verbal_score: r.empathy_verbal_score,
+      clinical_adequacy_score: r.clinical_adequacy_score,
+      naturalness_score: r.naturalness_score,
+      rag_accuracy: r.rag_accuracy,
+      behavioral_stability_pct: r.behavioral_stability_pct,
+      qualitative_notes: (r.qualitative_notes || "").replace(/[\r\n]+/g, " "),
+    }));
+  }, [rowsForReport]);
+
+  const exportCsv = () => {
+    if (!statsRows.length) { toast.error("Sem dados para exportar"); return; }
+    const cls = classes.find((c) => c.id === selectedClass);
+    const ws = XLSX.utils.json_to_sheet(statsRows);
+    const csv = XLSX.utils.sheet_to_csv(ws, { FS: "," });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pesquisa-vp-${cls?.name || "geral"}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportXlsx = () => {
+    if (!statsRows.length) { toast.error("Sem dados para exportar"); return; }
+    const cls = classes.find((c) => c.id === selectedClass);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(statsRows), "sessoes");
+    XLSX.writeFile(wb, `pesquisa-vp-${cls?.name || "geral"}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
 
   const exportPdf = async () => {
     const { data: user } = await supabase.auth.getUser();
