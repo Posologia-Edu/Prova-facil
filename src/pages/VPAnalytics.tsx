@@ -819,6 +819,13 @@ export default function VPAnalytics() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            onClick={() => window.location.assign(`/virtual-patients/research?class=${selectedClass}`)}
+          >
+            <BookOpen className="h-4 w-4 mr-1.5" />
+            Pesquisa científica
+          </Button>
           <Button onClick={handleBatchGrade} disabled={grading} variant="outline">
             {grading ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <BookOpen className="h-4 w-4 mr-1.5" />}
             Corrigir Turma
