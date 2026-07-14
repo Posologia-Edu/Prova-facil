@@ -11,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  ArrowLeft, Loader2, FlaskConical, FileDown, Save, RefreshCw, Trash2, Plus, ShieldAlert, Sparkles,
+  ArrowLeft, Loader2, FlaskConical, FileDown, Save, RefreshCw, Trash2, Plus, ShieldAlert, Sparkles, Bot, FileSpreadsheet, ShieldCheck, ShieldX,
 } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import { generateVPResearchReport, type VPResearchRow } from "@/lib/vp-research-report";
+
 
 interface ClassOption { id: string; name: string; }
 interface SessionRow {
