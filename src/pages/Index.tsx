@@ -185,28 +185,37 @@ const Index = () => {
             <span className="relative inline-flex items-baseline mx-2 align-baseline">
               {/* invisible sizer keeps layout stable at the widest word */}
               <span aria-hidden className="invisible whitespace-nowrap">pesquisadores</span>
-              <span className="absolute inset-0 flex items-baseline justify-center overflow-hidden">
+              <span className="absolute inset-0 flex items-baseline justify-center">
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={rotatingWords[wordIndex]}
-                    initial={{ y: "100%", opacity: 0, filter: "blur(8px)" }}
-                    animate={{ y: "0%", opacity: 1, filter: "blur(0px)" }}
-                    exit={{ y: "-100%", opacity: 0, filter: "blur(8px)" }}
-                    transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                    className="bg-clip-text text-transparent whitespace-nowrap"
+                    className="whitespace-nowrap bg-clip-text text-transparent"
                     style={{ backgroundImage: "linear-gradient(120deg, #7c74ff 0%, #4f46e5 50%, #a78bfa 100%)" }}
+                    initial="hidden"
+                    animate="show"
+                    exit="exit"
+                    variants={{
+                      hidden: {},
+                      show: { transition: { staggerChildren: 0.045 } },
+                      exit: { transition: { staggerChildren: 0.025, staggerDirection: -1 } },
+                    }}
                   >
-                    {rotatingWords[wordIndex]}
+                    {rotatingWords[wordIndex].split("").map((ch, i) => (
+                      <motion.span
+                        key={i}
+                        className="inline-block"
+                        variants={{
+                          hidden: { opacity: 0, y: "0.4em", filter: "blur(6px)" },
+                          show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+                          exit: { opacity: 0, y: "-0.4em", filter: "blur(6px)", transition: { duration: 0.25, ease: "easeIn" } },
+                        }}
+                      >
+                        {ch}
+                      </motion.span>
+                    ))}
                   </motion.span>
                 </AnimatePresence>
               </span>
-              <motion.span
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 1.2, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute -bottom-1 left-0 right-0 h-[3px] origin-left"
-                style={{ background: "linear-gradient(90deg, transparent, #7c74ff, transparent)" }}
-              />
             </span>
             {t("landing_hero_title_3")}
           </motion.h1>
