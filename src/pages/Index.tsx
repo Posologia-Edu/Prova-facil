@@ -44,7 +44,7 @@ const Index = () => {
   const rotatingWords = ["profissionais", "pesquisadores", "examinadores", "orientadores", "preceptores", "professores"];
   const [wordIndex, setWordIndex] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setWordIndex((i) => (i + 1) % rotatingWords.length), 2400);
+    const id = setInterval(() => setWordIndex((i) => (i + 1) % rotatingWords.length), 3600);
     return () => clearInterval(id);
   }, []);
 
