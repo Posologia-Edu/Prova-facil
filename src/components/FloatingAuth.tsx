@@ -71,7 +71,10 @@ const FloatingAuth = () => {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
+        <Button
+          size="sm"
+          className="gap-1.5 bg-white text-[#0a0a1a] hover:bg-white/90 border-0 shadow-[0_4px_20px_-4px_rgba(255,255,255,0.3)]"
+        >
           {t("landing_enter")}
           <ChevronDown className="h-3.5 w-3.5" />
         </Button>
