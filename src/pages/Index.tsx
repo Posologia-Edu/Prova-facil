@@ -196,8 +196,8 @@ const Index = () => {
                     exit="exit"
                     variants={{
                       hidden: {},
-                      show: { transition: { staggerChildren: 0.045 } },
-                      exit: { transition: { staggerChildren: 0.025, staggerDirection: -1 } },
+                      show: { transition: { staggerChildren: 0.09 } },
+                      exit: { transition: { staggerChildren: 0.05, staggerDirection: -1 } },
                     }}
                   >
                     {rotatingWords[wordIndex].split("").map((ch, i) => (
@@ -206,8 +206,8 @@ const Index = () => {
                         className="inline-block"
                         variants={{
                           hidden: { opacity: 0, y: "0.4em", filter: "blur(6px)" },
-                          show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
-                          exit: { opacity: 0, y: "-0.4em", filter: "blur(6px)", transition: { duration: 0.25, ease: "easeIn" } },
+                          show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
+                          exit: { opacity: 0, y: "-0.4em", filter: "blur(6px)", transition: { duration: 0.35, ease: "easeIn" } },
                         }}
                       >
                         {ch}
