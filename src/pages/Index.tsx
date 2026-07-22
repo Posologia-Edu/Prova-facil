@@ -182,12 +182,23 @@ const Index = () => {
             className="mx-auto max-w-5xl text-center text-5xl md:text-7xl lg:text-8xl font-display font-semibold leading-[0.95]"
           >
             {t("landing_hero_title_1")}
-            <span className="relative inline-block mx-2">
-              <span
-                className="bg-clip-text text-transparent"
-                style={{ backgroundImage: "linear-gradient(120deg, #7c74ff 0%, #4f46e5 50%, #a78bfa 100%)" }}
-              >
-                {t("landing_hero_title_2")}
+            <span className="relative inline-flex items-baseline mx-2 align-baseline">
+              {/* invisible sizer keeps layout stable at the widest word */}
+              <span aria-hidden className="invisible whitespace-nowrap">pesquisadores</span>
+              <span className="absolute inset-0 flex items-baseline justify-center overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={rotatingWords[wordIndex]}
+                    initial={{ y: "100%", opacity: 0, filter: "blur(8px)" }}
+                    animate={{ y: "0%", opacity: 1, filter: "blur(0px)" }}
+                    exit={{ y: "-100%", opacity: 0, filter: "blur(8px)" }}
+                    transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                    className="bg-clip-text text-transparent whitespace-nowrap"
+                    style={{ backgroundImage: "linear-gradient(120deg, #7c74ff 0%, #4f46e5 50%, #a78bfa 100%)" }}
+                  >
+                    {rotatingWords[wordIndex]}
+                  </motion.span>
+                </AnimatePresence>
               </span>
               <motion.span
                 initial={{ scaleX: 0 }}
