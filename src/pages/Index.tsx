@@ -15,7 +15,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import { motion, useScroll, useTransform, useMotionValue, useSpring, type Variants } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring, type Variants } from "framer-motion";
+import { useState as useReactState, useEffect as useReactEffect } from "react";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 32 },
