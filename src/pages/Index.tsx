@@ -41,6 +41,13 @@ const Index = () => {
   const smx = useSpring(mx, { stiffness: 60, damping: 20 });
   const smy = useSpring(my, { stiffness: 60, damping: 20 });
 
+  const rotatingWords = ["profissionais", "pesquisadores", "examinadores", "orientadores", "preceptores", "professores"];
+  const [wordIndex, setWordIndex] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setWordIndex((i) => (i + 1) % rotatingWords.length), 2400);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) navigate("/dashboard");
