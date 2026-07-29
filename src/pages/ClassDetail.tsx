@@ -548,7 +548,11 @@ export default function ClassDetail() {
 
           {/* HOLIDAYS */}
           <TabsContent value="holidays" className="space-y-3">
-            <HolidaysTab classId={classId!} />
+            <HolidaysTab
+              classId={classId!}
+              semesterId={activeSemesterId}
+              onScheduleChanged={() => activeSemesterId && loadLessons(activeSemesterId)}
+            />
           </TabsContent>
         </Tabs>
 
