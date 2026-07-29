@@ -188,8 +188,8 @@ const Index = () => {
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.span
                     key={rotatingWords[wordIndex]}
-                    className="whitespace-nowrap bg-clip-text text-transparent overflow-visible px-[0.18em]"
-                    style={{ backgroundImage: "linear-gradient(120deg, #7c74ff 0%, #4f46e5 50%, #a78bfa 100%)" }}
+                    className="whitespace-nowrap overflow-visible px-[0.18em]"
+                    style={{ color: "#a78bfa" }}
                     initial="hidden"
                     animate="show"
                     exit="exit"
@@ -202,7 +202,8 @@ const Index = () => {
                     {rotatingWords[wordIndex].split("").map((ch, i) => (
                       <motion.span
                         key={i}
-                        className="inline-block overflow-visible pb-[0.08em]"
+                        className="inline-block overflow-visible bg-clip-text text-transparent pb-[0.08em]"
+                        style={{ backgroundImage: "linear-gradient(120deg, #7c74ff 0%, #4f46e5 50%, #a78bfa 100%)" }}
                         variants={{
                           hidden: { opacity: 0, y: "0.4em", filter: "blur(6px)" },
                           show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
