@@ -182,10 +182,11 @@ const Index = () => {
             className="mx-auto max-w-5xl text-center text-5xl md:text-7xl lg:text-8xl font-display font-semibold leading-[0.95]"
           >
             {t("landing_hero_title_1")}
-            <span className="relative inline-flex items-baseline mx-2 align-baseline">
+            <span className="relative inline-flex items-baseline mx-2 align-baseline overflow-visible">
               {/* invisible sizer keeps layout stable at the widest word */}
-              <span aria-hidden className="invisible whitespace-nowrap">pesquisadores</span>
-              <span className="absolute inset-0 flex items-baseline justify-center">
+              <span aria-hidden className="invisible whitespace-nowrap px-[0.15em]">pesquisadoresx</span>
+              <span className="absolute inset-0 flex items-baseline justify-center overflow-visible">
+
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={rotatingWords[wordIndex]}
