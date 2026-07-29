@@ -182,15 +182,13 @@ const Index = () => {
             className="mx-auto max-w-5xl text-center text-5xl md:text-7xl lg:text-8xl font-display font-semibold leading-[0.95]"
           >
             {t("landing_hero_title_1")}
-            <span className="relative inline-flex items-baseline mx-2 align-baseline overflow-visible">
-              {/* invisible sizer keeps layout stable at the widest word */}
-              <span aria-hidden className="invisible whitespace-nowrap px-[0.15em]">pesquisadoresx</span>
-              <span className="absolute inset-0 flex items-baseline justify-center overflow-visible">
-
-                <AnimatePresence mode="wait">
+            <span className="relative mx-2 inline-grid min-w-[15ch] items-baseline align-baseline overflow-visible px-[0.35em]">
+              <span aria-hidden className="invisible col-start-1 row-start-1 whitespace-nowrap">pesquisadores</span>
+              <span className="col-start-1 row-start-1 flex items-baseline justify-center overflow-visible">
+                <AnimatePresence mode="wait" initial={false}>
                   <motion.span
                     key={rotatingWords[wordIndex]}
-                    className="whitespace-nowrap bg-clip-text text-transparent"
+                    className="whitespace-nowrap bg-clip-text text-transparent overflow-visible px-[0.18em]"
                     style={{ backgroundImage: "linear-gradient(120deg, #7c74ff 0%, #4f46e5 50%, #a78bfa 100%)" }}
                     initial="hidden"
                     animate="show"
@@ -204,7 +202,7 @@ const Index = () => {
                     {rotatingWords[wordIndex].split("").map((ch, i) => (
                       <motion.span
                         key={i}
-                        className="inline-block"
+                        className="inline-block overflow-visible pb-[0.08em]"
                         variants={{
                           hidden: { opacity: 0, y: "0.4em", filter: "blur(6px)" },
                           show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
