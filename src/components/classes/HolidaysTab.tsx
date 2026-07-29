@@ -21,6 +21,8 @@ interface Holiday {
 
 interface Props {
   classId: string;
+  semesterId?: string | null;
+  onScheduleChanged?: () => void;
 }
 
 const PRESET_BR = [
