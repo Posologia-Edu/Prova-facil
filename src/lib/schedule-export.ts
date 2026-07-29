@@ -79,7 +79,65 @@ function formatDateBR(iso: string | null | undefined): string {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : iso;
 }
 
+const MINUTES_PER_PERIOD = 50;
+
+// Conta os horários (períodos) de uma notação como "4T12" ou "6M234, 6N234".
+// Cada notação vale periods.length horários; múltiplos dias na mesma notação
+// (ex.: 245T12) representam a mesma aula recorrente, então contamos uma vez por data.
+function countPeriods(timeSlot: string | null | undefined): number {
+  if (!timeSlot) return 0;
+  return timeSlot
+    .split(/[,;\s]+/)
+    .filter(Boolean)
+    .reduce((acc, part) => {
+      const m = /^([1-7]+)([MTN])(\d+)$/.exec(part.trim().toUpperCase());
+      return acc + (m ? m[3].length : 0);
+    }, 0);
+}
+
+function formatHours(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
+}
+
+interface TeacherSummary {
+  name: string;
+  firstDate: string;
+  lastDate: string;
+  minutes: number;
+  slots: Set<string>;
+}
+
+export function buildTeacherSummary(lessons: ScheduleExportLesson[]): TeacherSummary[] {
+  const map = new Map<string, TeacherSummary>();
+
+  const add = (name: string | null, date: string | null, timeSlot: string | null) => {
+    const n = (name || "").trim();
+    if (!n) return;
+    const entry = map.get(n) || { name: n, firstDate: "", lastDate: "", minutes: 0, slots: new Set<string>() };
+    if (date) {
+      if (!entry.firstDate || date < entry.firstDate) entry.firstDate = date;
+      if (!entry.lastDate || date > entry.lastDate) entry.lastDate = date;
+    }
+    entry.minutes += countPeriods(timeSlot) * MINUTES_PER_PERIOD;
+    if (timeSlot) timeSlot.split(/[,;\s]+/).filter(Boolean).forEach((s) => entry.slots.add(s.toUpperCase()));
+    map.set(n, entry);
+  };
+
+  lessons.forEach((l) => {
+    if (l.visits.length > 0) {
+      l.visits.forEach((v) => add(v.teacher_name, l.lesson_date, v.time_slot));
+    } else {
+      add(l.teacher_name, l.lesson_date, l.time_slot);
+    }
+  });
+
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+}
+
 export function exportScheduleToPdf(name: string, lessons: ScheduleExportLesson[]) {
+
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -194,7 +252,43 @@ export function exportScheduleToPdf(name: string, lessons: ScheduleExportLesson[
     });
   }
 
+
+  // Teachers summary (period, workload)
+  const teachers = buildTeacherSummary(lessons);
+  if (teachers.length > 0) {
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text("Relação de professores e carga horária", 40, 40);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text("Cada horário equivale a 50 minutos.", 40, 54);
+    doc.setTextColor(0);
+
+    const totalMinutes = teachers.reduce((s, t) => s + t.minutes, 0);
+    autoTable(doc, {
+      startY: 66,
+      head: [["Professor", "Início", "Término", "Turnos/Horários", "Horários (nº)", "Carga horária"]],
+      body: teachers.map((t) => [
+        t.name,
+        formatDateBR(t.firstDate),
+        formatDateBR(t.lastDate),
+        Array.from(t.slots).sort().join(", "),
+        String(Math.round(t.minutes / MINUTES_PER_PERIOD)),
+        formatHours(t.minutes),
+      ]),
+      foot: [["Total", "", "", "", String(Math.round(totalMinutes / MINUTES_PER_PERIOD)), formatHours(totalMinutes)]],
+      styles: { fontSize: 8, cellPadding: 4 },
+      headStyles: { fillColor: [30, 58, 138], textColor: 255 },
+      footStyles: { fillColor: [226, 232, 240], textColor: 20, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+    });
+  }
+
   // Footer with page numbers
+
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
