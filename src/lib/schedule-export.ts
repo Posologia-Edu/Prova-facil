@@ -295,16 +295,22 @@ export function exportScheduleToPdf(name: string, lessons: ScheduleExportLesson[
     const totalMinutes = teachers.reduce((s, t) => s + t.minutes, 0);
     autoTable(doc, {
       startY: 66,
-      head: [["Professor", "Início", "Término", "Turnos/Horários", "Horários (nº)", "Carga horária"]],
+      head: [["Professor", "Períodos na disciplina", "Turnos/Horários", "Horários (nº)", "Carga horária"]],
       body: teachers.map((t) => [
         t.name,
-        formatDateBR(t.firstDate),
-        formatDateBR(t.lastDate),
+        t.intervals
+          .map((iv) =>
+            iv.start === iv.end
+              ? formatDateBR(iv.start)
+              : `${formatDateBR(iv.start)} a ${formatDateBR(iv.end)}`
+          )
+          .join("\n"),
         Array.from(t.slots).sort().join(", "),
         String(Math.round(t.minutes / MINUTES_PER_PERIOD)),
         formatHours(t.minutes),
       ]),
-      foot: [["Total", "", "", "", String(Math.round(totalMinutes / MINUTES_PER_PERIOD)), formatHours(totalMinutes)]],
+      foot: [["Total", "", "", String(Math.round(totalMinutes / MINUTES_PER_PERIOD)), formatHours(totalMinutes)]],
+      columnStyles: { 1: { cellWidth: 170 } },
       styles: { fontSize: 8, cellPadding: 4 },
       headStyles: { fillColor: [30, 58, 138], textColor: 255 },
       footStyles: { fillColor: [226, 232, 240], textColor: 20, fontStyle: "bold" },
