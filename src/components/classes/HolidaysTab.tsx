@@ -36,10 +36,12 @@ const PRESET_BR = [
   { date: "12-25", name: "Natal" },
 ];
 
-export function HolidaysTab({ classId }: Props) {
+export function HolidaysTab({ classId, semesterId, onScheduleChanged }: Props) {
   const [items, setItems] = useState<Holiday[]>([]);
+  const [syncing, setSyncing] = useState(false);
   const [dlg, setDlg] = useState<{ open: boolean; editing?: Holiday | null }>({ open: false });
   const [form, setForm] = useState<Partial<Holiday>>({});
+
 
   async function load() {
     const { data } = await supabase
