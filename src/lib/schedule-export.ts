@@ -105,21 +105,25 @@ interface TeacherSummary {
   name: string;
   firstDate: string;
   lastDate: string;
+  intervals: { start: string; end: string }[];
   minutes: number;
   slots: Set<string>;
 }
 
 export function buildTeacherSummary(lessons: ScheduleExportLesson[]): TeacherSummary[] {
-  const map = new Map<string, TeacherSummary>();
+  const map = new Map<string, { name: string; dates: Set<string>; minutes: number; slots: Set<string> }>();
+
+  // Linha do tempo global de datas do cronograma (para detectar interrupções)
+  const timeline = Array.from(
+    new Set(lessons.map((l) => l.lesson_date).filter(Boolean) as string[])
+  ).sort();
+  const indexOfDate = new Map(timeline.map((d, i) => [d, i]));
 
   const add = (name: string | null, date: string | null, timeSlot: string | null) => {
     const n = (name || "").trim();
     if (!n) return;
-    const entry = map.get(n) || { name: n, firstDate: "", lastDate: "", minutes: 0, slots: new Set<string>() };
-    if (date) {
-      if (!entry.firstDate || date < entry.firstDate) entry.firstDate = date;
-      if (!entry.lastDate || date > entry.lastDate) entry.lastDate = date;
-    }
+    const entry = map.get(n) || { name: n, dates: new Set<string>(), minutes: 0, slots: new Set<string>() };
+    if (date) entry.dates.add(date);
     entry.minutes += countPeriods(timeSlot) * MINUTES_PER_PERIOD;
     if (timeSlot) timeSlot.split(/[,;\s]+/).filter(Boolean).forEach((s) => entry.slots.add(s.toUpperCase()));
     map.set(n, entry);
@@ -133,7 +137,28 @@ export function buildTeacherSummary(lessons: ScheduleExportLesson[]): TeacherSum
     }
   });
 
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  return Array.from(map.values())
+    .map((e) => {
+      const dates = Array.from(e.dates).sort();
+      const intervals: { start: string; end: string }[] = [];
+      dates.forEach((d) => {
+        const last = intervals[intervals.length - 1];
+        const prevIdx = last ? indexOfDate.get(last.end) ?? -1 : -1;
+        const curIdx = indexOfDate.get(d) ?? -1;
+        // sequência contínua = datas consecutivas na linha do tempo do cronograma
+        if (last && curIdx === prevIdx + 1) last.end = d;
+        else intervals.push({ start: d, end: d });
+      });
+      return {
+        name: e.name,
+        firstDate: dates[0] ?? "",
+        lastDate: dates[dates.length - 1] ?? "",
+        intervals,
+        minutes: e.minutes,
+        slots: e.slots,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }
 
 export function exportScheduleToPdf(name: string, lessons: ScheduleExportLesson[]) {
