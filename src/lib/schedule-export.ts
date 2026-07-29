@@ -252,7 +252,43 @@ export function exportScheduleToPdf(name: string, lessons: ScheduleExportLesson[
     });
   }
 
+
+  // Teachers summary (period, workload)
+  const teachers = buildTeacherSummary(lessons);
+  if (teachers.length > 0) {
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text("Relação de professores e carga horária", 40, 40);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text("Cada horário equivale a 50 minutos.", 40, 54);
+    doc.setTextColor(0);
+
+    const totalMinutes = teachers.reduce((s, t) => s + t.minutes, 0);
+    autoTable(doc, {
+      startY: 66,
+      head: [["Professor", "Início", "Término", "Turnos/Horários", "Horários (nº)", "Carga horária"]],
+      body: teachers.map((t) => [
+        t.name,
+        formatDateBR(t.firstDate),
+        formatDateBR(t.lastDate),
+        Array.from(t.slots).sort().join(", "),
+        String(Math.round(t.minutes / MINUTES_PER_PERIOD)),
+        formatHours(t.minutes),
+      ]),
+      foot: [["Total", "", "", "", String(Math.round(totalMinutes / MINUTES_PER_PERIOD)), formatHours(totalMinutes)]],
+      styles: { fontSize: 8, cellPadding: 4 },
+      headStyles: { fillColor: [30, 58, 138], textColor: 255 },
+      footStyles: { fillColor: [226, 232, 240], textColor: 20, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+    });
+  }
+
   // Footer with page numbers
+
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
