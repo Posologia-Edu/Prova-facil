@@ -137,21 +137,31 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
   }, [open, lesson, semesterId, classId]);
 
   // Auto-detect holiday + auto-fill time slot when date changes
+  const autoFilledSlotRef = useRef<string | null>(null);
   useEffect(() => {
     if (!form.lesson_date) { setHolidayHit(null); return; }
     fetchHolidaysFor(classId).then((hs) => {
       const hit = holidayMatchingDate(hs as any, form.lesson_date!);
       setHolidayHit(hit ? { name: hit.name } : null);
     });
-    // auto-fill time_slot from weekly schedule, only when not yet set or matches a previous slot for the previous day
-    if (weeklySchedule.length && !form.time_slot && !lesson?.id) {
+    // auto-fill time_slot from the class weekly schedule (grade) based on the weekday of the chosen date.
+    // Overwrites a value that was previously auto-filled, but never a manual entry.
+    if (weeklySchedule.length && !lesson?.id) {
       const matches = slotsForDate(weeklySchedule, form.lesson_date);
-      if (matches.length === 1) {
-        setForm((f) => ({ ...f, time_slot: formatSlot(matches[0]) }));
+      const current = form.time_slot;
+      const canOverwrite = !current || current === autoFilledSlotRef.current;
+      if (matches.length > 0 && canOverwrite) {
+        const next = formatSlot(matches[0]);
+        autoFilledSlotRef.current = next;
+        setForm((f) => ({ ...f, time_slot: next }));
+      } else if (matches.length === 0 && current && current === autoFilledSlotRef.current) {
+        autoFilledSlotRef.current = null;
+        setForm((f) => ({ ...f, time_slot: null }));
       }
     }
     // eslint-disable-next-line
   }, [form.lesson_date, weeklySchedule, classId]);
+
 
   const filteredTemplates = templates.filter((t) => t.lesson_type === form.lesson_type);
   const activeTemplate = templates.find((t) => t.id === form.template_id);
