@@ -80,7 +80,8 @@ export function HolidaysTab({ classId, semesterId, onScheduleChanged }: Props) {
     if (error) return toast.error(error.message);
     toast.success("Feriado salvo");
     setDlg({ open: false });
-    load();
+    await load();
+    await syncToSchedule(true);
   }
 
   async function remove(h: Holiday) {
@@ -105,12 +106,83 @@ export function HolidaysTab({ classId, semesterId, onScheduleChanged }: Props) {
     const { error } = await supabase.from("class_holidays").insert(rows);
     if (error) return toast.error(error.message);
     toast.success("Feriados nacionais importados");
-    load();
+    await load();
+    await syncToSchedule(true);
+  }
+
+  // Lança no cronograma os feriados que caem em um dia da semana com aula (grade do semestre)
+  async function syncToSchedule(silent = false) {
+    if (!semesterId) {
+      if (!silent) toast.error("Selecione um semestre para lançar os feriados no cronograma");
+      return;
+    }
+    setSyncing(true);
+    try {
+      const [{ data: sem }, { data: cls }, { data: existing }] = await Promise.all([
+        supabase.from("class_semesters").select("start_date,end_date").eq("id", semesterId).single(),
+        supabase.from("classes").select("weekly_schedule").eq("id", classId).single(),
+        supabase.from("class_schedule_items").select("lesson_date,is_holiday").eq("semester_id", semesterId),
+      ]);
+      const start = (sem as any)?.start_date;
+      const end = (sem as any)?.end_date;
+      if (!start || !end) {
+        if (!silent) toast.error("Defina a data de início e término do semestre para lançar os feriados");
+        return;
+      }
+      const weekly = (((cls as any)?.weekly_schedule || []) as WeeklySlot[]);
+      if (!weekly.length) {
+        if (!silent) toast.error("Cadastre a grade semanal (notação) da turma primeiro");
+        return;
+      }
+      const holidays = await fetchHolidaysFor(classId);
+      const taken = new Set(
+        ((existing as any[]) || []).filter((i) => i.is_holiday && i.lesson_date).map((i) => i.lesson_date as string)
+      );
+
+      const rows: any[] = [];
+      const cursor = new Date(start + "T12:00:00");
+      const last = new Date(end + "T12:00:00");
+      while (cursor <= last) {
+        const iso = cursor.toISOString().slice(0, 10);
+        const hit = holidayMatchingDate(holidays, iso);
+        const slots = hit ? slotsForDate(weekly, iso) : [];
+        if (hit && slots.length > 0 && !taken.has(iso)) {
+          taken.add(iso);
+          rows.push({
+            semester_id: semesterId,
+            lesson_date: iso,
+            title: `Feriado — ${hit.name}`,
+            lesson_type: "holiday",
+            template_data: {},
+            rubric_json: {},
+            status: "cancelled",
+            is_holiday: true,
+            holiday_name: hit.name,
+            time_slot: formatSlot(slots[0]),
+          });
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      if (rows.length === 0) {
+        if (!silent) toast.info("Nenhum feriado novo coincide com os dias de aula do semestre");
+        return;
+      }
+      const { error } = await supabase.from("class_schedule_items").insert(rows);
+      if (error) return toast.error(error.message);
+      toast.success(`${rows.length} feriado(s) lançado(s) no cronograma`);
+      onScheduleChanged?.();
+    } finally {
+      setSyncing(false);
+    }
   }
 
   return (
     <div className="space-y-3">
       <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={() => syncToSchedule(false)} disabled={syncing}>
+          <CalendarCheck className="w-4 h-4 mr-1" />Lançar no cronograma
+        </Button>
         <Button variant="outline" onClick={importBrPresets}>
           <CalendarOff className="w-4 h-4 mr-1" />Importar feriados nacionais BR
         </Button>
@@ -118,6 +190,7 @@ export function HolidaysTab({ classId, semesterId, onScheduleChanged }: Props) {
           <Plus className="w-4 h-4 mr-1" />Novo feriado
         </Button>
       </div>
+
 
       {items.length === 0 ? (
         <Card>
