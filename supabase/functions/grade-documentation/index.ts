@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
+import { getUserId, ownsRoom, unauthorized, forbidden } from "../_shared/auth-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,6 +53,10 @@ serve(async (req) => {
 
   try {
     const { room_id, pair_index, referral_response, referral_answer_key, referral_fields, med_response, med_answer_key, med_columns } = await req.json();
+    const userId = await getUserId(req);
+    if (!userId) return unauthorized(corsHeaders);
+    if (!room_id || !(await ownsRoom("documentation_rooms", room_id, userId))) return forbidden(corsHeaders);
+
 
     let comparisonPrompt = "Avalie as respostas do aluno comparando RIGOROSAMENTE com o espelho de respostas.\n\n";
     comparisonPrompt += "PONTUAÇÃO MÁXIMA:\n- Encaminhamento: 5,0 pontos\n- Quadro Resumo de Medicamentos: 5,0 pontos\n- Total: 10,0 pontos\n\n";
