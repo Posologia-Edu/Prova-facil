@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
+import { getUserId, rowExists, unauthorized } from "../_shared/auth-guard.ts";
 
 async function loadCustomPatient(patientId: string) {
   if (!patientId?.startsWith("custom:")) return null;
@@ -440,6 +441,12 @@ serve(async (req) => {
   const startedAt = Date.now();
   try {
     const { patientId, messages, encounter, sessionId } = await req.json();
+
+    // AuthZ: signed-in caller, or an anonymous participant bound to a real session.
+    const authedUserId = await getUserId(req);
+    if (!authedUserId && !(await rowExists("virtual_patient_sessions", sessionId))) {
+      return unauthorized(corsHeaders);
+    }
 
     const patient = PATIENTS[patientId] || (await loadCustomPatient(patientId));
     if (!patient) {
