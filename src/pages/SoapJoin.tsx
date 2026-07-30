@@ -62,6 +62,7 @@ export default function SoapJoin() {
             soap_form_fields: soapFormFields,
             student_name: participantData.student_name || "",
             patient_name: patientName || "",
+            access_code: roomData.access_code,
           }),
         }
       );
