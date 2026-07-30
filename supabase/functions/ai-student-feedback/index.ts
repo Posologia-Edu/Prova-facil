@@ -28,6 +28,36 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // AuthZ: prevent reading another student's results.
+    const emailLower = String(studentEmail).trim().toLowerCase();
+    const isSelf = !!user?.email && user.email.toLowerCase() === emailLower;
+    if (!isSelf) {
+      const requestedIds: string[] = sessionId
+        ? [sessionId]
+        : (Array.isArray(sessionIds) ? sessionIds.filter((x: unknown) => typeof x === "string") : []);
+      if (requestedIds.length === 0) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: ownRows } = await supabase
+        .from("exam_sessions")
+        .select("id, student_email, publication_id")
+        .in("id", requestedIds);
+      const rows = ownRows || [];
+      if (rows.length !== requestedIds.length ||
+          rows.some((r: any) => String(r.student_email || "").toLowerCase() !== emailLower)) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (user) {
+        const pubIds = [...new Set(rows.map((r: any) => r.publication_id).filter(Boolean))];
+        const { data: pubs } = await supabase
+          .from("exam_publications").select("id, user_id").in("id", pubIds as string[]);
+        const owns = (pubs || []).length === pubIds.length && (pubs || []).every((p: any) => p.user_id === user.id);
+        if (!owns) {
+          return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+    }
+
     const sessionQuery = supabase
       .from("exam_sessions")
       .select("id, total_score, max_score, status, finished_at, publication_id")
