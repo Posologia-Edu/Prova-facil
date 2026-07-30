@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
+import { adminClient, getUserId, forbidden } from "../_shared/auth-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,6 +27,20 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    // AuthZ: signed-in caller, or an anonymous participant that references a real
+    // session belonging to the given virtual patient assignment.
+    const userId = await getUserId(req);
+    if (!userId) {
+      const { data: sess } = await adminClient()
+        .from("virtual_patient_sessions")
+        .select("id, class_virtual_patient_id")
+        .eq("id", session_id)
+        .maybeSingle();
+      if (!sess || sess.class_virtual_patient_id !== class_virtual_patient_id) {
+        return forbidden(corsHeaders);
+      }
+    }
 
     // Fetch ALL messages from the conversation (full transcript across encounters)
     const { data: messages, error: msgErr } = await supabase
