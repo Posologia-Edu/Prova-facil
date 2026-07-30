@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
+import { adminClient, getUserId, unauthorized } from "../_shared/auth-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +12,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { stationId, messages } = await req.json();
+    const { stationId, messages, accessCode } = await req.json();
 
     if (!stationId || !messages?.length) {
       return new Response(JSON.stringify({ error: "stationId and messages required" }), {
@@ -34,6 +35,23 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Station not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // AuthZ: signed-in caller, or an anonymous student while a circuit for this
+    // station's exam is running (optionally proving the circuit access code).
+    const authedUserId = await getUserId(req);
+    if (!authedUserId) {
+      const { data: stationRow } = await adminClient()
+        .from("osce_stations").select("osce_exam_id").eq("id", stationId).maybeSingle();
+      let circuitQuery = adminClient()
+        .from("osce_circuits").select("id, access_code")
+        .eq("osce_exam_id", stationRow?.osce_exam_id ?? "")
+        .in("status", ["running", "active", "in_progress"]);
+      if (typeof accessCode === "string" && accessCode.trim()) {
+        circuitQuery = circuitQuery.eq("access_code", accessCode.trim());
+      }
+      const { data: circuits } = await circuitQuery.limit(1);
+      if (!circuits || circuits.length === 0) return unauthorized(corsHeaders);
     }
 
     if (!station.virtual_patient_enabled) {

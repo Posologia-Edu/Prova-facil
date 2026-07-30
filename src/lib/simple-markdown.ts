@@ -55,7 +55,11 @@ export function simpleMarkdownToHtml(md: string): string {
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.*?)\*/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, '<code class="bg-muted px-1 rounded text-sm">$1</code>')
-    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="underline text-primary">$1</a>');
+    .replace(/\[(.*?)\]\((.*?)\)/g, (_m, label, url) => {
+      const raw = String(url || "").trim();
+      const safeHref = /^(https?:\/\/|mailto:|#|\/)/i.test(raw) ? raw.replace(/"/g, "%22") : "#";
+      return `<a href="${safeHref}" class="underline text-primary" rel="noopener noreferrer">${label}</a>`;
+    });
 
   // Convert remaining newlines to <br/>, but NOT inside our generated table block.
   // Strategy: temporarily protect <table>...</table> blocks.

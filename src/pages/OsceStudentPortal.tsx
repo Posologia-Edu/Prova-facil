@@ -159,6 +159,7 @@ export default function OsceStudentPortal() {
       const res = await supabase.functions.invoke("osce-virtual-patient", {
         body: {
           stationId: currentStation.id,
+          accessCode,
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
         },
       });

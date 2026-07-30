@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Loader2, X, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 
 
 interface Message {
@@ -113,7 +114,7 @@ export function SalesAgent() {
                     : "bg-muted text-foreground"
                 }`}>
                   {msg.role === "assistant" ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1" dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, "<br/>").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="underline">$1</a>') }} />
+                    <div className="prose prose-sm max-w-none dark:prose-invert [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
                   ) : msg.content}
                 </div>
               </div>

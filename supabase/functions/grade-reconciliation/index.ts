@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
+import { getUserId, ownsRoom, unauthorized, forbidden } from "../_shared/auth-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +12,10 @@ serve(async (req) => {
 
   try {
     const { response_id, room_id, answers_json, answer_key_json, form_fields } = await req.json();
+    const userId = await getUserId(req);
+    if (!userId) return unauthorized(corsHeaders);
+    if (!room_id || !(await ownsRoom("reconciliation_rooms", room_id, userId))) return forbidden(corsHeaders);
+
 
     if (!response_id || !answers_json || !answer_key_json || !form_fields) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {

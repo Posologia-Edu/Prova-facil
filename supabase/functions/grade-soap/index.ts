@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
+import { adminClient, getUserId, ownsRoom, roomCodeMatches, forbidden } from "../_shared/auth-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,13 +92,22 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { response_id, soap_answers, anamnesis_answers, soap_form_fields, student_name, patient_name } = await req.json();
+    const { response_id, soap_answers, anamnesis_answers, soap_form_fields, student_name, patient_name, access_code } = await req.json();
 
     if (!response_id || !soap_answers) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // AuthZ: the room owner (teacher, signed in) OR a participant holding the room access code.
+    const { data: respRow } = await adminClient()
+      .from("soap_responses").select("room_id").eq("id", response_id).maybeSingle();
+    if (!respRow?.room_id) return forbidden(corsHeaders, "Response not found");
+    const userId = await getUserId(req);
+    const allowed = (userId && await ownsRoom("soap_rooms", respRow.room_id, userId))
+      || await roomCodeMatches("soap_rooms", respRow.room_id, access_code);
+    if (!allowed) return forbidden(corsHeaders);
 
     const fields = Array.isArray(soap_form_fields) ? soap_form_fields : [];
     let soapSection = "## Respostas do SOAP do aluno:\n\n";
