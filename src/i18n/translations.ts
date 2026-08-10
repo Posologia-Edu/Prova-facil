@@ -643,6 +643,12 @@ const pt: TranslationKeys = {
   classes_delete: "Excluir",
   classes_delete_title: "Excluir turma?",
   classes_delete_desc: "Esta ação não pode ser desfeita. A turma será removida permanentemente.",
+  classes_active: "Ativos",
+  classes_inactive: "Inativos",
+  classes_mark_active: "Marcar como ativo",
+  classes_mark_inactive: "Marcar como inativo",
+  classes_status_active: "Ativo",
+  classes_status_inactive: "Inativo",
 
   analytics_title: "Análises",
   analytics_subtitle: "Insights sobre seu banco de questões e histórico de provas.",
