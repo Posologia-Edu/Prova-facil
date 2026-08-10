@@ -325,6 +325,16 @@ export default function ClassesPage() {
     fetchClasses();
   };
 
+  const handleToggleActive = async (cls: ClassItem) => {
+    const next = !(cls.is_active ?? true);
+    const { error } = await supabase.from("classes")
+      .update({ is_active: next })
+      .eq("id", cls.id);
+    if (error) { toast.error("Erro ao atualizar status."); return; }
+    toast.success(next ? "Turma ativada." : "Turma inativada.");
+    fetchClasses();
+  };
+
   const handleDuplicateClass = async (cls: ClassItem) => {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return;
