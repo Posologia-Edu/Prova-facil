@@ -1283,6 +1283,10 @@ export default function ClassesPage() {
                 <Label>Descrição</Label>
                 <Textarea rows={2} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
               </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Checkbox id="edit-is-active" checked={editIsActive} onCheckedChange={(checked) => setEditIsActive(Boolean(checked))} />
+                <Label htmlFor="edit-is-active" className="font-normal cursor-pointer">Turma ativa</Label>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
