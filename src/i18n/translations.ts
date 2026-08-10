@@ -121,6 +121,12 @@ type TranslationKeys = {
   classes_delete: string;
   classes_delete_title: string;
   classes_delete_desc: string;
+  classes_active: string;
+  classes_inactive: string;
+  classes_mark_active: string;
+  classes_mark_inactive: string;
+  classes_status_active: string;
+  classes_status_inactive: string;
 
   // Analytics
   analytics_title: string;
@@ -637,6 +643,12 @@ const pt: TranslationKeys = {
   classes_delete: "Excluir",
   classes_delete_title: "Excluir turma?",
   classes_delete_desc: "Esta ação não pode ser desfeita. A turma será removida permanentemente.",
+  classes_active: "Ativos",
+  classes_inactive: "Inativos",
+  classes_mark_active: "Marcar como ativo",
+  classes_mark_inactive: "Marcar como inativo",
+  classes_status_active: "Ativo",
+  classes_status_inactive: "Inativo",
 
   analytics_title: "Análises",
   analytics_subtitle: "Insights sobre seu banco de questões e histórico de provas.",
@@ -1138,6 +1150,12 @@ const en: TranslationKeys = {
   classes_delete: "Delete",
   classes_delete_title: "Delete class?",
   classes_delete_desc: "This action cannot be undone. The class will be permanently removed.",
+  classes_active: "Active",
+  classes_inactive: "Inactive",
+  classes_mark_active: "Mark as active",
+  classes_mark_inactive: "Mark as inactive",
+  classes_status_active: "Active",
+  classes_status_inactive: "Inactive",
 
   analytics_title: "Analytics",
   analytics_subtitle: "Insights about your question bank and exam history.",
@@ -1639,6 +1657,12 @@ const es: TranslationKeys = {
   classes_delete: "Eliminar",
   classes_delete_title: "¿Eliminar clase?",
   classes_delete_desc: "Esta acción no se puede deshacer. La clase será eliminada permanentemente.",
+  classes_active: "Activos",
+  classes_inactive: "Inactivos",
+  classes_mark_active: "Marcar como activo",
+  classes_mark_inactive: "Marcar como inactivo",
+  classes_status_active: "Activo",
+  classes_status_inactive: "Inactivo",
 
   analytics_title: "Análisis",
   analytics_subtitle: "Información sobre su banco de preguntas e historial de exámenes.",

@@ -60,6 +60,7 @@ interface ClassItem {
   description: string;
   studentCount: number;
   examCount: number;
+  is_active?: boolean;
 }
 
 interface StudentItem {
@@ -156,6 +157,8 @@ export default function ClassesPage() {
   const [newName, setNewName] = useState("");
   const [newSemester, setNewSemester] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [newIsActive, setNewIsActive] = useState(true);
+  const [editIsActive, setEditIsActive] = useState(true);
 
   // Profile info for detail view
   const [profileName, setProfileName] = useState("");
@@ -164,6 +167,7 @@ export default function ClassesPage() {
   // Hub list view: search, grouping, filters
   const [listSearch, setListSearch] = useState("");
   const [listView, setListView] = useState<"groups" | "all">("groups");
+  const [activeTab, setActiveTab] = useState<"active" | "inactive">("active");
   const [collapsedDisciplines, setCollapsedDisciplines] = useState<Set<string>>(new Set());
 
   const buildPublicationMap = (
@@ -226,7 +230,7 @@ export default function ClassesPage() {
 
     const { data } = await supabase
       .from("classes")
-      .select("id, name, semester, description, student_count")
+      .select("id, name, semester, description, student_count, is_active")
       .eq("user_id", user.user.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -262,6 +266,7 @@ export default function ClassesPage() {
       description: c.description || "",
       studentCount: studentCountMap[c.id] || 0,
       examCount: examCountMap[c.id] || 0,
+      is_active: c.is_active ?? true,
     })));
     setLoading(false);
   };
@@ -278,10 +283,11 @@ export default function ClassesPage() {
       name: newName.trim(),
       semester: newSemester.trim(),
       description: newDescription.trim(),
+      is_active: newIsActive,
     });
 
     if (error) { toast.error("Erro ao criar turma."); return; }
-    setNewName(""); setNewSemester(""); setNewDescription("");
+    setNewName(""); setNewSemester(""); setNewDescription(""); setNewIsActive(true);
     setCreateOpen(false);
     toast.success("Turma criada com sucesso!");
     fetchClasses();
@@ -290,7 +296,7 @@ export default function ClassesPage() {
   const handleEditClass = async () => {
     if (!editingClass || !newName.trim()) return;
     const { error } = await supabase.from("classes")
-      .update({ name: newName.trim(), semester: newSemester.trim(), description: newDescription.trim() })
+      .update({ name: newName.trim(), semester: newSemester.trim(), description: newDescription.trim(), is_active: editIsActive })
       .eq("id", editingClass.id);
 
     if (error) { toast.error("Erro ao editar turma."); return; }
@@ -299,7 +305,7 @@ export default function ClassesPage() {
     toast.success("Turma atualizada!");
     fetchClasses();
     if (selectedClass?.id === editingClass.id) {
-      setSelectedClass({ ...selectedClass, name: newName.trim(), semester: newSemester.trim(), description: newDescription.trim() });
+      setSelectedClass({ ...selectedClass, name: newName.trim(), semester: newSemester.trim(), description: newDescription.trim(), is_active: editIsActive });
     }
   };
 
@@ -308,6 +314,7 @@ export default function ClassesPage() {
     setNewName(cls.name);
     setNewSemester(cls.semester);
     setNewDescription(cls.description);
+    setEditIsActive(cls.is_active ?? true);
     setEditOpen(true);
   };
 
@@ -319,6 +326,16 @@ export default function ClassesPage() {
     setDeleteId(null);
     toast.success("Turma movida para a lixeira.");
     if (selectedClass?.id === id) setSelectedClass(null);
+    fetchClasses();
+  };
+
+  const handleToggleActive = async (cls: ClassItem) => {
+    const next = !(cls.is_active ?? true);
+    const { error } = await supabase.from("classes")
+      .update({ is_active: next })
+      .eq("id", cls.id);
+    if (error) { toast.error("Erro ao atualizar status."); return; }
+    toast.success(next ? "Turma ativada." : "Turma inativada.");
     fetchClasses();
   };
 
@@ -1266,6 +1283,10 @@ export default function ClassesPage() {
                 <Label>Descrição</Label>
                 <Textarea rows={2} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
               </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Checkbox id="edit-is-active" checked={editIsActive} onCheckedChange={(checked) => setEditIsActive(Boolean(checked))} />
+                <Label htmlFor="edit-is-active" className="font-normal cursor-pointer">Turma ativa</Label>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
@@ -1281,13 +1302,16 @@ export default function ClassesPage() {
 
   // Class list view
   const filteredClasses = classes.filter(c => {
-    if (!listSearch.trim()) return true;
+    const matchesTab = activeTab === "active" ? (c.is_active ?? true) : !(c.is_active ?? true);
+    if (!listSearch.trim()) return matchesTab;
     const q = listSearch.trim().toLowerCase();
-    return c.name.toLowerCase().includes(q) || (c.semester || "").toLowerCase().includes(q) || (c.description || "").toLowerCase().includes(q);
+    return matchesTab && (c.name.toLowerCase().includes(q) || (c.semester || "").toLowerCase().includes(q) || (c.description || "").toLowerCase().includes(q));
   });
-  const totalStudents = classes.reduce((a, c) => a + c.studentCount, 0);
-  const totalExams = classes.reduce((a, c) => a + c.examCount, 0);
-  const disciplinesCount = new Set(classes.map(c => c.name)).size;
+  const activeCount = classes.filter(c => c.is_active ?? true).length;
+  const inactiveCount = classes.length - activeCount;
+  const totalStudents = filteredClasses.reduce((a, c) => a + c.studentCount, 0);
+  const totalExams = filteredClasses.reduce((a, c) => a + c.examCount, 0);
+  const disciplinesCount = new Set(filteredClasses.map(c => c.name)).size;
 
   // group by discipline name
   const groupsMap = new Map<string, ClassItem[]>();
@@ -1336,6 +1360,10 @@ export default function ClassesPage() {
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicateClass(cls); }}>
                   <Copy className="h-4 w-4 mr-2" /> Duplicar
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleActive(cls); }}>
+                  {(cls.is_active ?? true) ? <Archive className="h-4 w-4 mr-2" /> : <Layers className="h-4 w-4 mr-2" />}
+                  {(cls.is_active ?? true) ? "Inativar" : "Reativar"}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(cls.id); }}>
                   <Trash2 className="h-4 w-4 mr-2" /> Excluir
@@ -1343,7 +1371,10 @@ export default function ClassesPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <h3 className="font-semibold mt-3 leading-tight">{cls.name}</h3>
+          <div className="flex items-start justify-between gap-2 mt-3">
+            <h3 className={cn("font-semibold leading-tight", !(cls.is_active ?? true) && "text-muted-foreground")}>{cls.name}</h3>
+            {!(cls.is_active ?? true) && <Badge variant="secondary" className="text-[10px] shrink-0">Inativo</Badge>}
+          </div>
           {cls.semester && <Badge variant="outline" className="mt-1 text-[11px]"><CalendarClock className="h-3 w-3 mr-1" />{cls.semester}</Badge>}
           {!compact && cls.description && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{cls.description}</p>}
           <div className="flex items-center gap-4 mt-4 pt-3 border-t">
@@ -1379,7 +1410,7 @@ export default function ClassesPage() {
           </div>
           <Dialog open={createOpen} onOpenChange={(open) => {
             setCreateOpen(open);
-            if (!open) { setNewName(""); setNewSemester(""); setNewDescription(""); }
+            if (!open) { setNewName(""); setNewSemester(""); setNewDescription(""); setNewIsActive(true); }
           }}>
             <Button onClick={() => setCreateOpen(true)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
               <Plus className="h-4 w-4 mr-2" /> Nova Turma
@@ -1398,6 +1429,10 @@ export default function ClassesPage() {
                 <div className="space-y-2">
                   <Label>Descrição</Label>
                   <Textarea placeholder="Breve descrição..." rows={2} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Checkbox id="new-is-active" checked={newIsActive} onCheckedChange={(checked) => setNewIsActive(Boolean(checked))} />
+                  <Label htmlFor="new-is-active" className="font-normal cursor-pointer">Turma ativa</Label>
                 </div>
               </div>
               <DialogFooter>
@@ -1425,6 +1460,16 @@ export default function ClassesPage() {
           ))}
         </div>
       </div>
+
+      {/* Active / Inactive tabs */}
+      {classes.length > 0 && (
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "inactive")}>
+          <TabsList>
+            <TabsTrigger value="active">Ativos ({activeCount})</TabsTrigger>
+            <TabsTrigger value="inactive">Inativos ({inactiveCount})</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
 
       {/* Toolbar */}
       {classes.length > 0 && (
@@ -1457,7 +1502,7 @@ export default function ClassesPage() {
         </CardContent></Card>
       ) : filteredClasses.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
-          Nenhum resultado para "{listSearch}".
+          {listSearch ? `Nenhum resultado para "${listSearch}".` : activeTab === "active" ? "Nenhuma turma ativa." : "Nenhuma turma inativa."}
         </CardContent></Card>
       ) : listView === "all" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1518,6 +1563,10 @@ export default function ClassesPage() {
               <div className="space-y-2">
                 <Label>Descrição</Label>
                 <Textarea rows={2} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Checkbox id="edit-is-active-list" checked={editIsActive} onCheckedChange={(checked) => setEditIsActive(Boolean(checked))} />
+                <Label htmlFor="edit-is-active-list" className="font-normal cursor-pointer">Turma ativa</Label>
               </div>
             </div>
             <DialogFooter>

@@ -1292,6 +1292,7 @@ export type Database = {
           deleted_at: string | null
           description: string | null
           id: string
+          is_active: boolean
           name: string
           semester: string | null
           student_count: number | null
@@ -1304,6 +1305,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean
           name: string
           semester?: string | null
           student_count?: number | null
@@ -1316,6 +1318,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean
           name?: string
           semester?: string | null
           student_count?: number | null
