@@ -121,6 +121,12 @@ type TranslationKeys = {
   classes_delete: string;
   classes_delete_title: string;
   classes_delete_desc: string;
+  classes_active: string;
+  classes_inactive: string;
+  classes_mark_active: string;
+  classes_mark_inactive: string;
+  classes_status_active: string;
+  classes_status_inactive: string;
 
   // Analytics
   analytics_title: string;
