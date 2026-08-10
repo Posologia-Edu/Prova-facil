@@ -1363,7 +1363,10 @@ export default function ClassesPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <h3 className="font-semibold mt-3 leading-tight">{cls.name}</h3>
+          <div className="flex items-start justify-between gap-2 mt-3">
+            <h3 className={cn("font-semibold leading-tight", !(cls.is_active ?? true) && "text-muted-foreground")}>{cls.name}</h3>
+            {!(cls.is_active ?? true) && <Badge variant="secondary" className="text-[10px] shrink-0">Inativo</Badge>}
+          </div>
           {cls.semester && <Badge variant="outline" className="mt-1 text-[11px]"><CalendarClock className="h-3 w-3 mr-1" />{cls.semester}</Badge>}
           {!compact && cls.description && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{cls.description}</p>}
           <div className="flex items-center gap-4 mt-4 pt-3 border-t">
