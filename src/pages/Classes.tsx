@@ -263,6 +263,7 @@ export default function ClassesPage() {
       description: c.description || "",
       studentCount: studentCountMap[c.id] || 0,
       examCount: examCountMap[c.id] || 0,
+      is_active: c.is_active ?? true,
     })));
     setLoading(false);
   };
