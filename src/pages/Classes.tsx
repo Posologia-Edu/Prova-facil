@@ -158,6 +158,7 @@ export default function ClassesPage() {
   const [newSemester, setNewSemester] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newIsActive, setNewIsActive] = useState(true);
+  const [editIsActive, setEditIsActive] = useState(true);
 
   // Profile info for detail view
   const [profileName, setProfileName] = useState("");
