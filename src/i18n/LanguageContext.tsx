@@ -7,7 +7,18 @@ interface LanguageContextType {
   t: (key: string) => string;
 }
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+const DEFAULT_LANGUAGE: Language = "pt";
+
+const fallbackContext: LanguageContextType = {
+  language: DEFAULT_LANGUAGE,
+  setLanguage: () => {},
+  t: (key: string) => {
+    const dict = translations[DEFAULT_LANGUAGE] as Record<string, string>;
+    return dict[key] ?? key;
+  },
+};
+
+const LanguageContext = createContext<LanguageContextType>(fallbackContext);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
@@ -37,9 +48,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 }
 
 export function useLanguage() {
-  const ctx = useContext(LanguageContext);
-  if (!ctx) throw new Error("useLanguage must be used within LanguageProvider");
-  return ctx;
+  return useContext(LanguageContext);
 }
 
 export { LANGUAGE_LABELS, LANGUAGE_FLAGS, type Language };
