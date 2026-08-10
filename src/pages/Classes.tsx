@@ -1302,8 +1302,8 @@ export default function ClassesPage() {
   const activeCount = classes.filter(c => c.is_active ?? true).length;
   const inactiveCount = classes.length - activeCount;
   const totalStudents = filteredClasses.reduce((a, c) => a + c.studentCount, 0);
-  const totalExams = classes.reduce((a, c) => a + c.examCount, 0);
-  const disciplinesCount = new Set(classes.map(c => c.name)).size;
+  const totalExams = filteredClasses.reduce((a, c) => a + c.examCount, 0);
+  const disciplinesCount = new Set(filteredClasses.map(c => c.name)).size;
 
   // group by discipline name
   const groupsMap = new Map<string, ClassItem[]>();
