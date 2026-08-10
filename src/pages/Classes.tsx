@@ -1502,7 +1502,7 @@ export default function ClassesPage() {
         </CardContent></Card>
       ) : filteredClasses.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
-          Nenhum resultado para "{listSearch}".
+          {listSearch ? `Nenhum resultado para "${listSearch}".` : activeTab === "active" ? "Nenhuma turma ativa." : "Nenhuma turma inativa."}
         </CardContent></Card>
       ) : listView === "all" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
