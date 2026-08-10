@@ -227,7 +227,7 @@ export default function ClassesPage() {
 
     const { data } = await supabase
       .from("classes")
-      .select("id, name, semester, description, student_count")
+      .select("id, name, semester, description, student_count, is_active")
       .eq("user_id", user.user.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
