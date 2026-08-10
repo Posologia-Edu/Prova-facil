@@ -314,6 +314,7 @@ export default function ClassesPage() {
     setNewName(cls.name);
     setNewSemester(cls.semester);
     setNewDescription(cls.description);
+    setEditIsActive(cls.is_active ?? true);
     setEditOpen(true);
   };
 
