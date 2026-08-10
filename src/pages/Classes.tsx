@@ -1404,7 +1404,7 @@ export default function ClassesPage() {
           </div>
           <Dialog open={createOpen} onOpenChange={(open) => {
             setCreateOpen(open);
-            if (!open) { setNewName(""); setNewSemester(""); setNewDescription(""); }
+            if (!open) { setNewName(""); setNewSemester(""); setNewDescription(""); setNewIsActive(true); }
           }}>
             <Button onClick={() => setCreateOpen(true)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
               <Plus className="h-4 w-4 mr-2" /> Nova Turma
