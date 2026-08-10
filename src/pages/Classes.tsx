@@ -296,7 +296,7 @@ export default function ClassesPage() {
   const handleEditClass = async () => {
     if (!editingClass || !newName.trim()) return;
     const { error } = await supabase.from("classes")
-      .update({ name: newName.trim(), semester: newSemester.trim(), description: newDescription.trim() })
+      .update({ name: newName.trim(), semester: newSemester.trim(), description: newDescription.trim(), is_active: editIsActive })
       .eq("id", editingClass.id);
 
     if (error) { toast.error("Erro ao editar turma."); return; }
@@ -305,7 +305,7 @@ export default function ClassesPage() {
     toast.success("Turma atualizada!");
     fetchClasses();
     if (selectedClass?.id === editingClass.id) {
-      setSelectedClass({ ...selectedClass, name: newName.trim(), semester: newSemester.trim(), description: newDescription.trim() });
+      setSelectedClass({ ...selectedClass, name: newName.trim(), semester: newSemester.trim(), description: newDescription.trim(), is_active: editIsActive });
     }
   };
 
