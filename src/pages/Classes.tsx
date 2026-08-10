@@ -282,10 +282,11 @@ export default function ClassesPage() {
       name: newName.trim(),
       semester: newSemester.trim(),
       description: newDescription.trim(),
+      is_active: newIsActive,
     });
 
     if (error) { toast.error("Erro ao criar turma."); return; }
-    setNewName(""); setNewSemester(""); setNewDescription("");
+    setNewName(""); setNewSemester(""); setNewDescription(""); setNewIsActive(true);
     setCreateOpen(false);
     toast.success("Turma criada com sucesso!");
     fetchClasses();
