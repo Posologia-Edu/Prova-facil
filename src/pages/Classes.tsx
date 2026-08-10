@@ -1424,6 +1424,10 @@ export default function ClassesPage() {
                   <Label>Descrição</Label>
                   <Textarea placeholder="Breve descrição..." rows={2} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
                 </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Checkbox id="new-is-active" checked={newIsActive} onCheckedChange={(checked) => setNewIsActive(Boolean(checked))} />
+                  <Label htmlFor="new-is-active" className="font-normal cursor-pointer">Turma ativa</Label>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
