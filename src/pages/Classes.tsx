@@ -259,6 +259,18 @@ export default function ClassesPage() {
       studentCountMap[s.class_id] = (studentCountMap[s.class_id] || 0) + 1;
     });
 
+    // Semestres: se a turma tem semestres cadastrados e todos estão arquivados,
+    // ela é considerada inativa mesmo que o flag da turma esteja ativo.
+    const { data: semestersData } = await supabase
+      .from("class_semesters")
+      .select("class_id, is_active")
+      .in("class_id", classIds.length > 0 ? classIds : ["__none__"]);
+
+    const semesterActiveMap: Record<string, boolean> = {};
+    (semestersData || []).forEach((s: any) => {
+      semesterActiveMap[s.class_id] = (semesterActiveMap[s.class_id] || false) || !!s.is_active;
+    });
+
     setClasses(data.map(c => ({
       id: c.id,
       name: c.name,
@@ -266,8 +278,9 @@ export default function ClassesPage() {
       description: c.description || "",
       studentCount: studentCountMap[c.id] || 0,
       examCount: examCountMap[c.id] || 0,
-      is_active: c.is_active ?? true,
+      is_active: (c.is_active ?? true) && (c.id in semesterActiveMap ? semesterActiveMap[c.id] : true),
     })));
+
     setLoading(false);
   };
 
