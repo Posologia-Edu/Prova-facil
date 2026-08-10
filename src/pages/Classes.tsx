@@ -1442,6 +1442,16 @@ export default function ClassesPage() {
         </div>
       </div>
 
+      {/* Active / Inactive tabs */}
+      {classes.length > 0 && (
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "inactive")}>
+          <TabsList>
+            <TabsTrigger value="active">Ativos ({activeCount})</TabsTrigger>
+            <TabsTrigger value="inactive">Inativos ({inactiveCount})</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+
       {/* Toolbar */}
       {classes.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
