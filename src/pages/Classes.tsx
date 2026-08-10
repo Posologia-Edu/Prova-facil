@@ -1352,6 +1352,10 @@ export default function ClassesPage() {
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicateClass(cls); }}>
                   <Copy className="h-4 w-4 mr-2" /> Duplicar
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleActive(cls); }}>
+                  {(cls.is_active ?? true) ? <Archive className="h-4 w-4 mr-2" /> : <Layers className="h-4 w-4 mr-2" />}
+                  {(cls.is_active ?? true) ? "Inativar" : "Reativar"}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(cls.id); }}>
                   <Trash2 className="h-4 w-4 mr-2" /> Excluir
