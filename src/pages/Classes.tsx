@@ -165,6 +165,7 @@ export default function ClassesPage() {
   // Hub list view: search, grouping, filters
   const [listSearch, setListSearch] = useState("");
   const [listView, setListView] = useState<"groups" | "all">("groups");
+  const [activeTab, setActiveTab] = useState<"active" | "inactive">("active");
   const [collapsedDisciplines, setCollapsedDisciplines] = useState<Set<string>>(new Set());
 
   const buildPublicationMap = (
