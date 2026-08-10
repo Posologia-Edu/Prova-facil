@@ -1294,11 +1294,14 @@ export default function ClassesPage() {
 
   // Class list view
   const filteredClasses = classes.filter(c => {
-    if (!listSearch.trim()) return true;
+    const matchesTab = activeTab === "active" ? (c.is_active ?? true) : !(c.is_active ?? true);
+    if (!listSearch.trim()) return matchesTab;
     const q = listSearch.trim().toLowerCase();
-    return c.name.toLowerCase().includes(q) || (c.semester || "").toLowerCase().includes(q) || (c.description || "").toLowerCase().includes(q);
+    return matchesTab && (c.name.toLowerCase().includes(q) || (c.semester || "").toLowerCase().includes(q) || (c.description || "").toLowerCase().includes(q));
   });
-  const totalStudents = classes.reduce((a, c) => a + c.studentCount, 0);
+  const activeCount = classes.filter(c => c.is_active ?? true).length;
+  const inactiveCount = classes.length - activeCount;
+  const totalStudents = filteredClasses.reduce((a, c) => a + c.studentCount, 0);
   const totalExams = classes.reduce((a, c) => a + c.examCount, 0);
   const disciplinesCount = new Set(classes.map(c => c.name)).size;
 
