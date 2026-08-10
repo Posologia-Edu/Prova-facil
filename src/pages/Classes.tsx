@@ -60,6 +60,7 @@ interface ClassItem {
   description: string;
   studentCount: number;
   examCount: number;
+  is_active?: boolean;
 }
 
 interface StudentItem {
