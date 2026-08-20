@@ -113,7 +113,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
         time_slot: v.time_slot,
         preceptor_name: v.preceptor_name ?? null,
         preceptor_phone: v.preceptor_phone ?? null,
-        students: (v.student_ids || []).map((id) => studentMap.get(id) || id),
+        students: (v.student_ids || []).map((id) => studentMap.get(id)).filter((n): n is string => !!n),
       })),
     }));
   }

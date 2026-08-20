@@ -84,6 +84,7 @@ export default function ClassDetail() {
   const [activeSemesterId, setActiveSemesterId] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [semesterStudents, setSemesterStudents] = useState<{ id: string; student_name: string }[]>([]);
+  const [allClassStudents, setAllClassStudents] = useState<{ id: string; student_name: string }[]>([]);
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   const [semDialog, setSemDialog] = useState<{ open: boolean; editing?: Semester | null }>({ open: false });
@@ -110,8 +111,9 @@ export default function ClassDetail() {
     const ids = semList.map((s) => s.id);
     const counts: Record<string, number> = {};
     if (ids.length) {
-      const { data: stu } = await supabase.from("class_students").select("semester_id").in("semester_id", ids);
+      const { data: stu } = await supabase.from("class_students").select("id,student_name,semester_id").in("semester_id", ids);
       stu?.forEach((s: any) => { counts[s.semester_id] = (counts[s.semester_id] || 0) + 1; });
+      setAllClassStudents(((stu as any[]) || []).map((s) => ({ id: s.id, student_name: s.student_name })));
     }
     const decorated = semList.map((s) => ({ ...s, student_count: counts[s.id] || 0 }));
     setSemesters(decorated);
@@ -403,7 +405,7 @@ export default function ClassDetail() {
                 <ScheduleViews
                   lessons={lessons as ScheduleLesson[]}
                   teachers={teachers}
-                  students={semesterStudents}
+                  students={allClassStudents.length ? allClassStudents : semesterStudents}
                   calendarName={`${klass.name}${activeSemester ? " - " + activeSemester.label : ""}`}
                   onOpenLesson={(l) => setLessonDialog({ open: true, editing: l as Lesson })}
                   onDeleteLesson={(l) => setConfirmDelete({ kind: "lesson", id: l.id, label: l.title })}
