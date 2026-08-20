@@ -106,20 +106,72 @@ export default function SoapRooms() {
     mutationFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
+      const linkedAnamnesisId = anamnesisRoomId && anamnesisRoomId !== "none" ? anamnesisRoomId : null;
       const { data, error } = await supabase
         .from("soap_rooms")
         .insert({
           user_id: session.user.id,
           title,
           description,
-          anamnesis_room_id: anamnesisRoomId && anamnesisRoomId !== "none" ? anamnesisRoomId : null,
+          anamnesis_room_id: linkedAnamnesisId,
         })
         .select()
         .single();
       if (error) throw error;
-      return data;
+
+      let importedStudents = 0;
+      let importedForms = 0;
+
+      if (linkedAnamnesisId) {
+        // 1) Import students from the linked anamnesis room
+        const { data: simParticipants } = await supabase
+          .from("simulation_participants")
+          .select("id, student_name, student_email, participant_role")
+          .eq("room_id", linkedAnamnesisId);
+        const students = (simParticipants || []).filter((p: any) => p.participant_role === "student");
+        if (students.length) {
+          const { error: insErr } = await supabase.from("soap_participants").insert(
+            students.map((p: any) => ({
+              room_id: data.id,
+              student_name: p.student_name,
+              student_email: p.student_email || "",
+              anamnesis_participant_id: p.id,
+              participant_role: "student",
+            })) as any
+          );
+          if (!insErr) importedStudents = students.length;
+        }
+
+        // 2) Reuse SOAP forms from a previous SOAP room linked to the same anamnesis room
+        const { data: siblingRooms } = await supabase
+          .from("soap_rooms")
+          .select("id, created_at")
+          .eq("anamnesis_room_id", linkedAnamnesisId)
+          .neq("id", data.id)
+          .order("created_at", { ascending: false });
+        for (const sibling of siblingRooms || []) {
+          const { data: sourceForms } = await supabase
+            .from("soap_forms")
+            .select("form_type, title, content_json")
+            .eq("room_id", sibling.id);
+          if (sourceForms?.length) {
+            const { error: fErr } = await supabase.from("soap_forms").insert(
+              sourceForms.map((f: any) => ({
+                room_id: data.id,
+                form_type: f.form_type,
+                title: f.title,
+                content_json: f.content_json,
+              })) as any
+            );
+            if (!fErr) importedForms = sourceForms.length;
+            break;
+          }
+        }
+      }
+
+      return { room: data, importedStudents, importedForms };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ room, importedStudents, importedForms }) => {
       queryClient.invalidateQueries({ queryKey: ["soap-rooms"] });
       setOpen(false);
       setTitle("");
@@ -127,12 +179,19 @@ export default function SoapRooms() {
       setAnamnesisRoomId("");
       setProfessorName("");
       setProfessorEmail("");
-      navigate(`/simulations/soap/editor/${data.id}`);
+      if (importedStudents || importedForms) {
+        toast({
+          title: "Sala criada com importação",
+          description: `${importedStudents} aluno(s) e ${importedForms} formulário(s) importados da anamnese.`,
+        });
+      }
+      navigate(`/simulations/soap/editor/${room.id}`);
     },
     onError: () => {
       toast({ title: "Erro", description: "Erro ao criar sala SOAP.", variant: "destructive" });
     },
   });
+
 
   const deleteRoom = useMutation({
     mutationFn: async (id: string) => {
