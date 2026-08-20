@@ -111,8 +111,9 @@ export default function ClassDetail() {
     const ids = semList.map((s) => s.id);
     const counts: Record<string, number> = {};
     if (ids.length) {
-      const { data: stu } = await supabase.from("class_students").select("semester_id").in("semester_id", ids);
+      const { data: stu } = await supabase.from("class_students").select("id,student_name,semester_id").in("semester_id", ids);
       stu?.forEach((s: any) => { counts[s.semester_id] = (counts[s.semester_id] || 0) + 1; });
+      setAllClassStudents(((stu as any[]) || []).map((s) => ({ id: s.id, student_name: s.student_name })));
     }
     const decorated = semList.map((s) => ({ ...s, student_count: counts[s.id] || 0 }));
     setSemesters(decorated);
