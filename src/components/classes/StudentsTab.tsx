@@ -141,9 +141,11 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
       };
     }).filter(s => s.student_name);
     if (!inserts.length) { setBusy(false); return toast.error("Nenhum nome válido."); }
-    const { error } = await supabase.from("class_students").insert(inserts);
+    if (visitMode && !teacherId) { setBusy(false); return toast.error("Selecione o professor responsável."); }
+    const { data, error } = await supabase.from("class_students").insert(inserts).select("id");
+    if (error) { setBusy(false); return toast.error("Erro ao importar."); }
+    if (visitMode) await linkToVisit(((data as any) || []).map((r: any) => r.id));
     setBusy(false);
-    if (error) return toast.error("Erro ao importar.");
     setBatch("");
     toast.success(`${inserts.length} aluno(s) importado(s).`);
     setAddOpen(false);
