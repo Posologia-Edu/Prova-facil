@@ -87,6 +87,7 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
     if (!t) return;
     update(i, {
       template_id: t.id,
+      teacher_id: t.teacher_id ?? visits[i].teacher_id ?? null,
       title: t.title,
       location: t.location,
       preceptor_name: t.preceptor_name,
@@ -101,7 +102,7 @@ export function LessonVisitsEditor({ classId, semesterId, visits, onChange, week
     onChange([
       ...visits,
       {
-        teacher_id: null,
+        teacher_id: t.teacher_id ?? null,
         title: t.title,
         location: t.location,
         notes: t.notes,

@@ -20,6 +20,7 @@ export interface VisitTemplate {
   preceptor_phone: string | null;
   notes: string | null;
   default_student_ids: string[];
+  teacher_id?: string | null;
 }
 
 interface Student { id: string; student_name: string; }
