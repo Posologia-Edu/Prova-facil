@@ -285,6 +285,53 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
               </Button>
             </TabsContent>
           </Tabs>
+
+          <div className="rounded-md border p-3 space-y-3 bg-muted/30">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <Label className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />Turma de visita técnica</Label>
+                <p className="text-xs text-muted-foreground">
+                  Vincula os alunos adicionados a um professor e a uma visita do catálogo — no cronograma o grupo já vem pronto.
+                </p>
+              </div>
+              <Switch checked={visitMode} onCheckedChange={setVisitMode} />
+            </div>
+
+            {visitMode && (
+              <div className="space-y-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Professor responsável *</Label>
+                  <Select value={teacherId} onValueChange={setTeacherId}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder={teachers.length ? "Selecione o professor" : "Cadastre professores na turma"} /></SelectTrigger>
+                    <SelectContent>
+                      {teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Visita do catálogo</Label>
+                  <Select value={templateId} onValueChange={setTemplateId}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__new__">+ Criar nova visita</SelectItem>
+                      {visitTemplates.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.title} ({t.default_student_ids.length} aluno(s))
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {templateId === "__new__" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Nome da visita</Label>
+                    <Input value={visitTitle} onChange={e => setVisitTitle(e.target.value)} placeholder="Ex.: Visita ao Hospital X" className="h-9" />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <DialogFooter>
             <Badge variant="outline">{students.length} alunos no semestre</Badge>
           </DialogFooter>
