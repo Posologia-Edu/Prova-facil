@@ -1197,6 +1197,7 @@ export type Database = {
           notes: string | null
           preceptor_name: string | null
           preceptor_phone: string | null
+          teacher_id: string | null
           title: string
           updated_at: string
         }
@@ -1209,6 +1210,7 @@ export type Database = {
           notes?: string | null
           preceptor_name?: string | null
           preceptor_phone?: string | null
+          teacher_id?: string | null
           title: string
           updated_at?: string
         }
@@ -1221,6 +1223,7 @@ export type Database = {
           notes?: string | null
           preceptor_name?: string | null
           preceptor_phone?: string | null
+          teacher_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -1230,6 +1233,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_visit_templates_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "class_teachers"
             referencedColumns: ["id"]
           },
         ]
