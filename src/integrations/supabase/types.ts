@@ -2203,6 +2203,60 @@ export type Database = {
           },
         ]
       }
+      exam_reopen_logs: {
+        Row: {
+          created_at: string
+          exam_id: string
+          id: string
+          justification: string
+          new_end_at: string | null
+          new_start_at: string | null
+          previous_end_at: string | null
+          previous_start_at: string | null
+          publication_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exam_id: string
+          id?: string
+          justification: string
+          new_end_at?: string | null
+          new_start_at?: string | null
+          previous_end_at?: string | null
+          previous_start_at?: string | null
+          publication_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exam_id?: string
+          id?: string
+          justification?: string
+          new_end_at?: string | null
+          new_start_at?: string | null
+          previous_end_at?: string | null
+          previous_start_at?: string | null
+          publication_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_reopen_logs_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_reopen_logs_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "exam_publications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_sessions: {
         Row: {
           created_at: string
