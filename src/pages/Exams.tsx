@@ -395,7 +395,44 @@ export default function ExamsPage() {
                       </div>
                     </div>
 
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => navigate(`/exams/${exam.id}`)}>
+                          <Pencil className="h-4 w-4 mr-2" /> Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicate(exam)}>
+                          <Copy className="h-4 w-4 mr-2" /> Duplicar para reaplicar
+                        </DropdownMenuItem>
+                        {exam.publicationId && (
+                          <DropdownMenuItem onClick={() => setReopenExam(exam)}>
+                            <RotateCcw className="h-4 w-4 mr-2" /> Reabrir prova
+                          </DropdownMenuItem>
+                        )}
+                        {!exam.isImported && !exam.marketplaceId && (
+                          <DropdownMenuItem onClick={() => handleShareToMarketplace(exam)}>
+                            <Store className="h-4 w-4 mr-2" /> Compartilhar no Marketplace
+                          </DropdownMenuItem>
+                        )}
+                        {exam.marketplaceId && (
+                          <DropdownMenuItem onClick={() => handleRevokeMarketplace(exam)}>
+                            <StoreIcon className="h-4 w-4 mr-2" /> Remover do Marketplace
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setDeleteId(exam.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
+
 
                   <div className="flex items-center justify-between mt-3 pt-3 border-t">
                     <Badge className={`text-[10px] px-2 py-0.5 font-bold uppercase ${status.className}`}>
