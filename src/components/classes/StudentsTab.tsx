@@ -75,13 +75,14 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
     if (!teacherId) { toast.error("Selecione o professor responsável."); return false; }
     if (templateId === "__new__") {
       const title = visitTitle.trim() || `Visita — ${teachers.find(t => t.id === teacherId)?.name || "Professor"}`;
-      const { error } = await supabase.from("class_visit_templates" as any).insert({
+      const { data, error } = await supabase.from("class_visit_templates" as any).insert({
         class_id: classId,
         title,
         teacher_id: teacherId,
         default_student_ids: newIds,
-      });
+      }).select("id").single();
       if (error) { toast.error("Erro ao criar a visita técnica."); return false; }
+      if ((data as any)?.id) setTemplateId((data as any).id);
     } else if (selectedTemplate) {
       const merged = Array.from(new Set([...selectedTemplate.default_student_ids, ...newIds]));
       const { error } = await supabase.from("class_visit_templates" as any)
