@@ -38,6 +38,13 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
   const [reg, setReg] = useState("");
   const [batch, setBatch] = useState("");
   const [busy, setBusy] = useState(false);
+  // Modo visita técnica
+  const [visitMode, setVisitMode] = useState(false);
+  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([]);
+  const [visitTemplates, setVisitTemplates] = useState<{ id: string; title: string; teacher_id: string | null; default_student_ids: string[] }[]>([]);
+  const [teacherId, setTeacherId] = useState<string>("");
+  const [templateId, setTemplateId] = useState<string>("__new__");
+  const [visitTitle, setVisitTitle] = useState("");
 
   async function load() {
     setLoading(true);
@@ -49,7 +56,42 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
     setStudents((data as SemesterStudent[]) || []);
     setLoading(false);
   }
+  async function loadVisitRefs() {
+    const [{ data: t }, { data: tpl }] = await Promise.all([
+      supabase.from("class_teachers").select("id,name").eq("class_id", classId).order("order_index"),
+      supabase.from("class_visit_templates" as any).select("id,title,teacher_id,default_student_ids").eq("class_id", classId).order("title"),
+    ]);
+    setTeachers((t as any) || []);
+    setVisitTemplates(((tpl as any) || []).map((x: any) => ({ ...x, default_student_ids: x.default_student_ids || [] })));
+  }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [semesterId]);
+  useEffect(() => { loadVisitRefs(); /* eslint-disable-next-line */ }, [classId]);
+
+  const selectedTemplate = visitTemplates.find(t => t.id === templateId);
+
+  /** Vincula os alunos recém-criados à visita técnica (catálogo) e ao professor escolhido. */
+  async function linkToVisit(newIds: string[]): Promise<boolean> {
+    if (!newIds.length) return true;
+    if (!teacherId) { toast.error("Selecione o professor responsável."); return false; }
+    if (templateId === "__new__") {
+      const title = visitTitle.trim() || `Visita — ${teachers.find(t => t.id === teacherId)?.name || "Professor"}`;
+      const { error } = await supabase.from("class_visit_templates" as any).insert({
+        class_id: classId,
+        title,
+        teacher_id: teacherId,
+        default_student_ids: newIds,
+      });
+      if (error) { toast.error("Erro ao criar a visita técnica."); return false; }
+    } else if (selectedTemplate) {
+      const merged = Array.from(new Set([...selectedTemplate.default_student_ids, ...newIds]));
+      const { error } = await supabase.from("class_visit_templates" as any)
+        .update({ default_student_ids: merged, teacher_id: teacherId })
+        .eq("id", selectedTemplate.id);
+      if (error) { toast.error("Erro ao vincular alunos à visita."); return false; }
+    }
+    await loadVisitRefs();
+    return true;
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
