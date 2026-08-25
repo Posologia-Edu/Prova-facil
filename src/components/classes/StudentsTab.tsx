@@ -9,7 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, Upload, Search, Trash2, Loader2, Download, KeyRound } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Users, UserPlus, Upload, Search, Trash2, Loader2, Download, KeyRound, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 export interface SemesterStudent {
@@ -36,6 +38,13 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
   const [reg, setReg] = useState("");
   const [batch, setBatch] = useState("");
   const [busy, setBusy] = useState(false);
+  // Modo visita técnica
+  const [visitMode, setVisitMode] = useState(false);
+  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([]);
+  const [visitTemplates, setVisitTemplates] = useState<{ id: string; title: string; teacher_id: string | null; default_student_ids: string[] }[]>([]);
+  const [teacherId, setTeacherId] = useState<string>("");
+  const [templateId, setTemplateId] = useState<string>("__new__");
+  const [visitTitle, setVisitTitle] = useState("");
 
   async function load() {
     setLoading(true);
@@ -47,7 +56,43 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
     setStudents((data as SemesterStudent[]) || []);
     setLoading(false);
   }
+  async function loadVisitRefs() {
+    const [{ data: t }, { data: tpl }] = await Promise.all([
+      supabase.from("class_teachers").select("id,name").eq("class_id", classId).order("order_index"),
+      supabase.from("class_visit_templates" as any).select("id,title,teacher_id,default_student_ids").eq("class_id", classId).order("title"),
+    ]);
+    setTeachers((t as any) || []);
+    setVisitTemplates(((tpl as any) || []).map((x: any) => ({ ...x, default_student_ids: x.default_student_ids || [] })));
+  }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [semesterId]);
+  useEffect(() => { loadVisitRefs(); /* eslint-disable-next-line */ }, [classId]);
+
+  const selectedTemplate = visitTemplates.find(t => t.id === templateId);
+
+  /** Vincula os alunos recém-criados à visita técnica (catálogo) e ao professor escolhido. */
+  async function linkToVisit(newIds: string[]): Promise<boolean> {
+    if (!newIds.length) return true;
+    if (!teacherId) { toast.error("Selecione o professor responsável."); return false; }
+    if (templateId === "__new__") {
+      const title = visitTitle.trim() || `Visita — ${teachers.find(t => t.id === teacherId)?.name || "Professor"}`;
+      const { data, error } = await supabase.from("class_visit_templates" as any).insert({
+        class_id: classId,
+        title,
+        teacher_id: teacherId,
+        default_student_ids: newIds,
+      }).select("id").single();
+      if (error) { toast.error("Erro ao criar a visita técnica."); return false; }
+      if ((data as any)?.id) setTemplateId((data as any).id);
+    } else if (selectedTemplate) {
+      const merged = Array.from(new Set([...selectedTemplate.default_student_ids, ...newIds]));
+      const { error } = await supabase.from("class_visit_templates" as any)
+        .update({ default_student_ids: merged, teacher_id: teacherId })
+        .eq("id", selectedTemplate.id);
+      if (error) { toast.error("Erro ao vincular alunos à visita."); return false; }
+    }
+    await loadVisitRefs();
+    return true;
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -61,20 +106,26 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
 
   async function addSingle() {
     if (!name.trim()) return toast.error("Informe o nome do aluno.");
+    if (visitMode && !teacherId) return toast.error("Selecione o professor responsável.");
     setBusy(true);
-    const { error } = await supabase.from("class_students").insert({
+    const { data, error } = await supabase.from("class_students").insert({
       class_id: classId,
       semester_id: semesterId,
       student_name: name.trim(),
       student_email: email.trim() || null,
       student_registration: reg.trim() || null,
-    });
+    }).select("id");
+    if (error) { setBusy(false); return toast.error("Erro ao adicionar."); }
+    if (visitMode) {
+      const ok = await linkToVisit(((data as any) || []).map((r: any) => r.id));
+      if (ok) setTemplateId((prev) => prev);
+    }
     setBusy(false);
-    if (error) return toast.error("Erro ao adicionar.");
     setName(""); setEmail(""); setReg("");
-    toast.success("Aluno adicionado.");
+    toast.success(visitMode ? "Aluno adicionado e vinculado à visita." : "Aluno adicionado.");
     load(); onChanged?.();
   }
+
 
   async function addBatch() {
     if (!batch.trim()) return toast.error("Cole os dados dos alunos.");
@@ -90,9 +141,11 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
       };
     }).filter(s => s.student_name);
     if (!inserts.length) { setBusy(false); return toast.error("Nenhum nome válido."); }
-    const { error } = await supabase.from("class_students").insert(inserts);
+    if (visitMode && !teacherId) { setBusy(false); return toast.error("Selecione o professor responsável."); }
+    const { data, error } = await supabase.from("class_students").insert(inserts).select("id");
+    if (error) { setBusy(false); return toast.error("Erro ao importar."); }
+    if (visitMode) await linkToVisit(((data as any) || []).map((r: any) => r.id));
     setBusy(false);
-    if (error) return toast.error("Erro ao importar.");
     setBatch("");
     toast.success(`${inserts.length} aluno(s) importado(s).`);
     setAddOpen(false);
@@ -232,6 +285,53 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
               </Button>
             </TabsContent>
           </Tabs>
+
+          <div className="rounded-md border p-3 space-y-3 bg-muted/30">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <Label className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />Turma de visita técnica</Label>
+                <p className="text-xs text-muted-foreground">
+                  Vincula os alunos adicionados a um professor e a uma visita do catálogo — no cronograma o grupo já vem pronto.
+                </p>
+              </div>
+              <Switch checked={visitMode} onCheckedChange={setVisitMode} />
+            </div>
+
+            {visitMode && (
+              <div className="space-y-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Professor responsável *</Label>
+                  <Select value={teacherId} onValueChange={setTeacherId}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder={teachers.length ? "Selecione o professor" : "Cadastre professores na turma"} /></SelectTrigger>
+                    <SelectContent>
+                      {teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Visita do catálogo</Label>
+                  <Select value={templateId} onValueChange={setTemplateId}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__new__">+ Criar nova visita</SelectItem>
+                      {visitTemplates.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.title} ({t.default_student_ids.length} aluno(s))
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {templateId === "__new__" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Nome da visita</Label>
+                    <Input value={visitTitle} onChange={e => setVisitTitle(e.target.value)} placeholder="Ex.: Visita ao Hospital X" className="h-9" />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <DialogFooter>
             <Badge variant="outline">{students.length} alunos no semestre</Badge>
           </DialogFooter>
