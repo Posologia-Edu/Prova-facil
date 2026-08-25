@@ -18,7 +18,9 @@ import {
   Store,
   StoreIcon,
   Shield,
+  RotateCcw,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +51,8 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { computeExamStatus, examStatusConfig } from "@/lib/exam-status";
+import ReopenExamDialog from "@/components/ReopenExamDialog";
+
 
 interface Exam {
   id: string;
@@ -74,6 +78,8 @@ export default function ExamsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [reopenExam, setReopenExam] = useState<Exam | null>(null);
+
 
   const fetchExams = async () => {
     setLoading(true);
