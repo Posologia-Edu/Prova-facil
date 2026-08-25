@@ -105,20 +105,26 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
 
   async function addSingle() {
     if (!name.trim()) return toast.error("Informe o nome do aluno.");
+    if (visitMode && !teacherId) return toast.error("Selecione o professor responsável.");
     setBusy(true);
-    const { error } = await supabase.from("class_students").insert({
+    const { data, error } = await supabase.from("class_students").insert({
       class_id: classId,
       semester_id: semesterId,
       student_name: name.trim(),
       student_email: email.trim() || null,
       student_registration: reg.trim() || null,
-    });
+    }).select("id");
+    if (error) { setBusy(false); return toast.error("Erro ao adicionar."); }
+    if (visitMode) {
+      const ok = await linkToVisit(((data as any) || []).map((r: any) => r.id));
+      if (ok) setTemplateId((prev) => prev);
+    }
     setBusy(false);
-    if (error) return toast.error("Erro ao adicionar.");
     setName(""); setEmail(""); setReg("");
-    toast.success("Aluno adicionado.");
+    toast.success(visitMode ? "Aluno adicionado e vinculado à visita." : "Aluno adicionado.");
     load(); onChanged?.();
   }
+
 
   async function addBatch() {
     if (!batch.trim()) return toast.error("Cole os dados dos alunos.");
