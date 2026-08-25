@@ -519,6 +519,16 @@ export default function ExamsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ReopenExamDialog
+        open={!!reopenExam}
+        onOpenChange={(o) => !o && setReopenExam(null)}
+        examId={reopenExam?.id ?? null}
+        examTitle={reopenExam?.title ?? ""}
+        publicationId={reopenExam?.publicationId ?? null}
+        onReopened={fetchExams}
+      />
     </div>
+
   );
 }
