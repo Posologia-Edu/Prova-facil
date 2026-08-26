@@ -14,6 +14,7 @@ import {
   Loader2,
   Pencil,
   Store,
+  ShareOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ExamPDFExporter, { type Section, type ExamQuestion } from "@/components/ExamPDFExporter";
 import PublishExamDialog from "@/components/PublishExamDialog";
+import { computeExamStatus, examStatusConfig } from "@/lib/exam-status";
 
 const typeIcons: Record<string, React.ReactNode> = {
   multiple_choice: <CheckCircle2 className="h-3.5 w-3.5" />,
@@ -463,7 +465,7 @@ export default function ExamViewPage() {
 
       <PublishExamDialog
         open={publishOpen}
-        onOpenChange={setPublishOpen}
+        onOpenChange={(o) => { setPublishOpen(o); if (!o && examId) loadPublication(examId); }}
         examId={examId || null}
         examTitle={examTitle}
       />
