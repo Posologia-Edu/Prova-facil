@@ -14,7 +14,7 @@ import {
   Loader2,
   Pencil,
   Store,
-  ShareOff,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -295,7 +295,7 @@ export default function ExamViewPage() {
         </Button>
         {isPublished ? (
           <Button size="sm" variant="secondary" onClick={handleUnpublish} disabled={unpublishing}>
-            {unpublishing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <ShareOff className="h-3.5 w-3.5 mr-1.5" />}
+            {unpublishing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Ban className="h-3.5 w-3.5 mr-1.5" />}
             Despublicar
           </Button>
         ) : (
