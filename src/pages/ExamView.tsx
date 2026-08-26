@@ -14,6 +14,7 @@ import {
   Loader2,
   Pencil,
   Store,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ExamPDFExporter, { type Section, type ExamQuestion } from "@/components/ExamPDFExporter";
 import PublishExamDialog from "@/components/PublishExamDialog";
+import { computeExamStatus, examStatusConfig } from "@/lib/exam-status";
 
 const typeIcons: Record<string, React.ReactNode> = {
   multiple_choice: <CheckCircle2 className="h-3.5 w-3.5" />,
@@ -61,6 +63,19 @@ export default function ExamViewPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [publication, setPublication] = useState<{ id: string; is_active: boolean; end_at: string | null; start_at: string | null } | null>(null);
+  const [unpublishing, setUnpublishing] = useState(false);
+
+  const loadPublication = async (id: string) => {
+    const { data: pubs } = await supabase
+      .from("exam_publications")
+      .select("id, is_active, start_at, end_at")
+      .eq("exam_id", id)
+      .order("created_at", { ascending: false });
+    const list = pubs || [];
+    setPublication(list.find((p) => p.is_active) || list[0] || null);
+  };
+
 
   useEffect(() => {
     const loadExam = async () => {
@@ -81,6 +96,8 @@ export default function ExamViewPage() {
 
       setExamTitle(exam.title);
       setExamStatus(exam.status);
+      await loadPublication(examId);
+
       const hc = exam.header_config_json as any;
       if (hc) {
         setInstitutionName(hc.institution || "");
@@ -211,9 +228,27 @@ export default function ExamViewPage() {
     toast.success("Prova compartilhada no Marketplace!");
   };
 
+  const handleUnpublish = async () => {
+    if (!publication || !examId) return;
+    setUnpublishing(true);
+    const { error } = await supabase
+      .from("exam_publications")
+      .update({ is_active: false })
+      .eq("id", publication.id);
+    setUnpublishing(false);
+    if (error) { toast.error("Erro ao despublicar."); return; }
+    await supabase.from("exams").update({ status: "grading" }).eq("id", examId);
+    setExamStatus("grading");
+    await loadPublication(examId);
+    toast.success("Prova despublicada. Os alunos não podem mais acessá-la.");
+  };
+
   const totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
   const totalPoints = sections.reduce((s, sec) => s + sec.questions.reduce((qs, q) => qs + q.points, 0), 0);
-  const status = statusConfig[examStatus] || statusConfig.draft;
+  const effectiveStatus = computeExamStatus(examStatus, publication);
+  const status = examStatusConfig[effectiveStatus];
+  const isPublished = !!publication?.is_active;
+
 
   if (loading) {
     return (
@@ -258,10 +293,18 @@ export default function ExamViewPage() {
           <Store className="h-3.5 w-3.5 mr-1.5" />
           Marketplace
         </Button>
-        <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}>
-          <Share2 className="h-3.5 w-3.5 mr-1.5" />
-          Publicar Online
-        </Button>
+        {isPublished ? (
+          <Button size="sm" variant="secondary" onClick={handleUnpublish} disabled={unpublishing}>
+            {unpublishing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Ban className="h-3.5 w-3.5 mr-1.5" />}
+            Despublicar
+          </Button>
+        ) : (
+          <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}>
+            <Share2 className="h-3.5 w-3.5 mr-1.5" />
+            Publicar Online
+          </Button>
+        )}
+
         <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
           <Trash2 className="h-3.5 w-3.5 mr-1.5" />
           Excluir
@@ -422,7 +465,7 @@ export default function ExamViewPage() {
 
       <PublishExamDialog
         open={publishOpen}
-        onOpenChange={setPublishOpen}
+        onOpenChange={(o) => { setPublishOpen(o); if (!o && examId) loadPublication(examId); }}
         examId={examId || null}
         examTitle={examTitle}
       />
