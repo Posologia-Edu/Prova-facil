@@ -291,10 +291,18 @@ export default function ExamViewPage() {
           <Store className="h-3.5 w-3.5 mr-1.5" />
           Marketplace
         </Button>
-        <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}>
-          <Share2 className="h-3.5 w-3.5 mr-1.5" />
-          Publicar Online
-        </Button>
+        {isPublished ? (
+          <Button size="sm" variant="secondary" onClick={handleUnpublish} disabled={unpublishing}>
+            {unpublishing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <ShareOff className="h-3.5 w-3.5 mr-1.5" />}
+            Despublicar
+          </Button>
+        ) : (
+          <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}>
+            <Share2 className="h-3.5 w-3.5 mr-1.5" />
+            Publicar Online
+          </Button>
+        )}
+
         <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
           <Trash2 className="h-3.5 w-3.5 mr-1.5" />
           Excluir
