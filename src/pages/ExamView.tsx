@@ -94,6 +94,8 @@ export default function ExamViewPage() {
 
       setExamTitle(exam.title);
       setExamStatus(exam.status);
+      await loadPublication(examId);
+
       const hc = exam.header_config_json as any;
       if (hc) {
         setInstitutionName(hc.institution || "");
