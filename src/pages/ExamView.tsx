@@ -61,6 +61,19 @@ export default function ExamViewPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [publication, setPublication] = useState<{ id: string; is_active: boolean; end_at: string | null; start_at: string | null } | null>(null);
+  const [unpublishing, setUnpublishing] = useState(false);
+
+  const loadPublication = async (id: string) => {
+    const { data: pubs } = await supabase
+      .from("exam_publications")
+      .select("id, is_active, start_at, end_at")
+      .eq("exam_id", id)
+      .order("created_at", { ascending: false });
+    const list = pubs || [];
+    setPublication(list.find((p) => p.is_active) || list[0] || null);
+  };
+
 
   useEffect(() => {
     const loadExam = async () => {
