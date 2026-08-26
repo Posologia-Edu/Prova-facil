@@ -226,9 +226,27 @@ export default function ExamViewPage() {
     toast.success("Prova compartilhada no Marketplace!");
   };
 
+  const handleUnpublish = async () => {
+    if (!publication || !examId) return;
+    setUnpublishing(true);
+    const { error } = await supabase
+      .from("exam_publications")
+      .update({ is_active: false })
+      .eq("id", publication.id);
+    setUnpublishing(false);
+    if (error) { toast.error("Erro ao despublicar."); return; }
+    await supabase.from("exams").update({ status: "grading" }).eq("id", examId);
+    setExamStatus("grading");
+    await loadPublication(examId);
+    toast.success("Prova despublicada. Os alunos não podem mais acessá-la.");
+  };
+
   const totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
   const totalPoints = sections.reduce((s, sec) => s + sec.questions.reduce((qs, q) => qs + q.points, 0), 0);
-  const status = statusConfig[examStatus] || statusConfig.draft;
+  const effectiveStatus = computeExamStatus(examStatus, publication);
+  const status = examStatusConfig[effectiveStatus];
+  const isPublished = !!publication?.is_active;
+
 
   if (loading) {
     return (
