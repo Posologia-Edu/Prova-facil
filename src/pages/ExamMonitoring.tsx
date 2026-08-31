@@ -682,7 +682,7 @@ export default function ExamMonitoring() {
             </DialogTitle>
           </DialogHeader>
           {reviewAnswer && (
-            <Tabs defaultValue="tutor" className="w-full">
+            <Tabs value={reviewTab} onValueChange={setReviewTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="tutor" className="gap-1">
                   <MessageSquare className="h-3.5 w-3.5" />
