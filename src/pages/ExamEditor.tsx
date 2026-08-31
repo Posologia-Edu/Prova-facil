@@ -88,6 +88,7 @@ interface ExamQuestion {
   title: string;
   type: string;
   points: number;
+  content_json?: any;
 }
 
 interface ClassStudent {
