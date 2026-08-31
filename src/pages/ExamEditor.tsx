@@ -338,6 +338,7 @@ export default function ExamEditorPage() {
               title: cj?.question_text || cj?.title || "Questão",
               type: bq?.type || "multiple_choice",
               points: Number(eq.points) || 0.6,
+              content_json: cj,
             };
           })
         );
