@@ -157,6 +157,7 @@ export default function ExamEditorPage() {
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [pointsMode, setPointsMode] = useState("by_grade");
   const [activeTab, setActiveTab] = useState("questions");
+  const [feedbackMode, setFeedbackMode] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Config state
