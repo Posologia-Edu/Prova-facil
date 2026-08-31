@@ -696,7 +696,7 @@ export default function ExamEditorPage() {
       if (newQ) {
         const pos = questions.length;
         const { data: eqData } = await supabase.from("exam_questions").insert({ exam_id: examId, question_id: newQ.id, position: pos, points: 0.6 }).select("id").single();
-        if (eqData) setQuestions((prev) => [...prev, { id: eqData.id, questionId: newQ.id, title: g.question_text, type: g.type, points: 0.6 }]);
+        if (eqData) setQuestions((prev) => [...prev, { id: eqData.id, questionId: newQ.id, title: g.question_text, type: g.type, points: 0.6, content_json: contentJson }]);
       }
     }
     toast.success(`${generated.length} questão(ões) gerada(s) e adicionada(s).`);
