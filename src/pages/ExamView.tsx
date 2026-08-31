@@ -63,7 +63,6 @@ export default function ExamViewPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [feedbackMode, setFeedbackMode] = useState(false);
 
   const [publication, setPublication] = useState<{ id: string; is_active: boolean; end_at: string | null; start_at: string | null } | null>(null);
   const [unpublishing, setUnpublishing] = useState(false);
