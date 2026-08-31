@@ -15,6 +15,8 @@ import {
   Pencil,
   Store,
   Ban,
+  MessageSquareQuote,
+
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +65,8 @@ export default function ExamViewPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [feedbackMode, setFeedbackMode] = useState(false);
+
   const [publication, setPublication] = useState<{ id: string; is_active: boolean; end_at: string | null; start_at: string | null } | null>(null);
   const [unpublishing, setUnpublishing] = useState(false);
 
@@ -249,6 +253,41 @@ export default function ExamViewPage() {
   const status = examStatusConfig[effectiveStatus];
   const isPublished = !!publication?.is_active;
 
+  const getAnswerKey = (q: ExamQuestion) => {
+    const cj: any = q.contentJson || {};
+    const parts: { label: string; value: string }[] = [];
+
+    if (q.type === "multiple_choice" && cj.correct_answer) {
+      const opts = cj.options;
+      let text = "";
+      if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+        text = (opts as Record<string, string>)[cj.correct_answer] || "";
+      } else if (Array.isArray(opts)) {
+        const idx = String(cj.correct_answer).length === 1
+          ? String(cj.correct_answer).toLowerCase().charCodeAt(0) - 97
+          : Number(cj.correct_answer);
+        const o = opts[idx];
+        text = typeof o === "string" ? o : o?.text || "";
+      }
+      parts.push({ label: "Alternativa correta", value: `${String(cj.correct_answer).toUpperCase()}) ${text}`.trim() });
+    } else if (q.type === "true_false" && cj.correct_answer != null) {
+      const v = String(cj.correct_answer).toLowerCase();
+      parts.push({ label: "Resposta correta", value: v === "true" || v === "v" || v === "verdadeiro" ? "Verdadeiro" : "Falso" });
+    } else if (q.type === "matching" && cj.correct_matches) {
+      const value = typeof cj.correct_matches === "string"
+        ? cj.correct_matches
+        : Object.entries(cj.correct_matches as Record<string, string>).map(([a, b]) => `${a} → ${b}`).join("  |  ");
+      parts.push({ label: "Associações corretas", value });
+    }
+
+    if (cj.expected_answer) parts.push({ label: "Resposta esperada", value: String(cj.expected_answer) });
+    if (cj.answer_key) parts.push({ label: "Espelho de correção", value: String(cj.answer_key) });
+    if (cj.explanation) parts.push({ label: "Comentário / justificativa", value: String(cj.explanation) });
+
+    return parts;
+  };
+
+
 
   if (loading) {
     return (
@@ -293,6 +332,15 @@ export default function ExamViewPage() {
           <Store className="h-3.5 w-3.5 mr-1.5" />
           Marketplace
         </Button>
+        <Button
+          variant={feedbackMode ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFeedbackMode((v) => !v)}
+        >
+          <MessageSquareQuote className="h-3.5 w-3.5 mr-1.5" />
+          {feedbackMode ? "Modo Feedback: ON" : "Modo Feedback"}
+        </Button>
+
         {isPublished ? (
           <Button size="sm" variant="secondary" onClick={handleUnpublish} disabled={unpublishing}>
             {unpublishing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Ban className="h-3.5 w-3.5 mr-1.5" />}
@@ -437,7 +485,31 @@ export default function ExamViewPage() {
                           }
                           return null;
                         })()}
+
+                        {feedbackMode && (() => {
+                          const parts = getAnswerKey(q);
+                          return (
+                            <div className="mt-3 rounded-md border-l-4 border-success/70 bg-success/5 px-3 py-2 space-y-2 print:break-inside-avoid">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-success">
+                                Feedback — resposta esperada
+                              </p>
+                              {parts.length > 0 ? (
+                                parts.map((p, i) => (
+                                  <div key={i}>
+                                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">{p.label}</p>
+                                    <p className="text-xs whitespace-pre-wrap">{p.value}</p>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-xs italic text-muted-foreground">
+                                  Nenhum espelho cadastrado para esta questão.
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
+
                     );
                   })}
                 </div>
