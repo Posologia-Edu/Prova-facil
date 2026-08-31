@@ -891,6 +891,31 @@ export default function ExamEditorPage() {
                     </div>
                   </div>
                   <div className="text-sm mt-2 leading-relaxed"><RichTextRenderer text={q.title} /></div>
+
+                  {feedbackMode && (() => {
+                    const parts = getAnswerKey(q);
+                    return (
+                      <div className="mt-3 rounded-md border-l-4 border-success/70 bg-success/5 px-3 py-2 space-y-2 print:break-inside-avoid">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-success flex items-center gap-1.5">
+                          <MessageSquareQuote className="h-3 w-3" />
+                          Feedback — resposta esperada
+                        </p>
+                        {parts.length > 0 ? (
+                          parts.map((p, i) => (
+                            <div key={i}>
+                              <p className="text-[10px] font-semibold uppercase text-muted-foreground">{p.label}</p>
+                              <p className="text-xs whitespace-pre-wrap">{p.value}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs italic text-muted-foreground">
+                            Nenhum espelho cadastrado para esta questão.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex items-center justify-between mt-3 pt-3 border-t">
                     <span className="text-xs text-muted-foreground">Elaborada por mim</span>
                     <div className="flex items-center gap-2">
