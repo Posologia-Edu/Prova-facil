@@ -144,9 +144,49 @@ Você está em modo de discussão com o professor. Responda de forma construtiva
       throw new Error("AI gateway error");
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    // Re-stream through a pass-through with periodic keep-alive comments so that
+    // intermediary proxies never buffer/idle-timeout the connection mid-generation.
+    const upstream = response.body!.getReader();
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        let closed = false;
+        const heartbeat = setInterval(() => {
+          if (!closed) {
+            try { controller.enqueue(encoder.encode(": keep-alive\n\n")); } catch { /* ignore */ }
+          }
+        }, 10000);
+
+        try {
+          while (true) {
+            const { done, value } = await upstream.read();
+            if (done) break;
+            controller.enqueue(value);
+          }
+        } catch (e) {
+          console.error("ai-tutor-chat stream error:", e);
+        } finally {
+          closed = true;
+          clearInterval(heartbeat);
+          try { controller.close(); } catch { /* ignore */ }
+        }
+      },
+      cancel() {
+        upstream.cancel().catch(() => {});
+      },
     });
+
+    return new Response(stream, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+
   } catch (error) {
     console.error("ai-tutor-chat error:", error);
     return new Response(JSON.stringify({ error: (error as Error).message }), {

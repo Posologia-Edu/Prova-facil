@@ -75,8 +75,9 @@ export default function AITutorChat({
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let streamDone = false;
 
-      while (true) {
+      while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
@@ -86,9 +87,10 @@ export default function AITutorChat({
           let line = buffer.slice(0, newlineIndex);
           buffer = buffer.slice(newlineIndex + 1);
           if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.trim() || line.startsWith(":")) continue; // keep-alive / blank
           if (!line.startsWith("data: ")) continue;
           const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
+          if (jsonStr === "[DONE]") { streamDone = true; break; }
           try {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content;
@@ -108,6 +110,7 @@ export default function AITutorChat({
           }
         }
       }
+
     } catch (e: any) {
       console.error("AI Tutor error:", e);
       setMessages((prev) => [
