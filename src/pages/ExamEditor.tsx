@@ -679,7 +679,7 @@ export default function ExamEditorPage() {
     const pos = questions.length;
     const { data: eqData, error: eqErr } = await supabase.from("exam_questions").insert({ exam_id: examId, question_id: newQ.id, position: pos, points: 0.6 }).select("id").single();
     if (eqErr) { toast.error("Erro ao adicionar à prova."); return; }
-    setQuestions((prev) => [...prev, { id: eqData!.id, questionId: newQ.id, title: createTitle, type: createType, points: 0.6 }]);
+    setQuestions((prev) => [...prev, { id: eqData!.id, questionId: newQ.id, title: createTitle, type: createType, points: 0.6, content_json: contentJson }]);
     setBankQuestions((prev) => [{ id: newQ.id, type: createType, title: createTitle, difficulty: createDifficulty, tags, content_json: contentJson }, ...prev]);
     setCreateOpen(false);
     setCreateTitle("");
