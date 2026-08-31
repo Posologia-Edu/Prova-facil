@@ -150,19 +150,46 @@ export default function AITutorChat({
     }
   };
 
-  const applyAISuggestion = () => {
-    // Try to extract score from last assistant message
-    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
-    if (!lastAssistant || !onSuggestScore) return;
-
-    const scoreMatch = lastAssistant.content.match(/nota\s*(?:sugerida)?[:\s]*(\d+(?:[.,]\d+)?)/i);
-    if (scoreMatch) {
-      const score = parseFloat(scoreMatch[1].replace(",", "."));
-      if (score >= 0 && score <= maxPoints) {
-        onSuggestScore(score, lastAssistant.content.substring(0, 500));
+  const extractScore = (text: string): number | null => {
+    const clean = text.replace(/[*_`#]/g, " ");
+    const patterns = [
+      /nota\s*(?:sugerida|final|atribu[ií]da)?\s*[:\-–]?\s*(\d+(?:[.,]\d+)?)\s*(?:\/|de|em)\s*\d+(?:[.,]\d+)?/i,
+      /(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)\s*ponto/i,
+      /nota\s*(?:sugerida|final|atribu[ií]da)?\s*[:\-–]?\s*(\d+(?:[.,]\d+)?)/i,
+      /pontua[çc][ãa]o\s*(?:sugerida|final)?\s*[:\-–]?\s*(\d+(?:[.,]\d+)?)/i,
+      /(\d+(?:[.,]\d+)?)\s*(?:de|\/)\s*\d+(?:[.,]\d+)?\s*(?:pontos?)?/i,
+    ];
+    for (const re of patterns) {
+      const m = clean.match(re);
+      if (m) {
+        const v = parseFloat(m[1].replace(",", "."));
+        if (!Number.isNaN(v) && v >= 0 && v <= maxPoints) return v;
       }
     }
+    return null;
   };
+
+  const applyAISuggestion = () => {
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    if (!lastAssistant) {
+      toast({ title: "Nenhuma avaliação da IA ainda", description: "Peça a correção antes de aplicar a nota.", variant: "destructive" });
+      return;
+    }
+    if (!onSuggestScore) return;
+
+    const score = extractScore(lastAssistant.content);
+    if (score === null) {
+      toast({
+        title: "Não encontrei a nota sugerida",
+        description: `Peça à IA: "Informe apenas a nota sugerida de 0 a ${maxPoints}".`,
+        variant: "destructive",
+      });
+      return;
+    }
+    onSuggestScore(score, lastAssistant.content.substring(0, 2000));
+    toast({ title: `Nota ${score}/${maxPoints} aplicada` });
+  };
+
 
   return (
     <div className="flex flex-col h-full">
