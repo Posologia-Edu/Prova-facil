@@ -68,6 +68,8 @@ export default function ExamMonitoring() {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewAnswer, setReviewAnswer] = useState<AnswerRow | null>(null);
   const [teacherScore, setTeacherScore] = useState("");
+  const [reviewTab, setReviewTab] = useState("tutor");
+
   const [teacherFeedback, setTeacherFeedback] = useState("");
 
   // Security tab state
