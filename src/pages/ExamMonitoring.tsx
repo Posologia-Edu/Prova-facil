@@ -68,6 +68,8 @@ export default function ExamMonitoring() {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewAnswer, setReviewAnswer] = useState<AnswerRow | null>(null);
   const [teacherScore, setTeacherScore] = useState("");
+  const [reviewTab, setReviewTab] = useState("tutor");
+
   const [teacherFeedback, setTeacherFeedback] = useState("");
 
   // Security tab state
@@ -254,6 +256,7 @@ export default function ExamMonitoring() {
     setReviewAnswer(answer);
     setTeacherScore(String(answer.teacher_score ?? answer.ai_score ?? ""));
     setTeacherFeedback(answer.teacher_feedback || "");
+    setReviewTab("tutor");
     setReviewOpen(true);
   };
 
@@ -273,11 +276,25 @@ export default function ExamMonitoring() {
     if (selectedSession) loadStudentAnswers(selectedSession);
   };
 
-  const handleAISuggestScore = (score: number, feedback: string) => {
+  const handleAISuggestScore = async (score: number, feedback: string) => {
+    const cleanFeedback = feedback.substring(0, 300);
     setTeacherScore(String(score));
-    setTeacherFeedback(feedback.substring(0, 300));
-    toast.info(`Nota sugerida: ${score}/${Number(reviewAnswer?.max_points)} aplicada.`);
+    setTeacherFeedback(cleanFeedback);
+    setReviewTab("review");
+    if (!reviewAnswer) return;
+    const { error } = await supabase
+      .from("student_answers")
+      .update({ teacher_score: score, teacher_feedback: cleanFeedback, grading_status: "reviewed" })
+      .eq("id", reviewAnswer.id);
+    if (error) {
+      toast.error("Nota aplicada, mas não foi possível salvar: " + error.message);
+      return;
+    }
+    setReviewAnswer({ ...reviewAnswer, teacher_score: score, teacher_feedback: cleanFeedback } as AnswerRow);
+    if (selectedSession) loadStudentAnswers(selectedSession);
+    toast.success(`Nota ${score}/${Number(reviewAnswer.max_points)} aplicada e salva.`);
   };
+
 
   const loadSecurityData = async () => {
     if (!publicationId) return;
@@ -666,7 +683,7 @@ export default function ExamMonitoring() {
             </DialogTitle>
           </DialogHeader>
           {reviewAnswer && (
-            <Tabs defaultValue="tutor" className="w-full">
+            <Tabs value={reviewTab} onValueChange={setReviewTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="tutor" className="gap-1">
                   <MessageSquare className="h-3.5 w-3.5" />
