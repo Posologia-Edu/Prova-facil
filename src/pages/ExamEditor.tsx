@@ -660,7 +660,7 @@ export default function ExamEditorPage() {
     if (error) { toast.error("Erro ao adicionar questões."); return; }
     const newQuestions: ExamQuestion[] = (data || []).map((eq) => {
       const bq = bankQuestions.find((b) => b.id === eq.question_id);
-      return { id: eq.id, questionId: eq.question_id, title: bq?.title || "Questão", type: bq?.type || "multiple_choice", points: Number(eq.points) || 0.6 };
+      return { id: eq.id, questionId: eq.question_id, title: bq?.title || "Questão", type: bq?.type || "multiple_choice", points: Number(eq.points) || 0.6, content_json: bq?.content_json };
     });
     setQuestions((prev) => [...prev, ...newQuestions]);
     setSelectedBankIds(new Set());
