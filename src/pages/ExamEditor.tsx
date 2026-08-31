@@ -420,6 +420,30 @@ export default function ExamEditorPage() {
     }
   };
 
+  const recalcSessionTotal = async (sessionId: string) => {
+    const { data } = await supabase
+      .from("student_answers")
+      .select("teacher_score, ai_score, points_earned, max_points")
+      .eq("session_id", sessionId);
+    if (!data) return;
+    const total = data.reduce(
+      (s: number, a: any) => s + (Number(a.teacher_score ?? a.ai_score ?? a.points_earned) || 0),
+      0
+    );
+    const max = data.reduce((s: number, a: any) => s + (Number(a.max_points) || 0), 0);
+    await supabase
+      .from("exam_sessions")
+      .update({ total_score: Number(total.toFixed(2)), max_score: Number(max.toFixed(2)) })
+      .eq("id", sessionId);
+    setSessions((prev: any) =>
+      prev.map((s: any) =>
+        s.id === sessionId
+          ? { ...s, total_score: Number(total.toFixed(2)), max_score: Number(max.toFixed(2)) }
+          : s
+      )
+    );
+  };
+
   const loadStudentAnswers = async (sessionId: string) => {
     setSelectedSession(sessionId);
     setLoadingAnswers(true);
@@ -431,6 +455,7 @@ export default function ExamEditorPage() {
     setSelectedAnswers((data as unknown as AnswerRow[]) || []);
     setLoadingAnswers(false);
   };
+
 
   const handlePublish = async () => {
     if (!examId) return;
