@@ -293,14 +293,6 @@ export default function ExamViewPage() {
           <Store className="h-3.5 w-3.5 mr-1.5" />
           Marketplace
         </Button>
-        <Button
-          variant={feedbackMode ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFeedbackMode((v) => !v)}
-        >
-          <MessageSquareQuote className="h-3.5 w-3.5 mr-1.5" />
-          {feedbackMode ? "Modo Feedback: ON" : "Modo Feedback"}
-        </Button>
 
         {isPublished ? (
           <Button size="sm" variant="secondary" onClick={handleUnpublish} disabled={unpublishing}>
