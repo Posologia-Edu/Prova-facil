@@ -249,6 +249,41 @@ export default function ExamViewPage() {
   const status = examStatusConfig[effectiveStatus];
   const isPublished = !!publication?.is_active;
 
+  const getAnswerKey = (q: ExamQuestion) => {
+    const cj: any = q.contentJson || {};
+    const parts: { label: string; value: string }[] = [];
+
+    if (q.type === "multiple_choice" && cj.correct_answer) {
+      const opts = cj.options;
+      let text = "";
+      if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+        text = (opts as Record<string, string>)[cj.correct_answer] || "";
+      } else if (Array.isArray(opts)) {
+        const idx = String(cj.correct_answer).length === 1
+          ? String(cj.correct_answer).toLowerCase().charCodeAt(0) - 97
+          : Number(cj.correct_answer);
+        const o = opts[idx];
+        text = typeof o === "string" ? o : o?.text || "";
+      }
+      parts.push({ label: "Alternativa correta", value: `${String(cj.correct_answer).toUpperCase()}) ${text}`.trim() });
+    } else if (q.type === "true_false" && cj.correct_answer != null) {
+      const v = String(cj.correct_answer).toLowerCase();
+      parts.push({ label: "Resposta correta", value: v === "true" || v === "v" || v === "verdadeiro" ? "Verdadeiro" : "Falso" });
+    } else if (q.type === "matching" && cj.correct_matches) {
+      const value = typeof cj.correct_matches === "string"
+        ? cj.correct_matches
+        : Object.entries(cj.correct_matches as Record<string, string>).map(([a, b]) => `${a} → ${b}`).join("  |  ");
+      parts.push({ label: "Associações corretas", value });
+    }
+
+    if (cj.expected_answer) parts.push({ label: "Resposta esperada", value: String(cj.expected_answer) });
+    if (cj.answer_key) parts.push({ label: "Espelho de correção", value: String(cj.answer_key) });
+    if (cj.explanation) parts.push({ label: "Comentário / justificativa", value: String(cj.explanation) });
+
+    return parts;
+  };
+
+
 
   if (loading) {
     return (
