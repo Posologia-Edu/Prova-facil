@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   TrendingUp,
   Shield,
+  MessageSquareQuote,
 } from "lucide-react";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 import { Button } from "@/components/ui/button";
