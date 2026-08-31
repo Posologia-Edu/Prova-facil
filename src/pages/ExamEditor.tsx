@@ -477,11 +477,25 @@ export default function ExamEditorPage() {
     if (selectedSession) loadStudentAnswers(selectedSession);
   };
 
-  const handleAISuggestScore = (score: number, feedback: string) => {
+  const handleAISuggestScore = async (score: number, feedback: string) => {
+    const cleanFeedback = feedback.substring(0, 300);
     setTeacherScore(String(score));
-    setTeacherFeedback(feedback.substring(0, 300));
-    toast.info(`Nota sugerida: ${score}/${Number(reviewAnswer?.max_points)} aplicada.`);
+    setTeacherFeedback(cleanFeedback);
+    setReviewTab("review");
+    if (!reviewAnswer) return;
+    const { error } = await supabase
+      .from("student_answers")
+      .update({ teacher_score: score, teacher_feedback: cleanFeedback, grading_status: "reviewed" })
+      .eq("id", reviewAnswer.id);
+    if (error) {
+      toast.error("Nota aplicada, mas não foi possível salvar: " + error.message);
+      return;
+    }
+    setReviewAnswer({ ...reviewAnswer, teacher_score: score, teacher_feedback: cleanFeedback } as AnswerRow);
+    if (selectedSession) loadStudentAnswers(selectedSession);
+    toast.success(`Nota ${score}/${Number(reviewAnswer.max_points)} aplicada e salva.`);
   };
+
 
   const filteredStudents = classStudents.filter(s => {
     if (!participantSearch.trim()) return true;
