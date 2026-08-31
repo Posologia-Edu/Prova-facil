@@ -461,6 +461,7 @@ export default function ExamEditorPage() {
     setReviewAnswer(answer);
     setTeacherScore(String(answer.teacher_score ?? answer.ai_score ?? ""));
     setTeacherFeedback(answer.teacher_feedback || "");
+    setReviewTab("tutor");
     setReviewOpen(true);
   };
 
