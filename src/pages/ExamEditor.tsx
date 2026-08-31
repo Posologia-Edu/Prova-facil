@@ -502,7 +502,10 @@ export default function ExamEditorPage() {
       .eq("id", reviewAnswer.id);
     toast.success("Avaliação salva.");
     setReviewOpen(false);
-    if (selectedSession) loadStudentAnswers(selectedSession);
+    if (selectedSession) {
+      await loadStudentAnswers(selectedSession);
+      await recalcSessionTotal(selectedSession);
+    }
   };
 
   const handleAISuggestScore = async (score: number, feedback: string) => {
@@ -520,9 +523,13 @@ export default function ExamEditorPage() {
       return;
     }
     setReviewAnswer({ ...reviewAnswer, teacher_score: score, teacher_feedback: cleanFeedback } as AnswerRow);
-    if (selectedSession) loadStudentAnswers(selectedSession);
+    if (selectedSession) {
+      await loadStudentAnswers(selectedSession);
+      await recalcSessionTotal(selectedSession);
+    }
     toast.success(`Nota ${score}/${Number(reviewAnswer.max_points)} aplicada e salva.`);
   };
+
 
 
   const filteredStudents = classStudents.filter(s => {
