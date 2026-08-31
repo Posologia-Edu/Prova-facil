@@ -837,17 +837,28 @@ export default function ExamEditorPage() {
 
         {/* ===== QUESTÕES TAB ===== */}
         <TabsContent value="questions" className="mt-6 space-y-6">
-          <div className="flex items-center justify-end gap-3">
-            <span className="text-sm text-muted-foreground">Valor das questões</span>
-            <Select value={pointsMode} onValueChange={setPointsMode}>
-              <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="by_grade">Por nota</SelectItem>
-                <SelectItem value="equal">Igual</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-sm text-muted-foreground">Valor da prova:</span>
-            <span className="text-lg font-bold">{totalPoints.toFixed(2).replace(".", ",")}</span>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <Button
+              variant={feedbackMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFeedbackMode((v) => !v)}
+              className="gap-1.5"
+            >
+              <MessageSquareQuote className="h-4 w-4" />
+              {feedbackMode ? "Modo Feedback: ON" : "Modo Feedback"}
+            </Button>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">Valor das questões</span>
+              <Select value={pointsMode} onValueChange={setPointsMode}>
+                <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="by_grade">Por nota</SelectItem>
+                  <SelectItem value="equal">Igual</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">Valor da prova:</span>
+              <span className="text-lg font-bold">{totalPoints.toFixed(2).replace(".", ",")}</span>
+            </div>
           </div>
 
           {questions.length === 0 ? (
