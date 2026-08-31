@@ -239,6 +239,30 @@ export default function ExamMonitoring() {
     return () => { supabase.removeChannel(channel); };
   }, [publicationId]);
 
+  const recalcSessionTotal = async (sessionId: string) => {
+    const { data } = await supabase
+      .from("student_answers")
+      .select("teacher_score, ai_score, points_earned, max_points")
+      .eq("session_id", sessionId);
+    if (!data) return;
+    const total = data.reduce(
+      (s: number, a: any) => s + (Number(a.teacher_score ?? a.ai_score ?? a.points_earned) || 0),
+      0
+    );
+    const max = data.reduce((s: number, a: any) => s + (Number(a.max_points) || 0), 0);
+    await supabase
+      .from("exam_sessions")
+      .update({ total_score: Number(total.toFixed(2)), max_score: Number(max.toFixed(2)) })
+      .eq("id", sessionId);
+    setSessions((prev: any) =>
+      prev.map((s: any) =>
+        s.id === sessionId
+          ? { ...s, total_score: Number(total.toFixed(2)), max_score: Number(max.toFixed(2)) }
+          : s
+      )
+    );
+  };
+
   const loadStudentAnswers = async (sessionId: string) => {
     setSelectedSession(sessionId);
     setLoadingAnswers(true);
@@ -273,7 +297,10 @@ export default function ExamMonitoring() {
 
     toast.success("Avaliação salva.");
     setReviewOpen(false);
-    if (selectedSession) loadStudentAnswers(selectedSession);
+    if (selectedSession) {
+      await loadStudentAnswers(selectedSession);
+      await recalcSessionTotal(selectedSession);
+    }
   };
 
   const handleAISuggestScore = async (score: number, feedback: string) => {
@@ -291,9 +318,13 @@ export default function ExamMonitoring() {
       return;
     }
     setReviewAnswer({ ...reviewAnswer, teacher_score: score, teacher_feedback: cleanFeedback } as AnswerRow);
-    if (selectedSession) loadStudentAnswers(selectedSession);
+    if (selectedSession) {
+      await loadStudentAnswers(selectedSession);
+      await recalcSessionTotal(selectedSession);
+    }
     toast.success(`Nota ${score}/${Number(reviewAnswer.max_points)} aplicada e salva.`);
   };
+
 
 
   const loadSecurityData = async () => {
