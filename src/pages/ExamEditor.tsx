@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   TrendingUp,
   Shield,
+  MessageSquareQuote,
 } from "lucide-react";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,7 @@ interface ExamQuestion {
   title: string;
   type: string;
   points: number;
+  content_json?: any;
 }
 
 interface ClassStudent {
@@ -156,6 +158,7 @@ export default function ExamEditorPage() {
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [pointsMode, setPointsMode] = useState("by_grade");
   const [activeTab, setActiveTab] = useState("questions");
+  const [feedbackMode, setFeedbackMode] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Config state
@@ -234,6 +237,40 @@ export default function ExamEditorPage() {
   const usedIds = useMemo(() => new Set(questions.map((q) => q.questionId)), [questions]);
   const totalPoints = questions.reduce((s, q) => s + q.points, 0);
 
+  const getAnswerKey = (q: ExamQuestion) => {
+    const cj: any = q.content_json || {};
+    const parts: { label: string; value: string }[] = [];
+
+    if (q.type === "multiple_choice" && cj.correct_answer) {
+      const opts = cj.options;
+      let text = "";
+      if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+        text = (opts as Record<string, string>)[cj.correct_answer] || "";
+      } else if (Array.isArray(opts)) {
+        const idx = String(cj.correct_answer).length === 1
+          ? String(cj.correct_answer).toLowerCase().charCodeAt(0) - 97
+          : Number(cj.correct_answer);
+        const o = opts[idx];
+        text = typeof o === "string" ? o : o?.text || "";
+      }
+      parts.push({ label: "Alternativa correta", value: `${String(cj.correct_answer).toUpperCase()}) ${text}`.trim() });
+    } else if (q.type === "true_false" && cj.correct_answer != null) {
+      const v = String(cj.correct_answer).toLowerCase();
+      parts.push({ label: "Resposta correta", value: v === "true" || v === "v" || v === "verdadeiro" ? "Verdadeiro" : "Falso" });
+    } else if (q.type === "matching" && cj.correct_matches) {
+      const value = typeof cj.correct_matches === "string"
+        ? cj.correct_matches
+        : Object.entries(cj.correct_matches as Record<string, string>).map(([a, b]) => `${a} → ${b}`).join("  |  ");
+      parts.push({ label: "Associações corretas", value });
+    }
+
+    if (cj.expected_answer) parts.push({ label: "Resposta esperada", value: String(cj.expected_answer) });
+    if (cj.answer_key) parts.push({ label: "Espelho de correção", value: String(cj.answer_key) });
+    if (cj.explanation) parts.push({ label: "Comentário / justificativa", value: String(cj.explanation) });
+
+    return parts;
+  };
+
   // Load exam data
   useEffect(() => {
     const loadExam = async () => {
@@ -301,6 +338,7 @@ export default function ExamEditorPage() {
               title: cj?.question_text || cj?.title || "Questão",
               type: bq?.type || "multiple_choice",
               points: Number(eq.points) || 0.6,
+              content_json: cj,
             };
           })
         );
@@ -622,7 +660,7 @@ export default function ExamEditorPage() {
     if (error) { toast.error("Erro ao adicionar questões."); return; }
     const newQuestions: ExamQuestion[] = (data || []).map((eq) => {
       const bq = bankQuestions.find((b) => b.id === eq.question_id);
-      return { id: eq.id, questionId: eq.question_id, title: bq?.title || "Questão", type: bq?.type || "multiple_choice", points: Number(eq.points) || 0.6 };
+      return { id: eq.id, questionId: eq.question_id, title: bq?.title || "Questão", type: bq?.type || "multiple_choice", points: Number(eq.points) || 0.6, content_json: bq?.content_json };
     });
     setQuestions((prev) => [...prev, ...newQuestions]);
     setSelectedBankIds(new Set());
@@ -641,7 +679,7 @@ export default function ExamEditorPage() {
     const pos = questions.length;
     const { data: eqData, error: eqErr } = await supabase.from("exam_questions").insert({ exam_id: examId, question_id: newQ.id, position: pos, points: 0.6 }).select("id").single();
     if (eqErr) { toast.error("Erro ao adicionar à prova."); return; }
-    setQuestions((prev) => [...prev, { id: eqData!.id, questionId: newQ.id, title: createTitle, type: createType, points: 0.6 }]);
+    setQuestions((prev) => [...prev, { id: eqData!.id, questionId: newQ.id, title: createTitle, type: createType, points: 0.6, content_json: contentJson }]);
     setBankQuestions((prev) => [{ id: newQ.id, type: createType, title: createTitle, difficulty: createDifficulty, tags, content_json: contentJson }, ...prev]);
     setCreateOpen(false);
     setCreateTitle("");
@@ -658,7 +696,7 @@ export default function ExamEditorPage() {
       if (newQ) {
         const pos = questions.length;
         const { data: eqData } = await supabase.from("exam_questions").insert({ exam_id: examId, question_id: newQ.id, position: pos, points: 0.6 }).select("id").single();
-        if (eqData) setQuestions((prev) => [...prev, { id: eqData.id, questionId: newQ.id, title: g.question_text, type: g.type, points: 0.6 }]);
+        if (eqData) setQuestions((prev) => [...prev, { id: eqData.id, questionId: newQ.id, title: g.question_text, type: g.type, points: 0.6, content_json: contentJson }]);
       }
     }
     toast.success(`${generated.length} questão(ões) gerada(s) e adicionada(s).`);
@@ -799,17 +837,28 @@ export default function ExamEditorPage() {
 
         {/* ===== QUESTÕES TAB ===== */}
         <TabsContent value="questions" className="mt-6 space-y-6">
-          <div className="flex items-center justify-end gap-3">
-            <span className="text-sm text-muted-foreground">Valor das questões</span>
-            <Select value={pointsMode} onValueChange={setPointsMode}>
-              <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="by_grade">Por nota</SelectItem>
-                <SelectItem value="equal">Igual</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-sm text-muted-foreground">Valor da prova:</span>
-            <span className="text-lg font-bold">{totalPoints.toFixed(2).replace(".", ",")}</span>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <Button
+              variant={feedbackMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFeedbackMode((v) => !v)}
+              className="gap-1.5"
+            >
+              <MessageSquareQuote className="h-4 w-4" />
+              {feedbackMode ? "Modo Feedback: ON" : "Modo Feedback"}
+            </Button>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">Valor das questões</span>
+              <Select value={pointsMode} onValueChange={setPointsMode}>
+                <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="by_grade">Por nota</SelectItem>
+                  <SelectItem value="equal">Igual</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">Valor da prova:</span>
+              <span className="text-lg font-bold">{totalPoints.toFixed(2).replace(".", ",")}</span>
+            </div>
           </div>
 
           {questions.length === 0 ? (
@@ -842,6 +891,31 @@ export default function ExamEditorPage() {
                     </div>
                   </div>
                   <div className="text-sm mt-2 leading-relaxed"><RichTextRenderer text={q.title} /></div>
+
+                  {feedbackMode && (() => {
+                    const parts = getAnswerKey(q);
+                    return (
+                      <div className="mt-3 rounded-md border-l-4 border-success/70 bg-success/5 px-3 py-2 space-y-2 print:break-inside-avoid">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-success flex items-center gap-1.5">
+                          <MessageSquareQuote className="h-3 w-3" />
+                          Feedback — resposta esperada
+                        </p>
+                        {parts.length > 0 ? (
+                          parts.map((p, i) => (
+                            <div key={i}>
+                              <p className="text-[10px] font-semibold uppercase text-muted-foreground">{p.label}</p>
+                              <p className="text-xs whitespace-pre-wrap">{p.value}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs italic text-muted-foreground">
+                            Nenhum espelho cadastrado para esta questão.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex items-center justify-between mt-3 pt-3 border-t">
                     <span className="text-xs text-muted-foreground">Elaborada por mim</span>
                     <div className="flex items-center gap-2">
