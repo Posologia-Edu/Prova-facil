@@ -252,8 +252,14 @@ export default function SimulationControl() {
     toast({ title: `Rodada ${round.round_number} iniciada (fora da ordem).` });
   };
 
-  // Swap the participant of a specific assignment within a round (substituir aluno ausente)
+  // Swap the participant of a specific assignment within a round (substituir aluno ausente).
+  // If the chosen student is already assigned in the same round, the two participants trade places.
   const swapAssignmentParticipant = async (assignmentId: string, newParticipantId: string) => {
+    const current = assignments.find((a: any) => a.id === assignmentId);
+    const conflict = assignments.find(
+      (a: any) => a.round_id === current?.round_id && a.participant_id === newParticipantId && a.id !== assignmentId
+    );
+
     const { error } = await supabase
       .from("simulation_round_assignments")
       .update({ participant_id: newParticipantId })
@@ -262,9 +268,27 @@ export default function SimulationControl() {
       toast({ title: "Erro ao substituir", description: error.message, variant: "destructive" });
       return;
     }
+
+    if (conflict && current) {
+      const { error: swapError } = await supabase
+        .from("simulation_round_assignments")
+        .update({ participant_id: current.participant_id })
+        .eq("id", conflict.id);
+      if (swapError) {
+        // revert to keep data consistent
+        await supabase
+          .from("simulation_round_assignments")
+          .update({ participant_id: current.participant_id })
+          .eq("id", assignmentId);
+        toast({ title: "Erro ao trocar papéis", description: swapError.message, variant: "destructive" });
+        return;
+      }
+    }
+
     queryClient.invalidateQueries({ queryKey: ["simulation-assignments", roomId] });
-    toast({ title: "Participante substituído." });
+    toast({ title: conflict ? "Papéis trocados entre os alunos." : "Participante substituído." });
   };
+
 
   const endActiveRound = async () => {
     if (!activeRound || !room) return;
