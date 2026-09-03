@@ -299,20 +299,34 @@ export default function SimulationJoin() {
           .eq("round_id", activeR.id)
           .eq("participant_id", participant.id)
           .limit(1);
-        setAssignment(assigns?.[0] || null);
+        const currentAssignment = assigns?.[0] || null;
+        setAssignment(currentAssignment);
 
         const { data: resp } = await supabase
           .from("simulation_responses")
           .select("*")
           .eq("round_id", activeR.id)
           .eq("participant_id", participant.id)
-          .not("submitted_at", "is", null)
-          .limit(1);
-        setSubmitted(!!resp?.length);
+          .not("submitted_at", "is", null);
+
+        // Only block editing when a response already exists for the form of the
+        // role the participant currently holds. After a substitution the student
+        // may already have submitted another role's form in this same round.
+        const roleFormMap: Record<string, string> = {
+          professional: "anamnesis",
+          patient: "patient_script",
+          observer: "observer_eval",
+          professor: "professor_eval",
+        };
+        const currentFormType = currentAssignment ? roleFormMap[currentAssignment.assigned_role] : null;
+        const currentForm = currentFormType ? forms.find((f: any) => f.form_type === currentFormType) : null;
+        const submittedForms = (resp || []).map((r: any) => r.form_id);
+        setSubmitted(currentForm ? submittedForms.includes(currentForm.id) : submittedForms.length > 0);
       } else {
         setAssignment(null);
         setSubmitted(false);
       }
+
 
       // Load completed round responses for professor
       if (isProfessor) {
