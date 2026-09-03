@@ -384,6 +384,14 @@ export default function SimulationControl() {
   // Analytics computations
   const getParticipantName = (id: string) => participants.find((p: any) => p.id === id)?.student_name || id;
 
+  // Clinical cases available in this room (from the patient script form)
+  const availableCases = useMemo(() => {
+    const patientScriptForm = forms.find((f: any) => f.form_type === "patient_script");
+    const content = patientScriptForm?.content_json as any;
+    const cases = Array.isArray(content) && content[0]?.cases ? content[0].cases : [];
+    return cases.map((c: any, index: number) => ({ index, title: c?.title || `Caso ${index + 1}` }));
+  }, [forms]);
+
   const analyticsData = useMemo(() => {
     const completedRounds = rounds.filter((r: any) => r.status === "completed");
     const profForm = forms.find((f: any) => f.form_type === "professor_eval");
