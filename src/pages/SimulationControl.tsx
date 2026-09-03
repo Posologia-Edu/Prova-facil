@@ -171,6 +171,25 @@ export default function SimulationControl() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId, queryClient]);
 
+  // Presença em tempo real dos alunos conectados
+  const [onlineIds, setOnlineIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!roomId) return;
+    const presence = supabase.channel(`sim-presence-${roomId}`, {
+      config: { presence: { key: `ctrl-${roomId}` } },
+    });
+    const sync = () => {
+      const state = presence.presenceState() as Record<string, any[]>;
+      setOnlineIds(Object.keys(state).filter((k) => !k.startsWith("ctrl-")));
+    };
+    presence
+      .on("presence", { event: "sync" }, sync)
+      .on("presence", { event: "join" }, sync)
+      .on("presence", { event: "leave" }, sync)
+      .subscribe();
+    return () => { supabase.removeChannel(presence); };
+  }, [roomId]);
+
   const openProfessorRoom = () => {
     if (!room?.access_code || !professor?.student_email) {
       toast({ title: "Cadastre o e-mail do professor para abrir a sala.", variant: "destructive" });
