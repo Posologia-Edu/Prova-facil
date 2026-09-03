@@ -655,11 +655,12 @@ export default function SimulationControl() {
                         )}
                       </div>
                       <Badge
-                        variant={p.status === "ready" ? "default" : (p.status === "joined" || onlineIds.includes(p.id)) ? "outline" : "secondary"}
+                        variant={p.status === "ready" ? "default" : onlineIds.includes(p.id) ? "outline" : "secondary"}
                         className="ml-auto text-xs shrink-0"
                       >
-                        {p.status === "ready" ? "Pronto" : (p.status === "joined" || onlineIds.includes(p.id)) ? "Na sala" : "Aguardando"}
+                        {p.status === "ready" ? "Pronto" : onlineIds.includes(p.id) ? "Na sala" : "Aguardando"}
                       </Badge>
+
                     </div>
                   ))}
                 </div>
