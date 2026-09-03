@@ -982,8 +982,9 @@ export default function SimulationJoin() {
   const RoleIcon = assignment ? roleIcons[assignment.assigned_role] || Users : Users;
   const form = getFormForRole();
   const isActive = !!activeRound;
-  const isReusedRole = !!assignment?.is_reused_role;
-  const canFill = isActive && !submitted && assignment?.assigned_role !== "patient" && !isReusedRole;
+  // A reused role is still an active assignment. This happens when a student is
+  // substituted into a later/makeup round and must not make the new form read-only.
+  const canFill = isActive && !submitted && assignment?.assigned_role !== "patient";
   const completedRoundsList = allRounds.filter((r: any) => r.status === "completed");
   const allRoundsCompleted = allRounds.length > 0 && allRounds.every((round: any) => round.status === "completed");
   const isPaused = room?.status === "paused";
