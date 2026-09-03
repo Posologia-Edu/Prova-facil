@@ -7061,6 +7061,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      swap_simulation_assignment: {
+        Args: {
+          _access_code?: string
+          _assignment_id: string
+          _new_participant_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "teacher" | "student"

@@ -512,24 +512,32 @@ export default function SimulationJoin() {
   // Professor: substituir paciente/observador em uma rodada (aluno faltou)
   const swapAssignmentParticipant = async (assignmentId: string, newParticipantId: string) => {
     const target = allAssignments.find((a: any) => a.id === assignmentId);
-    const { error } = await supabase
-      .from("simulation_round_assignments")
-      .update({ participant_id: newParticipantId })
-      .eq("id", assignmentId);
+    const conflict = allAssignments.find(
+      (a: any) => a.round_id === target?.round_id && a.participant_id === newParticipantId && a.id !== assignmentId
+    );
+    const { error } = await supabase.rpc("swap_simulation_assignment" as any, {
+      _assignment_id: assignmentId,
+      _new_participant_id: newParticipantId,
+      _access_code: room?.access_code ?? null,
+    });
     if (error) {
       toast({ title: "Erro ao substituir", description: error.message, variant: "destructive" });
       return;
     }
     // Remove qualquer resposta já enviada pelo participante anterior nessa rodada
     // (assim o substituto poderá enviar a sua própria avaliação/anamnese)
-    if (target?.round_id && target?.participant_id) {
+    if (target?.round_id && target?.participant_id && !conflict) {
       await supabase
         .from("simulation_responses")
         .delete()
         .eq("round_id", target.round_id)
         .eq("participant_id", target.participant_id);
     }
-    setAllAssignments((prev) => prev.map((a) => a.id === assignmentId ? { ...a, participant_id: newParticipantId } : a));
+    setAllAssignments((prev) => prev.map((a) => {
+      if (a.id === assignmentId) return { ...a, participant_id: newParticipantId };
+      if (conflict && a.id === conflict.id) return { ...a, participant_id: target?.participant_id };
+      return a;
+    }));
     // Se o swap foi na rodada ativa e era a atribuição do usuário atual, atualiza estado local
     if (activeRound && target?.round_id === activeRound.id) {
       if (assignment?.id === assignmentId) {
@@ -538,8 +546,9 @@ export default function SimulationJoin() {
         setAssignment({ ...target, participant_id: newParticipantId });
       }
     }
-    toast({ title: "Participante substituído." });
+    toast({ title: conflict ? "Papéis trocados entre os alunos." : "Participante substituído." });
   };
+
 
   // Professor: liberar materiais de um ciclo específico (respeitando os papéis das rodadas daquele ciclo)
   const releaseMaterialsForCycle = async (cycle: number) => {
