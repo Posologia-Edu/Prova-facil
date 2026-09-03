@@ -236,6 +236,20 @@ export default function SimulationJoin() {
     await joinRoomWithCredentials(pin, email);
   };
 
+  // Realtime presence: informa ao painel do professor que o aluno está na sala
+  useEffect(() => {
+    if (!joined || !room?.id || !participant?.id) return;
+    const channel = supabase.channel(`sim-presence-${room.id}`, {
+      config: { presence: { key: participant.id } },
+    });
+    channel.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await channel.track({ participant_id: participant.id, at: new Date().toISOString() });
+      }
+    });
+    return () => { supabase.removeChannel(channel); };
+  }, [joined, room?.id, participant?.id]);
+
   const isProfessor = participant?.participant_role === "professor";
 
   // Poll for active round, all rounds, and participants
