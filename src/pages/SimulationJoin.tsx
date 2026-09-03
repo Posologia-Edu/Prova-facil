@@ -344,7 +344,7 @@ export default function SimulationJoin() {
     poll();
     const interval = setInterval(poll, 5000);
     return () => clearInterval(interval);
-  }, [joined, room, participant, isProfessor]);
+  }, [joined, room, participant, isProfessor, forms]);
 
   // Timer
   useEffect(() => {
