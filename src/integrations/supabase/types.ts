@@ -7061,6 +7061,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      set_simulation_assignment_case: {
+        Args: {
+          _access_code?: string
+          _assignment_id: string
+          _case_index: number
+        }
+        Returns: undefined
+      }
       swap_simulation_assignment: {
         Args: {
           _access_code?: string

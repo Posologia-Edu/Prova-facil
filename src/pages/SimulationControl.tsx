@@ -278,17 +278,20 @@ export default function SimulationControl() {
 
   // Change the clinical case assigned to a simulated patient in a specific round.
   const changeAssignmentCase = async (assignmentId: string, caseIndex: number) => {
-    const { error } = await supabase
-      .from("simulation_round_assignments")
-      .update({ case_index: caseIndex })
-      .eq("id", assignmentId);
+    const { error } = await supabase.rpc("set_simulation_assignment_case" as any, {
+      _assignment_id: assignmentId,
+      _case_index: caseIndex,
+      _access_code: room?.access_code ?? null,
+    });
     if (error) {
       toast({ title: "Erro ao alterar o caso", description: error.message, variant: "destructive" });
       return;
     }
     await queryClient.invalidateQueries({ queryKey: ["simulation-assignments", roomId] });
+    await queryClient.refetchQueries({ queryKey: ["simulation-assignments", roomId] });
     toast({ title: "Caso clínico atualizado." });
   };
+
 
   const endActiveRound = async () => {
     if (!activeRound || !room) return;
