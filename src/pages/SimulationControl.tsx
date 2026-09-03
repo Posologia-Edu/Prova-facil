@@ -276,6 +276,20 @@ export default function SimulationControl() {
 
 
 
+  // Change the clinical case assigned to a simulated patient in a specific round.
+  const changeAssignmentCase = async (assignmentId: string, caseIndex: number) => {
+    const { error } = await supabase
+      .from("simulation_round_assignments")
+      .update({ case_index: caseIndex })
+      .eq("id", assignmentId);
+    if (error) {
+      toast({ title: "Erro ao alterar o caso", description: error.message, variant: "destructive" });
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["simulation-assignments", roomId] });
+    toast({ title: "Caso clínico atualizado." });
+  };
+
   const endActiveRound = async () => {
     if (!activeRound || !room) return;
     const remainingPending = rounds.filter((r: any) => r.id !== activeRound.id && r.status === "pending");
@@ -744,6 +758,7 @@ export default function SimulationControl() {
                         }
                       }
                       const canSwap = !isCompleted && (a.assigned_role === "patient" || a.assigned_role === "observer");
+                      const canChangeCase = !isCompleted && a.assigned_role === "patient" && availableCases.length > 0;
                       return (
                         <div key={a.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                           <Badge className={roleColors[a.assigned_role] || ""}>
@@ -757,6 +772,24 @@ export default function SimulationControl() {
                           )}
                           {roundResponses.some((r: any) => r.participant_id === a.participant_id && r.submitted_at) && (
                             <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                          )}
+                          {canChangeCase && (
+                            <Select
+                              value={a.case_index != null ? String(a.case_index) : undefined}
+                              onValueChange={(val) => changeAssignmentCase(a.id, Number(val))}
+                            >
+                              <SelectTrigger className="h-7 w-auto text-xs gap-1 border-dashed">
+                                <FileText className="h-3 w-3" />
+                                <SelectValue placeholder="Trocar caso" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableCases.map((c) => (
+                                  <SelectItem key={c.index} value={String(c.index)} className="text-xs">
+                                    {c.title}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           )}
                           {canSwap && swapCandidates.length > 0 && (
                             <Select onValueChange={(val) => swapAssignmentParticipant(a.id, val)}>
