@@ -713,9 +713,18 @@ export default function SimulationControl() {
             const isCompleted = round.status === "completed";
             const isPending = round.status === "pending";
 
-            // Eligible substitutes for swapping (only patient/observer can be swapped, professional must remain to keep the evaluation history)
-            const usedIds = new Set(roundAssignments.map((a: any) => a.participant_id));
-            const swapCandidates = students.filter((s: any) => !usedIds.has(s.id));
+            // Eligible substitutes: every student in the room. Students free in this round come first;
+            // students already assigned here can also be chosen (roles are traded).
+            const usedRoleById = new Map<string, string>(
+              roundAssignments.map((a: any) => [a.participant_id, a.assigned_role])
+            );
+            const swapCandidates = [...students].sort((a: any, b: any) => {
+              const au = usedRoleById.has(a.id) ? 1 : 0;
+              const bu = usedRoleById.has(b.id) ? 1 : 0;
+              if (au !== bu) return au - bu;
+              return (a.student_name || "").localeCompare(b.student_name || "");
+            });
+
 
             return (
               <Card key={round.id} className={isActive ? "ring-2 ring-primary" : ""}>
