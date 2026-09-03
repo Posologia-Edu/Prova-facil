@@ -779,11 +779,18 @@ export default function SimulationControl() {
                                 <SelectValue placeholder="Substituir" />
                               </SelectTrigger>
                               <SelectContent>
-                                {swapCandidates.map((c: any) => (
-                                  <SelectItem key={c.id} value={c.id} className="text-xs">
-                                    {c.student_name}
-                                  </SelectItem>
-                                ))}
+                                {swapCandidates
+                                  .filter((c: any) => c.id !== a.participant_id)
+                                  .map((c: any) => {
+                                    const busyRole = usedRoleById.get(c.id);
+                                    return (
+                                      <SelectItem key={c.id} value={c.id} className="text-xs">
+                                        {c.student_name}
+                                        {busyRole ? ` — trocar com ${roleLabels[busyRole] || busyRole}` : ""}
+                                      </SelectItem>
+                                    );
+                                  })}
+
                               </SelectContent>
                             </Select>
                           )}
