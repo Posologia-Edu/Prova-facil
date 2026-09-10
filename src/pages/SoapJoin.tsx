@@ -232,7 +232,7 @@ export default function SoapJoin() {
       const { data: anamnesisMe } = await supabase
         .from("simulation_participants")
         .select("pair_index, room_id")
-        .eq("id", me.anamnesis_participant_id)
+        .eq("id", anamPid)
         .single();
       if (anamnesisMe && anamnesisMe.pair_index >= 0) {
         const { data: anamnesisPartner } = await supabase
@@ -240,7 +240,7 @@ export default function SoapJoin() {
           .select("student_name")
           .eq("room_id", anamnesisMe.room_id)
           .eq("pair_index", anamnesisMe.pair_index)
-          .neq("id", me.anamnesis_participant_id)
+          .neq("id", anamPid)
           .limit(1)
           .maybeSingle();
         if (anamnesisPartner) setPatientName(anamnesisPartner.student_name);
@@ -249,7 +249,7 @@ export default function SoapJoin() {
       const { data: responses } = await supabase
         .from("simulation_responses")
         .select("answers_json, form_id")
-        .eq("participant_id", me.anamnesis_participant_id);
+        .eq("participant_id", anamPid);
       if (responses?.length) {
         const merged: Record<string, any> = {};
         const formIds = [...new Set(responses.map((r) => r.form_id))];
