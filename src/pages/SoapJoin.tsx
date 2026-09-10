@@ -187,13 +187,52 @@ export default function SoapJoin() {
       if (partners?.length) setPartner(partners[0]);
     }
 
+    // Resolve the anamnesis participant: use the stored link when present,
+    // otherwise fall back to matching by e-mail and then by name so students
+    // added/substituted later still receive their own anamnesis answers.
+    let anamPid: string | null = me.anamnesis_participant_id || null;
+    if (!anamPid) {
+      const normalize = (s: string) =>
+        (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+      const { data: byEmail } = await supabase
+        .from("simulation_participants")
+        .select("id, student_name, student_email, created_at")
+        .ilike("student_email", (me.student_email || "").trim())
+        .order("created_at", { ascending: false });
+      let candidates = byEmail || [];
+      if (!candidates.length && me.student_name) {
+        const { data: all } = await supabase
+          .from("simulation_participants")
+          .select("id, student_name, student_email, created_at")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        candidates = (all || []).filter(
+          (p: any) => normalize(p.student_name) === normalize(me.student_name)
+        );
+      }
+      for (const c of candidates) {
+        const { data: subs } = await supabase
+          .from("simulation_responses")
+          .select("id")
+          .eq("participant_id", c.id)
+          .not("submitted_at", "is", null)
+          .limit(1);
+        if (subs?.length) { anamPid = c.id; break; }
+      }
+      if (anamPid) {
+        await supabase.from("soap_participants").update({ anamnesis_participant_id: anamPid }).eq("id", me.id);
+        me.anamnesis_participant_id = anamPid;
+      }
+    }
+
     // Load anamnesis data and find patient name
-    if (me.anamnesis_participant_id) {
+    if (anamPid) {
+
       // Find the patient (partner in anamnesis pair)
       const { data: anamnesisMe } = await supabase
         .from("simulation_participants")
         .select("pair_index, room_id")
-        .eq("id", me.anamnesis_participant_id)
+        .eq("id", anamPid)
         .single();
       if (anamnesisMe && anamnesisMe.pair_index >= 0) {
         const { data: anamnesisPartner } = await supabase
@@ -201,7 +240,7 @@ export default function SoapJoin() {
           .select("student_name")
           .eq("room_id", anamnesisMe.room_id)
           .eq("pair_index", anamnesisMe.pair_index)
-          .neq("id", me.anamnesis_participant_id)
+          .neq("id", anamPid)
           .limit(1)
           .maybeSingle();
         if (anamnesisPartner) setPatientName(anamnesisPartner.student_name);
@@ -210,7 +249,7 @@ export default function SoapJoin() {
       const { data: responses } = await supabase
         .from("simulation_responses")
         .select("answers_json, form_id")
-        .eq("participant_id", me.anamnesis_participant_id);
+        .eq("participant_id", anamPid);
       if (responses?.length) {
         const merged: Record<string, any> = {};
         const formIds = [...new Set(responses.map((r) => r.form_id))];

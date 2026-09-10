@@ -1,0 +1,2 @@
+UPDATE public.soap_participants SET anamnesis_participant_id = '35bb3db4-6011-4f34-b076-b980fbd43f0f', status = 'joined' WHERE id = 'f6207325-95fc-4074-ba38-956919ffb3e0';
+UPDATE public.soap_participants SET anamnesis_participant_id = 'df4d612e-75fe-4352-88ce-88aa86dcae59', status = 'joined' WHERE id = '9267e264-b530-426d-a7b3-2aa9fe003bb8';
