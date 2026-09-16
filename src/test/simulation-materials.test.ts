@@ -5,6 +5,7 @@ import {
   areCycleMaterialsReleased,
   canAccessCycleMaterials,
   getCycleCaseIndex,
+  getMaterialStudyRole,
   getMaterialCycle,
   hasCycleStarted,
   getStudyRole,
@@ -27,6 +28,13 @@ describe("simulation material helpers", () => {
     expect(getStudyRole("B", 1)).toBe("patient");
     expect(getStudyRole("A", 2)).toBe("patient");
     expect(getStudyRole("B", 2)).toBe("professional");
+  });
+
+  it("does not let a temporary observer assignment replace pair study materials", () => {
+    expect(getMaterialStudyRole("A", 1, "observer")).toBe("professional");
+    expect(getMaterialStudyRole("B", 1, "observer")).toBe("patient");
+    expect(getMaterialStudyRole("A", 2, "observer")).toBe("patient");
+    expect(getMaterialStudyRole("B", 2, "observer")).toBe("professional");
   });
 
   it("finds the patient case from the participant pair when needed", () => {
