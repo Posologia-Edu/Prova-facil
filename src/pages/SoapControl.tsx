@@ -313,13 +313,20 @@ export default function SoapControl() {
       const soapForm = forms.find((f: any) => f.form_type === "standard" || f.form_type === "soap");
       const soapFormFields = soapForm ? (Array.isArray(soapForm.content_json) ? soapForm.content_json : []) : [];
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        throw new Error("Sua sessão expirou. Entre novamente para corrigir com IA.");
+      }
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/grade-soap`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             response_id: selectedResponse.id,
