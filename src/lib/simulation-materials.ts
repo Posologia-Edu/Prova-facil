@@ -55,6 +55,16 @@ export function getStudyRole(pairPosition?: string, cycle = 1) {
   return null;
 }
 
+export function getMaterialStudyRole(
+  pairPosition: string | undefined,
+  cycle: number,
+  directAssignmentRole?: string,
+) {
+  // Study materials follow the student's fixed position in the pair. Observer
+  // is only a temporary execution role and must not replace the patient script.
+  return getStudyRole(pairPosition, cycle) || directAssignmentRole || "professional";
+}
+
 export function getCycleCaseIndex<T extends AssignmentLike>(
   assignments: T[],
   roundIds: string[],

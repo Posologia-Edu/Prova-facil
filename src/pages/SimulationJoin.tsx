@@ -25,10 +25,10 @@ import {
   areCycleMaterialsReleased,
   canAccessCycleMaterials,
   getCycleCaseIndex,
+  getMaterialStudyRole,
   hasCycleStarted,
   getMaterialCycle,
   getPendingRoundsSorted,
-  getStudyRole,
 } from "@/lib/simulation-materials";
 import SimulationPausedView from "@/components/simulation/SimulationPausedView";
 import { useFormDraft } from "@/hooks/use-form-draft";
@@ -1326,9 +1326,14 @@ export default function SimulationJoin() {
             participant?.id,
             participant?.pair_index,
           );
-          // In solo/manual mode, use the actual assigned_role from round assignments
+          // Pair position defines study material; observer is only a runtime role.
+          // Direct assignment remains a fallback for manual distributions without A/B/S positions.
           const myDirectAssignment = cycleAssigns.find((assignment: any) => assignment.participant_id === participant?.id);
-          const myRole = myDirectAssignment?.assigned_role || getStudyRole(participant?.pair_position, materialCycle) || "professional";
+          const myRole = getMaterialStudyRole(
+            participant?.pair_position,
+            materialCycle,
+            myDirectAssignment?.assigned_role,
+          );
 
           // Professionals see anamnesis form
           if (myRole === "professional") {
