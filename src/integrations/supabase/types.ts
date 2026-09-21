@@ -7045,6 +7045,36 @@ export type Database = {
           },
         ]
       }
+      wpagents_verification_codes: {
+        Row: {
+          attempts: number
+          code: string
+          consumed_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+        }
+        Insert: {
+          attempts?: number
+          code: string
+          consumed_at?: string | null
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+        }
+        Update: {
+          attempts?: number
+          code?: string
+          consumed_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
