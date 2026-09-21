@@ -42,7 +42,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-wpagents-key",
 };
 
+// A test/instructor account can rack up many exam sessions over a semester —
+// the sibling TBL repo hit this live (11 rooms in one payload made the
+// caller's own LLM tool-result call time out even at 60s, and would have
+// produced an unreadable wall of text on WhatsApp regardless). Default to
+// just the single most recent exam; a student who wants an older one can
+// name it via the optional `prova` argument, after being told (via
+// mais_provas_disponiveis, below) which other exams exist.
 const MAX_EXAM_SESSIONS = 10;
+const DEFAULT_EXAM_LIMIT = 1;
 // Bounds the SOAP/reconciliation/documentation/anamnese scans below to
 // recent rooms, so this doesn't grow unbounded as rooms accumulate over
 // semesters/years.
@@ -92,7 +100,7 @@ function questionStem(content: Record<string, any>): string {
   return content?.stem || content?.question_text || content?.statement || "Questão";
 }
 
-async function findExamResults(supabase: any, email: string) {
+async function findExamResults(supabase: any, email: string, examFilter?: string | null) {
   const { data: sessions, error: sessErr } = await supabase
     .from("exam_sessions")
     .select("id, publication_id, total_score, max_score, status, finished_at")
@@ -101,7 +109,7 @@ async function findExamResults(supabase: any, email: string) {
     .order("finished_at", { ascending: false })
     .limit(MAX_EXAM_SESSIONS);
   if (sessErr) throw sessErr;
-  if (!sessions?.length) return [];
+  if (!sessions?.length) return { provas: [] };
 
   const publicationIds = Array.from(new Set(sessions.map((s: any) => s.publication_id)));
   const { data: publications, error: pubErr } = await supabase
@@ -118,15 +126,37 @@ async function findExamResults(supabase: any, email: string) {
     .in("id", examIds);
   if (examErr) throw examErr;
   const examTitleById = new Map((exams || []).map((e: any) => [e.id, e.title]));
+  const titleForSession = (sess: any) => examTitleById.get(examIdByPubId.get(sess.publication_id)) || "Prova";
 
-  const sessionIds = sessions.map((s: any) => s.id);
+  // A test/instructor account can pile up many exam sessions — default to
+  // the single most recent one so this (and the LLM call that reads it)
+  // doesn't blow up on a heavy account; a student can ask for an older one
+  // by title via the optional `prova` argument.
+  let selectedSessions = sessions;
+  let maisProvasDisponiveis: { titulo: string; data: string }[] = [];
+  if (examFilter) {
+    const matched = sessions.filter((s: any) => titleForSession(s).toLowerCase().includes(examFilter.toLowerCase()));
+    if (matched.length === 0) {
+      return {
+        provas: [],
+        prova_nao_encontrada: examFilter,
+        provas_disponiveis: sessions.map((s: any) => titleForSession(s)),
+      };
+    }
+    selectedSessions = matched;
+  } else if (sessions.length > DEFAULT_EXAM_LIMIT) {
+    maisProvasDisponiveis = sessions.slice(DEFAULT_EXAM_LIMIT).map((s: any) => ({ titulo: titleForSession(s), data: s.finished_at }));
+    selectedSessions = sessions.slice(0, DEFAULT_EXAM_LIMIT);
+  }
+
+  const sessionIds = selectedSessions.map((s: any) => s.id);
   const { data: answers, error: ansErr } = await supabase
     .from("student_answers")
     .select("session_id, question_id, answer_text, answer_json, is_correct, points_earned, max_points, grading_status, ai_score, ai_feedback, teacher_score, teacher_feedback, question_bank(type, content_json)")
     .in("session_id", sessionIds);
   if (ansErr) throw ansErr;
 
-  return sessions.map((sess: any) => {
+  const provas = selectedSessions.map((sess: any) => {
     const examId = examIdByPubId.get(sess.publication_id);
     const sessAnswers = (answers || []).filter((a: any) => a.session_id === sess.id);
 
@@ -177,6 +207,11 @@ async function findExamResults(supabase: any, email: string) {
       questoes_erradas,
     };
   });
+
+  return {
+    provas,
+    ...(maisProvasDisponiveis.length ? { mais_provas_disponiveis: maisProvasDisponiveis } : {}),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -403,14 +438,21 @@ async function findSimulationRealisticaResults(supabase: any, email: string) {
   };
 }
 
-async function findStudentPerformance(supabase: any, email: string) {
-  const [provas, simulacaoRealistica] = await Promise.all([
-    findExamResults(supabase, email),
+async function findStudentPerformance(supabase: any, email: string, provaFilter?: string | null) {
+  const [examResult, simulacaoRealistica] = await Promise.all([
+    findExamResults(supabase, email, provaFilter),
     findSimulationRealisticaResults(supabase, email),
   ]);
 
-  const encontrado = provas.length > 0 || simulacaoRealistica != null;
-  return { aluno_email: email, encontrado, provas, simulacao_realistica: simulacaoRealistica };
+  const encontrado = examResult.provas.length > 0 || simulacaoRealistica != null || !!examResult.prova_nao_encontrada;
+  return {
+    aluno_email: email,
+    encontrado,
+    provas: examResult.provas,
+    simulacao_realistica: simulacaoRealistica,
+    ...(examResult.mais_provas_disponiveis ? { mais_provas_disponiveis: examResult.mais_provas_disponiveis } : {}),
+    ...(examResult.prova_nao_encontrada ? { prova_nao_encontrada: examResult.prova_nao_encontrada, provas_disponiveis: examResult.provas_disponiveis } : {}),
+  };
 }
 
 Deno.serve(async (req) => {
@@ -428,17 +470,20 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     let email = url.searchParams.get("email");
     let code = url.searchParams.get("code");
+    let prova = url.searchParams.get("prova");
     if (!email && req.method === "POST") {
       try {
         const body = await req.json();
         email = body?.email ?? null;
         code = body?.code ?? code;
+        prova = body?.prova ?? prova;
       } catch {
         // no/invalid JSON body — email stays null, handled below
       }
     }
     email = (email || "").trim().toLowerCase();
     code = (code || "").trim();
+    prova = (prova || "").trim() || null;
 
     if (!email || !email.includes("@")) {
       return json({ error: "Parâmetro 'email' ausente ou inválido." }, 400);
@@ -490,7 +535,7 @@ Deno.serve(async (req) => {
         .update({ consumed_at: new Date().toISOString() })
         .eq("id", pending.id);
 
-      const result = await findStudentPerformance(supabase, email);
+      const result = await findStudentPerformance(supabase, email, prova);
       return json({ status: "verified", ...result });
     }
 
