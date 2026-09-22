@@ -26,6 +26,16 @@ import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { VP_CLINICAL_CASES } from "@/lib/vp-clinical-cases";
 import { Stethoscope, ClipboardList, Target } from "lucide-react";
+import { computePeerBonus, PEER_EVAL_MAX_ADJUST } from "@/lib/vp-peer-eval";
+
+interface PeerEvalRow {
+  evaluator_name: string | null;
+  evaluator_email: string;
+  participacao_score: number;
+  contribuicao_score: number;
+  colaboracao_score: number;
+  comentario: string | null;
+}
 
 const VP_CATALOG: Record<string, { name: string; module: string }> = {
   pain_helena: { name: "Dona Helena, 67 anos", module: "Dor" },
@@ -88,6 +98,8 @@ export default function VPAnalytics() {
     flags_seguranca: string;
   } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [peerEvals, setPeerEvals] = useState<PeerEvalRow[]>([]);
+  const [peerEvalsLoading, setPeerEvalsLoading] = useState(false);
 
   // Batch grading
   const [grading, setGrading] = useState(false);
@@ -291,6 +303,19 @@ export default function VPAnalytics() {
   const openDetail = async (grade: GradeRow) => {
     setDetailGrade(grade);
     setEditMode(false);
+    setPeerEvals([]);
+    if (grade.group_id && grade.student_email) {
+      setPeerEvalsLoading(true);
+      supabase
+        .from("virtual_patient_peer_evaluations")
+        .select("evaluator_name, evaluator_email, participacao_score, contribuicao_score, colaboracao_score, comentario")
+        .eq("group_id", grade.group_id)
+        .eq("evaluatee_email", grade.student_email.trim().toLowerCase())
+        .then(({ data }) => {
+          setPeerEvals((data as PeerEvalRow[]) || []);
+          setPeerEvalsLoading(false);
+        });
+    }
     const subs = (grade.subscores && typeof grade.subscores === "object") ? grade.subscores : {};
     const flagsArr = Array.isArray(grade.flags_seguranca) ? grade.flags_seguranca : [];
     setEditForm({
@@ -1330,12 +1355,16 @@ export default function VPAnalytics() {
                         />
                       ) : (() => {
                         const bonus = microBonus(detailGrade.nota_microlearning);
-                        const finalScore = finalWithBonus(detailGrade.nota_final, detailGrade.nota_microlearning);
+                        const peerBonus = peerEvals.length > 0 ? computePeerBonus(peerEvals) : 0;
+                        const finalScore = Math.max(0, Math.min(10,
+                          finalWithBonus(detailGrade.nota_final, detailGrade.nota_microlearning) + peerBonus,
+                        ));
                         return (
                           <>
                             <p className="text-2xl font-bold mt-1">{finalScore.toFixed(1)}/10</p>
                             <p className="text-[11px] text-muted-foreground mt-0.5">
                               Base {(detailGrade.nota_final || 0).toFixed(2)} {bonus > 0 && <>+ Bônus <strong className="text-primary">{bonus.toFixed(2)}</strong></>}
+                              {peerBonus !== 0 && <> + Pares <strong className={peerBonus > 0 ? "text-primary" : "text-destructive"}>{peerBonus >= 0 ? "+" : ""}{peerBonus.toFixed(2)}</strong></>}
                             </p>
                           </>
                         );
@@ -1420,6 +1449,46 @@ export default function VPAnalytics() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Avaliação entre pares (somente leitura — visão do professor, com identidade do avaliador) */}
+                {!editMode && detailGrade.group_id && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                      Avaliação entre Pares
+                      {peerEvals.length > 0 && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Bônus: {computePeerBonus(peerEvals) >= 0 ? "+" : ""}{computePeerBonus(peerEvals).toFixed(2)}
+                          {" "}(teto ±{PEER_EVAL_MAX_ADJUST.toFixed(1)})
+                        </Badge>
+                      )}
+                    </h4>
+                    {peerEvalsLoading ? (
+                      <p className="text-xs text-muted-foreground">Carregando...</p>
+                    ) : peerEvals.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nenhum colega avaliou este aluno ainda (ou o convite ainda não foi enviado).</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {new Set(peerEvals.map((p) => `${p.participacao_score}-${p.contribuicao_score}-${p.colaboracao_score}`)).size === 1 &&
+                          peerEvals.length > 1 && (
+                            <p className="text-xs text-amber-600 flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" /> Todos os avaliadores deram exatamente as mesmas notas — vale conferir.
+                            </p>
+                          )}
+                        {peerEvals.map((p, i) => (
+                          <div key={i} className="p-2 rounded border text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{p.evaluator_name || p.evaluator_email}</span>
+                              <span className="text-muted-foreground">
+                                P:{p.participacao_score} · T:{p.contribuicao_score} · C:{p.colaboracao_score}
+                              </span>
+                            </div>
+                            {p.comentario && <p className="text-muted-foreground mt-1 italic">"{p.comentario}"</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 

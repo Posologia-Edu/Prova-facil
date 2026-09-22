@@ -4,10 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Loader2, Award, MessageSquare, Stethoscope, ShieldAlert, Pill } from "lucide-react";
+import { ArrowLeft, Loader2, Award, MessageSquare, Stethoscope, ShieldAlert, Pill, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
+import { PEER_EVAL_MAX_ADJUST } from "@/lib/vp-peer-eval";
+
+interface PeerEvalSummary {
+  count: number;
+  bonus: number;
+  participacao_avg?: number;
+  contribuicao_avg?: number;
+  colaboracao_avg?: number;
+}
 
 interface Grade {
   id: string;
@@ -45,6 +54,7 @@ export default function VirtualPatientFeedback() {
   const [transcript, setTranscript] = useState<Msg[]>([]);
   const [studentName, setStudentName] = useState("");
   const [patientName, setPatientName] = useState("");
+  const [peerSummary, setPeerSummary] = useState<PeerEvalSummary | null>(null);
 
   useEffect(() => {
     load();
@@ -74,6 +84,13 @@ export default function VirtualPatientFeedback() {
     }
     setStudentName(session.student_name || "");
     setPatientName(session.patient_id || "");
+
+    if (session.group_id && cvpId) {
+      const { data: summary } = await supabase.functions.invoke("vp-peer-eval-summary", {
+        body: { class_virtual_patient_id: cvpId, email },
+      });
+      if (summary && !summary.error) setPeerSummary(summary as PeerEvalSummary);
+    }
 
     // Buscar a nota — pode estar na própria sessão OU em qualquer membro do grupo
     let { data: gradeData } = await supabase
@@ -181,8 +198,10 @@ export default function VirtualPatientFeedback() {
     );
   }
 
-  const finalScore = finalWithBonus(grade.nota_final, grade.nota_microlearning);
+  const baseWithMicroBonus = finalWithBonus(grade.nota_final, grade.nota_microlearning);
   const bonus = microBonus(grade.nota_microlearning);
+  const peerBonus = peerSummary?.count ? peerSummary.bonus : 0;
+  const finalScore = Math.max(0, Math.min(10, baseWithMicroBonus + peerBonus));
   const flags = Array.isArray(grade.flags_seguranca) ? grade.flags_seguranca : [];
 
   return (
@@ -211,12 +230,45 @@ export default function VirtualPatientFeedback() {
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Base: {(grade.nota_final || 0).toFixed(2)} + Bônus de Eficiência Clínica: {bonus.toFixed(2)}
+              {peerSummary?.count ? <> + Avaliação entre Pares: {peerBonus >= 0 ? "+" : ""}{peerBonus.toFixed(2)}</> : null}
             </p>
             <p className="text-xs text-muted-foreground">
               Eficiência Clínica: {(grade.nota_microlearning || 0).toFixed(1)} / 5
             </p>
           </CardContent>
         </Card>
+
+        {/* Avaliação entre pares */}
+        {peerSummary && peerSummary.count > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" /> Avaliação entre Pares
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Média das notas dadas por {peerSummary.count} colega{peerSummary.count > 1 ? "s" : ""} de grupo
+                (as respostas individuais não são identificadas). Isso ajusta sua nota final em até{" "}
+                {PEER_EVAL_MAX_ADJUST.toFixed(1)} ponto{PEER_EVAL_MAX_ADJUST !== 1 ? "s" : ""}.
+              </p>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="p-2 rounded border text-center">
+                  <p className="text-xs text-muted-foreground">Participação</p>
+                  <Badge variant="secondary">{(peerSummary.participacao_avg ?? 0).toFixed(1)} / 5</Badge>
+                </div>
+                <div className="p-2 rounded border text-center">
+                  <p className="text-xs text-muted-foreground">Contribuição técnica</p>
+                  <Badge variant="secondary">{(peerSummary.contribuicao_avg ?? 0).toFixed(1)} / 5</Badge>
+                </div>
+                <div className="p-2 rounded border text-center">
+                  <p className="text-xs text-muted-foreground">Colaboração</p>
+                  <Badge variant="secondary">{(peerSummary.colaboracao_avg ?? 0).toFixed(1)} / 5</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Subscores */}
         {grade.subscores && Object.keys(grade.subscores).length > 0 && (

@@ -59,6 +59,7 @@ export default function VirtualPatientRoom() {
   const [groupEmails, setGroupEmails] = useState<string[]>([]);
   const [groupNames, setGroupNames] = useState<string[]>([]);
   const [groupSessionIds, setGroupSessionIds] = useState<string[]>([]);
+  const [groupId, setGroupId] = useState<string>("");
   const [remoteTyping, setRemoteTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const sessionIdRef = useRef<string>("");
@@ -193,6 +194,7 @@ export default function VirtualPatientRoom() {
 
       const found = (existingForGroup || []).find((s: any) => s.group_id);
       sharedGroupId = found?.group_id || crypto.randomUUID();
+      setGroupId(sharedGroupId);
 
       const existingByEmail = new Map<string, any>();
       (existingForGroup || []).forEach((s: any) => existingByEmail.set(s.student_email, s));
@@ -463,6 +465,18 @@ export default function VirtualPatientRoom() {
     setShowMAI(false);
     setSessionCompleted(true);
 
+    // Case is considered finished the moment the group submits the MAI — this is
+    // the trigger point for peer-eval invites, independent of AI grading below
+    // (which can fail/be retried later without blocking the peer-eval e-mails).
+    if (isGroupSession && groupSessionIds.length > 1 && groupId) {
+      supabase.functions
+        .invoke("send-vp-peer-eval-invites", { body: { group_id: groupId, class_virtual_patient_id: cvpId } })
+        .then(({ error }) => {
+          if (error) console.warn("Peer eval invite failed:", error);
+        })
+        .catch((err) => console.warn("Peer eval invite failed:", err));
+    }
+
     try {
       if (isGroupSession && groupSessionIds.length > 1) {
         // Group activity → grade ONCE on primary session, then mirror the same grade
@@ -506,7 +520,7 @@ export default function VirtualPatientRoom() {
             }
           }
         }
-        toast.success("Correção em grupo gerada — todos os integrantes receberão a mesma avaliação.");
+        toast.success("Correção em grupo gerada. Um e-mail para avaliação entre pares foi enviado a cada integrante.");
       } else {
         const { error: gradeErr } = await supabase.functions.invoke("grade-virtual-patient", {
           body: { session_id: sessionId, class_virtual_patient_id: cvpId },

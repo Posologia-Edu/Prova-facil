@@ -111,6 +111,7 @@ import VirtualPatients from "./pages/VirtualPatients";
 import VirtualPatientChat from "./pages/VirtualPatientChat";
 import VirtualPatientRoom from "./pages/VirtualPatientRoom";
 import VirtualPatientFeedback from "./pages/VirtualPatientFeedback";
+import VpPeerEvaluation from "./pages/VpPeerEvaluation";
 import VPAnalytics from "./pages/VPAnalytics";
 import VPResearch from "./pages/VPResearch";
 import Features from "./pages/Features";
@@ -514,6 +515,7 @@ const App = () => (
             {/* Public Virtual Patient Room (student access via PIN) */}
             <Route path="/virtual-patients/room/:cvpId" element={<VirtualPatientRoom />} />
             <Route path="/virtual-patients/feedback/:cvpId" element={<VirtualPatientFeedback />} />
+            <Route path="/virtual-patients/peer-eval/:token" element={<VpPeerEvaluation />} />
             {/* SCT Routes */}
             <Route
               path="/sct"

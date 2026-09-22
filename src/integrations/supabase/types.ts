@@ -6840,6 +6840,100 @@ export type Database = {
           },
         ]
       }
+      virtual_patient_peer_eval_tokens: {
+        Row: {
+          class_virtual_patient_id: string
+          created_at: string
+          evaluator_email: string
+          evaluator_name: string | null
+          expires_at: string
+          group_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          class_virtual_patient_id: string
+          created_at?: string
+          evaluator_email: string
+          evaluator_name?: string | null
+          expires_at: string
+          group_id: string
+          token?: string
+          used_at?: string | null
+        }
+        Update: {
+          class_virtual_patient_id?: string
+          created_at?: string
+          evaluator_email?: string
+          evaluator_name?: string | null
+          expires_at?: string
+          group_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "virtual_patient_peer_eval_tokens_class_virtual_patient_id_fkey"
+            columns: ["class_virtual_patient_id"]
+            isOneToOne: false
+            referencedRelation: "class_virtual_patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      virtual_patient_peer_evaluations: {
+        Row: {
+          class_virtual_patient_id: string
+          colaboracao_score: number
+          comentario: string | null
+          contribuicao_score: number
+          created_at: string
+          evaluatee_email: string
+          evaluatee_name: string | null
+          evaluator_email: string
+          evaluator_name: string | null
+          group_id: string
+          id: string
+          participacao_score: number
+        }
+        Insert: {
+          class_virtual_patient_id: string
+          colaboracao_score: number
+          comentario?: string | null
+          contribuicao_score: number
+          created_at?: string
+          evaluatee_email: string
+          evaluatee_name?: string | null
+          evaluator_email: string
+          evaluator_name?: string | null
+          group_id: string
+          id?: string
+          participacao_score: number
+        }
+        Update: {
+          class_virtual_patient_id?: string
+          colaboracao_score?: number
+          comentario?: string | null
+          contribuicao_score?: number
+          created_at?: string
+          evaluatee_email?: string
+          evaluatee_name?: string | null
+          evaluator_email?: string
+          evaluator_name?: string | null
+          group_id?: string
+          id?: string
+          participacao_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "virtual_patient_peer_evaluations_class_virtual_patient_id_fkey"
+            columns: ["class_virtual_patient_id"]
+            isOneToOne: false
+            referencedRelation: "class_virtual_patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       virtual_patient_sessions: {
         Row: {
           class_virtual_patient_id: string | null

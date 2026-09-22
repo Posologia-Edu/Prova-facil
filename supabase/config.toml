@@ -74,3 +74,15 @@ verify_jwt = false
 
 [functions.grade-mock-trial-jury-panel]
 verify_jwt = false
+
+[functions.send-vp-peer-eval-invites]
+verify_jwt = false
+
+[functions.vp-peer-eval-context]
+verify_jwt = false
+
+[functions.submit-vp-peer-evaluation]
+verify_jwt = false
+
+[functions.vp-peer-eval-summary]
+verify_jwt = false
