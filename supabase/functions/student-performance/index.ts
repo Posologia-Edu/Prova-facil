@@ -664,13 +664,13 @@ async function findJuriSimuladoResults(supabase: any, email: string) {
 
   const groupIds = Array.from(new Set(students.map((s: any) => s.group_id)));
   const { data: groups } = await supabase.from("mock_trial_groups").select("id, name, mock_trial_id").in("id", groupIds);
-  const groupById = new Map((groups || []).map((g: any) => [g.id, g]));
+  const groupById = new Map<string, any>((groups || []).map((g: any) => [String(g.id), g]));
 
   const trialIds = Array.from(new Set((groups || []).map((g: any) => g.mock_trial_id)));
   const { data: trials } = trialIds.length
     ? await supabase.from("mock_trials").select("id, title").in("id", trialIds)
     : { data: [] };
-  const trialById = new Map((trials || []).map((t: any) => [t.id, t]));
+  const trialById = new Map<string, any>((trials || []).map((t: any) => [String(t.id), t]));
 
   // One membership per (student row, trial); a student normally has exactly
   // one mock_trial_students row per trial they joined. Kept in the
@@ -721,7 +721,7 @@ async function findJuriSimuladoResults(supabase: any, email: string) {
     .select("case_id, status, score_override, notes")
     .eq("student_id", selected.student.id)
     .in("case_id", caseIds);
-  const attendanceByCase = new Map((attendance || []).map((a: any) => [a.case_id, a]));
+  const attendanceByCase = new Map<string, any>((attendance || []).map((a: any) => [String(a.case_id), a]));
 
   const processos = assignments.map((assign: any) => {
     const caseInfo = (cases || []).find((c: any) => c.id === assign.case_id);
@@ -792,7 +792,7 @@ async function findClinicalObservationResults(supabase: any, email: string) {
   const { data: observations } = obsIds.length
     ? await supabase.from("clinical_observations").select("id, title, type, competency_domains_json").in("id", obsIds)
     : { data: [] };
-  const obsById = new Map((observations || []).map((o: any) => [o.id, o]));
+  const obsById = new Map<string, any>((observations || []).map((o: any) => [String(o.id), o]));
 
   // Same "heavy account -> most recent only, list the rest by title" cap
   // used by every other module in this file.
@@ -843,19 +843,19 @@ async function findOsceResults(supabase: any, email: string) {
 
   const circuitIds = Array.from(new Set(evaluations.map((e: any) => e.circuit_id)));
   const { data: circuits } = await supabase.from("osce_circuits").select("id, osce_exam_id").in("id", circuitIds);
-  const examIdByCircuit = new Map((circuits || []).map((c: any) => [c.id, c.osce_exam_id]));
+  const examIdByCircuit = new Map<string, string>((circuits || []).map((c: any) => [String(c.id), String(c.osce_exam_id)]));
 
   const examIds = Array.from(new Set((circuits || []).map((c: any) => c.osce_exam_id)));
   const { data: exams } = examIds.length
     ? await supabase.from("osce_exams").select("id, title").in("id", examIds)
     : { data: [] };
-  const examById = new Map((exams || []).map((e: any) => [e.id, e]));
+  const examById = new Map<string, any>((exams || []).map((e: any) => [String(e.id), e]));
 
   const stationIds = Array.from(new Set(evaluations.map((e: any) => e.station_id)));
   const { data: stations } = stationIds.length
     ? await supabase.from("osce_stations").select("id, title").in("id", stationIds)
     : { data: [] };
-  const stationById = new Map((stations || []).map((s: any) => [s.id, s]));
+  const stationById = new Map<string, any>((stations || []).map((s: any) => [String(s.id), s]));
 
   const evalIds = evaluations.map((e: any) => e.id);
   const { data: items } = evalIds.length
@@ -865,7 +865,7 @@ async function findOsceResults(supabase: any, email: string) {
   const { data: checklistItems } = checklistItemIds.length
     ? await supabase.from("osce_checklist_items").select("id, description, type, likert_max, max_points, is_critical").in("id", checklistItemIds)
     : { data: [] };
-  const checklistById = new Map((checklistItems || []).map((c: any) => [c.id, c]));
+  const checklistById = new Map<string, any>((checklistItems || []).map((c: any) => [String(c.id), c]));
 
   // Group evaluations by OSCE exam (a circuit's rotation covers several
   // stations, each its own evaluation row); keep newest-exam-first order
@@ -875,8 +875,13 @@ async function findOsceResults(supabase: any, email: string) {
   for (const ev of evaluations) {
     const examId = examIdByCircuit.get(ev.circuit_id);
     if (!examId) continue;
-    if (!byExam.has(examId)) { byExam.set(examId, []); examOrder.push(examId); }
-    byExam.get(examId)!.push(ev);
+    let examEvaluations = byExam.get(examId);
+    if (!examEvaluations) {
+      examEvaluations = [];
+      byExam.set(examId, examEvaluations);
+      examOrder.push(examId);
+    }
+    examEvaluations.push(ev);
   }
   if (!examOrder.length) return { osce: [] };
 
