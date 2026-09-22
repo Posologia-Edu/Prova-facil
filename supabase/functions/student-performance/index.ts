@@ -19,8 +19,8 @@ import { Resend } from "https://esm.sh/resend@4.0.0";
 //      expired, not already used, capped attempts) and only then returns
 //      the actual results.
 //
-// Unlike the simulador repo, "results" here spans two very different shapes
-// (see findStudentPerformance below):
+// Unlike the simulador repo, "results" here spans three very different
+// shapes (see findStudentPerformance below):
 //   - `provas`: traditional exams (exam_sessions/student_answers), the
 //     closest analog to the simulador's MC-question review — per-question
 //     correct/incorrect + points.
@@ -30,6 +30,15 @@ import { Resend } from "https://esm.sh/resend@4.0.0";
 //     (a client-only React component with no server-side equivalent before
 //     this) — AI-graded, rubric/field-based feedback rather than fixed
 //     right/wrong questions.
+//   - `pacientes_virtuais`: the AI-patient anamnese/MAI exercise (a group of
+//     students interviews an AI-role-played patient; ProvaFácil's own AI
+//     grades the group on a 10-item rubric + safety flags), ported from
+//     src/pages/VirtualPatientFeedback.tsx (student-facing) and
+//     src/pages/VPAnalytics.tsx (teacher grading UI) — a completely
+//     separate module/table set from `simulacao_realistica` above despite
+//     both involving an "anamnese", first added here after a student's own
+//     virtual-patient result came back "not found" even though it had been
+//     graded, because this module simply had no query at all.
 //
 // Every module here identifies a participant by a freely-typed
 // `student_email` column with no FK to any central roster (confirmed by
@@ -51,9 +60,9 @@ const corsHeaders = {
 // mais_provas_disponiveis, below) which other exams exist.
 const MAX_EXAM_SESSIONS = 10;
 const DEFAULT_EXAM_LIMIT = 1;
-// Bounds the SOAP/reconciliation/documentation/anamnese scans below to
-// recent rooms, so this doesn't grow unbounded as rooms accumulate over
-// semesters/years.
+// Bounds the SOAP/reconciliation/documentation/anamnese/virtual-patient
+// scans below to recent rooms, so this doesn't grow unbounded as rooms
+// accumulate over semesters/years.
 const ROOM_SCAN_SINCE_DAYS = 365;
 
 const CODE_TTL_MINUTES = 10;
@@ -438,18 +447,164 @@ async function findSimulationRealisticaResults(supabase: any, email: string) {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Pacientes Virtuais (VP) — a group of students interviews an AI-role-played
+// patient; ProvaFácil's own AI grades the shared encounter on a 10-item
+// rubric (6 "Anamnese" items + 4 "MAI" — Medication Appropriateness Index —
+// items) plus a clinical-efficiency bonus and free-text safety flags.
+// Ported from src/pages/VirtualPatientFeedback.tsx (the student-facing
+// feedback page) — including its group-fallback and release-gating rules,
+// which matter here just as much as they do for a student browsing the app:
+//   - A case is graded once per group, but each member has their own
+//     `virtual_patient_sessions` row. If a member's own session has no
+//     grade (or an unreleased one), fall back to a sibling session's
+//     *released* grade — same rule the student portal itself applies via
+//     src/pages/VirtualPatientFeedback.tsx:87-104.
+//   - `feedback_released` gates visibility (also enforced by an RLS policy
+//     on virtual_patient_grades) — a professor reviews the AI's grading
+//     before releasing it, so an ungraded or not-yet-released case must
+//     stay invisible here too, not just "not found".
+// ─────────────────────────────────────────────────────────────────────────
+
+// Built-in catalog, mirrored from the VP_CATALOG constant in
+// src/pages/VPAnalytics.tsx and src/pages/Classes.tsx (no shared module to
+// import from a Deno edge function). Falls back to custom_virtual_patients
+// (teacher-authored patients) for any patient_id not found here.
+const VP_PATIENT_NAMES: Record<string, string> = {
+  pain_helena: "Dona Helena, 67 anos",
+  pain_luciana: "Luciana, 42 anos",
+  pain_rogerio: "Rogério, 58 anos",
+  pain_pedro: "Pedro, 65 anos",
+  pain_ana: "Ana, 36 anos",
+  inflammation_maria: "Dona Maria, 72 anos",
+  inflammation_antonio: "Seu Antônio, 66 anos",
+  inflammation_renata: "Renata, 39 anos",
+  inflammation_wilson: "Seu Wilson, 57 anos",
+  inflammation_jose: "José, 57 anos",
+};
+
+const VP_SUBSCORE_LABELS: Record<string, string> = {
+  identificacao_acolhimento: "Acolhimento",
+  queixa_principal_hda: "Queixa principal / HDA",
+  historia_medicamentosa: "História medicamentosa",
+  antecedentes_comorbidades: "Antecedentes / comorbidades",
+  habitos_estilo_vida: "Hábitos e estilo de vida",
+  escuta_raciocinio_clinico: "Escuta e raciocínio clínico",
+  mai_completude: "MAI - completude",
+  mai_coerencia_clinica: "MAI - coerência clínica",
+  mai_justificativa_critica: "MAI - crítica/justificativa",
+  mai_seguranca_paciente: "MAI - segurança do paciente",
+};
+const VP_ANAMNESE_KEYS = Object.keys(VP_SUBSCORE_LABELS).slice(0, 6);
+const VP_MAI_KEYS = Object.keys(VP_SUBSCORE_LABELS).slice(6);
+
+// Verbatim port of src/pages/VirtualPatientFeedback.tsx's microBonus/finalWithBonus.
+const vpMicroBonus = (m: number | null | undefined) => Math.max(0, Math.min(1, (Number(m) || 0) / 5));
+const vpFinalWithBonus = (base: number | null | undefined, m: number | null | undefined) =>
+  Math.round(Math.min(10, Math.max(0, (Number(base) || 0) + vpMicroBonus(m))) * 100) / 100;
+
+async function findVirtualPatientResults(supabase: any, email: string) {
+  const { data: sessions } = await supabase
+    .from("virtual_patient_sessions")
+    .select("id, class_virtual_patient_id, patient_id, group_id, created_at")
+    .ilike("student_email", email)
+    .gte("created_at", since())
+    .order("created_at", { ascending: false });
+  if (!sessions?.length) return [];
+
+  const cvpIds = Array.from(new Set(sessions.map((s: any) => s.class_virtual_patient_id).filter(Boolean)));
+  const { data: cvps } = cvpIds.length
+    ? await supabase.from("class_virtual_patients").select("id, group_label").in("id", cvpIds)
+    : { data: [] };
+  const cvpLabelMap = new Map((cvps || []).map((c: any) => [c.id, c.group_label || null]));
+
+  // Group-fallback needs every sibling session in the group, not just this
+  // student's own — batched here across all of this student's cases at once.
+  const groupIds = Array.from(new Set(sessions.filter((s: any) => s.group_id).map((s: any) => s.group_id)));
+  const { data: siblingSessions } = groupIds.length
+    ? await supabase.from("virtual_patient_sessions").select("id, group_id").in("group_id", groupIds)
+    : { data: [] };
+
+  const sessionIdsForGrades = Array.from(new Set([
+    ...sessions.map((s: any) => s.id),
+    ...(siblingSessions || []).map((s: any) => s.id),
+  ]));
+  const { data: grades } = sessionIdsForGrades.length
+    ? await supabase
+        .from("virtual_patient_grades")
+        .select("session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, feedback_released")
+        .in("session_id", sessionIdsForGrades)
+    : { data: [] };
+  const gradeBySession = new Map((grades || []).map((g: any) => [g.session_id, g]));
+
+  // Resolve display names for any patient_id missing from the built-in
+  // catalog (a teacher-authored custom_virtual_patients row).
+  const unknownPatientIds = Array.from(new Set(
+    sessions.map((s: any) => s.patient_id).filter((id: string) => id && !VP_PATIENT_NAMES[id])
+  ));
+  const { data: customPatients } = unknownPatientIds.length
+    ? await supabase.from("custom_virtual_patients").select("id, name").in("id", unknownPatientIds)
+    : { data: [] };
+  const customNameMap = new Map((customPatients || []).map((p: any) => [p.id, p.name]));
+  const patientName = (id: string) => VP_PATIENT_NAMES[id] || customNameMap.get(id) || id;
+
+  return sessions.map((session: any) => {
+    let grade = gradeBySession.get(session.id);
+    if ((!grade || !grade.feedback_released) && session.group_id) {
+      const released = (siblingSessions || [])
+        .filter((s: any) => s.group_id === session.group_id)
+        .map((s: any) => gradeBySession.get(s.id))
+        .find((g: any) => g?.feedback_released);
+      if (released) grade = released;
+    }
+
+    if (!grade) {
+      return { paciente: patientName(session.patient_id), data: session.created_at, status: "aguardando_correcao" };
+    }
+    if (!grade.feedback_released) {
+      return { paciente: patientName(session.patient_id), data: session.created_at, status: "corrigido_aguardando_liberacao_do_professor" };
+    }
+
+    const subs = grade.subscores || {};
+    const anamnese = Object.fromEntries(VP_ANAMNESE_KEYS.map((k) => [VP_SUBSCORE_LABELS[k], Number(subs[k]) || 0]));
+    const mai = Object.fromEntries(VP_MAI_KEYS.map((k) => [VP_SUBSCORE_LABELS[k], Number(subs[k]) || 0]));
+
+    return {
+      paciente: patientName(session.patient_id),
+      grupo: cvpLabelMap.get(session.class_virtual_patient_id) || null,
+      status: "corrigido",
+      data: session.created_at,
+      nota_final: vpFinalWithBonus(grade.nota_final, grade.nota_microlearning),
+      nota_base_sem_bonus: grade.nota_final,
+      eficiencia_clinica: grade.nota_microlearning,
+      anamnese_por_item_0_a_1: anamnese,
+      mai_por_item_0_a_1: mai,
+      bonus_penalidades: grade.bonus_penalidades || null,
+      flags_seguranca: Array.isArray(grade.flags_seguranca) ? grade.flags_seguranca : [],
+      feedback_resumido: grade.feedback_resumido || null,
+      orientacoes_melhoria: grade.orientacoes_melhoria || null,
+    };
+  });
+}
+
 async function findStudentPerformance(supabase: any, email: string, provaFilter?: string | null) {
-  const [examResult, simulacaoRealistica] = await Promise.all([
+  const [examResult, simulacaoRealistica, pacientesVirtuais] = await Promise.all([
     findExamResults(supabase, email, provaFilter),
     findSimulationRealisticaResults(supabase, email),
+    findVirtualPatientResults(supabase, email),
   ]);
 
-  const encontrado = examResult.provas.length > 0 || simulacaoRealistica != null || !!examResult.prova_nao_encontrada;
+  const encontrado =
+    examResult.provas.length > 0 ||
+    simulacaoRealistica != null ||
+    pacientesVirtuais.length > 0 ||
+    !!examResult.prova_nao_encontrada;
   return {
     aluno_email: email,
     encontrado,
     provas: examResult.provas,
     simulacao_realistica: simulacaoRealistica,
+    pacientes_virtuais: pacientesVirtuais,
     ...(examResult.mais_provas_disponiveis ? { mais_provas_disponiveis: examResult.mais_provas_disponiveis } : {}),
     ...(examResult.prova_nao_encontrada ? { prova_nao_encontrada: examResult.prova_nao_encontrada, provas_disponiveis: examResult.provas_disponiveis } : {}),
   };
