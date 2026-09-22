@@ -34,7 +34,6 @@ Deno.serve(async (req) => {
 
     if (!session?.group_id) return json({ count: 0, bonus: 0 });
 
-    // Return only the aggregate — never who rated what, so classmates stay anonymous to each other.
     const { data: rows } = await supabase
       .from("virtual_patient_peer_evaluations")
       .select("participacao_score, contribuicao_score, colaboracao_score")
