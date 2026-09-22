@@ -19,7 +19,7 @@ import { Resend } from "https://esm.sh/resend@4.0.0";
 //      expired, not already used, capped attempts) and only then returns
 //      the actual results.
 //
-// Unlike the simulador repo, "results" here spans four very different
+// Unlike the simulador repo, "results" here spans six very different
 // shapes (see findStudentPerformance below):
 //   - `provas`: traditional exams (exam_sessions/student_answers), the
 //     closest analog to the simulador's MC-question review — per-question
@@ -53,6 +53,22 @@ import { Resend } from "https://esm.sh/resend@4.0.0";
 //     grade — so this is the first "your Júri Simulado result" view for a
 //     student anywhere, and there's no release gate to mirror since none
 //     exists yet in the app itself.
+//   - `mini_cex_dops`: a direct-observation checklist an evaluator fills in
+//     while watching one clinical encounter (`clinical_observations`, `type`
+//     "mini_cex" or "dops"). The simplest module here — everything lives on
+//     one row (`clinical_observation_sessions`: per-domain 1–9 scores in
+//     `scores_json`, a 1–9 global score, free-text feedback), no separate
+//     "answers" table at all.
+//   - `osce`: a circuit of timed stations, each independently checklist-
+//     graded (`osce_exams`/`osce_circuits`/`osce_stations`/`osce_evaluations`
+//     /`osce_evaluation_items`). Ported from src/pages/OsceResults.tsx's
+//     per-student aggregation (sum `total_score`/`max_score` across a
+//     circuit's stations; "reprovado" if any station's `passed` is falsy)
+//     and src/components/osce/OsceEvaluatorChecklist.tsx's per-item scoring
+//     rule (binary/likert/score item types, each weighted; a zeroed
+//     `is_critical` item fails that station regardless of the numeric
+//     total) — only weak/failed items are surfaced, not the full checklist,
+//     same "only the problems" spirit as `provas`' questoes_erradas.
 //
 // Every module here identifies a participant by a freely-typed
 // `student_email` column with no FK to any central roster (confirmed by
@@ -757,12 +773,173 @@ async function findJuriSimuladoResults(supabase: any, email: string) {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Mini-CEX / DOPS — see the file-header comment. No release gate, no
+// group/team wrinkle, no companion "answers" table: everything a student
+// needs is already on clinical_observation_sessions.
+// ─────────────────────────────────────────────────────────────────────────
+
+async function findClinicalObservationResults(supabase: any, email: string) {
+  const { data: sessions } = await supabase
+    .from("clinical_observation_sessions")
+    .select("id, observation_id, evaluator_name, global_score, scores_json, feedback, complexity, setting, duration_minutes, created_at")
+    .ilike("student_email", email)
+    .gte("created_at", since())
+    .order("created_at", { ascending: false });
+  if (!sessions?.length) return { mini_cex_dops: [] };
+
+  const obsIds = Array.from(new Set(sessions.map((s: any) => s.observation_id)));
+  const { data: observations } = obsIds.length
+    ? await supabase.from("clinical_observations").select("id, title, type, competency_domains_json").in("id", obsIds)
+    : { data: [] };
+  const obsById = new Map((observations || []).map((o: any) => [o.id, o]));
+
+  // Same "heavy account -> most recent only, list the rest by title" cap
+  // used by every other module in this file.
+  const maisDisponiveis = sessions.slice(DEFAULT_EXAM_LIMIT).map((s: any) => ({
+    titulo: obsById.get(s.observation_id)?.title || "Observação clínica",
+    data: s.created_at,
+  }));
+  const selected = sessions.slice(0, DEFAULT_EXAM_LIMIT);
+
+  const mini_cex_dops = selected.map((s: any) => {
+    const obs = obsById.get(s.observation_id);
+    const domains: any[] = Array.isArray(obs?.competency_domains_json) ? obs.competency_domains_json : [];
+    const scores = s.scores_json || {};
+    const porDominio = Object.fromEntries(domains.map((d: any) => [d.name, scores[d.id] ?? null]));
+    return {
+      tipo: obs?.type === "dops" ? "DOPS" : "Mini-CEX",
+      titulo: obs?.title || "Observação clínica",
+      data: s.created_at,
+      avaliador: s.evaluator_name || null,
+      nota_global_1_a_9: s.global_score,
+      por_dominio_1_a_9: porDominio,
+      complexidade: s.complexity || null,
+      ambiente: s.setting || null,
+      duracao_minutos: s.duration_minutes || null,
+      feedback: s.feedback || null,
+    };
+  });
+
+  return {
+    mini_cex_dops,
+    ...(maisDisponiveis.length ? { mais_observacoes_clinicas_disponiveis: maisDisponiveis } : {}),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// OSCE — see the file-header comment for the aggregation/scoring rules
+// ported from OsceResults.tsx and OsceEvaluatorChecklist.tsx.
+// ─────────────────────────────────────────────────────────────────────────
+
+async function findOsceResults(supabase: any, email: string) {
+  const { data: evaluations } = await supabase
+    .from("osce_evaluations")
+    .select("id, circuit_id, station_id, total_score, max_score, passed, observations, created_at")
+    .ilike("student_email", email)
+    .gte("created_at", since())
+    .order("created_at", { ascending: false });
+  if (!evaluations?.length) return { osce: [] };
+
+  const circuitIds = Array.from(new Set(evaluations.map((e: any) => e.circuit_id)));
+  const { data: circuits } = await supabase.from("osce_circuits").select("id, osce_exam_id").in("id", circuitIds);
+  const examIdByCircuit = new Map((circuits || []).map((c: any) => [c.id, c.osce_exam_id]));
+
+  const examIds = Array.from(new Set((circuits || []).map((c: any) => c.osce_exam_id)));
+  const { data: exams } = examIds.length
+    ? await supabase.from("osce_exams").select("id, title").in("id", examIds)
+    : { data: [] };
+  const examById = new Map((exams || []).map((e: any) => [e.id, e]));
+
+  const stationIds = Array.from(new Set(evaluations.map((e: any) => e.station_id)));
+  const { data: stations } = stationIds.length
+    ? await supabase.from("osce_stations").select("id, title").in("id", stationIds)
+    : { data: [] };
+  const stationById = new Map((stations || []).map((s: any) => [s.id, s]));
+
+  const evalIds = evaluations.map((e: any) => e.id);
+  const { data: items } = evalIds.length
+    ? await supabase.from("osce_evaluation_items").select("evaluation_id, checklist_item_id, value, notes").in("evaluation_id", evalIds)
+    : { data: [] };
+  const checklistItemIds = Array.from(new Set((items || []).map((i: any) => i.checklist_item_id)));
+  const { data: checklistItems } = checklistItemIds.length
+    ? await supabase.from("osce_checklist_items").select("id, description, type, likert_max, max_points, is_critical").in("id", checklistItemIds)
+    : { data: [] };
+  const checklistById = new Map((checklistItems || []).map((c: any) => [c.id, c]));
+
+  // Group evaluations by OSCE exam (a circuit's rotation covers several
+  // stations, each its own evaluation row); keep newest-exam-first order
+  // from the already-sorted `evaluations` query.
+  const examOrder: string[] = [];
+  const byExam = new Map<string, any[]>();
+  for (const ev of evaluations) {
+    const examId = examIdByCircuit.get(ev.circuit_id);
+    if (!examId) continue;
+    if (!byExam.has(examId)) { byExam.set(examId, []); examOrder.push(examId); }
+    byExam.get(examId)!.push(ev);
+  }
+  if (!examOrder.length) return { osce: [] };
+
+  const maisOsceDisponiveis = examOrder.slice(1).map((id) => ({ titulo: examById.get(id)?.title || "OSCE" }));
+  const selectedExamId = examOrder[0];
+  const selectedEvals = byExam.get(selectedExamId) || [];
+
+  const estacoes = selectedEvals.map((ev: any) => {
+    const evItems = (items || []).filter((i: any) => i.evaluation_id === ev.id);
+    const itensCriticosOuFracos = evItems
+      .map((i: any) => {
+        const ci = checklistById.get(i.checklist_item_id);
+        if (!ci) return null;
+        const itemMax = ci.type === "binary" ? 1 : ci.type === "likert" ? ci.likert_max : ci.max_points;
+        const ratio = itemMax > 0 ? Number(i.value) / itemMax : 1;
+        const failedCritical = ci.is_critical && Number(i.value) === 0;
+        if (!failedCritical && ratio >= 0.6) return null; // only surface weak/failed items
+        return {
+          item: ci.description,
+          critico: ci.is_critical,
+          pontuacao: `${i.value}/${itemMax}`,
+          observacao_avaliador: i.notes || null,
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      estacao: stationById.get(ev.station_id)?.title || "Estação",
+      nota: ev.total_score,
+      nota_maxima: ev.max_score,
+      aprovado: !!ev.passed,
+      itens_criticos_ou_fracos: itensCriticosOuFracos,
+      observacoes_gerais_avaliador: ev.observations || null,
+    };
+  });
+
+  const notaTotal = selectedEvals.reduce((s: number, e: any) => s + (Number(e.total_score) || 0), 0);
+  const notaMaximaTotal = selectedEvals.reduce((s: number, e: any) => s + (Number(e.max_score) || 0), 0);
+  // Mirrors OsceResults.tsx's own rule exactly: `evals.some(e => !e.passed)`
+  // (a falsy/unset `passed` counts as a fail, not just an explicit false).
+  const anyFailed = selectedEvals.some((e: any) => !e.passed);
+
+  return {
+    osce: [{
+      exame: examById.get(selectedExamId)?.title || "OSCE",
+      nota_total: notaTotal,
+      nota_maxima_total: notaMaximaTotal,
+      percentual: notaMaximaTotal > 0 ? Math.round((notaTotal / notaMaximaTotal) * 100) : null,
+      resultado_geral: anyFailed ? "reprovado" : "aprovado",
+      estacoes,
+    }],
+    ...(maisOsceDisponiveis.length ? { mais_osce_disponiveis: maisOsceDisponiveis } : {}),
+  };
+}
+
 async function findStudentPerformance(supabase: any, email: string, provaFilter?: string | null) {
-  const [examResult, simulacaoRealistica, pacientesVirtuais, juriResult] = await Promise.all([
+  const [examResult, simulacaoRealistica, pacientesVirtuais, juriResult, miniCexResult, osceResult] = await Promise.all([
     findExamResults(supabase, email, provaFilter),
     findSimulationRealisticaResults(supabase, email),
     findVirtualPatientResults(supabase, email),
     findJuriSimuladoResults(supabase, email),
+    findClinicalObservationResults(supabase, email),
+    findOsceResults(supabase, email),
   ]);
 
   const encontrado =
@@ -770,6 +947,8 @@ async function findStudentPerformance(supabase: any, email: string, provaFilter?
     simulacaoRealistica != null ||
     pacientesVirtuais.length > 0 ||
     juriResult.juri_simulado.length > 0 ||
+    miniCexResult.mini_cex_dops.length > 0 ||
+    osceResult.osce.length > 0 ||
     !!examResult.prova_nao_encontrada;
   return {
     aluno_email: email,
@@ -778,9 +957,13 @@ async function findStudentPerformance(supabase: any, email: string, provaFilter?
     simulacao_realistica: simulacaoRealistica,
     pacientes_virtuais: pacientesVirtuais,
     juri_simulado: juriResult.juri_simulado,
+    mini_cex_dops: miniCexResult.mini_cex_dops,
+    osce: osceResult.osce,
     ...(examResult.mais_provas_disponiveis ? { mais_provas_disponiveis: examResult.mais_provas_disponiveis } : {}),
     ...(examResult.prova_nao_encontrada ? { prova_nao_encontrada: examResult.prova_nao_encontrada, provas_disponiveis: examResult.provas_disponiveis } : {}),
     ...(juriResult.mais_juris_disponiveis ? { mais_juris_disponiveis: juriResult.mais_juris_disponiveis } : {}),
+    ...(miniCexResult.mais_observacoes_clinicas_disponiveis ? { mais_observacoes_clinicas_disponiveis: miniCexResult.mais_observacoes_clinicas_disponiveis } : {}),
+    ...(osceResult.mais_osce_disponiveis ? { mais_osce_disponiveis: osceResult.mais_osce_disponiveis } : {}),
   };
 }
 
