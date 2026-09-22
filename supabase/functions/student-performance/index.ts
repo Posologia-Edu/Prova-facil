@@ -109,7 +109,14 @@ function questionStem(content: Record<string, any>): string {
   return content?.stem || content?.question_text || content?.statement || "Questão";
 }
 
-async function findExamResults(supabase: any, email: string, examFilter?: string | null) {
+type ExamResults = {
+  provas: any[];
+  mais_provas_disponiveis?: { titulo: string; data: string }[];
+  prova_nao_encontrada?: string;
+  provas_disponiveis?: string[];
+};
+
+async function findExamResults(supabase: any, email: string, examFilter?: string | null): Promise<ExamResults> {
   const { data: sessions, error: sessErr } = await supabase
     .from("exam_sessions")
     .select("id, publication_id, total_score, max_score, status, finished_at")
@@ -135,7 +142,7 @@ async function findExamResults(supabase: any, email: string, examFilter?: string
     .in("id", examIds);
   if (examErr) throw examErr;
   const examTitleById = new Map((exams || []).map((e: any) => [e.id, e.title]));
-  const titleForSession = (sess: any) => examTitleById.get(examIdByPubId.get(sess.publication_id)) || "Prova";
+  const titleForSession = (sess: any): string => String(examTitleById.get(examIdByPubId.get(sess.publication_id)) || "Prova");
 
   // A test/instructor account can pile up many exam sessions — default to
   // the single most recent one so this (and the LLM call that reads it)
@@ -535,7 +542,7 @@ async function findVirtualPatientResults(supabase: any, email: string) {
         .select("session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, feedback_released")
         .in("session_id", sessionIdsForGrades)
     : { data: [] };
-  const gradeBySession = new Map((grades || []).map((g: any) => [g.session_id, g]));
+  const gradeBySession = new Map<string, any>((grades || []).map((g: any) => [g.session_id, g]));
 
   // Resolve display names for any patient_id missing from the built-in
   // catalog (a teacher-authored custom_virtual_patients row).
