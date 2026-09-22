@@ -19,7 +19,7 @@ import { Resend } from "https://esm.sh/resend@4.0.0";
 //      expired, not already used, capped attempts) and only then returns
 //      the actual results.
 //
-// Unlike the simulador repo, "results" here spans three very different
+// Unlike the simulador repo, "results" here spans four very different
 // shapes (see findStudentPerformance below):
 //   - `provas`: traditional exams (exam_sessions/student_answers), the
 //     closest analog to the simulador's MC-question review — per-question
@@ -39,6 +39,20 @@ import { Resend } from "https://esm.sh/resend@4.0.0";
 //     both involving an "anamnese", first added here after a student's own
 //     virtual-patient result came back "not found" even though it had been
 //     graded, because this module simply had no query at all.
+//   - `juri_simulado`: a mock-trial team activity — a group of students is
+//     assigned a role (prosecution/defense/jury) per case, and the *group*
+//     is graded, not the individual. Ported from
+//     src/components/mock-trial/StudentScoresPanel.tsx (the teacher's own
+//     per-student gradebook — the only place in this app that already
+//     resolves a group grade down to an individual student) including its
+//     attendance override rule (absent -> 0, excused -> dropped from the
+//     average, a manual per-student override replaces the group score).
+//     Unlike the other three modules, this app has no student-facing "your
+//     result" page at all for this one — src/pages/MockTrialStudent.tsx only
+//     lets a student participate (read the case, submit forms), never see a
+//     grade — so this is the first "your Júri Simulado result" view for a
+//     student anywhere, and there's no release gate to mirror since none
+//     exists yet in the app itself.
 //
 // Every module here identifies a participant by a freely-typed
 // `student_email` column with no FK to any central roster (confirmed by
@@ -594,17 +608,168 @@ async function findVirtualPatientResults(supabase: any, email: string) {
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Júri Simulado (mock trial) — see the file-header comment for the module
+// overview. Grading is per (group, case): mock_trial_assignments says which
+// role a group played in which case; mock_trial_evaluations holds the actual
+// scores, keyed by group_id+case_id+evaluator_type (never by student).
+// ─────────────────────────────────────────────────────────────────────────
+
+const MT_ROLE_LABELS: Record<string, string> = {
+  prosecution: "Acusação",
+  defense: "Defesa",
+  jury: "Júri Técnico",
+};
+
+// Verbatim port of src/lib/mock-trial-evaluations.ts's consolidateScores,
+// specialized to a single (group, case) pair instead of a whole case's
+// assignment list.
+function consolidateMockTrialScore(evals: any[]) {
+  const parts: number[] = [];
+  const feedbacks: string[] = [];
+  for (const type of ["judge", "teacher", "ai_jury"]) {
+    const ev = evals.find((e: any) => e.evaluator_type === type);
+    if (ev?.score != null && !Number.isNaN(Number(ev.score))) parts.push(Number(ev.score));
+    if (ev?.feedback) feedbacks.push(ev.feedback);
+  }
+  return {
+    score: parts.length ? Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100) / 100 : null,
+    feedbacks,
+  };
+}
+
+async function findJuriSimuladoResults(supabase: any, email: string) {
+  const { data: students } = await supabase
+    .from("mock_trial_students")
+    .select("id, group_id, created_at")
+    .ilike("student_email", email)
+    .order("created_at", { ascending: false });
+  if (!students?.length) return { juri_simulado: [] };
+
+  const groupIds = Array.from(new Set(students.map((s: any) => s.group_id)));
+  const { data: groups } = await supabase.from("mock_trial_groups").select("id, name, mock_trial_id").in("id", groupIds);
+  const groupById = new Map((groups || []).map((g: any) => [g.id, g]));
+
+  const trialIds = Array.from(new Set((groups || []).map((g: any) => g.mock_trial_id)));
+  const { data: trials } = trialIds.length
+    ? await supabase.from("mock_trials").select("id, title").in("id", trialIds)
+    : { data: [] };
+  const trialById = new Map((trials || []).map((t: any) => [t.id, t]));
+
+  // One membership per (student row, trial); a student normally has exactly
+  // one mock_trial_students row per trial they joined. Kept in the
+  // already-newest-first order from the query above.
+  const seenTrials = new Set<string>();
+  const memberships: { student: any; group: any; trial: any }[] = [];
+  for (const s of students) {
+    const group = groupById.get(s.group_id);
+    const trial = group ? trialById.get(group.mock_trial_id) : null;
+    if (!trial || seenTrials.has(trial.id)) continue;
+    seenTrials.add(trial.id);
+    memberships.push({ student: s, group, trial });
+  }
+  if (!memberships.length) return { juri_simulado: [] };
+
+  // Same "heavy account -> only the most recent, list the rest by name" cap
+  // used everywhere else in this file.
+  const maisJurisDisponiveis = memberships.slice(1).map((m) => ({ titulo: m.trial.title }));
+  const selected = memberships[0];
+
+  const { data: cases } = await supabase
+    .from("mock_trial_cases")
+    .select("id, title, case_number, position")
+    .eq("mock_trial_id", selected.trial.id)
+    .order("position");
+  const caseIds = (cases || []).map((c: any) => c.id);
+  if (!caseIds.length) {
+    return { juri_simulado: [{ juri: selected.trial.title, grupo: selected.group?.name || null, media: null, processos: [] }] };
+  }
+
+  const { data: assignments } = await supabase
+    .from("mock_trial_assignments")
+    .select("case_id, group_id, role")
+    .in("case_id", caseIds)
+    .eq("group_id", selected.student.group_id);
+  if (!assignments?.length) {
+    return { juri_simulado: [{ juri: selected.trial.title, grupo: selected.group?.name || null, media: null, processos: [] }] };
+  }
+
+  const { data: evaluations } = await supabase
+    .from("mock_trial_evaluations")
+    .select("case_id, group_id, evaluator_type, evaluated_role, score, feedback")
+    .in("case_id", caseIds)
+    .eq("group_id", selected.student.group_id);
+
+  const { data: attendance } = await supabase
+    .from("mock_trial_attendance")
+    .select("case_id, status, score_override, notes")
+    .eq("student_id", selected.student.id)
+    .in("case_id", caseIds);
+  const attendanceByCase = new Map((attendance || []).map((a: any) => [a.case_id, a]));
+
+  const processos = assignments.map((assign: any) => {
+    const caseInfo = (cases || []).find((c: any) => c.id === assign.case_id);
+    const caseEvals = (evaluations || []).filter((e: any) => e.case_id === assign.case_id);
+
+    let rawScore: number | null = null;
+    let feedbacks: string[] = [];
+    if (assign.role === "prosecution" || assign.role === "defense") {
+      const consolidated = consolidateMockTrialScore(caseEvals);
+      rawScore = consolidated.score;
+      feedbacks = consolidated.feedbacks;
+    } else if (assign.role === "jury") {
+      const ev = caseEvals.find((e: any) => e.evaluator_type === "ai_jury_panel" && e.evaluated_role === "jury");
+      rawScore = ev?.score != null ? Number(ev.score) : null;
+      if (ev?.feedback) feedbacks.push(ev.feedback);
+    }
+
+    const att = attendanceByCase.get(assign.case_id);
+    const status = att?.status || "present";
+    let notaFinal: number | null;
+    let contaNaMedia = true;
+    if (status === "absent") {
+      notaFinal = 0;
+    } else if (status === "excused") {
+      notaFinal = null;
+      contaNaMedia = false;
+    } else {
+      notaFinal = att?.score_override != null ? Number(att.score_override) : rawScore;
+    }
+
+    return {
+      processo: caseInfo?.title || caseInfo?.case_number || "Processo",
+      papel: MT_ROLE_LABELS[assign.role] || assign.role,
+      status_presenca: status === "absent" ? "faltou" : status === "excused" ? "nao_participou" : "presente",
+      nota_do_grupo: rawScore,
+      nota_final: notaFinal,
+      conta_na_media: contaNaMedia,
+      observacoes_professor: att?.notes || null,
+      feedback: feedbacks.length ? feedbacks.join("\n\n") : null,
+    };
+  });
+
+  const counted = processos.filter((p: any) => p.conta_na_media && p.nota_final != null).map((p: any) => p.nota_final as number);
+  const media = counted.length ? Math.round((counted.reduce((a: number, b: number) => a + b, 0) / counted.length) * 100) / 100 : null;
+
+  return {
+    juri_simulado: [{ juri: selected.trial.title, grupo: selected.group?.name || null, media, processos }],
+    ...(maisJurisDisponiveis.length ? { mais_juris_disponiveis: maisJurisDisponiveis } : {}),
+  };
+}
+
 async function findStudentPerformance(supabase: any, email: string, provaFilter?: string | null) {
-  const [examResult, simulacaoRealistica, pacientesVirtuais] = await Promise.all([
+  const [examResult, simulacaoRealistica, pacientesVirtuais, juriResult] = await Promise.all([
     findExamResults(supabase, email, provaFilter),
     findSimulationRealisticaResults(supabase, email),
     findVirtualPatientResults(supabase, email),
+    findJuriSimuladoResults(supabase, email),
   ]);
 
   const encontrado =
     examResult.provas.length > 0 ||
     simulacaoRealistica != null ||
     pacientesVirtuais.length > 0 ||
+    juriResult.juri_simulado.length > 0 ||
     !!examResult.prova_nao_encontrada;
   return {
     aluno_email: email,
@@ -612,8 +777,10 @@ async function findStudentPerformance(supabase: any, email: string, provaFilter?
     provas: examResult.provas,
     simulacao_realistica: simulacaoRealistica,
     pacientes_virtuais: pacientesVirtuais,
+    juri_simulado: juriResult.juri_simulado,
     ...(examResult.mais_provas_disponiveis ? { mais_provas_disponiveis: examResult.mais_provas_disponiveis } : {}),
     ...(examResult.prova_nao_encontrada ? { prova_nao_encontrada: examResult.prova_nao_encontrada, provas_disponiveis: examResult.provas_disponiveis } : {}),
+    ...(juriResult.mais_juris_disponiveis ? { mais_juris_disponiveis: juriResult.mais_juris_disponiveis } : {}),
   };
 }
 
