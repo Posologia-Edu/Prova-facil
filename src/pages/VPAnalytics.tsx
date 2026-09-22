@@ -1457,6 +1457,51 @@ export default function VPAnalytics() {
                   <div>
                     <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                       Avaliação entre Pares
+                      <TooltipProvider>
+                        <UiTooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="left"
+                            align="start"
+                            sideOffset={8}
+                            collisionPadding={16}
+                            avoidCollisions
+                            className="w-[min(92vw,420px)] max-h-[70vh] overflow-y-auto z-[100]"
+                          >
+                            <div className="text-xs space-y-1.5 break-words whitespace-normal">
+                              <p>
+                                <strong>O que é:</strong> nota que os próprios colegas de grupo dão uns aos
+                                outros por e-mail, logo após o envio do MAI. Cada avaliador pontua de 0 a 5
+                                em três critérios (mostrados como <strong>P · T · C</strong>):
+                              </p>
+                              <ul className="list-disc list-inside space-y-0.5 ml-1">
+                                <li><strong>P — Participação ativa:</strong> engajamento e perguntas relevantes na anamnese.</li>
+                                <li><strong>T — Contribuição Técnica:</strong> raciocínio farmacoterapêutico e MAI.</li>
+                                <li><strong>C — Colaboração em equipe:</strong> postura respeitosa e colaborativa.</li>
+                              </ul>
+                              <p>
+                                <strong>Como vira bônus/penalidade:</strong> calcula-se a média das 3 notas de
+                                cada avaliador e depois a média entre avaliadores (0–5). O ponto neutro é
+                                <strong> 2.5</strong> — nem bônus, nem penalidade.
+                              </p>
+                              <p className="font-mono text-[11px] bg-muted/50 rounded px-2 py-1">
+                                bônus = ((média − 2.5) / 2.5) × 1.0, limitado a ±1.0
+                              </p>
+                              <p>
+                                Média 5 → bônus máximo <strong>+1.0</strong>. Média 0 → penalidade máxima{" "}
+                                <strong>−1.0</strong>. Esse valor se soma à nota final <strong>individualmente</strong>{" "}
+                                — dois alunos do mesmo grupo, mesma anamnese, podem terminar com notas diferentes.
+                              </p>
+                              <p className="text-muted-foreground italic">
+                                Com poucos avaliadores (ex.: apenas 1 colega), o valor pode mudar bastante
+                                quando mais respostas chegarem — trate como preliminar até o grupo todo responder.
+                              </p>
+                            </div>
+                          </TooltipContent>
+                        </UiTooltip>
+                      </TooltipProvider>
                       {peerEvals.length > 0 && (
                         <Badge variant="outline" className="text-[10px]">
                           Bônus: {computePeerBonus(peerEvals) >= 0 ? "+" : ""}{computePeerBonus(peerEvals).toFixed(2)}
