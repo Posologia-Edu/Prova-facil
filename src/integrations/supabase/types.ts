@@ -3790,22 +3790,25 @@ export type Database = {
       mock_trial_students: {
         Row: {
           created_at: string
-          group_id: string
+          group_id: string | null
           id: string
+          mock_trial_id: string
           student_email: string | null
           student_name: string
         }
         Insert: {
           created_at?: string
-          group_id: string
+          group_id?: string | null
           id?: string
+          mock_trial_id: string
           student_email?: string | null
           student_name: string
         }
         Update: {
           created_at?: string
-          group_id?: string
+          group_id?: string | null
           id?: string
+          mock_trial_id?: string
           student_email?: string | null
           student_name?: string
         }
@@ -3815,6 +3818,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "mock_trial_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_trial_students_mock_trial_id_fkey"
+            columns: ["mock_trial_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trials"
             referencedColumns: ["id"]
           },
         ]

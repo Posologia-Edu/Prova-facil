@@ -70,15 +70,13 @@ export default function MockTrialEditor() {
 
   // Students
   const { data: students = [], refetch: refetchStudents } = useQuery({
-    queryKey: ["mock-trial-students", id, groups],
+    queryKey: ["mock-trial-students", id],
     queryFn: async () => {
-      if (groups.length === 0) return [];
-      const groupIds = groups.map(g => g.id);
-      const { data, error } = await supabase.from("mock_trial_students").select("*").in("group_id", groupIds).order("created_at");
+      const { data, error } = await supabase.from("mock_trial_students").select("*").eq("mock_trial_id", id!).order("created_at");
       if (error) throw error;
       return data;
     },
-    enabled: groups.length > 0,
+    enabled: !!id,
   });
 
   // Assignments
@@ -189,6 +187,9 @@ export default function MockTrialEditor() {
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentEmail, setNewStudentEmail] = useState("");
   const [selectedGroupForAdd, setSelectedGroupForAdd] = useState<string>("");
+  const [studentAddMode, setStudentAddMode] = useState<"single" | "batch">("single");
+  const [batchStudentsText, setBatchStudentsText] = useState("");
+  const [batchStudentsLoading, setBatchStudentsLoading] = useState(false);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiObjectives, setAiObjectives] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -534,9 +535,10 @@ export default function MockTrialEditor() {
   }, [id, groupsFetched, groups.length]);
 
   const addStudent = async () => {
-    if (!newStudentName.trim() || !selectedGroupForAdd) return;
+    if (!id || !newStudentName.trim()) return;
     const { error } = await supabase.from("mock_trial_students").insert({
-      group_id: selectedGroupForAdd,
+      mock_trial_id: id,
+      group_id: selectedGroupForAdd || null,
       student_name: newStudentName.trim(),
       student_email: newStudentEmail.trim() || null,
     });
@@ -548,6 +550,35 @@ export default function MockTrialEditor() {
     }
   };
 
+  const addBatchStudents = async () => {
+    if (!id || !batchStudentsText.trim()) { toast.error("Cole os dados dos alunos."); return; }
+    setBatchStudentsLoading(true);
+
+    const lines = batchStudentsText.trim().split("\n").filter(l => l.trim());
+    const inserts = lines.map(line => {
+      const parts = line.includes(";") ? line.split(";") : line.split("\t");
+      return {
+        mock_trial_id: id,
+        group_id: null,
+        student_name: (parts[0] || "").trim(),
+        student_email: (parts[1] || "").trim() || null,
+      };
+    }).filter(s => s.student_name);
+
+    if (inserts.length === 0) {
+      toast.error("Nenhum aluno válido encontrado.");
+      setBatchStudentsLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.from("mock_trial_students").insert(inserts);
+    setBatchStudentsLoading(false);
+    if (error) { toast.error("Erro ao importar alunos."); return; }
+    setBatchStudentsText("");
+    toast.success(`${inserts.length} aluno(s) importado(s). Distribua-os nos grupos abaixo.`);
+    refetchStudents();
+  };
+
   const removeStudent = async (studentId: string) => {
     await supabase.from("mock_trial_students").delete().eq("id", studentId);
     refetchStudents();
@@ -555,6 +586,20 @@ export default function MockTrialEditor() {
 
   const moveStudent = async (studentId: string, newGroupId: string) => {
     await supabase.from("mock_trial_students").update({ group_id: newGroupId }).eq("id", studentId);
+    refetchStudents();
+  };
+
+  const distributeUnassignedStudents = async () => {
+    const unassigned = students.filter(s => !s.group_id);
+    if (unassigned.length === 0 || groups.length === 0) return;
+    const shuffled = [...unassigned].sort(() => Math.random() - 0.5);
+    const results = await Promise.all(
+      shuffled.map((s, i) =>
+        supabase.from("mock_trial_students").update({ group_id: groups[i % groups.length].id }).eq("id", s.id)
+      )
+    );
+    if (results.some(r => r.error)) toast.error("Erro ao distribuir alunos");
+    else toast.success("Alunos distribuídos nos grupos!");
     refetchStudents();
   };
 
@@ -1003,30 +1048,107 @@ export default function MockTrialEditor() {
               <CardTitle className="text-base">Adicionar Aluno</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2 items-end flex-wrap">
-                <div className="flex-1 min-w-[150px]">
-                  <Label>Nome</Label>
-                  <Input value={newStudentName} onChange={e => setNewStudentName(e.target.value)} placeholder="Nome do aluno" />
-                </div>
-                <div className="flex-1 min-w-[150px]">
-                  <Label>Email</Label>
-                  <Input value={newStudentEmail} onChange={e => setNewStudentEmail(e.target.value)} placeholder="email@exemplo.com" />
-                </div>
-                <div className="w-40">
-                  <Label>Grupo</Label>
-                  <Select value={selectedGroupForAdd} onValueChange={setSelectedGroupForAdd}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={addStudent} disabled={!newStudentName.trim() || !selectedGroupForAdd}>
-                  <Plus className="h-4 w-4 mr-1" />Adicionar
-                </Button>
-              </div>
+              <Tabs value={studentAddMode} onValueChange={(v) => setStudentAddMode(v as "single" | "batch")}>
+                <TabsList className="w-full">
+                  <TabsTrigger value="single" className="flex-1">Individual</TabsTrigger>
+                  <TabsTrigger value="batch" className="flex-1">Em Lote</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="single" className="pt-3">
+                  <div className="flex gap-2 items-end flex-wrap">
+                    <div className="flex-1 min-w-[150px]">
+                      <Label>Nome</Label>
+                      <Input value={newStudentName} onChange={e => setNewStudentName(e.target.value)} placeholder="Nome do aluno" />
+                    </div>
+                    <div className="flex-1 min-w-[150px]">
+                      <Label>Email</Label>
+                      <Input value={newStudentEmail} onChange={e => setNewStudentEmail(e.target.value)} placeholder="email@exemplo.com" />
+                    </div>
+                    <div className="w-48">
+                      <Label>Grupo</Label>
+                      <Select value={selectedGroupForAdd} onValueChange={setSelectedGroupForAdd}>
+                        <SelectTrigger><SelectValue placeholder="Distribuir depois" /></SelectTrigger>
+                        <SelectContent>
+                          {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={addStudent} disabled={!newStudentName.trim()}>
+                      <Plus className="h-4 w-4 mr-1" />Adicionar
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="batch" className="pt-3 space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Cole os dados dos alunos, um por linha. Separe nome e e-mail com <strong>;</strong> ou <strong>Tab</strong> (e-mail é opcional).
+                    Os alunos entram sem grupo — distribua-os depois na lista abaixo.
+                  </p>
+                  <Textarea
+                    placeholder={"João Silva; joao@email.com\nMaria Santos; maria@email.com\nPedro Souza"}
+                    value={batchStudentsText}
+                    onChange={(e) => setBatchStudentsText(e.target.value)}
+                    rows={6}
+                    className="font-mono text-xs"
+                  />
+                  <Button onClick={addBatchStudents} disabled={batchStudentsLoading || !batchStudentsText.trim()}>
+                    {batchStudentsLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+                    Importar {batchStudentsText.trim().split("\n").filter(l => l.trim()).length} Aluno(s)
+                  </Button>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
+
+          {students.some(s => !s.group_id) && (
+            <Card className="border-dashed">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base">
+                    Alunos sem grupo ({students.filter(s => !s.group_id).length})
+                  </CardTitle>
+                  <Button size="sm" variant="secondary" onClick={distributeUnassignedStudents} disabled={groups.length === 0}>
+                    <Shuffle className="h-3.5 w-3.5 mr-1" />Distribuir automaticamente
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                {students.filter(s => !s.group_id).map(s => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between gap-2 p-2 rounded-md border border-foreground/10 bg-background/60"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{s.student_name}</p>
+                      {s.student_email && (
+                        <p className="text-xs text-muted-foreground truncate">{s.student_email}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Select onValueChange={(val) => moveStudent(s.id, val)}>
+                        <SelectTrigger className="h-8 w-40 text-xs">
+                          <SelectValue placeholder="Atribuir a um grupo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {groups.map(g => (
+                            <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeStudent(s.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {groups.map((g, gIdx) => {
