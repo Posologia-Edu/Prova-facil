@@ -346,6 +346,18 @@ export default function MockTrialJudge() {
     } as any).eq("id", session.id);
     setIsRunning(false);
     setTimeLeft(0);
+
+    // Peer evaluation invites — fires once per case, independent of grading
+    // (AI/judge/teacher scores can still be edited later without blocking this).
+    if (selectedCaseId) {
+      supabase.functions
+        .invoke("send-mt-peer-eval-invites", { body: { case_id: selectedCaseId } })
+        .then(({ error }) => {
+          if (error) console.warn("Peer eval invite failed:", error);
+        })
+        .catch((err) => console.warn("Peer eval invite failed:", err));
+    }
+
     toast.success("Sessão finalizada. Avançando para o próximo processo...");
     // Auto-advance to next case
     const idx = cases.findIndex(c => c.id === selectedCaseId);

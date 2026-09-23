@@ -54,6 +54,7 @@ import MockTrials from "./pages/MockTrials";
 import MockTrialEditor from "./pages/MockTrialEditor";
 import MockTrialJudge from "./pages/MockTrialJudge";
 import MockTrialStudent from "./pages/MockTrialStudent";
+import MtPeerEvaluation from "./pages/MtPeerEvaluation";
 import OsceEditor from "./pages/OsceEditor";
 import OsceCircuitControl from "./pages/OsceCircuitControl";
 import OsceEvaluator from "./pages/OsceEvaluator";
@@ -573,6 +574,7 @@ const App = () => (
             {/* Public Mock Trial routes — accessed via StudentAuth PIN */}
             <Route path="/mock-trial/portal/:accessCode" element={<MockTrialStudent />} />
             <Route path="/mock-trial/judge/:accessCode" element={<MockTrialJudge />} />
+            <Route path="/mock-trial/peer-eval/:token" element={<MtPeerEvaluation />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />

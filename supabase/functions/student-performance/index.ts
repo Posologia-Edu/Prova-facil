@@ -723,6 +723,27 @@ async function findJuriSimuladoResults(supabase: any, email: string) {
     .in("case_id", caseIds);
   const attendanceByCase = new Map<string, any>((attendance || []).map((a: any) => [String(a.case_id), a]));
 
+  // Peer evaluation bonus/penalty (up to ±1.0), individual per student per
+  // case — layered on top of the shared group score. See src/lib/mt-peer-eval.ts.
+  const { data: peerEvals } = await supabase
+    .from("mock_trial_peer_evaluations")
+    .select("case_id, preparacao_score, atuacao_score, colaboracao_score")
+    .in("case_id", caseIds)
+    .eq("group_id", selected.student.group_id)
+    .eq("evaluatee_email", email);
+  const peerEvalsByCase = new Map<string, any[]>();
+  (peerEvals || []).forEach((p: any) => {
+    const arr = peerEvalsByCase.get(p.case_id) || [];
+    arr.push(p);
+    peerEvalsByCase.set(p.case_id, arr);
+  });
+  const computeMtPeerBonus = (evals: any[]): number => {
+    if (!evals.length) return 0;
+    const perEvaluatorMean = evals.map((e) => (Number(e.preparacao_score) + Number(e.atuacao_score) + Number(e.colaboracao_score)) / 3);
+    const mean = perEvaluatorMean.reduce((a: number, b: number) => a + b, 0) / perEvaluatorMean.length;
+    return Math.max(-1, Math.min(1, ((mean - 2.5) / 2.5) * 1.0));
+  };
+
   const processos = assignments.map((assign: any) => {
     const caseInfo = (cases || []).find((c: any) => c.id === assign.case_id);
     const caseEvals = (evaluations || []).filter((e: any) => e.case_id === assign.case_id);
@@ -743,13 +764,20 @@ async function findJuriSimuladoResults(supabase: any, email: string) {
     const status = att?.status || "present";
     let notaFinal: number | null;
     let contaNaMedia = true;
+    let peerBonus = 0;
     if (status === "absent") {
       notaFinal = 0;
     } else if (status === "excused") {
       notaFinal = null;
       contaNaMedia = false;
+    } else if (att?.score_override != null) {
+      // A manual override is the teacher's own final word — don't perturb it with the peer bonus.
+      notaFinal = Number(att.score_override);
     } else {
-      notaFinal = att?.score_override != null ? Number(att.score_override) : rawScore;
+      peerBonus = computeMtPeerBonus(peerEvalsByCase.get(assign.case_id) || []);
+      notaFinal = rawScore != null && peerBonus !== 0
+        ? Math.max(0, Math.min(10, rawScore + peerBonus))
+        : rawScore;
     }
 
     return {
@@ -758,6 +786,7 @@ async function findJuriSimuladoResults(supabase: any, email: string) {
       status_presenca: status === "absent" ? "faltou" : status === "excused" ? "nao_participou" : "presente",
       nota_do_grupo: rawScore,
       nota_final: notaFinal,
+      avaliacao_entre_pares_bonus: peerBonus !== 0 ? Number(peerBonus.toFixed(2)) : null,
       conta_na_media: contaNaMedia,
       observacoes_professor: att?.notes || null,
       feedback: feedbacks.length ? feedbacks.join("\n\n") : null,

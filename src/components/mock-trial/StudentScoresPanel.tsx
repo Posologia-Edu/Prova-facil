@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { consolidateScores } from "@/lib/mock-trial-evaluations";
+import { computeMtPeerBonus, MT_PEER_EVAL_MAX_ADJUST, MtPeerEvaluationScores } from "@/lib/mt-peer-eval";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Users, AlertTriangle } from "lucide-react";
 
 interface Props {
   mockTrialId: string;
@@ -36,6 +38,15 @@ interface AttendanceRow {
   notes: string | null;
 }
 
+interface MtPeerEvalRow extends MtPeerEvaluationScores {
+  case_id: string;
+  group_id: string;
+  evaluator_name: string | null;
+  evaluator_email: string;
+  evaluatee_email: string;
+  comentario: string | null;
+}
+
 interface PerCase {
   caseId: string;
   caseTitle: string;
@@ -43,8 +54,10 @@ interface PerCase {
   rawScore: number | null;
   status: AttendanceStatus;
   override: number | null;
-  effectiveScore: number | null; // counted in average
+  effectiveScore: number | null; // counted in average (already includes peer bonus)
   countsInAverage: boolean;
+  peerBonus: number;
+  peerEvals: MtPeerEvalRow[];
 }
 
 interface StudentRow {
@@ -89,6 +102,7 @@ export function StudentScoresPanel({
   evaluations,
 }: Props) {
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
+  const [peerEvals, setPeerEvals] = useState<MtPeerEvalRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadAttendance = async () => {
@@ -100,10 +114,25 @@ export function StudentScoresPanel({
     if (!error && data) setAttendance(data as any);
   };
 
+  const loadPeerEvals = async () => {
+    const caseIds = cases.map((c: any) => c.id);
+    if (caseIds.length === 0) { setPeerEvals([]); return; }
+    const { data, error } = await supabase
+      .from("mock_trial_peer_evaluations")
+      .select("case_id, group_id, evaluator_name, evaluator_email, evaluatee_email, preparacao_score, atuacao_score, colaboracao_score, comentario")
+      .in("case_id", caseIds);
+    if (!error && data) setPeerEvals(data as any);
+  };
+
   useEffect(() => {
     loadAttendance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mockTrialId]);
+
+  useEffect(() => {
+    loadPeerEvals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cases.map((c: any) => c.id).join(",")]);
 
   const attendanceMap = useMemo(() => {
     const m = new Map<string, AttendanceRow>();
@@ -135,6 +164,17 @@ export function StudentScoresPanel({
     return m;
   }, [cases, assignments, evaluations]);
 
+  const peerEvalMap = useMemo(() => {
+    const m = new Map<string, MtPeerEvalRow[]>();
+    for (const p of peerEvals) {
+      const key = `${p.case_id}:${p.group_id}:${p.evaluatee_email}`;
+      const arr = m.get(key) || [];
+      arr.push(p);
+      m.set(key, arr);
+    }
+    return m;
+  }, [peerEvals]);
+
   const rows = useMemo<StudentRow[]>(() => {
     const sorted = [...students].sort((a, b) =>
       (a.student_name || "").localeCompare(b.student_name || "", "pt-BR", {
@@ -154,6 +194,11 @@ export function StudentScoresPanel({
         const att = attendanceMap.get(`${s.id}:${c.id}`);
         const status: AttendanceStatus = att?.status ?? "present";
         const override = att?.score_override ?? null;
+        const studentEmail = (s.student_email || "").trim().toLowerCase();
+        const evalsForStudent = studentEmail
+          ? peerEvalMap.get(`${c.id}:${s.group_id}:${studentEmail}`) || []
+          : [];
+        const peerBonus = evalsForStudent.length ? computeMtPeerBonus(evalsForStudent) : 0;
 
         let effectiveScore: number | null = null;
         let countsInAverage = true;
@@ -162,14 +207,21 @@ export function StudentScoresPanel({
         } else if (status === "excused") {
           effectiveScore = null;
           countsInAverage = false;
+        } else if (override != null) {
+          // A manual override is the teacher's own final word — don't perturb it with the peer bonus.
+          effectiveScore = Number(override);
         } else {
-          effectiveScore = override != null ? Number(override) : rawScore;
+          effectiveScore = rawScore != null && peerBonus !== 0
+            ? Math.max(0, Math.min(10, rawScore + peerBonus))
+            : rawScore;
         }
 
         perCase.push({
           caseId: c.id,
           caseTitle: c.title || c.case_number || "Processo",
           role: assign.role,
+          peerBonus,
+          peerEvals: evalsForStudent,
           rawScore,
           status,
           override,
@@ -194,7 +246,7 @@ export function StudentScoresPanel({
         average,
       };
     });
-  }, [cases, groups, students, assignments, scoreMap, attendanceMap]);
+  }, [cases, groups, students, assignments, scoreMap, attendanceMap, peerEvalMap]);
 
   const upsertAttendance = async (
     studentId: string,
@@ -388,7 +440,7 @@ export function StudentScoresPanel({
                                   <Pencil className="h-2.5 w-2.5 opacity-60 ml-0.5" />
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-72 space-y-3">
+                              <PopoverContent className="w-80 space-y-3">
                                 <div>
                                   <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
                                     {p.caseTitle}
@@ -401,8 +453,42 @@ export function StudentScoresPanel({
                                     {p.rawScore != null
                                       ? p.rawScore.toFixed(2)
                                       : "—"}
+                                    {p.peerBonus !== 0 && (
+                                      <>
+                                        {" "}+ pares{" "}
+                                        <strong className={p.peerBonus > 0 ? "text-emerald-600" : "text-red-600"}>
+                                          {p.peerBonus >= 0 ? "+" : ""}{p.peerBonus.toFixed(2)}
+                                        </strong>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
+                                {p.peerEvals.length > 0 && (
+                                  <div className="border rounded-md p-2 space-y-1.5">
+                                    <div className="text-xs font-medium flex items-center gap-1.5">
+                                      <Users className="h-3 w-3" /> Avaliação entre Pares
+                                      {new Set(p.peerEvals.map((e) => `${e.preparacao_score}-${e.atuacao_score}-${e.colaboracao_score}`)).size === 1 &&
+                                        p.peerEvals.length > 1 && (
+                                          <span title="Todos os avaliadores deram exatamente as mesmas notas">
+                                            <AlertTriangle className="h-3 w-3 text-amber-600" />
+                                          </span>
+                                        )}
+                                    </div>
+                                    {p.peerEvals.map((e, i) => (
+                                      <div key={i} className="text-[11px] flex items-center justify-between">
+                                        <span className="text-muted-foreground truncate max-w-[45%]">
+                                          {e.evaluator_name || e.evaluator_email}
+                                        </span>
+                                        <span className="font-mono">
+                                          P:{e.preparacao_score} · A:{e.atuacao_score} · C:{e.colaboracao_score}
+                                        </span>
+                                      </div>
+                                    ))}
+                                    <p className="text-[10px] text-muted-foreground pt-0.5">
+                                      Bônus/penalidade de até ±{MT_PEER_EVAL_MAX_ADJUST.toFixed(1)}, já somado à nota original acima.
+                                    </p>
+                                  </div>
+                                )}
                                 <div className="space-y-1.5">
                                   <label className="text-xs font-medium">
                                     Presença

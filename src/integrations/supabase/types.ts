@@ -3574,6 +3574,120 @@ export type Database = {
           },
         ]
       }
+      mock_trial_peer_eval_tokens: {
+        Row: {
+          case_id: string
+          created_at: string
+          evaluator_email: string
+          evaluator_name: string | null
+          expires_at: string
+          group_id: string
+          role: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          evaluator_email: string
+          evaluator_name?: string | null
+          expires_at: string
+          group_id: string
+          role: string
+          token?: string
+          used_at?: string | null
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          evaluator_email?: string
+          evaluator_name?: string | null
+          expires_at?: string
+          group_id?: string
+          role?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_peer_eval_tokens_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_trial_peer_eval_tokens_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mock_trial_peer_evaluations: {
+        Row: {
+          atuacao_score: number
+          case_id: string
+          colaboracao_score: number
+          comentario: string | null
+          created_at: string
+          evaluatee_email: string
+          evaluatee_name: string | null
+          evaluator_email: string
+          evaluator_name: string | null
+          group_id: string
+          id: string
+          preparacao_score: number
+          role: string
+        }
+        Insert: {
+          atuacao_score: number
+          case_id: string
+          colaboracao_score: number
+          comentario?: string | null
+          created_at?: string
+          evaluatee_email: string
+          evaluatee_name?: string | null
+          evaluator_email: string
+          evaluator_name?: string | null
+          group_id: string
+          id?: string
+          preparacao_score: number
+          role: string
+        }
+        Update: {
+          atuacao_score?: number
+          case_id?: string
+          colaboracao_score?: number
+          comentario?: string | null
+          created_at?: string
+          evaluatee_email?: string
+          evaluatee_name?: string | null
+          evaluator_email?: string
+          evaluator_name?: string | null
+          group_id?: string
+          id?: string
+          preparacao_score?: number
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_trial_peer_evaluations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_trial_peer_evaluations_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "mock_trial_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mock_trial_responses: {
         Row: {
           created_at: string

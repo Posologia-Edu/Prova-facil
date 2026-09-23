@@ -86,3 +86,12 @@ verify_jwt = false
 
 [functions.vp-peer-eval-summary]
 verify_jwt = false
+
+[functions.send-mt-peer-eval-invites]
+verify_jwt = false
+
+[functions.mt-peer-eval-context]
+verify_jwt = false
+
+[functions.submit-mt-peer-evaluation]
+verify_jwt = false
