@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users, Activity, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users, Activity, ShieldCheck, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
@@ -68,6 +68,7 @@ export default function VirtualPatientRoom() {
   const [consentState, setConsentState] = useState<null | boolean>(null);
   const [showConsent, setShowConsent] = useState(false);
   const [savingConsent, setSavingConsent] = useState(false);
+  const [showPeerEvalNotice, setShowPeerEvalNotice] = useState(false);
 
 
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
@@ -468,11 +469,19 @@ export default function VirtualPatientRoom() {
     // Case is considered finished the moment the group submits the MAI — this is
     // the trigger point for peer-eval invites, independent of AI grading below
     // (which can fail/be retried later without blocking the peer-eval e-mails).
+    // Only one device is ever in the room, so the others learn about the peer
+    // evaluation solely through this e-mail — the modal below gives whoever is
+    // at the keyboard something to read aloud to the rest of the group before
+    // everyone leaves the room.
     if (isGroupSession && groupSessionIds.length > 1 && groupId) {
       supabase.functions
         .invoke("send-vp-peer-eval-invites", { body: { group_id: groupId, class_virtual_patient_id: cvpId } })
-        .then(({ error }) => {
-          if (error) console.warn("Peer eval invite failed:", error);
+        .then(({ data, error }) => {
+          if (error) {
+            console.warn("Peer eval invite failed:", error);
+            return;
+          }
+          if (data?.reason !== "not_a_group") setShowPeerEvalNotice(true);
         })
         .catch((err) => console.warn("Peer eval invite failed:", err));
     }
@@ -725,6 +734,37 @@ export default function VirtualPatientRoom() {
               {savingConsent ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1.5" />}
               Autorizo o uso científico
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPeerEvalNotice} onOpenChange={setShowPeerEvalNotice}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" /> Verifiquem o e-mail de cada um!
+            </DialogTitle>
+            <DialogDescription className="text-left space-y-3 pt-2">
+              <p>
+                O atendimento foi concluído. Agora cada integrante do grupo precisa checar o próprio e-mail e
+                avaliar a participação dos colegas — isso faz parte da nota individual de cada aluno.
+              </p>
+              <div className="rounded-md border p-3 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Quem precisa checar o e-mail:</p>
+                {groupNames.map((name, i) => (
+                  <div key={i} className="text-sm flex items-center justify-between gap-2">
+                    <span className="font-medium">{name || "—"}</span>
+                    <span className="text-xs text-muted-foreground truncate">{groupEmails[i]}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O link é pessoal e expira em 3 horas — melhor fazer isso agora, antes de sair da sala.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowPeerEvalNotice(false)}>Entendi</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
