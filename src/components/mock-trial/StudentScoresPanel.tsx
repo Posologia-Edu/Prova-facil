@@ -12,11 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip as UiTooltip, TooltipContent as UiTooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { consolidateScores } from "@/lib/mock-trial-evaluations";
 import { computeMtPeerBonus, MT_PEER_EVAL_MAX_ADJUST, MtPeerEvaluationScores } from "@/lib/mt-peer-eval";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Users, AlertTriangle } from "lucide-react";
+import { Users, AlertTriangle, Info } from "lucide-react";
 
 interface Props {
   mockTrialId: string;
@@ -466,6 +467,57 @@ export function StudentScoresPanel({
                                 <div className="border rounded-md p-2 space-y-1.5">
                                   <div className="text-xs font-medium flex items-center gap-1.5">
                                     <Users className="h-3 w-3" /> Avaliação entre Pares
+                                    <TooltipProvider>
+                                      <UiTooltip>
+                                        <TooltipTrigger asChild>
+                                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                                        </TooltipTrigger>
+                                        <UiTooltipContent
+                                          side="left"
+                                          align="start"
+                                          sideOffset={8}
+                                          collisionPadding={16}
+                                          avoidCollisions
+                                          className="w-[min(92vw,420px)] max-h-[70vh] overflow-y-auto z-[100]"
+                                        >
+                                          <div className="text-xs space-y-1.5 break-words whitespace-normal">
+                                            <p>
+                                              <strong>O que é:</strong> logo que o juiz encerra este processo, cada
+                                              integrante do grupo recebe um e-mail para avaliar os colegas de 0 a 5
+                                              em três critérios (mostrados como <strong>P · A · C</strong>):
+                                            </p>
+                                            <ul className="list-disc list-inside space-y-0.5 ml-1">
+                                              <li><strong>P — Preparação:</strong> participou das reuniões e da construção dos argumentos/perguntas antes do julgamento.</li>
+                                              <li>
+                                                <strong>A — Atuação no julgamento:</strong>{" "}
+                                                {p.role === "jury"
+                                                  ? "qualidade das perguntas feitas e imparcialidade no julgamento."
+                                                  : "qualidade da argumentação e atuação durante o julgamento."}
+                                              </li>
+                                              <li><strong>C — Colaboração:</strong> postura respeitosa e colaborativa do início ao fim.</li>
+                                            </ul>
+                                            <p>
+                                              <strong>Como vira bônus/penalidade:</strong> média das 3 notas de cada
+                                              avaliador, depois média entre avaliadores (0–5). Ponto neutro:{" "}
+                                              <strong>2.5</strong>.
+                                            </p>
+                                            <p className="font-mono text-[11px] bg-muted/50 rounded px-2 py-1">
+                                              bônus = ((média − 2.5) / 2.5) × 1.0, limitado a ±1.0
+                                            </p>
+                                            <p>
+                                              Se ninguém responder, o bônus fica em <strong>0</strong> (nem soma, nem
+                                              subtrai) — não é penalidade por falta de resposta. Se o professor já
+                                              definiu uma nota individual manual (override), o bônus{" "}
+                                              <strong>não</strong> é aplicado por cima dela.
+                                            </p>
+                                            <p className="text-muted-foreground italic">
+                                              Um grupo pode jogar papéis diferentes em cada processo (ex.: Acusação no
+                                              caso 1, Júri no caso 2) — a avaliação é sempre por processo específico.
+                                            </p>
+                                          </div>
+                                        </UiTooltipContent>
+                                      </UiTooltip>
+                                    </TooltipProvider>
                                     {new Set(p.peerEvals.map((e) => `${e.preparacao_score}-${e.atuacao_score}-${e.colaboracao_score}`)).size === 1 &&
                                       p.peerEvals.length > 1 && (
                                         <span title="Todos os avaliadores deram exatamente as mesmas notas">

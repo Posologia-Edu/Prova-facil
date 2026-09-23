@@ -8,7 +8,7 @@ import {
   Download, Eye, Shuffle, LayoutTemplate, Globe, CreditCard,
   MonitorPlay, CheckCircle, Search, Stethoscope, Store, Bot,
   Code, Server, Database, Plug, Lock, CloudCog, HardDrive, Radio,
-  HeartPulse, ClipboardList, Pill, FileCheck
+  HeartPulse, ClipboardList, Pill, FileCheck, Gavel
 } from "lucide-react";
 import {
   Accordion,
@@ -37,6 +37,7 @@ const Documentation = () => {
     { id: "marketplace", icon: Store, title: t("docs_marketplace"), content: t("docs_marketplace_content") },
     { id: "ai-tutor", icon: Bot, title: t("docs_ai_tutor"), content: t("docs_ai_tutor_content") },
     { id: "virtual-patients", icon: HeartPulse, title: t("docs_virtual_patients"), content: t("docs_virtual_patients_content") },
+    { id: "mock-trial", icon: Gavel, title: t("docs_mock_trial"), content: t("docs_mock_trial_content") },
     { id: "simulation", icon: ClipboardList, title: t("docs_simulation"), content: t("docs_simulation_content") },
     { id: "soap", icon: FileText, title: t("docs_soap"), content: t("docs_soap_content") },
     { id: "reconciliation", icon: Pill, title: t("docs_reconciliation"), content: t("docs_reconciliation_content") },
