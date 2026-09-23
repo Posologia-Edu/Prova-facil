@@ -463,32 +463,39 @@ export function StudentScoresPanel({
                                     )}
                                   </div>
                                 </div>
-                                {p.peerEvals.length > 0 && (
-                                  <div className="border rounded-md p-2 space-y-1.5">
-                                    <div className="text-xs font-medium flex items-center gap-1.5">
-                                      <Users className="h-3 w-3" /> Avaliação entre Pares
-                                      {new Set(p.peerEvals.map((e) => `${e.preparacao_score}-${e.atuacao_score}-${e.colaboracao_score}`)).size === 1 &&
-                                        p.peerEvals.length > 1 && (
-                                          <span title="Todos os avaliadores deram exatamente as mesmas notas">
-                                            <AlertTriangle className="h-3 w-3 text-amber-600" />
-                                          </span>
-                                        )}
-                                    </div>
-                                    {p.peerEvals.map((e, i) => (
-                                      <div key={i} className="text-[11px] flex items-center justify-between">
-                                        <span className="text-muted-foreground truncate max-w-[45%]">
-                                          {e.evaluator_name || e.evaluator_email}
+                                <div className="border rounded-md p-2 space-y-1.5">
+                                  <div className="text-xs font-medium flex items-center gap-1.5">
+                                    <Users className="h-3 w-3" /> Avaliação entre Pares
+                                    {new Set(p.peerEvals.map((e) => `${e.preparacao_score}-${e.atuacao_score}-${e.colaboracao_score}`)).size === 1 &&
+                                      p.peerEvals.length > 1 && (
+                                        <span title="Todos os avaliadores deram exatamente as mesmas notas">
+                                          <AlertTriangle className="h-3 w-3 text-amber-600" />
                                         </span>
-                                        <span className="font-mono">
-                                          P:{e.preparacao_score} · A:{e.atuacao_score} · C:{e.colaboracao_score}
-                                        </span>
-                                      </div>
-                                    ))}
-                                    <p className="text-[10px] text-muted-foreground pt-0.5">
-                                      Bônus/penalidade de até ±{MT_PEER_EVAL_MAX_ADJUST.toFixed(1)}, já somado à nota original acima.
-                                    </p>
+                                      )}
                                   </div>
-                                )}
+                                  {p.peerEvals.length === 0 ? (
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Nenhum colega avaliou este aluno ainda (grupo sem outros integrantes, convite
+                                      ainda não enviado, ou ninguém respondeu — bônus fica em 0 nesse caso).
+                                    </p>
+                                  ) : (
+                                    <>
+                                      {p.peerEvals.map((e, i) => (
+                                        <div key={i} className="text-[11px] flex items-center justify-between">
+                                          <span className="text-muted-foreground truncate max-w-[45%]">
+                                            {e.evaluator_name || e.evaluator_email}
+                                          </span>
+                                          <span className="font-mono">
+                                            P:{e.preparacao_score} · A:{e.atuacao_score} · C:{e.colaboracao_score}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      <p className="text-[10px] text-muted-foreground pt-0.5">
+                                        Bônus/penalidade de até ±{MT_PEER_EVAL_MAX_ADJUST.toFixed(1)}, já somado à nota original acima.
+                                      </p>
+                                    </>
+                                  )}
+                                </div>
                                 <div className="space-y-1.5">
                                   <label className="text-xs font-medium">
                                     Presença
