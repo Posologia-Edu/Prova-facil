@@ -94,8 +94,13 @@ export default function GenericSplitRoomDialog({ roomId, open, onOpenChange, onC
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
-      // Load clinical cases
-      const { data: cases } = await supabase.from(casesTable).select("*").eq("room_id", roomId) as { data: any[] | null };
+      // Load clinical cases in a stable order. New cases receive new UUIDs, so
+      // answer-key forms must be remapped to those UUIDs before being copied.
+      const { data: cases } = await supabase
+        .from(casesTable)
+        .select("*")
+        .eq("room_id", roomId)
+        .order("position", { ascending: true }) as { data: any[] | null };
 
       for (const sr of subRooms) {
         // Build insert object dynamically
@@ -117,27 +122,54 @@ export default function GenericSplitRoomDialog({ roomId, open, onOpenChange, onC
           .single() as any);
         if (roomErr || !newRoom) throw roomErr;
 
-        // Copy forms
-        for (const form of forms) {
-          const formInsert: any = {
-            room_id: newRoom.id,
-            title: form.title,
-            content_json: form.content_json,
-          };
-          if (form.form_type !== undefined) formInsert.form_type = form.form_type;
-          await supabase.from(formsTable).insert(formInsert);
-        }
-
         // Copy clinical cases
+        const caseIdMap: Record<string, string> = {};
         if (cases?.length) {
-          for (const c of cases) {
-            await supabase.from(casesTable).insert({
+          const { data: newCases, error: casesErr } = await supabase
+            .from(casesTable)
+            .insert(cases.map((c) => ({
               room_id: newRoom.id,
               title: c.title,
               content: c.content,
               position: c.position,
-            });
+            })))
+            .select("id, position")
+            .order("position", { ascending: true }) as { data: any[] | null; error: any };
+          if (casesErr) throw casesErr;
+
+          // Both arrays are ordered by position, preserving the old→new case
+          // relationship even though every copied case gets a new UUID.
+          (newCases || []).forEach((newCase, index) => {
+            const oldCase = cases[index];
+            if (oldCase?.id && newCase?.id) caseIdMap[oldCase.id] = newCase.id;
+          });
+        }
+
+        // Copy forms after cases so per-case answer keys can follow the new IDs.
+        for (const form of forms) {
+          let contentJson = form.content_json;
+          if (
+            contentJson &&
+            typeof contentJson === "object" &&
+            !Array.isArray(contentJson) &&
+            contentJson.case_answers &&
+            typeof contentJson.case_answers === "object"
+          ) {
+            const remappedAnswers: Record<string, any> = {};
+            for (const [oldCaseId, answers] of Object.entries(contentJson.case_answers)) {
+              remappedAnswers[caseIdMap[oldCaseId] || oldCaseId] = answers;
+            }
+            contentJson = { ...contentJson, case_answers: remappedAnswers };
           }
+
+          const formInsert: any = {
+            room_id: newRoom.id,
+            title: form.title,
+            content_json: contentJson,
+          };
+          if (form.form_type !== undefined) formInsert.form_type = form.form_type;
+          const { error: formErr } = await supabase.from(formsTable).insert(formInsert);
+          if (formErr) throw formErr;
         }
 
         // Move selected students to new room

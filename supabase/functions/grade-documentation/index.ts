@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
 import { getUserId, ownsRoom, unauthorized, forbidden } from "../_shared/auth-guard.ts";
 
@@ -57,6 +58,47 @@ serve(async (req) => {
     if (!userId) return unauthorized(corsHeaders);
     if (!room_id || !(await ownsRoom("documentation_rooms", room_id, userId))) return forbidden(corsHeaders);
 
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    // Older rooms (especially rooms created by the split-room flow) may have
+    // answer keys whose case IDs belong to the source room. Keep the normal
+    // exact-ID lookup, but use the case position as a safe recovery path for
+    // those legacy records.
+    const resolveCaseAnswer = async (
+      caseAnswers: Record<string, any>,
+      caseId: string | null | undefined,
+    ) => {
+      const keys = Object.keys(caseAnswers);
+      if (caseId && caseAnswers[caseId] !== undefined) return caseAnswers[caseId];
+      if (keys.length === 1) return caseAnswers[keys[0]];
+      if (!keys.length) return undefined;
+
+      const { data: roomCases, error: casesError } = await supabaseAdmin
+        .from("documentation_clinical_cases")
+        .select("id, position")
+        .eq("room_id", room_id)
+        .order("position", { ascending: true });
+
+      if (casesError || !roomCases?.length || roomCases.length !== keys.length) {
+        if (casesError) console.warn("Could not load documentation cases for answer-key recovery:", casesError.message);
+        return undefined;
+      }
+
+      const caseIdIndex = caseId
+        ? roomCases.findIndex((clinicalCase: any) => clinicalCase.id === caseId)
+        : -1;
+      const caseIndex = caseIdIndex >= 0
+        ? caseIdIndex
+        : Number.isInteger(Number(pair_index))
+          ? Number(pair_index) % roomCases.length
+          : -1;
+
+      return caseIndex >= 0 ? caseAnswers[keys[caseIndex]] : undefined;
+    };
+
 
     let comparisonPrompt = "Avalie as respostas do aluno comparando RIGOROSAMENTE com o espelho de respostas.\n\n";
     comparisonPrompt += "PONTUAÇÃO MÁXIMA:\n- Encaminhamento: 5,0 pontos\n- Quadro Resumo de Medicamentos: 5,0 pontos\n- Total: 10,0 pontos\n\n";
@@ -67,11 +109,9 @@ serve(async (req) => {
       if (referral_answer_key.case_answers) {
         const caseId = referral_response.clinical_case_id;
         const answers = referral_answer_key.case_answers as Record<string, any>;
-        const keys = Object.keys(answers);
-        if (caseId && answers[caseId]) {
-          keyFields = answers[caseId];
-        } else if (keys.length === 1) {
-          keyFields = answers[keys[0]];
+        const resolvedAnswer = await resolveCaseAnswer(answers, caseId);
+        if (resolvedAnswer !== undefined) {
+          keyFields = resolvedAnswer;
         } else {
           return new Response(JSON.stringify({
             error: `Espelho de encaminhamento não encontrado para o caso clínico "${caseId}". Verifique se os casos clínicos e os espelhos da sala estão sincronizados (edite o espelho e associe-o aos casos atuais).`,
@@ -144,12 +184,10 @@ serve(async (req) => {
       if (med_answer_key.case_answers) {
         const caseId = med_response.clinical_case_id;
         const answers = med_answer_key.case_answers as Record<string, any>;
-        const keys = Object.keys(answers);
         let caseData: any = null;
-        if (caseId && answers[caseId]) {
-          caseData = answers[caseId];
-        } else if (keys.length === 1) {
-          caseData = answers[keys[0]];
+        const resolvedAnswer = await resolveCaseAnswer(answers, caseId);
+        if (resolvedAnswer !== undefined) {
+          caseData = resolvedAnswer;
         } else {
           return new Response(JSON.stringify({
             error: `Espelho do quadro resumo não encontrado para o caso clínico "${caseId}". Verifique se os casos clínicos e os espelhos da sala estão sincronizados (edite o espelho e associe-o aos casos atuais).`,
@@ -274,9 +312,6 @@ REGRAS DE FORMATO:
 
     const referralScore = Math.min(Number(grading.referral_total) || 0, 5);
     const medicationScore = Math.min(Number(grading.medication_score) || 0, 5);
-
-    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-    const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     if (referral_response?.id) {
       const feedbackJson: Record<string, any> = {};
