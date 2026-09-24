@@ -172,6 +172,20 @@ export default function DocumentationControl() {
     return pool.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
   };
 
+  // The student sees the case assigned from pair_index in DocumentationJoin.
+  // Use that same assignment for grading instead of trusting a stale response ID.
+  const getAssignedCaseId = (pairIdx: number | null) => {
+    if (pairIdx === null || clinicalCases.length === 0) return undefined;
+    const caseIndex = ((pairIdx % clinicalCases.length) + clinicalCases.length) % clinicalCases.length;
+    return clinicalCases[caseIndex]?.id;
+  };
+
+  const responseForGrading = (response: any, pairIdx: number) => response ? {
+    id: response.id,
+    answers_json: response.answers_json,
+    clinical_case_id: getAssignedCaseId(pairIdx) || response.clinical_case_id,
+  } : null;
+
   const selectedReferralResp = findBestResponse(selectedPairIndex, referralForm?.id);
   const selectedMedResp = findBestResponse(selectedPairIndex, medForm?.id);
 
@@ -233,10 +247,10 @@ export default function DocumentationControl() {
         body: {
           room_id: roomId,
           pair_index: selectedPairIndex,
-          referral_response: selectedReferralResp ? { id: selectedReferralResp.id, answers_json: selectedReferralResp.answers_json, clinical_case_id: selectedReferralResp.clinical_case_id } : null,
+          referral_response: responseForGrading(selectedReferralResp, selectedPairIndex),
           referral_answer_key: referralAnswerKey?.content_json || null,
           referral_fields: referralForm?.content_json || [],
-          med_response: selectedMedResp ? { id: selectedMedResp.id, answers_json: selectedMedResp.answers_json, clinical_case_id: selectedMedResp.clinical_case_id } : null,
+          med_response: responseForGrading(selectedMedResp, selectedPairIndex),
           med_answer_key: medAnswerKey?.content_json || null,
           med_columns: medContent?.columns || [],
         },
@@ -271,10 +285,10 @@ export default function DocumentationControl() {
           body: {
             room_id: roomId,
             pair_index: pairIdx,
-            referral_response: refResp ? { id: refResp.id, answers_json: refResp.answers_json, clinical_case_id: refResp.clinical_case_id } : null,
+            referral_response: responseForGrading(refResp, pairIdx),
             referral_answer_key: referralAnswerKey?.content_json || null,
             referral_fields: referralForm?.content_json || [],
-            med_response: mResp ? { id: mResp.id, answers_json: mResp.answers_json, clinical_case_id: mResp.clinical_case_id } : null,
+            med_response: responseForGrading(mResp, pairIdx),
             med_answer_key: medAnswerKey?.content_json || null,
             med_columns: medContent?.columns || [],
           },
@@ -521,7 +535,8 @@ export default function DocumentationControl() {
             pairIndicesWithResponses.map(pairIdx => {
               const refResp = findBestResponse(pairIdx, referralForm?.id);
               const mResp = findBestResponse(pairIdx, medForm?.id);
-              const caseData = clinicalCases.find(c => c.id === (refResp || mResp)?.clinical_case_id);
+              const assignedCaseId = getAssignedCaseId(pairIdx) || (refResp || mResp)?.clinical_case_id;
+              const caseData = clinicalCases.find(c => c.id === assignedCaseId);
               const caseKeyFields = getReferralKeyFields(caseData?.id);
               const caseMedKey = getMedKeyContent(caseData?.id);
 

@@ -63,10 +63,27 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Older rooms (especially rooms created by the split-room flow) may have
-    // answer keys whose case IDs belong to the source room. Keep the normal
-    // exact-ID lookup, but use the case position as a safe recovery path for
-    // those legacy records.
+    // Resolve answer keys only when the case relationship is provable. This
+    // prevents grading a response with the mirror of a different case.
+    let roomCasesCache: any[] | null = null;
+    const loadRoomCases = async () => {
+      if (roomCasesCache) return roomCasesCache;
+      const { data, error } = await supabaseAdmin
+        .from("documentation_clinical_cases")
+        .select("id, reconciliation_case_id, title, position")
+        .eq("room_id", room_id)
+        .order("position", { ascending: true });
+      if (error) {
+        console.warn("Could not load documentation cases:", error.message);
+        roomCasesCache = [];
+      } else {
+        roomCasesCache = data || [];
+      }
+      return roomCasesCache;
+    };
+
+    const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
     const resolveCaseAnswer = async (
       caseAnswers: Record<string, any>,
       caseId: string | null | undefined,
@@ -76,27 +93,55 @@ serve(async (req) => {
       if (keys.length === 1) return caseAnswers[keys[0]];
       if (!keys.length) return undefined;
 
-      const { data: roomCases, error: casesError } = await supabaseAdmin
-        .from("documentation_clinical_cases")
-        .select("id, position")
-        .eq("room_id", room_id)
-        .order("position", { ascending: true });
+      const roomCases = await loadRoomCases();
+      if (!roomCases.length) return undefined;
 
-      if (casesError || !roomCases?.length || roomCases.length !== keys.length) {
-        if (casesError) console.warn("Could not load documentation cases for answer-key recovery:", casesError.message);
-        return undefined;
+      let targetCase = caseId ? roomCases.find((clinicalCase: any) => clinicalCase.id === caseId) : undefined;
+
+      // Recover a stale response ID through the source-case relationship or
+      // title, when the old case still exists in the database.
+      if (!targetCase && caseId && isUuid(caseId)) {
+        const { data: legacyResponseCase } = await supabaseAdmin
+          .from("documentation_clinical_cases")
+          .select("id, reconciliation_case_id, title")
+          .eq("id", caseId)
+          .maybeSingle();
+        if (legacyResponseCase) {
+          targetCase = roomCases.find((clinicalCase: any) =>
+            (legacyResponseCase.reconciliation_case_id && clinicalCase.reconciliation_case_id === legacyResponseCase.reconciliation_case_id) ||
+            (legacyResponseCase.title && clinicalCase.title === legacyResponseCase.title)
+          );
+        }
       }
 
-      const caseIdIndex = caseId
-        ? roomCases.findIndex((clinicalCase: any) => clinicalCase.id === caseId)
-        : -1;
-      const caseIndex = caseIdIndex >= 0
-        ? caseIdIndex
-        : Number.isInteger(Number(pair_index))
-          ? Number(pair_index) % roomCases.length
-          : -1;
+      // pair_index identifies which case was shown to the student. It is only
+      // used to identify the target case; the answer-key entry still must match
+      // that case by ID, source-case ID, or title.
+      if (!targetCase && Number.isInteger(Number(pair_index))) {
+        const caseIndex = ((Number(pair_index) % roomCases.length) + roomCases.length) % roomCases.length;
+        targetCase = roomCases[caseIndex];
+      }
+      if (!targetCase) return undefined;
 
-      return caseIndex >= 0 ? caseAnswers[keys[caseIndex]] : undefined;
+      const legacyKeyIds = keys.filter(isUuid);
+      const { data: legacyKeyCases } = legacyKeyIds.length
+        ? await supabaseAdmin
+          .from("documentation_clinical_cases")
+          .select("id, reconciliation_case_id, title")
+          .in("id", legacyKeyIds)
+        : { data: [] as any[] };
+
+      const candidates = keys.filter((key) => {
+        if (key === targetCase.id || key === targetCase.reconciliation_case_id) return true;
+        const legacyKeyCase = (legacyKeyCases || []).find((clinicalCase: any) => clinicalCase.id === key);
+        return Boolean(
+          legacyKeyCase &&
+          ((targetCase.reconciliation_case_id && legacyKeyCase.reconciliation_case_id === targetCase.reconciliation_case_id) ||
+            (targetCase.title && legacyKeyCase.title === targetCase.title))
+        );
+      });
+
+      return candidates.length === 1 ? caseAnswers[candidates[0]] : undefined;
     };
 
 
@@ -316,11 +361,19 @@ REGRAS DE FORMATO:
     if (referral_response?.id) {
       const feedbackJson: Record<string, any> = {};
       (grading.referral_items || []).forEach((item: any) => { feedbackJson[item.field_id] = { score: item.score, feedback: item.feedback }; });
-      await supabaseAdmin.from("documentation_responses").update({ ai_score: referralScore, ai_feedback_json: feedbackJson }).eq("id", referral_response.id);
+      await supabaseAdmin.from("documentation_responses").update({
+        clinical_case_id: referral_response.clinical_case_id || null,
+        ai_score: referralScore,
+        ai_feedback_json: feedbackJson,
+      }).eq("id", referral_response.id);
     }
 
     if (med_response?.id) {
-      await supabaseAdmin.from("documentation_responses").update({ ai_score: medicationScore, ai_feedback_json: { feedback: grading.medication_feedback || grading.general_feedback || "" } }).eq("id", med_response.id);
+      await supabaseAdmin.from("documentation_responses").update({
+        clinical_case_id: med_response.clinical_case_id || null,
+        ai_score: medicationScore,
+        ai_feedback_json: { feedback: grading.medication_feedback || grading.general_feedback || "" },
+      }).eq("id", med_response.id);
     }
 
     return new Response(JSON.stringify({

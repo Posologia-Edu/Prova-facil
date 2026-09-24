@@ -179,7 +179,7 @@ export default function DocumentationRooms() {
       const caseIdMap: Record<string, string> = {};
       if (cases?.length) {
         const { data: newCases } = await supabase.from("documentation_clinical_cases")
-          .insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })))
+          .insert(cases.map(c => ({ room_id: newRoom.id, reconciliation_case_id: c.reconciliation_case_id, title: c.title, content: c.content, position: c.position })))
           .select("id");
         if (newCases) {
           cases.forEach((oldCase, i) => { caseIdMap[oldCase.id] = newCases[i].id; });

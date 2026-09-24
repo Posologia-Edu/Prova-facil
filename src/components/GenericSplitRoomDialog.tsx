@@ -127,12 +127,16 @@ export default function GenericSplitRoomDialog({ roomId, open, onOpenChange, onC
         if (cases?.length) {
           const { data: newCases, error: casesErr } = await supabase
             .from(casesTable)
-            .insert(cases.map((c) => ({
-              room_id: newRoom.id,
-              title: c.title,
-              content: c.content,
-              position: c.position,
-            })))
+            .insert(cases.map((c) => {
+              const caseInsert: any = {
+                room_id: newRoom.id,
+                title: c.title,
+                content: c.content,
+                position: c.position,
+              };
+              if (c.reconciliation_case_id !== undefined) caseInsert.reconciliation_case_id = c.reconciliation_case_id;
+              return caseInsert;
+            }))
             .select("id, position")
             .order("position", { ascending: true }) as { data: any[] | null; error: any };
           if (casesErr) throw casesErr;
