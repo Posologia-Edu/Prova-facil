@@ -128,16 +128,67 @@ export default function DocumentationControl() {
   const medForm = forms.find((f: any) => f.form_type === "medication_summary");
   const medAnswerKey = forms.find((f: any) => f.form_type === "medication_answer_key");
 
+  // Existing rooms may contain answer keys saved with IDs from the source room
+  // before a duplication/split. Load those source-case relationships so the
+  // control screen can resolve the correct mirror without guessing by order.
+  const answerKeyCaseIds = useMemo(() => {
+    const ids = new Set<string>();
+    [referralAnswerKey, medAnswerKey].forEach((form: any) => {
+      const caseAnswers = form?.content_json?.case_answers;
+      if (!caseAnswers || typeof caseAnswers !== "object" || Array.isArray(caseAnswers)) return;
+      Object.keys(caseAnswers).forEach((id) => {
+        if (!clinicalCases.some((clinicalCase: any) => clinicalCase.id === id)) ids.add(id);
+      });
+    });
+    return Array.from(ids).sort();
+  }, [referralAnswerKey, medAnswerKey, clinicalCases]);
+
+  const { data: answerKeyCaseMetadata = [] } = useQuery({
+    queryKey: ["documentation-answer-key-case-metadata", roomId, answerKeyCaseIds],
+    queryFn: async () => {
+      if (!answerKeyCaseIds.length) return [];
+      const { data, error } = await supabase
+        .from("documentation_clinical_cases")
+        .select("id, reconciliation_case_id, title")
+        .in("id", answerKeyCaseIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!roomId && answerKeyCaseIds.length > 0,
+  });
+
   const referralFields: FormField[] = referralForm ? (Array.isArray(referralForm.content_json) ? referralForm.content_json : []) : [];
 
   // Get answer key fields for a specific clinical case
+  const resolveCaseAnswer = (content: any, caseId?: string) => {
+    const caseAnswers = content?.case_answers;
+    if (!caseAnswers || typeof caseAnswers !== "object" || Array.isArray(caseAnswers) || !caseId) return undefined;
+    if (caseAnswers[caseId] !== undefined) return caseAnswers[caseId];
+
+    const targetCase = clinicalCases.find((clinicalCase: any) => clinicalCase.id === caseId);
+    const candidates = Object.keys(caseAnswers).filter((key) => {
+      if (targetCase?.reconciliation_case_id && key === targetCase.reconciliation_case_id) return true;
+      const sourceCase = answerKeyCaseMetadata.find((clinicalCase: any) => clinicalCase.id === key);
+      return Boolean(
+        sourceCase &&
+        ((targetCase?.reconciliation_case_id && sourceCase.reconciliation_case_id === targetCase.reconciliation_case_id) ||
+          (targetCase?.title && sourceCase.title === targetCase.title))
+      );
+    });
+
+    if (candidates.length === 1) return caseAnswers[candidates[0]];
+    if (candidates.length === 0 && clinicalCases.length === 1 && Object.keys(caseAnswers).length === 1) {
+      return caseAnswers[Object.keys(caseAnswers)[0]];
+    }
+    return undefined;
+  };
+
   const getReferralKeyFields = (caseId?: string): FormField[] => {
     if (!referralAnswerKey) return [];
     const content = referralAnswerKey.content_json;
     if (content?.case_answers) {
-      if (caseId && content.case_answers[caseId]) return content.case_answers[caseId];
-      const firstKey = Object.keys(content.case_answers)[0];
-      return firstKey ? content.case_answers[firstKey] : [];
+      const resolved = resolveCaseAnswer(content, caseId);
+      return Array.isArray(resolved) ? resolved : [];
     }
     return Array.isArray(content) ? content : [];
   };
@@ -146,9 +197,7 @@ export default function DocumentationControl() {
     if (!medAnswerKey) return null;
     const content = medAnswerKey.content_json;
     if (content?.case_answers) {
-      if (caseId && content.case_answers[caseId]) return content.case_answers[caseId];
-      const firstKey = Object.keys(content.case_answers)[0];
-      return firstKey ? content.case_answers[firstKey] : null;
+      return resolveCaseAnswer(content, caseId) || null;
     }
     return content as MedFormContent;
   };
@@ -172,18 +221,25 @@ export default function DocumentationControl() {
     return pool.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
   };
 
-  // The student sees the case assigned from pair_index in DocumentationJoin.
-  // Use that same assignment for grading instead of trusting a stale response ID.
-  const getAssignedCaseId = (pairIdx: number | null) => {
+  const getPairAssignedCaseId = (pairIdx: number | null) => {
     if (pairIdx === null || clinicalCases.length === 0) return undefined;
     const caseIndex = ((pairIdx % clinicalCases.length) + clinicalCases.length) % clinicalCases.length;
     return clinicalCases[caseIndex]?.id;
   };
 
+  // Prefer the case ID persisted with the response because it records what the
+  // student actually received. Fall back to pair_index only for legacy rows.
+  const getAssignedCaseId = (pairIdx: number | null, response?: any) => {
+    if (response?.clinical_case_id && clinicalCases.some((clinicalCase: any) => clinicalCase.id === response.clinical_case_id)) {
+      return response.clinical_case_id;
+    }
+    return getPairAssignedCaseId(pairIdx) || response?.clinical_case_id;
+  };
+
   const responseForGrading = (response: any, pairIdx: number) => response ? {
     id: response.id,
     answers_json: response.answers_json,
-    clinical_case_id: getAssignedCaseId(pairIdx) || response.clinical_case_id,
+    clinical_case_id: response.clinical_case_id || getPairAssignedCaseId(pairIdx),
   } : null;
 
   const selectedReferralResp = findBestResponse(selectedPairIndex, referralForm?.id);
