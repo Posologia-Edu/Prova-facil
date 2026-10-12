@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
@@ -46,6 +50,7 @@ export function VirtualPatientMAI({ open, onOpenChange, sessionId, onComplete }:
     { name: "", answers: {}, expanded: true },
   ]);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const addMedication = () => {
     setMedications(prev => [
@@ -89,12 +94,13 @@ export function VirtualPatientMAI({ open, onOpenChange, sessionId, onComplete }:
     return Object.keys(med.answers).length;
   };
 
-  const handleSubmit = async () => {
-    // Validate all medications
+  const requestSubmit = () => {
+    // Validate all medications before asking for confirmation
     for (let i = 0; i < medications.length; i++) {
       const med = medications[i];
       if (!med.name.trim()) {
         toast.error(`Informe o nome do medicamento ${i + 1}.`);
+        setMedications(prev => prev.map((m, j) => ({ ...m, expanded: j === i })));
         return;
       }
       if (Object.keys(med.answers).length < MAI_CRITERIA.length) {
@@ -103,7 +109,10 @@ export function VirtualPatientMAI({ open, onOpenChange, sessionId, onComplete }:
         return;
       }
     }
+    setConfirmOpen(true);
+  };
 
+  const handleSubmit = async () => {
     setSubmitting(true);
 
     // Build combined MAI data
@@ -229,15 +238,50 @@ export function VirtualPatientMAI({ open, onOpenChange, sessionId, onComplete }:
             </div>
           ))}
 
-          <Button variant="outline" onClick={addMedication} className="w-full gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addMedication}
+            className="w-full gap-2 border-dashed"
+          >
             <Plus className="h-4 w-4" /> Adicionar outro medicamento
           </Button>
+        </div>
 
-          <Button onClick={handleSubmit} disabled={submitting} className="w-full">
-            {submitting ? "Salvando..." : `Enviar Avaliação MAI (${medications.length} medicamento${medications.length > 1 ? "s" : ""})`}
+        {/* Final submit, visually separated from the "add" action to avoid accidental clicks */}
+        <div className="mt-10 pt-6 border-t-2 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Revise todos os medicamentos antes de finalizar. Após o envio, a atividade será concluída.
+          </p>
+          <Button
+            type="button"
+            onClick={requestSubmit}
+            disabled={submitting}
+            className="sm:w-auto shrink-0"
+          >
+            {submitting ? "Salvando..." : "Finalizar e enviar atividade"}
           </Button>
         </div>
       </DialogContent>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enviar a atividade?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você avaliou {medications.length} medicamento{medications.length > 1 ? "s" : ""}. Depois de enviado, o MAI não poderá ser editado. Se esqueceu algum medicamento, volte e adicione-o antes de enviar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar e revisar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { setConfirmOpen(false); handleSubmit(); }}
+            >
+              Confirmar envio
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
