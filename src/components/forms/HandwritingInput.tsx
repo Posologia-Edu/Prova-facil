@@ -27,6 +27,8 @@ interface HandwritingInputProps {
 
 type Tool = "pen" | "eraser";
 
+const CANVAS_HEIGHT = 320;
+
 export default function HandwritingInput({
   context,
   onTranscribe,
@@ -39,75 +41,135 @@ export default function HandwritingInput({
   const [tool, setTool] = useState<Tool>("pen");
   const [loading, setLoading] = useState(false);
   const [hasInk, setHasInk] = useState(false);
+  const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
+  const pointerIdRef = useRef<number | null>(null);
+  const activePenRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Setup canvas size on open
+  // Size the canvas bitmap to its real on-screen size (re-run on any resize).
+  // Uses state-backed ref because the dialog content mounts after `open` flips.
   useEffect(() => {
-    if (!open) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    // High DPI handling
-    const ratio = window.devicePixelRatio || 1;
-    const parent = canvas.parentElement;
-    const w = parent ? parent.clientWidth : 600;
-    const h = 320;
-    canvas.width = w * ratio;
-    canvas.height = h * ratio;
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.scale(ratio, ratio);
+    if (!open || !canvasEl) return;
+    const parent = canvasEl.parentElement;
+    if (!parent) return;
+
+    const setup = () => {
+      const ratio = window.devicePixelRatio || 1;
+      // clientWidth ignores CSS transforms (e.g. dialog zoom-in animation)
+      const w = Math.max(1, Math.round(parent.clientWidth));
+      const h = CANVAS_HEIGHT;
+      if (canvasEl.width === Math.round(w * ratio) && canvasEl.height === Math.round(h * ratio)) return;
+
+      // Preserve existing ink across resizes
+      let snapshot: HTMLCanvasElement | null = null;
+      if (canvasEl.width > 0 && canvasEl.height > 0) {
+        snapshot = document.createElement("canvas");
+        snapshot.width = canvasEl.width;
+        snapshot.height = canvasEl.height;
+        snapshot.getContext("2d")?.drawImage(canvasEl, 0, 0);
+      }
+
+      canvasEl.width = Math.round(w * ratio);
+      canvasEl.height = Math.round(h * ratio);
+      canvasEl.style.width = `${w}px`;
+      canvasEl.style.height = `${h}px`;
+      const ctx = canvasEl.getContext("2d");
+      if (!ctx) return;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, w, h);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-    }
-    setHasInk(false);
+      if (snapshot) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(snapshot, 0, 0);
+        ctx.restore();
+      }
+    };
+
+    setup();
+    const ro = new ResizeObserver(setup);
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, [open, canvasEl]);
+
+  useEffect(() => {
+    if (open) setHasInk(false);
   }, [open]);
 
-  const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  // Convert pointer position to canvas CSS-pixel coordinates. Divides by the
+  // real rendered size so it stays exact even while the dialog is animating/scaled.
+  const getPos = (e: { clientX: number; clientY: number }) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const sx = rect.width ? canvas.clientWidth / rect.width : 1;
+    const sy = rect.height ? canvas.clientHeight / rect.height : 1;
+    return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+  };
+
+  const strokeFor = (pressure: number, pointerType: string) => {
+    if (tool === "eraser") return { color: "#ffffff", width: 18 };
+    // Stylus: vary width with pressure; finger/mouse: constant
+    const p = pointerType === "pen" && pressure > 0 ? pressure : 0.5;
+    return { color: "#0f172a", width: 1.5 + p * 2.5 };
   };
 
   const startDraw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (disabled) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    // While a stylus is in use, ignore palm/finger touches
+    if (e.pointerType === "touch" && activePenRef.current) return;
+    if (e.pointerType === "pen") activePenRef.current = true;
     e.preventDefault();
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+    canvasRef.current?.setPointerCapture?.(e.pointerId);
     drawingRef.current = true;
-    lastPointRef.current = getPos(e);
+    pointerIdRef.current = e.pointerId;
+    const p = getPos(e);
+    lastPointRef.current = p;
+    // Draw a dot so taps (i, periods, accents) are registered
+    const ctx = canvasRef.current?.getContext("2d");
+    if (ctx) {
+      const { color, width } = strokeFor(e.pressure, e.pointerType);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, width / 2, 0, Math.PI * 2);
+      ctx.fill();
+      setHasInk(true);
+    }
   };
 
   const moveDraw = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drawingRef.current) return;
+    if (!drawingRef.current || e.pointerId !== pointerIdRef.current) return;
     e.preventDefault();
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
-    const p = getPos(e);
-    const last = lastPointRef.current ?? p;
-    ctx.beginPath();
-    ctx.moveTo(last.x, last.y);
-    ctx.lineTo(p.x, p.y);
-    if (tool === "pen") {
-      ctx.strokeStyle = "#0f172a";
-      ctx.lineWidth = 2.5;
-      ctx.globalCompositeOperation = "source-over";
-    } else {
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 18;
-      ctx.globalCompositeOperation = "source-over";
+    // Use every sampled point (coalesced events) so fast strokes follow the pen tip
+    const native = e.nativeEvent;
+    const coalesced = native.getCoalescedEvents?.() ?? [];
+    const samples = coalesced.length ? coalesced : [native];
+    for (const ev of samples) {
+      const p = getPos(ev);
+      const last = lastPointRef.current ?? p;
+      const { color, width } = strokeFor(ev.pressure, e.pointerType);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      lastPointRef.current = p;
     }
-    ctx.stroke();
-    lastPointRef.current = p;
     setHasInk(true);
   };
 
-  const endDraw = () => {
+  const endDraw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerId !== pointerIdRef.current) return;
+    if (e.pointerType === "pen") activePenRef.current = false;
     drawingRef.current = false;
+    pointerIdRef.current = null;
     lastPointRef.current = null;
   };
 
@@ -116,13 +178,11 @@ export default function HandwritingInput({
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const ratio = window.devicePixelRatio || 1;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.restore();
-    ctx.scale(ratio, ratio);
     setHasInk(false);
   };
 
@@ -217,13 +277,12 @@ export default function HandwritingInput({
 
           <div className="rounded-md border bg-white overflow-hidden touch-none select-none">
             <canvas
-              ref={canvasRef}
+              ref={(el) => { canvasRef.current = el; setCanvasEl(el); }}
               onPointerDown={startDraw}
               onPointerMove={moveDraw}
               onPointerUp={endDraw}
               onPointerCancel={endDraw}
-              onPointerLeave={endDraw}
-              className="block w-full cursor-crosshair touch-none"
+              className="block cursor-crosshair touch-none"
               style={{ touchAction: "none" }}
             />
           </div>
