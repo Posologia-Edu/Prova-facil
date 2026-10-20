@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -6843,16 +6843,16 @@ export type Database = {
           feedback_released_at: string | null
           feedback_resumido: string | null
           flags_seguranca: Json | null
+          graded_at: string | null
+          grading_model: string | null
           id: string
           nota_final: number | null
           nota_microlearning: number | null
           orientacoes_melhoria: string | null
-          session_id: string
-          subscores: Json
-          graded_at: string | null
-          grading_model: string | null
           raw_ai_response: string | null
           rubric_version: string | null
+          session_id: string
+          subscores: Json
         }
         Insert: {
           bonus_penalidades?: Json | null
@@ -6862,16 +6862,16 @@ export type Database = {
           feedback_released_at?: string | null
           feedback_resumido?: string | null
           flags_seguranca?: Json | null
+          graded_at?: string | null
+          grading_model?: string | null
           id?: string
           nota_final?: number | null
           nota_microlearning?: number | null
           orientacoes_melhoria?: string | null
-          session_id: string
-          subscores?: Json
-          graded_at?: string | null
-          grading_model?: string | null
           raw_ai_response?: string | null
           rubric_version?: string | null
+          session_id: string
+          subscores?: Json
         }
         Update: {
           bonus_penalidades?: Json | null
@@ -6881,16 +6881,16 @@ export type Database = {
           feedback_released_at?: string | null
           feedback_resumido?: string | null
           flags_seguranca?: Json | null
+          graded_at?: string | null
+          grading_model?: string | null
           id?: string
           nota_final?: number | null
           nota_microlearning?: number | null
           orientacoes_melhoria?: string | null
-          session_id?: string
-          subscores?: Json
-          graded_at?: string | null
-          grading_model?: string | null
           raw_ai_response?: string | null
           rubric_version?: string | null
+          session_id?: string
+          subscores?: Json
         }
         Relationships: [
           {
@@ -6943,34 +6943,34 @@ export type Database = {
       }
       virtual_patient_messages: {
         Row: {
+          author_email: string | null
+          author_name: string | null
           content: string
           created_at: string
           encounter: number
           id: string
           role: string
           session_id: string
-          author_email: string | null
-          author_name: string | null
         }
         Insert: {
+          author_email?: string | null
+          author_name?: string | null
           content?: string
           created_at?: string
           encounter?: number
           id?: string
           role?: string
           session_id: string
-          author_email?: string | null
-          author_name?: string | null
         }
         Update: {
+          author_email?: string | null
+          author_name?: string | null
           content?: string
           created_at?: string
           encounter?: number
           id?: string
           role?: string
           session_id?: string
-          author_email?: string | null
-          author_name?: string | null
         }
         Relationships: [
           {
@@ -7081,6 +7081,7 @@ export type Database = {
           class_virtual_patient_id: string | null
           created_at: string
           current_encounter: number
+          encounter_conducts: Json
           group_id: string | null
           id: string
           mai_answers_json: Json | null
@@ -7099,12 +7100,12 @@ export type Database = {
           total_tokens: number
           updated_at: string
           user_id: string | null
-          encounter_conducts: Json
         }
         Insert: {
           class_virtual_patient_id?: string | null
           created_at?: string
           current_encounter?: number
+          encounter_conducts?: Json
           group_id?: string | null
           id?: string
           mai_answers_json?: Json | null
@@ -7123,12 +7124,12 @@ export type Database = {
           total_tokens?: number
           updated_at?: string
           user_id?: string | null
-          encounter_conducts?: Json
         }
         Update: {
           class_virtual_patient_id?: string | null
           created_at?: string
           current_encounter?: number
+          encounter_conducts?: Json
           group_id?: string | null
           id?: string
           mai_answers_json?: Json | null
@@ -7147,7 +7148,6 @@ export type Database = {
           total_tokens?: number
           updated_at?: string
           user_id?: string | null
-          encounter_conducts?: Json
         }
         Relationships: [
           {
