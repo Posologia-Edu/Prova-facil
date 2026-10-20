@@ -1147,9 +1147,9 @@ export type Database = {
           group_label: string | null
           id: string
           patient_id: string
+          profession: string
           semester_id: string | null
           status: string
-          profession: string
         }
         Insert: {
           access_code?: string
@@ -1158,9 +1158,9 @@ export type Database = {
           group_label?: string | null
           id?: string
           patient_id: string
+          profession?: string
           semester_id?: string | null
           status?: string
-          profession?: string
         }
         Update: {
           access_code?: string
@@ -1169,9 +1169,9 @@ export type Database = {
           group_label?: string | null
           id?: string
           patient_id?: string
+          profession?: string
           semester_id?: string | null
           status?: string
-          profession?: string
         }
         Relationships: [
           {
