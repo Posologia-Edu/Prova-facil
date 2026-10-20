@@ -8,6 +8,93 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Versão da rubrica gravada em cada nota. Incrementar sempre que pesos, dimensões ou
+// penalidades mudarem, para que notas antigas e novas possam ser distinguidas.
+const RUBRIC_VERSION = "vp-2026-10-a";
+const GRADING_MODEL = "google/gemini-2.5-pro";
+const MAX_ATTEMPTS = 2;
+
+const ANAMNESE_KEYS = [
+  "identificacao_acolhimento", "queixa_principal_hda", "historia_medicamentosa",
+  "antecedentes_comorbidades", "habitos_estilo_vida", "escuta_raciocinio_clinico",
+];
+const MAI_KEYS = ["mai_completude", "mai_coerencia_clinica", "mai_justificativa_critica", "mai_seguranca_paciente"];
+
+const MAX_BONUS = 0.5;
+const MAX_PENALTY = 1.5;
+
+const GRADING_TOOL = {
+  type: "function",
+  function: {
+    name: "submit_grading",
+    description: "Registra as subnotas, evidências, bônus/penalidades e feedback da correção. O servidor calcula as notas totais.",
+    parameters: {
+      type: "object",
+      properties: {
+        subscores: {
+          type: "object",
+          description: "Cada dimensão de 0 a 1, com casas decimais.",
+          properties: Object.fromEntries([...ANAMNESE_KEYS, ...MAI_KEYS].map((k) => [k, { type: "number" }])),
+          required: [...ANAMNESE_KEYS, ...MAI_KEYS],
+        },
+        evidencias: {
+          type: "object",
+          properties: {
+            anamnese: { type: "array", items: { type: "string" }, description: "Bullets com citação curta da conversa." },
+            mai: { type: "array", items: { type: "string" }, description: "Bullets com citação ou observação sobre o MAI." },
+          },
+          required: ["anamnese", "mai"],
+        },
+        bonus_penalidades: {
+          type: "object",
+          description: "Valores SEMPRE positivos (magnitude). O servidor soma o bônus e subtrai as penalidades.",
+          properties: {
+            comunicacao_empatica_bonus: { type: "number", description: "0 a 0,5" },
+            erro_seguranca_penalidade: { type: "number" },
+            ignorou_alergia_penalidade: { type: "number" },
+          },
+          required: ["comunicacao_empatica_bonus", "erro_seguranca_penalidade", "ignorou_alergia_penalidade"],
+        },
+        feedback_resumido: {
+          type: "string",
+          description: "STRING única em markdown com 5 a 7 bullets iniciados por '- ' separados por \\n. Cada bullet com 1-2 frases completas em 2ª pessoa ('Você...'), citando aspectos específicos da anamnese, comunicação, raciocínio clínico e MAI. Mínimo 600 caracteres.",
+        },
+        orientacoes_melhoria: {
+          type: "string",
+          description: "STRING única em markdown com 5 a 8 bullets iniciados por '- ' separados por \\n. Cada bullet com uma orientação concreta e acionável em 2ª pessoa ('Você deve...'), referenciando o caso específico. Mínimo 800 caracteres.",
+        },
+        flags_seguranca: { type: "array", items: { type: "string" }, description: "Problemas críticos identificados, ou lista vazia." },
+      },
+      required: ["subscores", "evidencias", "bonus_penalidades", "feedback_resumido", "orientacoes_melhoria", "flags_seguranca"],
+    },
+  },
+};
+
+const num = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+const round2 = (v: number) => Math.round(v * 100) / 100;
+
+// Aceita a resposta via tool call (preferido) ou JSON no texto (provedores sem tool calling).
+function extractGrade(aiData: any): any | null {
+  const msg = aiData?.choices?.[0]?.message;
+  const args = msg?.tool_calls?.[0]?.function?.arguments;
+  let parsed: any = null;
+  if (args) {
+    try { parsed = typeof args === "string" ? JSON.parse(args) : args; } catch { parsed = null; }
+  }
+  if (!parsed) {
+    let content: string = msg?.content || "";
+    const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenced) content = fenced[1].trim();
+    const braces = content.match(/\{[\s\S]*\}/);
+    try { parsed = braces ? JSON.parse(braces[0]) : null; } catch { parsed = null; }
+  }
+  return parsed && typeof parsed.subscores === "object" && parsed.subscores !== null ? parsed : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -45,7 +132,7 @@ serve(async (req) => {
     // Fetch ALL messages from the conversation (full transcript across encounters)
     const { data: messages, error: msgErr } = await supabase
       .from("virtual_patient_messages")
-      .select("role, content, encounter")
+      .select("role, content, encounter, author_name")
       .eq("session_id", session_id)
       .order("created_at", { ascending: true });
 
@@ -84,7 +171,8 @@ serve(async (req) => {
     for (const enc of Object.keys(byEncounter).sort()) {
       transcript += `\n=== ENCONTRO ${enc} ===\n`;
       for (const m of byEncounter[Number(enc)]) {
-        const role = (m as any).role === "user" ? "ESTUDANTE" : "PACIENTE";
+        const author = (m as any).author_name ? ` (${(m as any).author_name})` : "";
+        const role = (m as any).role === "user" ? `ESTUDANTE${author}` : "PACIENTE";
         transcript += `${role}: ${(m as any).content}\n`;
       }
     }
@@ -120,60 +208,27 @@ Avalie 4 dimensões do uso do Medication Appropriateness Index (cada uma 0–1):
 4. **mai_seguranca_paciente** — Identificação correta de problemas de segurança: interações graves, contraindicações, duplicidades, doses inadequadas para idade/função renal/hepática.
 
 ═══════════════════════════════════════════════
-PENALIDADES CRÍTICAS DE SEGURANÇA (até –1,5 no total)
+PENALIDADES CRÍTICAS DE SEGURANÇA (até 1,5 no total)
 ═══════════════════════════════════════════════
-Liste em "flags_seguranca" e descontar:
-- Recomendar/aceitar AINE em DRC, gestação avançada, úlcera ativa: –0,5 cada
-- Não identificar interação grave (ex.: varfarina + AINE, IECA + AINE em idoso): –0,5 cada
-- Opioide sem orientação de constipação/sedação: –0,3
-- Ignorar alergia relatada: –0,5
-- Não investigar gestação em mulher em idade fértil antes de prescrever: –0,3
+Liste em "flags_seguranca" e informe a magnitude (valor positivo) em bonus_penalidades:
+- Recomendar/aceitar AINE em DRC, gestação avançada, úlcera ativa: 0,5 cada
+- Não identificar interação grave (ex.: varfarina + AINE, IECA + AINE em idoso): 0,5 cada
+- Opioide sem orientação de constipação/sedação: 0,3
+- Ignorar alergia relatada: 0,5
+- Não investigar gestação em mulher em idade fértil antes de prescrever: 0,3
+
+BÔNUS: comunicacao_empatica_bonus de 0 a ${MAX_BONUS} para comunicação especialmente empática e clara.
 
 ═══════════════════════════════════════════════
 REGRAS DE OUTPUT
 ═══════════════════════════════════════════════
-- Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem comentários).
+- Responda chamando a função submit_grading. NÃO calcule notas totais: o sistema soma as subnotas, aplica bônus e penalidades e limita o resultado a 0–10.
+- Em grupos, as falas do estudante vêm identificadas pelo nome de quem escreveu. Avalie a atuação do grupo como um todo.
 - Cite EVIDÊNCIAS curtas do transcript ("o aluno perguntou: …" / "o aluno NÃO investigou …").
 - Seja honesto: se a anamnese foi pobre, dê notas baixas.
-- Se MAI não foi preenchido, zerar totalmente a seção B e sinalizar.
-
-═══════════════════════════════════════════════
-SCHEMA OBRIGATÓRIO (JSON)
-═══════════════════════════════════════════════
-{
-  "subscores": {
-    "identificacao_acolhimento": 0.0,
-    "queixa_principal_hda": 0.0,
-    "historia_medicamentosa": 0.0,
-    "antecedentes_comorbidades": 0.0,
-    "habitos_estilo_vida": 0.0,
-    "escuta_raciocinio_clinico": 0.0,
-    "mai_completude": 0.0,
-    "mai_coerencia_clinica": 0.0,
-    "mai_justificativa_critica": 0.0,
-    "mai_seguranca_paciente": 0.0
-  },
-  "evidencias": {
-    "anamnese": ["bullet com citação curta", "..."],
-    "mai": ["bullet com citação ou observação", "..."]
-  },
-  "bonus_penalidades": {
-    "comunicacao_empatica_bonus": 0.0,
-    "erro_seguranca_penalidade": 0.0,
-    "ignorou_alergia_penalidade": 0.0
-  },
-  "nota_anamnese_0a6": 0.0,
-  "nota_mai_0a4": 0.0,
-  "nota_final_0a10": 0.0,
-  "feedback_resumido": "STRING única em markdown com OBRIGATORIAMENTE 5 a 7 bullets iniciados por '- ' separados por \\n. Cada bullet deve ter 1-2 frases completas em 2ª pessoa ('Você...'), citando aspectos específicos da anamnese, comunicação, raciocínio clínico e MAI. Mínimo 600 caracteres. NUNCA retorne array nem texto curto/superficial.",
-  "orientacoes_melhoria": "STRING única em markdown com OBRIGATORIAMENTE 5 a 8 bullets iniciados por '- ' separados por \\n. Cada bullet deve ser uma orientação concreta e acionável em 2ª pessoa ('Você deve...'), referenciando o caso específico (medicamentos, comorbidades, situação do paciente). Mínimo 800 caracteres. NUNCA retorne array nem texto genérico.",
-  "flags_seguranca": ["lista de problemas críticos identificados, ou vazio"]
-}
-
-CÁLCULO:
-- nota_anamnese_0a6 = soma dos 6 subscores de anamnese (máx 6)
-- nota_mai_0a4 = soma dos 4 subscores MAI (máx 4)
-- nota_final_0a10 = nota_anamnese_0a6 + nota_mai_0a4 + bônus/penalidades (clamp 0–10)`;
+- O tamanho da conversa NÃO deve influenciar a nota: avalie a cobertura e a qualidade, não a quantidade de mensagens.
+- Se o MAI não foi preenchido, atribua 0 a todas as dimensões do MAI e sinalize nas evidências.
+- Se o texto de qualquer campo vier em formato de lista, use um único string em markdown com bullets.`;
 
     const userContent = `[CONTEXTO DA SESSÃO]
 Paciente virtual: ${sessionData?.patient_id || "?"}
@@ -188,38 +243,43 @@ ${transcript}
 [MAI – MEDICATION APPROPRIATENESS INDEX]
 ${maiSummary}
 
-Avalie agora seguindo rigorosamente o schema do system prompt.`;
+Avalie agora seguindo rigorosamente as regras do system prompt.`;
 
-    const { response } = await callAiWithFallback({
-      model: "google/gemini-2.5-pro",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
-      ],
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI error:", errText);
-      return new Response(JSON.stringify({ error: "AI grading failed", detail: errText }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Correção com resposta estruturada, temperatura baixa e nova tentativa em caso de
+    // falha ou resposta malformada (antes, um JSON inválido virava erro 500 sem retry).
+    let gradeResult: any = null;
+    let rawResponse = "";
+    let lastError = "";
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS && !gradeResult; attempt++) {
+      const { response } = await callAiWithFallback({
+        model: GRADING_MODEL,
+        temperature: 0.2,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+        tools: [GRADING_TOOL],
+        tool_choice: { type: "function", function: { name: "submit_grading" } },
       });
+
+      if (!response.ok) {
+        lastError = await response.text();
+        console.error(`AI error (attempt ${attempt}):`, response.status, lastError);
+        if (response.status === 402) break;
+        continue;
+      }
+
+      const aiData = await response.json();
+      rawResponse = JSON.stringify(aiData?.choices?.[0]?.message ?? aiData).slice(0, 20000);
+      gradeResult = extractGrade(aiData);
+      if (!gradeResult) {
+        lastError = "Failed to parse AI grade response";
+        console.error(`Failed to parse grade (attempt ${attempt}):`, rawResponse.slice(0, 2000));
+      }
     }
 
-    const aiData = await response.json();
-    let content = aiData.choices?.[0]?.message?.content || "";
-
-    // Extract JSON from potential markdown code block
-    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) content = jsonMatch[1].trim();
-
-    let gradeResult: any;
-    try {
-      gradeResult = JSON.parse(content);
-    } catch {
-      console.error("Failed to parse grade JSON:", content);
-      return new Response(JSON.stringify({ error: "Failed to parse AI grade response" }), {
+    if (!gradeResult) {
+      return new Response(JSON.stringify({ error: lastError ? `AI grading failed: ${lastError.slice(0, 400)}` : "AI grading failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -249,6 +309,30 @@ Avalie agora seguindo rigorosamente o schema do system prompt.`;
       }
     }
 
+    // ===== Cálculo da nota no servidor (a IA só devolve subnotas) =====
+    const rawSubs = gradeResult.subscores || {};
+    const subs: Record<string, number> = {};
+    for (const k of [...ANAMNESE_KEYS, ...MAI_KEYS]) subs[k] = round2(clamp(num(rawSubs[k]), 0, 1));
+    // Sem MAI enviado, a seção B é zerada independentemente do que o modelo devolver.
+    if (!maiData) for (const k of MAI_KEYS) subs[k] = 0;
+
+    const notaAnamnese = round2(ANAMNESE_KEYS.reduce((s, k) => s + subs[k], 0));
+    const notaMai = round2(MAI_KEYS.reduce((s, k) => s + subs[k], 0));
+
+    const rawBp = gradeResult.bonus_penalidades || {};
+    const bonus = clamp(Math.abs(num(rawBp.comunicacao_empatica_bonus)), 0, MAX_BONUS);
+    const penalty = clamp(
+      Math.abs(num(rawBp.erro_seguranca_penalidade)) + Math.abs(num(rawBp.ignorou_alergia_penalidade)),
+      0,
+      MAX_PENALTY,
+    );
+    const bonusPenalidades = {
+      comunicacao_empatica_bonus: round2(bonus),
+      erro_seguranca_penalidade: round2(Math.abs(num(rawBp.erro_seguranca_penalidade))),
+      ignorou_alergia_penalidade: round2(Math.abs(num(rawBp.ignorou_alergia_penalidade))),
+    };
+    const notaFinal = round2(clamp(notaAnamnese + notaMai + bonus - penalty, 0, 10));
+
     // Upsert grade (overwrite if re-graded)
     const { data: existing } = await supabase
       .from("virtual_patient_grades")
@@ -256,38 +340,46 @@ Avalie agora seguindo rigorosamente o schema do system prompt.`;
       .eq("session_id", session_id)
       .maybeSingle();
 
-    // Compute Clinical Efficiency (0–5) from anamnese coverage × objectivity (student turns)
-    const subs = gradeResult.subscores || {};
-    const anamneseKeys = [
-      "identificacao_acolhimento", "queixa_principal_hda", "historia_medicamentosa",
-      "antecedentes_comorbidades", "habitos_estilo_vida", "escuta_raciocinio_clinico",
-    ];
-    const sumAnam = anamneseKeys.reduce((s, k) => s + (Number(subs[k]) || 0), 0);
-    const coverage = Math.max(0, Math.min(1, sumAnam / 6));
-    const studentTurns = (messages || []).filter((m: any) => m.role === "user").length;
-    const objectivity = Math.min(1, 25 / Math.max(studentTurns, 25)) * (studentTurns < 8 ? studentTurns / 8 : 1);
-    const efficiency = Math.round(coverage * objectivity * 5 * 10) / 10;
+    // Clinical Efficiency (0–5): cobertura da anamnese. O tamanho da conversa não entra
+    // mais no cálculo (antes, passar de 25 mensagens reduzia o indicador).
+    const coverage = clamp(notaAnamnese / ANAMNESE_KEYS.length, 0, 1);
+    const efficiency = Math.round(coverage * 5 * 10) / 10;
 
     const payload = {
       session_id,
       class_virtual_patient_id,
       subscores: subs,
-      bonus_penalidades: gradeResult.bonus_penalidades || {},
-      nota_final: gradeResult.nota_final_0a10 || 0,
+      bonus_penalidades: bonusPenalidades,
+      nota_final: notaFinal,
       nota_microlearning: efficiency,
       feedback_resumido: feedbackResumido,
       orientacoes_melhoria: orientacoes,
-      flags_seguranca: gradeResult.flags_seguranca || [],
+      flags_seguranca: Array.isArray(gradeResult.flags_seguranca) ? gradeResult.flags_seguranca : [],
+      rubric_version: RUBRIC_VERSION,
+      grading_model: GRADING_MODEL,
+      graded_at: new Date().toISOString(),
+      raw_ai_response: rawResponse,
     };
 
     if (existing?.id) {
-      await supabase.from("virtual_patient_grades").update(payload).eq("id", existing.id);
+      const { error: updErr } = await supabase.from("virtual_patient_grades").update(payload).eq("id", existing.id);
+      if (updErr) console.error("Failed to update grade:", updErr);
     } else {
       const { error: insertErr } = await supabase.from("virtual_patient_grades").insert(payload);
       if (insertErr) console.error("Failed to save grade:", insertErr);
     }
 
-    return new Response(JSON.stringify({ success: true, grade: gradeResult }), {
+    return new Response(JSON.stringify({
+      success: true,
+      grade: {
+        ...gradeResult,
+        subscores: subs,
+        bonus_penalidades: bonusPenalidades,
+        nota_anamnese_0a6: notaAnamnese,
+        nota_mai_0a4: notaMai,
+        nota_final_0a10: notaFinal,
+      },
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

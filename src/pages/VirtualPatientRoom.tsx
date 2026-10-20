@@ -15,9 +15,12 @@ const RESEARCH_CONSENT_VERSION = "1.0";
 
 
 interface Message {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   encounter: number;
+  author_name?: string | null;
+  author_email?: string | null;
 }
 
 const PATIENT_NAMES: Record<string, { name: string; age: number; module: string }> = {
@@ -101,12 +104,18 @@ export default function VirtualPatientRoom() {
         },
         (payload: any) => {
           const m = payload.new;
-          const key = `${m.role}|${m.encounter}|${m.content}`;
-          if (seenMsgKeysRef.current.has(key)) return;
-          seenMsgKeysRef.current.add(key);
+          if (seenMsgKeysRef.current.has(m.id)) return;
+          seenMsgKeysRef.current.add(m.id);
           setMessages((prev) => [
             ...prev,
-            { role: m.role, content: m.content, encounter: m.encounter },
+            {
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              encounter: m.encounter,
+              author_name: m.author_name,
+              author_email: m.author_email,
+            },
           ]);
           if (m.role === "assistant") setRemoteTyping(false);
         },
@@ -251,14 +260,14 @@ export default function VirtualPatientRoom() {
       if (primary?.id) {
         const { data: msgs } = await supabase
           .from("virtual_patient_messages")
-          .select("role, content, encounter, created_at")
+          .select("id, role, content, encounter, created_at, author_name, author_email")
           .eq("session_id", primary.id)
           .order("created_at", { ascending: true });
         if (msgs) {
           setMessages(msgs as Message[]);
           // Track to dedupe with realtime inserts
           msgs.forEach((m: any) => {
-            seenMsgKeysRef.current.add(`${m.role}|${m.encounter}|${m.content}`);
+            seenMsgKeysRef.current.add(m.id);
           });
         }
       }
@@ -303,7 +312,7 @@ export default function VirtualPatientRoom() {
 
       const { data: msgs } = await supabase
         .from("virtual_patient_messages")
-        .select("role, content, encounter")
+        .select("id, role, content, encounter, author_name, author_email")
         .eq("session_id", sid)
         .order("created_at", { ascending: true });
 
@@ -331,9 +340,15 @@ export default function VirtualPatientRoom() {
   const sendMessage = async () => {
     if (!input.trim() || loading || !sessionId) return;
 
-    const userMsg: Message = { role: "user", content: input.trim(), encounter };
-    const userKey = `user|${encounter}|${userMsg.content}`;
-    seenMsgKeysRef.current.add(userKey);
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: input.trim(),
+      encounter,
+      author_name: studentName || null,
+      author_email: studentEmail || null,
+    };
+    seenMsgKeysRef.current.add(userMsg.id!);
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
@@ -351,14 +366,17 @@ export default function VirtualPatientRoom() {
 
     // Save user message ONLY to the shared primary session (other devices receive it via realtime)
     await supabase.from("virtual_patient_messages").insert({
+      id: userMsg.id,
       session_id: sessionId,
       encounter,
       role: "user",
       content: userMsg.content,
+      author_email: userMsg.author_email,
+      author_name: userMsg.author_name,
     });
 
     try {
-      const aiMessages = messages.concat(userMsg).map((m) => ({ role: m.role, content: m.content }));
+      const aiMessages = messages.concat(userMsg).map((m) => ({ role: m.role, content: m.content, encounter: m.encounter }));
 
       const response = await supabase.functions.invoke("virtual-patient-chat", {
         body: { patientId, messages: aiMessages, encounter, sessionId },
@@ -367,13 +385,13 @@ export default function VirtualPatientRoom() {
       if (response.error) throw new Error(response.error.message);
 
       const reply = response.data?.reply || "Desculpe, não consegui responder.";
-      const assistantKey = `assistant|${encounter}|${reply}`;
-      seenMsgKeysRef.current.add(assistantKey);
-      const assistantMsg: Message = { role: "assistant", content: reply, encounter };
+      const assistantMsg: Message = { id: crypto.randomUUID(), role: "assistant", content: reply, encounter };
+      seenMsgKeysRef.current.add(assistantMsg.id!);
       setMessages((prev) => [...prev, assistantMsg]);
 
       // Save assistant message ONLY to primary session — realtime fans out to other devices
       await supabase.from("virtual_patient_messages").insert({
+        id: assistantMsg.id,
         session_id: sessionId,
         encounter,
         role: "assistant",
@@ -400,13 +418,13 @@ export default function VirtualPatientRoom() {
     ));
 
     const noteContent = `---\n\n**📋 Transição para o ${ENCOUNTER_LABELS[next - 1]}**\n\nO paciente retorna para uma nova consulta. Continue a conversa.\n\n---`;
-    const noteKey = `assistant|${next}|${noteContent}`;
-    seenMsgKeysRef.current.add(noteKey);
-    const systemNote: Message = { role: "assistant", content: noteContent, encounter: next };
+    const systemNote: Message = { id: crypto.randomUUID(), role: "assistant", content: noteContent, encounter: next };
+    seenMsgKeysRef.current.add(systemNote.id!);
     setMessages((prev) => [...prev, systemNote]);
 
     // Save note ONLY to primary session
     await supabase.from("virtual_patient_messages").insert({
+      id: systemNote.id,
       session_id: sessionId,
       encounter: next,
       role: "assistant",
@@ -443,12 +461,12 @@ export default function VirtualPatientRoom() {
       });
       if (error) throw error;
       const content: string = data?.message || "Não foi possível aferir os sinais vitais.";
-      const key = `assistant|${encounter}|${content}`;
-      seenMsgKeysRef.current.add(key);
-      const vitalsMsg: Message = { role: "assistant", content, encounter };
+      const vitalsMsg: Message = { id: crypto.randomUUID(), role: "assistant", content, encounter };
+      seenMsgKeysRef.current.add(vitalsMsg.id!);
       setMessages((prev) => [...prev, vitalsMsg]);
       // Salva apenas na sessão primária — realtime distribui para os demais membros
       await supabase.from("virtual_patient_messages").insert({
+        id: vitalsMsg.id,
         session_id: sessionId,
         encounter,
         role: "assistant",
@@ -499,7 +517,7 @@ export default function VirtualPatientRoom() {
         // Fetch the freshly produced grade for the primary session
         const { data: primaryGrade } = await supabase
           .from("virtual_patient_grades")
-          .select("subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id")
+          .select("subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id, rubric_version, grading_model, graded_at")
           .eq("session_id", primaryId)
           .maybeSingle();
 
@@ -521,6 +539,9 @@ export default function VirtualPatientRoom() {
               feedback_resumido: primaryGrade.feedback_resumido,
               orientacoes_melhoria: primaryGrade.orientacoes_melhoria,
               flags_seguranca: primaryGrade.flags_seguranca,
+              rubric_version: primaryGrade.rubric_version,
+              grading_model: primaryGrade.grading_model,
+              graded_at: primaryGrade.graded_at,
             };
             if (existing?.id) {
               await supabase.from("virtual_patient_grades").update(payload).eq("id", existing.id);
@@ -639,8 +660,13 @@ export default function VirtualPatientRoom() {
         )}
 
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div key={msg.id ?? i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <Card className={`max-w-[80%] p-3 ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+              {isGroupSession && msg.role === "user" && (msg.author_name || msg.author_email) && (
+                <p className="text-xs font-semibold opacity-80 mb-1">
+                  {msg.author_email && msg.author_email === studentEmail ? "Você" : msg.author_name || msg.author_email}
+                </p>
+              )}
               <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
             </Card>
           </div>

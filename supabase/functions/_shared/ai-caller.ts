@@ -7,6 +7,7 @@ interface AiCallOptions {
   tools?: any[];
   tool_choice?: any;
   modalities?: string[];
+  temperature?: number;
 }
 
 interface AiUsageContext {
@@ -212,6 +213,7 @@ async function callAnthropicApi(provider: ProviderConfig, options: AiCallOptions
     messages: userMessages,
   };
   if (systemMsg) body.system = systemMsg.content;
+  if (options.temperature !== undefined) body.temperature = options.temperature;
   if (options.stream) body.stream = true;
 
   return await fetch(provider.baseUrl, {
@@ -236,6 +238,7 @@ async function callOpenAiCompatibleApi(provider: ProviderConfig, options: AiCall
   if (options.tools) body.tools = options.tools;
   if (options.tool_choice) body.tool_choice = options.tool_choice;
   if (options.modalities) body.modalities = options.modalities;
+  if (options.temperature !== undefined) body.temperature = options.temperature;
 
   return await fetch(provider.baseUrl, {
     method: "POST",
@@ -259,6 +262,7 @@ async function callLovableAi(options: AiCallOptions): Promise<Response> {
   if (options.tools) body.tools = options.tools;
   if (options.tool_choice) body.tool_choice = options.tool_choice;
   if (options.modalities) body.modalities = options.modalities;
+  if (options.temperature !== undefined) body.temperature = options.temperature;
 
   return await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",

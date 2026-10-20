@@ -6849,6 +6849,10 @@ export type Database = {
           orientacoes_melhoria: string | null
           session_id: string
           subscores: Json
+          graded_at: string | null
+          grading_model: string | null
+          raw_ai_response: string | null
+          rubric_version: string | null
         }
         Insert: {
           bonus_penalidades?: Json | null
@@ -6864,6 +6868,10 @@ export type Database = {
           orientacoes_melhoria?: string | null
           session_id: string
           subscores?: Json
+          graded_at?: string | null
+          grading_model?: string | null
+          raw_ai_response?: string | null
+          rubric_version?: string | null
         }
         Update: {
           bonus_penalidades?: Json | null
@@ -6879,6 +6887,10 @@ export type Database = {
           orientacoes_melhoria?: string | null
           session_id?: string
           subscores?: Json
+          graded_at?: string | null
+          grading_model?: string | null
+          raw_ai_response?: string | null
+          rubric_version?: string | null
         }
         Relationships: [
           {
@@ -6937,6 +6949,8 @@ export type Database = {
           id: string
           role: string
           session_id: string
+          author_email: string | null
+          author_name: string | null
         }
         Insert: {
           content?: string
@@ -6945,6 +6959,8 @@ export type Database = {
           id?: string
           role?: string
           session_id: string
+          author_email?: string | null
+          author_name?: string | null
         }
         Update: {
           content?: string
@@ -6953,6 +6969,8 @@ export type Database = {
           id?: string
           role?: string
           session_id?: string
+          author_email?: string | null
+          author_name?: string | null
         }
         Relationships: [
           {
@@ -7081,6 +7099,7 @@ export type Database = {
           total_tokens: number
           updated_at: string
           user_id: string | null
+          encounter_conducts: Json
         }
         Insert: {
           class_virtual_patient_id?: string | null
@@ -7104,6 +7123,7 @@ export type Database = {
           total_tokens?: number
           updated_at?: string
           user_id?: string | null
+          encounter_conducts?: Json
         }
         Update: {
           class_virtual_patient_id?: string | null
@@ -7127,6 +7147,7 @@ export type Database = {
           total_tokens?: number
           updated_at?: string
           user_id?: string | null
+          encounter_conducts?: Json
         }
         Relationships: [
           {

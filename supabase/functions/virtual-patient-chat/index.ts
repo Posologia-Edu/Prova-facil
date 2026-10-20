@@ -26,6 +26,108 @@ async function loadCustomPatient(patientId: string) {
   };
 }
 
+type Turn = { role: string; content: string; encounter?: number };
+
+const NO_CONDUCT_TEXT = "(o aluno não fez nenhuma prescrição, recomendação ou pedido de exame neste encontro)";
+
+// Usa o campo encounter enviado pelo front; só infere pelo marcador de transição quando ele falta.
+function groupStudentTurnsByEncounter(msgs: Turn[], currentEncounter: number): Record<number, string[]> {
+  const out: Record<number, string[]> = {};
+  let inferred = 1;
+  for (const m of msgs) {
+    const c = String(m.content || "");
+    if (m.role === "assistant" && /Transição para o\s+2º Encontro/i.test(c)) inferred = 2;
+    else if (m.role === "assistant" && /Transição para o\s+3º Encontro/i.test(c)) inferred = 3;
+    const enc = Number.isInteger(m.encounter) && (m.encounter as number) >= 1 ? (m.encounter as number) : inferred;
+    if (m.role === "user" && enc < currentEncounter) {
+      (out[enc] ||= []).push(c);
+    }
+  }
+  return out;
+}
+
+const CONDUCT_TOOL = {
+  type: "function",
+  function: {
+    name: "register_conducts",
+    description: "Registra as condutas que o aluno efetivamente prescreveu, ajustou, recomendou ou pediu.",
+    parameters: {
+      type: "object",
+      properties: {
+        medicamentos: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              nome: { type: "string" },
+              dose: { type: "string" },
+              posologia: { type: "string" },
+              acao: { type: "string", enum: ["iniciar", "ajustar", "manter", "suspender", "orientar"] },
+            },
+            required: ["nome", "acao"],
+          },
+        },
+        exames_solicitados: { type: "array", items: { type: "string" } },
+        orientacoes_nao_farmacologicas: { type: "array", items: { type: "string" } },
+        encaminhamentos_e_retorno: { type: "array", items: { type: "string" } },
+      },
+      required: ["medicamentos", "exames_solicitados", "orientacoes_nao_farmacologicas", "encaminhamentos_e_retorno"],
+    },
+  },
+};
+
+const CONDUCT_SYSTEM = `Você lê as falas de um estudante durante um encontro clínico simulado e lista APENAS as condutas que ele afirmou, prescreveu, ajustou, recomendou ou pediu.
+- Perguntas de anamnese NÃO são condutas.
+- NÃO invente medicamentos, doses ou exames. Use o nome EXATO dito pelo estudante e preserve dose e posologia quando citadas.
+- Se não houver nada em uma categoria, devolva lista vazia.`;
+
+function formatConducts(c: any): string | null {
+  if (!c || typeof c !== "object") return null;
+  const meds = Array.isArray(c.medicamentos) ? c.medicamentos : [];
+  const lists: Array<[string, string[]]> = [
+    ["Medicamentos (prescritos/ajustados/orientados)", meds.map((m: any) =>
+      [m?.nome, m?.dose, m?.posologia].filter(Boolean).join(" ") + (m?.acao ? ` — ${m.acao}` : ""))],
+    ["Exames solicitados", Array.isArray(c.exames_solicitados) ? c.exames_solicitados : []],
+    ["Orientações não farmacológicas", Array.isArray(c.orientacoes_nao_farmacologicas) ? c.orientacoes_nao_farmacologicas : []],
+    ["Encaminhamentos e retorno", Array.isArray(c.encaminhamentos_e_retorno) ? c.encaminhamentos_e_retorno : []],
+  ];
+  const blocks = lists
+    .filter(([, items]) => items.length > 0)
+    .map(([title, items]) => `${title}:\n${items.map((i) => `  - ${String(i).trim()}`).join("\n")}`);
+  return blocks.length ? blocks.join("\n") : NO_CONDUCT_TEXT;
+}
+
+async function extractConducts(studentTurns: string[]): Promise<string | null> {
+  try {
+    const { response } = await callAiWithFallback({
+      model: "google/gemini-2.5-flash",
+      temperature: 0,
+      messages: [
+        { role: "system", content: CONDUCT_SYSTEM },
+        { role: "user", content: "Falas do estudante neste encontro:\n- " + studentTurns.join("\n- ") },
+      ],
+      tools: [CONDUCT_TOOL],
+      tool_choice: { type: "function", function: { name: "register_conducts" } },
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const msg = data?.choices?.[0]?.message;
+    let parsed: any = null;
+    const args = msg?.tool_calls?.[0]?.function?.arguments;
+    if (args) {
+      try { parsed = typeof args === "string" ? JSON.parse(args) : args; } catch { parsed = null; }
+    }
+    if (!parsed) {
+      const braces = String(msg?.content || "").match(/\{[\s\S]*\}/);
+      try { parsed = braces ? JSON.parse(braces[0]) : null; } catch { parsed = null; }
+    }
+    return formatConducts(parsed);
+  } catch (e) {
+    console.error("extractConducts failed:", e);
+    return null;
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -456,28 +558,44 @@ serve(async (req) => {
       });
     }
 
-    // ========== Extrai do histórico apenas as mensagens do ALUNO de encontros anteriores ==========
-    // Para que o paciente só "saiba" o que o aluno realmente prescreveu/pediu.
-    const studentTurnsByEncounter: Record<number, string[]> = { 1: [], 2: [] };
-    const allMsgs: Array<{ role: string; content: string; encounter?: number }> = messages || [];
+    // ========== Condutas do aluno nos encontros anteriores ==========
+    // Para que o paciente só "saiba" o que o aluno realmente prescreveu/pediu. As condutas
+    // de cada encontro são extraídas em lista estruturada (e guardadas na sessão), em vez de
+    // truncar o texto bruto — as prescrições costumam estar no fim do encontro.
+    const allMsgs: Turn[] = Array.isArray(messages) ? messages : [];
+    const studentTurnsByEncounter = groupStudentTurnsByEncounter(allMsgs, encounter);
 
-    // Reconstrói o encontro de cada mensagem usando os marcadores de transição enviados pelo front
-    let inferredEncounter = 1;
-    for (const m of allMsgs) {
-      const c = String(m.content || "");
-      if (m.role === "assistant" && /Transição para o\s+2º Encontro/i.test(c)) inferredEncounter = 2;
-      else if (m.role === "assistant" && /Transição para o\s+3º Encontro/i.test(c)) inferredEncounter = 3;
-      if (m.role === "user" && inferredEncounter < encounter) {
-        if (!studentTurnsByEncounter[inferredEncounter]) studentTurnsByEncounter[inferredEncounter] = [];
-        studentTurnsByEncounter[inferredEncounter].push(c);
-      }
+    const admin = sessionId
+      ? createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
+      : null;
+    let cachedConducts: Record<string, string> = {};
+    if (admin) {
+      const { data: sessRow } = await admin
+        .from("virtual_patient_sessions")
+        .select("encounter_conducts")
+        .eq("id", sessionId)
+        .maybeSingle();
+      cachedConducts = ((sessRow as any)?.encounter_conducts as Record<string, string>) || {};
     }
 
-    const summarizeStudent = (turns: string[]) => {
-      if (!turns || turns.length === 0) return "(o aluno não fez nenhuma prescrição, recomendação ou pedido de exame neste encontro)";
-      // Limita tamanho
-      const joined = turns.join("\n- ");
-      return "- " + joined.slice(0, 4000);
+    const conductsFor = async (enc: number): Promise<string> => {
+      const turns = studentTurnsByEncounter[enc] || [];
+      if (turns.length === 0) return NO_CONDUCT_TEXT;
+      if (cachedConducts[String(enc)]) return cachedConducts[String(enc)];
+      const extracted = await extractConducts(turns);
+      if (!extracted) {
+        // Fallback: texto bruto, mantendo o FIM da conversa (onde ficam as prescrições).
+        const joined = turns.join("\n- ");
+        return "- " + (joined.length > 6000 ? joined.slice(-6000) : joined);
+      }
+      cachedConducts = { ...cachedConducts, [String(enc)]: extracted };
+      if (admin) {
+        await admin
+          .from("virtual_patient_sessions")
+          .update({ encounter_conducts: cachedConducts })
+          .eq("id", sessionId);
+      }
+      return extracted;
     };
 
     // ========== REGRAS UNIVERSAIS (reforçam comportamento de TODOS os pacientes) ==========
@@ -542,7 +660,7 @@ E) PEDIDOS DE RETORNO FUTURO COM EXAMES (CRÍTICO)
 Este é o primeiro contato. Inicie respondendo apenas ao cumprimento do aluno com uma queixa MUITO VAGA. Não revele nenhuma informação clínica até que o aluno pergunte. Mantenha-se rigorosamente no Momento 1.
 `;
     } else if (encounter === 2) {
-      const r1 = summarizeStudent(studentTurnsByEncounter[1] || []);
+      const r1 = await conductsFor(1);
       encounterContext += `
 [CONTEXTO DO SISTEMA — 2º ENCONTRO]
 Você retorna após o 1º encontro. ATENÇÃO: você só pode ter feito o que está listado abaixo como falas/prescrições do aluno no 1º encontro. NÃO INVENTE nada que não esteja aí.
@@ -559,8 +677,8 @@ REGRAS:
 5. Continue respondendo apenas ao que for perguntado.
 `;
     } else if (encounter === 3) {
-      const r1 = summarizeStudent(studentTurnsByEncounter[1] || []);
-      const r2 = summarizeStudent(studentTurnsByEncounter[2] || []);
+      const r1 = await conductsFor(1);
+      const r2 = await conductsFor(2);
       encounterContext += `
 [CONTEXTO DO SISTEMA — 3º ENCONTRO]
 Você retorna para o último encontro. Seu relato deve refletir a soma das condutas dos dois encontros anteriores.
@@ -585,7 +703,7 @@ REGRAS:
 
     const aiMessages = [
       { role: "system", content: systemPrompt },
-      ...messages,
+      ...allMsgs.map((m) => ({ role: m.role, content: m.content })),
     ];
 
     const { response } = await callAiWithFallback({

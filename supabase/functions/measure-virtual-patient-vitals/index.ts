@@ -66,14 +66,14 @@ const BASELINES: Record<string, {
     context: "AINEs ↑PA e ↓função renal. Corticoide ↑PA e ↑glicemia. Idosa frágil.",
   },
   inflammation_antonio: {
-    description: "Seu Antônio, 66a, gota, IMC 34, diabético (glibenclamida + metformina) e hipertenso (losartana). TFG ~38.",
+    description: "Seu Antônio, 66a, osteoartrite de quadril direito, IMC 34, diabético tipo 2 (glibenclamida + metformina) e hipertenso (losartana). TFG ~38, creatinina 1,7 mg/dL.",
     baseline: { PA: "145/90", FC: 76, FR: 16, Temp: 36.5, SatO2: 96, Glicemia: 165 },
-    context: "DRC III. AINE/colchicina perigosos. Corticoide ↑glicemia. Alopurinol seguro.",
+    context: "DRC III. AINE oral ↑PA, piora a função renal e a glicemia. AINE tópico é mais seguro. Corticoide ↑glicemia. Glibenclamida em DRC → risco de hipoglicemia. Tramadol pode causar náusea e ↓FR leve.",
   },
   inflammation_renata: {
-    description: "Renata, 39a, tendinite/bursite ocupacional, automedicação com ibuprofeno.",
+    description: "Renata, 39a, cabeleireira, artrite reumatoide inicial (anti-CCP positivo), automedicação eventual com ibuprofeno 400 mg.",
     baseline: { PA: "118/74", FC: 72, FR: 16, Temp: 36.6, SatO2: 99 },
-    context: "Saudável. AINE crônico pode causar gastrite/HAS.",
+    context: "Sem comorbidades. Atividade inflamatória pode elevar discretamente FC e Temp. AINE ↑PA leve. Corticoide oral ↑PA e ↑glicemia, causa insônia. DMARD (metotrexato) sem efeito imediato nos vitais.",
   },
   inflammation_wilson: {
     description: "Seu Wilson, 57a, AR em uso de sulfassalazina; refere febrícula.",
@@ -81,9 +81,9 @@ const BASELINES: Record<string, {
     context: "Atividade inflamatória pode manter Temp levemente elevada e FC↑.",
   },
   inflammation_jose: {
-    description: "José, 57a, polimialgia reumática em uso prolongado de prednisona; IMC 29,8.",
-    baseline: { PA: "152/94", FC: 78, FR: 16, Temp: 36.4, SatO2: 97, Glicemia: 142 },
-    context: "Corticoide crônico → HAS, hiperglicemia, risco cardiovascular. Desmame deve ser lento.",
+    description: "José, 57a, contador, artrite reumatoide em prednisona 15 mg/dia há 8 meses, com efeitos do corticoide (fácies cushingoide, estrias); IMC 29,8.",
+    baseline: { PA: "152/94", FC: 78, FR: 16, Temp: 36.4, SatO2: 97, Glicemia: 165 },
+    context: "Corticoide crônico → HAS de difícil controle, hiperglicemia (jejum 165 mg/dL, HbA1c 7,5%), risco cardiovascular. Cortisol basal reduzido: desmame deve ser lento. Reduzir corticoide sem DMARD → dor volta forte e a PA tende a melhorar.",
   },
 };
 

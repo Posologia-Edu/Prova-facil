@@ -116,10 +116,10 @@ export default function VirtualPatientChat() {
       // Build messages for AI (full history)
       const aiMessages = messages
         .concat(userMsg)
-        .map(m => ({ role: m.role, content: m.content }));
+        .map(m => ({ role: m.role, content: m.content, encounter: m.encounter }));
 
       const response = await supabase.functions.invoke("virtual-patient-chat", {
-        body: { patientId: apiPatientId, messages: aiMessages, encounter },
+        body: { patientId: apiPatientId, messages: aiMessages, encounter, sessionId: isEphemeral ? undefined : sessionId },
       });
 
       if (response.error) throw new Error(response.error.message);

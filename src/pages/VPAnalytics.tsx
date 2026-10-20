@@ -74,7 +74,7 @@ interface GradeRow {
   mai_json?: any;
   feedback_released?: boolean;
 }
-interface TranscriptMsg { role: string; content: string; encounter: number; }
+interface TranscriptMsg { role: string; content: string; encounter: number; author_name?: string | null; author_email?: string | null; }
 
 export default function VPAnalytics() {
   const [loading, setLoading] = useState(true);
@@ -352,7 +352,7 @@ export default function VPAnalytics() {
     }
     const { data } = await supabase
       .from("virtual_patient_messages")
-      .select("role, content, encounter")
+      .select("role, content, encounter, author_name, author_email")
       .eq("session_id", sourceSessionId)
       .order("created_at", { ascending: true });
     setTranscript((data as TranscriptMsg[]) || []);
@@ -364,24 +364,22 @@ export default function VPAnalytics() {
     return Math.max(0, Math.min(10, total));
   };
 
-  // Eficiência Clínica (0–5): combina cobertura da anamnese com objetividade (nº de turnos do estudante).
+  // Eficiência Clínica (0–5): cobertura da anamnese. O tamanho da conversa não entra no cálculo.
   // Vira bônus de até +1.0 ponto na nota final (eficiencia/5 × 1.0), com teto em 10.
   const microBonus = (eff: number | null | undefined) =>
     Math.max(0, Math.min(1, ((Number(eff) || 0) / 5)));
   const finalWithBonus = (nota: number | null | undefined, eff: number | null | undefined) =>
     Math.max(0, Math.min(10, (Number(nota) || 0) + microBonus(eff)));
 
-  // Compute Clinical Efficiency from existing data (anamnese coverage × objectivity)
-  const computeEfficiency = (subs: Record<string, number> | null | undefined, studentTurns: number) => {
+  // Compute Clinical Efficiency from existing data (anamnese coverage)
+  const computeEfficiency = (subs: Record<string, number> | null | undefined) => {
     const anamneseKeys = [
       "identificacao_acolhimento", "queixa_principal_hda", "historia_medicamentosa",
       "antecedentes_comorbidades", "habitos_estilo_vida", "escuta_raciocinio_clinico",
     ];
     const sum = anamneseKeys.reduce((s, k) => s + (Number(subs?.[k]) || 0), 0);
     const coverage = Math.max(0, Math.min(1, sum / 6));
-    const t = Math.max(0, studentTurns);
-    const objectivity = Math.min(1, 25 / Math.max(t, 25)) * (t < 8 ? t / 8 : 1);
-    return Math.round(coverage * objectivity * 5 * 10) / 10;
+    return Math.round(coverage * 5 * 10) / 10;
   };
 
   const handleSaveEdit = async () => {
@@ -1389,8 +1387,8 @@ export default function VPAnalytics() {
                               <div className="text-xs space-y-1.5 break-words whitespace-normal">
                                 <p>
                                   <strong>O que é:</strong> nota de 0 a 5 que mede o quanto o aluno foi
-                                  <em> objetivo e completo</em> na consulta — cobriu os pontos essenciais
-                                  da anamnese sem alongar a interação desnecessariamente.
+                                  <em> completo</em> na consulta — cobriu os pontos essenciais
+                                  da anamnese. O tamanho da conversa não altera esse valor.
                                 </p>
                                 <p>
                                   <strong>Como é calculada (automática, a partir do próprio caso):</strong>
@@ -1398,9 +1396,7 @@ export default function VPAnalytics() {
                                 <ul className="list-disc list-inside space-y-0.5 ml-1">
                                   <li><strong>Cobertura</strong> = média dos 6 critérios da anamnese (acolhimento,
                                   queixa/HDA, história medicamentosa, antecedentes, hábitos, raciocínio).</li>
-                                  <li><strong>Objetividade</strong> = penaliza conversas muito longas
-                                  (ideal ≈ 25 turnos do estudante) e também conversas rasas (&lt; 8 turnos).</li>
-                                  <li><strong>Eficiência</strong> = Cobertura × Objetividade × 5.</li>
+                                  <li><strong>Eficiência</strong> = Cobertura × 5.</li>
                                 </ul>
                                 <p>
                                   <strong>Como entra na nota final:</strong> vira bônus de até
@@ -1737,11 +1733,29 @@ export default function VPAnalytics() {
                     <p className="text-sm text-muted-foreground italic">Nenhuma mensagem encontrada.</p>
                   ) : (
                     <div className="space-y-2 max-h-[60vh] overflow-y-auto border rounded-lg p-3">
+                      {(() => {
+                        // Mensagens por integrante (só existe autoria em conversas gravadas após o registro de autor)
+                        const byAuthor = new Map<string, number>();
+                        transcript.forEach((m) => {
+                          if (m.role !== "user") return;
+                          const who = m.author_name || m.author_email;
+                          if (who) byAuthor.set(who, (byAuthor.get(who) || 0) + 1);
+                        });
+                        if (byAuthor.size === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-1.5 pb-2 border-b">
+                            <span className="text-xs text-muted-foreground mr-1">Mensagens por integrante:</span>
+                            {Array.from(byAuthor.entries()).map(([who, n]) => (
+                              <Badge key={who} variant="secondary" className="text-[10px]">{who}: {n}</Badge>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {transcript.map((msg, i) => (
                         <div key={i} className={`p-3 rounded-lg text-sm ${msg.role === "user" ? "bg-primary/10 ml-8" : "bg-muted mr-8"}`}>
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="outline" className="text-[10px]">
-                              {msg.role === "user" ? "Estudante" : "Paciente"}
+                              {msg.role === "user" ? (msg.author_name || msg.author_email || "Estudante") : "Paciente"}
                             </Badge>
                             <span className="text-[10px] text-muted-foreground">Encontro {msg.encounter}</span>
                           </div>
