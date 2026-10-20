@@ -2,19 +2,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
 import { getUserId, rowExists, unauthorized } from "../_shared/auth-guard.ts";
+import { loadVpCase } from "../_shared/vp-cases.ts";
 
-async function loadCustomPatient(patientId: string) {
-  if (!patientId?.startsWith("custom:")) return null;
-  const id = patientId.slice("custom:".length);
-  const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-  const { data } = await admin
-    .from("custom_virtual_patients")
-    .select("name, age, profession, category, description, system_prompt")
-    .eq("id", id)
-    .maybeSingle();
+// Cadastro único de casos (inclui os 10 legados). Os PATIENTS abaixo ficam só como reserva.
+async function loadRegisteredPatient(patientId: string) {
+  const data = await loadVpCase(patientId);
   if (!data) return null;
   return {
     name: data.name,
@@ -550,7 +542,7 @@ serve(async (req) => {
       return unauthorized(corsHeaders);
     }
 
-    const patient = PATIENTS[patientId] || (await loadCustomPatient(patientId));
+    const patient = (await loadRegisteredPatient(patientId)) || PATIENTS[patientId];
     if (!patient) {
       return new Response(JSON.stringify({ error: "Paciente não encontrado" }), {
         status: 404,

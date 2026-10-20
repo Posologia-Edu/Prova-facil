@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { VirtualPatientMAI } from "@/components/VirtualPatientMAI";
+import { fetchPublicVpCase, sessionModuleFor } from "@/lib/vp-catalog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 const RESEARCH_CONSENT_VERSION = "1.0";
@@ -22,19 +23,6 @@ interface Message {
   author_name?: string | null;
   author_email?: string | null;
 }
-
-const PATIENT_NAMES: Record<string, { name: string; age: number; module: string }> = {
-  pain_helena: { name: "Dona Helena", age: 67, module: "Dor" },
-  pain_luciana: { name: "Luciana", age: 42, module: "Dor" },
-  pain_rogerio: { name: "Rogério", age: 58, module: "Dor" },
-  pain_pedro: { name: "Pedro", age: 65, module: "Dor" },
-  pain_ana: { name: "Ana", age: 36, module: "Dor" },
-  inflammation_maria: { name: "Dona Maria", age: 72, module: "Inflamação" },
-  inflammation_antonio: { name: "Seu Antônio", age: 66, module: "Inflamação" },
-  inflammation_renata: { name: "Renata", age: 39, module: "Inflamação" },
-  inflammation_wilson: { name: "Seu Wilson", age: 57, module: "Inflamação" },
-  inflammation_jose: { name: "José", age: 57, module: "Inflamação" },
-};
 
 const ENCOUNTER_LABELS = [
   "1º Encontro – Anamnese Inicial",
@@ -77,7 +65,7 @@ export default function VirtualPatientRoom() {
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
   useEffect(() => { encounterRef.current = encounter; }, [encounter]);
 
-  const patient = PATIENT_NAMES[patientId] || null;
+  const [patient, setPatient] = useState<{ name: string; age: number; module: string } | null>(null);
 
   useEffect(() => {
     initRoom();
@@ -228,6 +216,11 @@ export default function VirtualPatientRoom() {
 
     setPatientId(cvp.patient_id);
 
+    // Nome, idade e categoria vêm do cadastro único (função pública: não expõe roteiro nem gabarito).
+    const pub = await fetchPublicVpCase(cvp.patient_id);
+    setPatient(pub);
+    const sessionModule = sessionModuleFor(pub?.module);
+
     if (isGroup) {
       // Group mode: ensure every member has a session row (for grading), but use ONE
       // shared "primary" session as the single source of truth for chat messages.
@@ -269,7 +262,7 @@ export default function VirtualPatientRoom() {
             .from("virtual_patient_sessions")
             .insert({
               patient_id: cvp.patient_id,
-              module: cvp.patient_id.startsWith("inflammation") ? "inflammation" : "pain",
+              module: sessionModule,
               class_virtual_patient_id: cvpId,
               student_email: memberEmail,
               student_name: memberName,
@@ -331,7 +324,7 @@ export default function VirtualPatientRoom() {
           .from("virtual_patient_sessions")
           .insert({
             patient_id: cvp.patient_id,
-            module: cvp.patient_id.startsWith("inflammation") ? "inflammation" : "pain",
+            module: sessionModule,
             class_virtual_patient_id: cvpId,
             student_email: email.toLowerCase(),
             student_name: name,

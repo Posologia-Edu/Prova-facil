@@ -1582,7 +1582,12 @@ export type Database = {
           profession: string
           system_prompt: string
           updated_at: string
-          user_id: string
+          user_id: string | null
+          case_data: Json | null
+          is_legacy: boolean
+          schema_version: number
+          slug: string | null
+          status: string
         }
         Insert: {
           age: number
@@ -1598,7 +1603,12 @@ export type Database = {
           profession: string
           system_prompt: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
+          case_data?: Json | null
+          is_legacy?: boolean
+          schema_version?: number
+          slug?: string | null
+          status?: string
         }
         Update: {
           age?: number
@@ -1614,7 +1624,12 @@ export type Database = {
           profession?: string
           system_prompt?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
+          case_data?: Json | null
+          is_legacy?: boolean
+          schema_version?: number
+          slug?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -7319,6 +7334,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_vp_case_public: {
+        Args: { _patient_id: string }
+        Returns: {
+          age: number
+          category: string
+          id: string
+          name: string
+          slug: string
+        }[]
+      }
       assign_role_on_signup: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: undefined

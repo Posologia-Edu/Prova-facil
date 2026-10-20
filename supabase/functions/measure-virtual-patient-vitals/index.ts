@@ -1,23 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
+import { loadVpCase } from "../_shared/vp-cases.ts";
 
-async function loadCustomBaseline(patientId: string) {
-  if (!patientId?.startsWith("custom:")) return null;
-  const id = patientId.slice("custom:".length);
-  const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-  const { data } = await admin
-    .from("custom_virtual_patients")
-    .select("name, age, description, baseline_vitals, baseline_context")
-    .eq("id", id)
-    .maybeSingle();
+// Cadastro único de casos (inclui os 10 legados). BASELINES abaixo fica só como reserva.
+async function loadRegisteredBaseline(patientId: string) {
+  const data = await loadVpCase(patientId);
   if (!data) return null;
   return {
     description: `${data.name}, ${data.age}a — ${data.description}`,
-    baseline: data.baseline_vitals,
+    baseline: data.baseline_vitals as any,
     context: data.baseline_context || "",
   };
 }
@@ -117,7 +109,7 @@ serve(async (req) => {
   try {
     const { patientId, encounter = 1, transcript = [] } = await req.json();
 
-    const info = BASELINES[patientId] || (await loadCustomBaseline(patientId));
+    const info = (await loadRegisteredBaseline(patientId)) || BASELINES[patientId];
     if (!patientId || !info) {
       return new Response(
         JSON.stringify({ error: "patientId inválido ou paciente sem baseline cadastrada." }),

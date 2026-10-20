@@ -24,7 +24,7 @@ import { OsceRadarChart } from "@/components/osce/OsceRadarChart";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
-import { VP_CLINICAL_CASES } from "@/lib/vp-clinical-cases";
+import { useVpCatalog } from "@/lib/vp-catalog";
 import { Stethoscope, ClipboardList, Target } from "lucide-react";
 import { computePeerBonus, PEER_EVAL_MAX_ADJUST } from "@/lib/vp-peer-eval";
 
@@ -36,19 +36,6 @@ interface PeerEvalRow {
   colaboracao_score: number;
   comentario: string | null;
 }
-
-const VP_CATALOG: Record<string, { name: string; module: string }> = {
-  pain_helena: { name: "Dona Helena, 67 anos", module: "Dor" },
-  pain_luciana: { name: "Luciana, 42 anos", module: "Dor" },
-  pain_rogerio: { name: "Rogério, 58 anos", module: "Dor" },
-  pain_pedro: { name: "Pedro, 65 anos", module: "Dor" },
-  pain_ana: { name: "Ana, 36 anos", module: "Dor" },
-  inflammation_maria: { name: "Dona Maria, 72 anos", module: "Inflamação" },
-  inflammation_antonio: { name: "Seu Antônio, 66 anos", module: "Inflamação" },
-  inflammation_renata: { name: "Renata, 39 anos", module: "Inflamação" },
-  inflammation_wilson: { name: "Seu Wilson, 57 anos", module: "Inflamação" },
-  inflammation_jose: { name: "José, 57 anos", module: "Inflamação" },
-};
 
 interface ClassOption { id: string; name: string; }
 interface CVPOption { id: string; patient_id: string; class_id: string; group_label?: string | null; }
@@ -77,6 +64,8 @@ interface GradeRow {
 interface TranscriptMsg { role: string; content: string; encounter: number; author_name?: string | null; author_email?: string | null; }
 
 export default function VPAnalytics() {
+  const { byId: vpById } = useVpCatalog();
+  const vpName = (id: string) => vpById[id]?.label || id;
   const [loading, setLoading] = useState(true);
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [cvps, setCvps] = useState<CVPOption[]>([]);
@@ -837,7 +826,7 @@ export default function VPAnalytics() {
               <SelectItem value="all">Todos os pacientes</SelectItem>
               {filteredCvpOptions.map(c => (
                 <SelectItem key={c.id} value={c.id}>
-                  {VP_CATALOG[c.patient_id]?.name || c.patient_id}
+                  {vpName(c.patient_id)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1113,7 +1102,7 @@ export default function VPAnalytics() {
                     <TableBody>
                       {list.map((b) => {
                         const cvp = cvps.find((c) => c.id === b.cvpId);
-                        const patientName = cvp ? (VP_CATALOG[cvp.patient_id]?.name || cvp.patient_id) : "—";
+                        const patientName = cvp ? vpName(cvp.patient_id) : "—";
                         if (b.isGroup) {
                           return (
                             <Fragment key={b.key}>
@@ -1183,8 +1172,8 @@ export default function VPAnalytics() {
           {detailGrade && editForm && (() => {
             const cvp = cvps.find((c) => c.id === detailGrade.class_virtual_patient_id);
             const patientId = cvp?.patient_id || "";
-            const clinicalCase = VP_CLINICAL_CASES[patientId];
-            const patientName = cvp ? (VP_CATALOG[cvp.patient_id]?.name || cvp.patient_id) : "";
+            const clinicalCase = vpById[patientId]?.clinicalCase;
+            const patientName = cvp ? vpName(cvp.patient_id) : "";
             return (
             <div className="flex-1 overflow-y-auto pr-4 -mr-2">
               <div className="space-y-6 pb-4">

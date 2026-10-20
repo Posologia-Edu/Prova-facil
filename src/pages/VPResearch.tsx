@@ -151,7 +151,9 @@ export default function VPResearch() {
     setSessions((sess as SessionRow[]) || []);
 
     // Custom patients (name/description)
-    const patientIds = [...new Set((sess || []).map((s: any) => s.patient_id))];
+    // Só uuids: os casos legados têm slug (ex.: "pain_helena") e fariam a consulta inteira falhar.
+    const patientIds = [...new Set((sess || []).map((s: any) => s.patient_id))]
+      .filter((id: any) => typeof id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id));
     if (patientIds.length) {
       const { data: cps } = await supabase
         .from("custom_virtual_patients")

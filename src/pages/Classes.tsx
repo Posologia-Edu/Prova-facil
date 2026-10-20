@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useVpCatalog } from "@/lib/vp-catalog";
 import { useNavigate } from "react-router-dom";
 import { computeExamStatus, examStatusConfig, type ExamEffectiveStatus } from "@/lib/exam-status";
 
@@ -99,19 +100,6 @@ interface VPAssignment {
   student_name: string;
 }
 
-const VP_CATALOG = [
-  { id: "pain_helena", name: "Dona Helena, 67 anos", module: "Dor", desc: "Dor neuropática pós-herpética" },
-  { id: "pain_luciana", name: "Luciana, 42 anos", module: "Dor", desc: "Fibromialgia" },
-  { id: "pain_rogerio", name: "Rogério, 58 anos", module: "Dor", desc: "Lombalgia crônica" },
-  { id: "pain_pedro", name: "Pedro, 65 anos", module: "Dor", desc: "Dor oncológica" },
-  { id: "pain_ana", name: "Ana, 36 anos", module: "Dor", desc: "Cefaleia por uso excessivo" },
-  { id: "inflammation_maria", name: "Dona Maria, 72 anos", module: "Inflamação", desc: "Osteoartrite de joelho" },
-  { id: "inflammation_antonio", name: "Seu Antônio, 66 anos", module: "Inflamação", desc: "Osteoartrite de quadril" },
-  { id: "inflammation_renata", name: "Renata, 39 anos", module: "Inflamação", desc: "Artrite reumatoide inicial" },
-  { id: "inflammation_wilson", name: "Seu Wilson, 57 anos", module: "Inflamação", desc: "AR refratária" },
-  { id: "inflammation_jose", name: "José, 57 anos", module: "Inflamação", desc: "Complicações do corticoide" },
-];
-
 export default function ClassesPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -127,6 +115,7 @@ export default function ClassesPage() {
   const [classExams, setClassExams] = useState<ExamItem[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [classVPs, setClassVPs] = useState<ClassVirtualPatient[]>([]);
+  const { entries: vpCatalog } = useVpCatalog();
   const [linkVPOpen, setLinkVPOpen] = useState(false);
   const [linkExamOpen, setLinkExamOpen] = useState(false);
 
@@ -575,7 +564,10 @@ export default function ClassesPage() {
     toast.success(value ? "Rótulo do grupo salvo!" : "Rótulo do grupo removido.");
   };
 
-  const getVPInfo = (patientId: string) => VP_CATALOG.find(p => p.id === patientId);
+  const getVPInfo = (patientId: string) => {
+    const e = vpCatalog.find(p => p.id === patientId);
+    return e ? { id: e.id, name: e.label, module: e.module, desc: e.desc } : undefined;
+  };
 
   // VP Assignments helpers
   const loadVPAssignments = async (classId: string) => {
@@ -1161,17 +1153,20 @@ export default function ClassesPage() {
             <DialogHeader><DialogTitle>Vincular Paciente Virtual</DialogTitle></DialogHeader>
             <p className="text-sm text-muted-foreground mb-4">Selecione um paciente para vincular a esta turma. Um PIN será gerado automaticamente.</p>
             <div className="space-y-2">
-              {VP_CATALOG.filter(p => !classVPs.some(v => v.patient_id === p.id)).map((p) => (
+              {vpCatalog.filter(p => !classVPs.some(v => v.patient_id === p.id)).map((p) => (
                 <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                   <div>
-                    <p className="text-sm font-medium">{p.name}</p>
+                    <p className="text-sm font-medium">{p.label}</p>
                     <p className="text-xs text-muted-foreground">{p.desc}</p>
-                    <Badge variant="outline" className="text-[10px] mt-1">{p.module}</Badge>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <Badge variant="outline" className="text-[10px]">{p.module}</Badge>
+                      {p.isLegacy && <Badge variant="secondary" className="text-[10px]">Legado</Badge>}
+                    </div>
                   </div>
                   <Button size="sm" onClick={() => linkVirtualPatient(p.id)}>Vincular</Button>
                 </div>
               ))}
-              {VP_CATALOG.filter(p => !classVPs.some(v => v.patient_id === p.id)).length === 0 && (
+              {vpCatalog.filter(p => !classVPs.some(v => v.patient_id === p.id)).length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">Todos os pacientes já estão vinculados.</p>
               )}
             </div>
