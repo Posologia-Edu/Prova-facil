@@ -1572,64 +1572,64 @@ export type Database = {
           age: number
           baseline_context: string
           baseline_vitals: Json
+          case_data: Json | null
           category: string
           clinical_case: Json
           clinical_context: string
           created_at: string
           description: string
           id: string
+          is_legacy: boolean
           name: string
           profession: string
-          system_prompt: string
-          updated_at: string
-          user_id: string | null
-          case_data: Json | null
-          is_legacy: boolean
           schema_version: number
           slug: string | null
           status: string
+          system_prompt: string
+          updated_at: string
+          user_id: string | null
         }
         Insert: {
           age: number
           baseline_context?: string
           baseline_vitals?: Json
+          case_data?: Json | null
           category: string
           clinical_case?: Json
           clinical_context: string
           created_at?: string
           description: string
           id?: string
+          is_legacy?: boolean
           name: string
           profession: string
-          system_prompt: string
-          updated_at?: string
-          user_id?: string | null
-          case_data?: Json | null
-          is_legacy?: boolean
           schema_version?: number
           slug?: string | null
           status?: string
+          system_prompt: string
+          updated_at?: string
+          user_id?: string | null
         }
         Update: {
           age?: number
           baseline_context?: string
           baseline_vitals?: Json
+          case_data?: Json | null
           category?: string
           clinical_case?: Json
           clinical_context?: string
           created_at?: string
           description?: string
           id?: string
+          is_legacy?: boolean
           name?: string
           profession?: string
-          system_prompt?: string
-          updated_at?: string
-          user_id?: string | null
-          case_data?: Json | null
-          is_legacy?: boolean
           schema_version?: number
           slug?: string | null
           status?: string
+          system_prompt?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -7334,6 +7334,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_role_on_signup: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: undefined
+      }
       get_vp_case_public: {
         Args: { _patient_id: string }
         Returns: {
@@ -7343,10 +7347,6 @@ export type Database = {
           name: string
           slug: string
         }[]
-      }
-      assign_role_on_signup: {
-        Args: { _role: Database["public"]["Enums"]["app_role"] }
-        Returns: undefined
       }
       has_role: {
         Args: {
