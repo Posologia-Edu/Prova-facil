@@ -1592,7 +1592,15 @@ export type Database = {
           saved_by?: string | null
           snapshot?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "custom_virtual_patient_versions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "custom_virtual_patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       custom_virtual_patients: {
         Row: {
