@@ -1570,6 +1570,30 @@ export type Database = {
           },
         ]
       }
+      custom_virtual_patient_versions: {
+        Row: {
+          id: string
+          patient_id: string
+          saved_at: string
+          saved_by: string | null
+          snapshot: Json
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          saved_at?: string
+          saved_by?: string | null
+          snapshot: Json
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          saved_at?: string
+          saved_by?: string | null
+          snapshot?: Json
+        }
+        Relationships: []
+      }
       custom_virtual_patients: {
         Row: {
           age: number

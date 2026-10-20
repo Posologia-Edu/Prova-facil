@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Zap, User, MessageCircle, Info, Sparkles, Loader2, Trash2 } from "lucide-react";
+import { Flame, Zap, User, MessageCircle, Info, Sparkles, Loader2, Trash2, FileText } from "lucide-react";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -139,9 +139,14 @@ export default function VirtualPatients() {
         <p className="text-xs text-muted-foreground mb-4">
           Converse livremente com o paciente para testar o comportamento. As mensagens não são salvas — o atendimento real ocorre nas Salas Virtuais.
         </p>
-        <Button className="w-full" onClick={() => startSession(patient)}>
-          <MessageCircle className="h-4 w-4 mr-2" />Conversar com Paciente
-        </Button>
+        <div className="space-y-2">
+          <Button className="w-full" onClick={() => startSession(patient)}>
+            <MessageCircle className="h-4 w-4 mr-2" />Conversar com Paciente
+          </Button>
+          <Button className="w-full" variant="outline" onClick={() => navigate(`/virtual-patients/case/${patient.id}`)}>
+            <FileText className="h-4 w-4 mr-2" />Roteiro e gabarito
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

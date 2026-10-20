@@ -545,7 +545,7 @@ serve(async (req) => {
 
   const startedAt = Date.now();
   try {
-    const { patientId, messages, encounter, sessionId, profession: reqProfession } = await req.json();
+    const { patientId, messages, encounter, sessionId, profession: reqProfession, previewCaseData } = await req.json();
 
     // AuthZ: signed-in caller, or an anonymous participant bound to a real session.
     const authedUserId = await getUserId(req);
@@ -553,7 +553,20 @@ serve(async (req) => {
       return unauthorized(corsHeaders);
     }
 
-    const registered = await loadRegisteredPatient(patientId);
+    let registered = await loadRegisteredPatient(patientId);
+    // Prévia do editor: o docente (autenticado) testa um caso ainda não salvo. Nada é gravado.
+    if (authedUserId && previewCaseData && isCaseDataV2(previewCaseData)) {
+      const idt = (previewCaseData as VpCaseData).nucleo.identidade;
+      registered = {
+        name: idt.nome,
+        age: idt.idade,
+        profession: idt.ocupacao,
+        module: "",
+        description: "",
+        systemPrompt: "",
+        caseData: previewCaseData as VpCaseData,
+      };
+    }
     const patient = registered || PATIENTS[patientId];
     if (!patient) {
       return new Response(JSON.stringify({ error: "Paciente não encontrado" }), {

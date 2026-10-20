@@ -16,6 +16,8 @@ export interface VpCatalogEntry {
   module: string;
   desc: string;
   isLegacy: boolean;
+  /** rascunhos não podem ser vinculados a turmas */
+  published: boolean;
   /** "Dona Helena, 67 anos" */
   label: string;
   clinicalCase?: VPClinicalCase;
@@ -39,6 +41,7 @@ const STATIC_LEGACY: Array<{ id: string; name: string; age: number; module: stri
 export const STATIC_VP_CATALOG: VpCatalogEntry[] = STATIC_LEGACY.map((p) => ({
   ...p,
   isLegacy: true,
+  published: true,
   label: label(p.name, p.age),
   clinicalCase: VP_CLINICAL_CASES[p.id],
 }));
@@ -54,7 +57,7 @@ export function sessionModuleFor(category: string | null | undefined): string {
 export async function fetchVpCatalog(): Promise<VpCatalogEntry[]> {
   const { data, error } = await supabase
     .from("custom_virtual_patients")
-    .select("id, slug, name, age, category, description, is_legacy, clinical_case, created_at")
+    .select("id, slug, name, age, category, description, is_legacy, status, clinical_case, created_at")
     .order("created_at", { ascending: true });
   if (error || !data) return STATIC_VP_CATALOG;
 
@@ -67,6 +70,7 @@ export async function fetchVpCatalog(): Promise<VpCatalogEntry[]> {
       module: r.category,
       desc: r.description,
       isLegacy: !!r.is_legacy,
+      published: r.status !== "draft",
       label: label(r.name, r.age),
       clinicalCase: (r.clinical_case && Object.keys(r.clinical_case).length > 0 ? r.clinical_case : VP_CLINICAL_CASES[id]) as VPClinicalCase | undefined,
     };

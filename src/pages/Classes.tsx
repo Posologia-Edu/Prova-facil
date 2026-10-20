@@ -1153,7 +1153,7 @@ export default function ClassesPage() {
             <DialogHeader><DialogTitle>Vincular Paciente Virtual</DialogTitle></DialogHeader>
             <p className="text-sm text-muted-foreground mb-4">Selecione um paciente para vincular a esta turma. Um PIN será gerado automaticamente.</p>
             <div className="space-y-2">
-              {vpCatalog.filter(p => !classVPs.some(v => v.patient_id === p.id)).map((p) => (
+              {vpCatalog.filter(p => p.published && !classVPs.some(v => v.patient_id === p.id)).map((p) => (
                 <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                   <div>
                     <p className="text-sm font-medium">{p.label}</p>
@@ -1166,7 +1166,7 @@ export default function ClassesPage() {
                   <Button size="sm" onClick={() => linkVirtualPatient(p.id)}>Vincular</Button>
                 </div>
               ))}
-              {vpCatalog.filter(p => !classVPs.some(v => v.patient_id === p.id)).length === 0 && (
+              {vpCatalog.filter(p => p.published && !classVPs.some(v => v.patient_id === p.id)).length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">Todos os pacientes já estão vinculados.</p>
               )}
             </div>

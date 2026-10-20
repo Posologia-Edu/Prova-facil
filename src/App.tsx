@@ -110,6 +110,7 @@ import BiomedicineJoin from "./pages/BiomedicineJoin";
 import BiomedicineAggregator from "./pages/BiomedicineAggregator";
 import VirtualPatients from "./pages/VirtualPatients";
 import VirtualPatientChat from "./pages/VirtualPatientChat";
+import VirtualPatientCaseEditor from "./pages/VirtualPatientCaseEditor";
 import VirtualPatientRoom from "./pages/VirtualPatientRoom";
 import VirtualPatientFeedback from "./pages/VirtualPatientFeedback";
 import VpPeerEvaluation from "./pages/VpPeerEvaluation";
@@ -486,6 +487,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout><VirtualPatients /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/virtual-patients/case/:id"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><VirtualPatientCaseEditor /></AppLayout>
                 </ProtectedRoute>
               }
             />
