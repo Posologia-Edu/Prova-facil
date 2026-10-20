@@ -140,9 +140,49 @@ export default function VirtualPatientRoom() {
           setTimeout(() => setRemoteTyping(false), 15000);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        // Ao (re)conectar, busca o que possa ter sido perdido enquanto a conexão estava fora.
+        if (status === "SUBSCRIBED") syncFromDb();
+      });
+
+    // Celulares suspendem o websocket com a tela apagada ou a aba em segundo plano, e o
+    // realtime não reenvia o que foi perdido. Por isso, além de reagir a foco/volta da
+    // rede, a sala confere o banco periodicamente enquanto o atendimento está aberto.
+    async function syncFromDb() {
+      const { data: rows } = await supabase
+        .from("virtual_patient_messages")
+        .select("id, role, content, encounter, author_name, author_email")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true });
+      const missing = (rows || []).filter((r: any) => !seenMsgKeysRef.current.has(r.id));
+      if (missing.length > 0) {
+        missing.forEach((r: any) => seenMsgKeysRef.current.add(r.id));
+        setMessages((prev) => [...prev, ...(missing as Message[])]);
+        if (missing.some((r: any) => r.role === "assistant")) setRemoteTyping(false);
+      }
+      const { data: sess } = await supabase
+        .from("virtual_patient_sessions")
+        .select("current_encounter, status")
+        .eq("id", sessionId)
+        .maybeSingle();
+      if (sess) {
+        if (typeof sess.current_encounter === "number") setEncounter(sess.current_encounter);
+        if (sess.status === "completed") setSessionCompleted(true);
+      }
+    }
+    const onVisible = () => { if (document.visibilityState === "visible") syncFromDb(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", syncFromDb);
+    window.addEventListener("online", syncFromDb);
+    const poll = window.setInterval(() => {
+      if (document.visibilityState === "visible") syncFromDb();
+    }, 8000);
 
     return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", syncFromDb);
+      window.removeEventListener("online", syncFromDb);
+      window.clearInterval(poll);
       supabase.removeChannel(channel);
     };
   }, [sessionId, isGroupSession, studentEmail]);
