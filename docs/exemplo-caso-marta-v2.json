@@ -1,0 +1,182 @@
+{
+  "schema_version": 2,
+  "nucleo": {
+    "identidade": {
+      "nome": "Marta",
+      "idade": 52,
+      "sexo": "feminino",
+      "ocupacao": "costureira (trabalha em casa), filha e cuidadora de Dona Lurdes, 78 anos, com Alzheimer",
+      "estado_civil": "Divorciada",
+      "moradia": "Mora com a mãe e um filho de 16 anos",
+      "escolaridade": "ensino médio completo",
+      "alergias": "nega alergias (sua e da mãe)",
+      "habitos": "dorme pouco, sem tempo para si"
+    },
+    "temperamento": "Exausta, ansiosa, sobrecarregada, mas muito protetora em relação à mãe.",
+    "modo_de_falar": "Fala rápido, suspira muito, usa termos coloquiais (remédio da pressão, comprimido do sono). Interrompe a própria fala para reclamar do cansaço.",
+    "letramento_saude": "Moderado. Conhece os nomes comerciais dos remédios e para que servem, mas desconhece interações e efeitos colaterais em idosos.",
+    "como_se_sente": "Visivelmente cansada, com olheiras. Demonstra amor e preocupação com a mãe, mas também irritação. Sente-se culpada por não dar conta de tudo.",
+    "fatos": [
+      { "id": "I1", "categoria": "queixa e sintomas", "conteudo": "Dona Lurdes (78 anos) tem Alzheimer há 3 anos. Há 2 meses está muito agitada à noite, tem pesadelos, levanta e já caiu duas vezes de madrugada (sem fraturas, só escoriações)." },
+      { "id": "I2", "categoria": "queixa e sintomas", "conteudo": "Manchas roxas grandes (equimoses) nos braços e pernas da mãe, que a filha atribui às quedas e esbarrões." },
+      { "id": "I3", "categoria": "medicamentos", "conteudo": "Donepezila 10 mg: a prescrição não especifica horário, mas Marta dá às 20h, junto com os outros, achando que remédio 'pra cabeça' dá sono." },
+      { "id": "I4", "categoria": "medicamentos", "conteudo": "Quetiapina prescrita 12,5 mg (meio comprimido) à noite; como a mãe não dormia, Marta passou a dar 1 comprimido inteiro (25 mg) por conta própria." },
+      { "id": "I5", "categoria": "automedicacao e fitoterapicos", "conteudo": "Ginkgo Biloba 120 mg comprado na internet, 1 cápsula de manhã há 1 mês, porque leu que 'cura a memória'." },
+      { "id": "I6", "categoria": "automedicacao e fitoterapicos", "conteudo": "Dá Dramin (dimenidrinato) de madrugada, 3 a 4 vezes por semana, há semanas, para tentar fazer a mãe dormir." },
+      { "id": "I7", "categoria": "adesao", "conteudo": "Esquece com frequência a Losartana da noite, por causa do caos da rotina noturna." },
+      { "id": "I8", "categoria": "contexto social", "conteudo": "É a única cuidadora; o filho adolescente não ajuda. Compra Quetiapina e Ginkgo do próprio bolso, o que pesa no orçamento. O SUS fornece donepezila e losartana." }
+    ],
+    "medicamentos": [
+      { "como_chama": "Eranz (donepezila)", "prescrito": "10 mg, 1 comprimido ao dia", "uso_real": "1 comprimido às 20h", "acha_que_serve": "Para não esquecer as coisas e frear o Alzheimer.", "observacao_clinica": "Dispensado pelo SUS (CEAF). Tomar à noite aumenta risco de insônia e pesadelos." },
+      { "como_chama": "Seroquel (quetiapina)", "prescrito": "25 mg, 1/2 comprimido à noite", "uso_real": "1 comprimido inteiro (25 mg) à noite", "acha_que_serve": "Para acalmar e dormir.", "observacao_clinica": "Comprado. Dose alterada pela filha. Sedação excessiva, hipotensão ortostática e risco de quedas." },
+      { "como_chama": "Aradois (losartana)", "prescrito": "50 mg, de 12/12h", "uso_real": "Toma o da manhã (8h), quase sempre omite o da noite (20h)", "acha_que_serve": "Pressão alta.", "observacao_clinica": "Adesão parcial. Farmácia Popular." },
+      { "como_chama": "AAS Protect (ácido acetilsalicílico)", "prescrito": "100 mg, 1x ao dia após o almoço", "uso_real": "1x ao dia após o almoço, sem falhas", "acha_que_serve": "O médico do posto passou faz anos 'pro coração', para não ter infarto.", "observacao_clinica": "Prevenção primária em idosa, inadequado (Beers/STOPP). Risco de sangramento." },
+      { "como_chama": "Ginkgo Biloba", "prescrito": "Não prescrito", "uso_real": "120 mg, 1 cápsula de manhã", "acha_que_serve": "Para curar o Alzheimer.", "observacao_clinica": "Interação farmacodinâmica com AAS: aumenta muito o risco de sangramento/equimoses." },
+      { "como_chama": "Dramin B6 (dimenidrinato)", "prescrito": "Não prescrito", "uso_real": "1 comprimido de madrugada, 3 a 4 vezes por semana", "acha_que_serve": "Para forçar o sono de madrugada.", "observacao_clinica": "Anticolinérgico, inapropriado em demência. Antagoniza a donepezila e causa delírio/confusão." }
+    ],
+    "achados": [
+      { "id": "A1", "tipo": "documento", "titulo": "Sacola de medicamentos", "conteudo": "Caixas de: Eranz 10 mg, Quetiapina 25 mg, Losartana 50 mg, AAS 100 mg, Dramin B6, Ginkgo Biloba 120 mg." },
+      { "id": "A2", "tipo": "parametro_clinico", "titulo": "Pressão arterial de Dona Lurdes (medida em casa hoje cedo)", "conteudo": "140 x 90 mmHg" }
+    ],
+    "exames": [],
+    "vitais_baseline": { "PA": "140/90", "FC": 72, "FR": 16, "Temp": 36.4, "SatO2": 96 },
+    "contexto_vitais": "Paciente é Dona Lurdes (idosa, 78 anos): quetiapina pode causar hipotensão ortostática; AAS e ginkgo aumentam risco de sangramento."
+  },
+  "versoes": {
+    "farmaceutico": {
+      "cenario": {
+        "local": "farmácia comunitária do bairro",
+        "tratamento": "moço(a)",
+        "motivo_da_vinda": "Marta vai à farmácia comprar os medicamentos de uso contínuo de Dona Lurdes. Traz uma sacola cheia de caixinhas e receitas velhas. Dona Lurdes ficou em casa com o neto. Marta quer uma solução (automedicação) para a insônia, agitação e quedas da mãe, que na verdade são efeitos adversos e interações dos medicamentos em uso. Ela espera sair com um produto milagroso (xarope de maracujá, melatonina).",
+        "abertura": "Moço(a), eu vim comprar as caixas do mês da minha mãe, mas queria pedir uma ajuda. Tem algum xarope natural, tipo maracujá, bem forte pra ela dormir? Ela tá trocando o dia pela noite, caindo pelos cantos, e eu não aguento mais ficar acordada."
+      },
+      "revelacao": [
+        { "id": "I1", "nivel": "espontanea", "quando": "Ao detalhar o que está acontecendo com a mãe.", "fala": "A mãe tem Alzheimer, sabe? De uns dois meses pra cá, ela não dorme mais de noite. Fica andando pela casa, tem pesadelo, grita. Já caiu duas vezes no corredor de madrugada, um susto!" },
+        { "id": "I8", "nivel": "espontanea", "quando": "Desabafo natural durante a conversa.", "fala": "Sou só eu pra tudo. Costuro o dia inteiro pra pagar as contas. O SUS dá a donepezila e a losartana, mas o Seroquel e o Ginkgo eu tiro do meu bolso, e tá pesando demais." },
+        { "id": "I2", "nivel": "pergunta_aberta", "quando": "Profissional pergunta se machucou nas quedas ou pede para falar mais da saúde física da mãe.", "fala": "Graças a Deus não quebrou nada, mas ela tá com uns roxos enormes nos braços. Acho que a pele de velho é fina, qualquer esbarrão já mancha, né?" },
+        { "id": "I7", "nivel": "pergunta_aberta", "quando": "Profissional pergunta sobre a rotina da noite ou dificuldade nos horários dos remédios.", "fala": "A rotina da noite é um inferno. Tenho que dar janta, banho, ela briga comigo... Acaba que o remédio da pressão da noite, o Aradois, eu esqueço direto." },
+        { "id": "I3", "nivel": "direta", "quando": "Profissional pede para revisar os medicamentos da sacola ou pergunta o horário da donepezila.", "fala": "O Eranz eu dou logo depois da janta, umas 20h, junto com os outros. Como é remédio forte pra cabeça, pensei que era melhor de noite pra ela descansar." },
+        { "id": "I5", "nivel": "direta", "quando": "Profissional pergunta ativamente sobre chás, vitaminas, suplementos ou remédios por conta própria.", "fala": "Ah, eu vi na internet que Ginkgo Biloba é ótimo pra memória. Dou uma cápsula de manhã. Mal não faz, né? É planta." },
+        { "id": "I4", "nivel": "vinculo", "quando": "Profissional demonstra empatia pelo cansaço dela e pergunta como ela administra os calmantes, sem julgamento.", "fala": "Olha, o médico mandou dar metade daquele Seroquel, mas não tava fazendo nem cócegas. Como eu preciso trabalhar no dia seguinte, confesso que tô dando um inteiro pra ver se ela apaga, mas nem assim adianta." },
+        { "id": "I6", "nivel": "vinculo", "quando": "Profissional investiga o que ela já tentou para a insônia antes de pedir o xarope, acolhendo o desespero dela.", "fala": "Vou ser sincera... às vezes eu tô tão desesperada pra dormir que dou um Dramin pra ela de madrugada. Eu sei que é pra enjoo, mas dá um soninho, né? Só que nela parece que piora a confusão." }
+      ],
+      "gatilhos_achados": [
+        { "achado": "A1", "quando": "O farmacêutico pedir para ver os remédios que a paciente usa ou trouxe." },
+        { "achado": "A2", "quando": "O farmacêutico perguntar como está a pressão da mãe." }
+      ],
+      "perguntas_do_paciente": [
+        "Não tem um xarope calmante forte que não precise de receita?",
+        "Será que a doença dela piorou de vez e ela nunca mais vai dormir?",
+        "O Ginkgo biloba não ajuda a reconstruir os neurônios?"
+      ],
+      "fora_do_roteiro": [
+        "Exames de laboratório recentes: 'Faz mais de ano que ela não tira sangue, é uma luta levar ela no posto'.",
+        "Outros problemas de saúde: 'Ela tem a pressão alta e artrose no joelho, só isso'.",
+        "Se o farmacêutico repreender bruscamente o uso do Dramin ou o aumento da Quetiapina: reaja com choro ou irritação ('Você fala isso porque não é você que passa a noite em claro tendo que costurar de dia!')."
+      ],
+      "dicas_de_atuacao": [
+        "Sente-se de forma curvada, mostrando exaustão física.",
+        "Não entregue a informação do Dramin e do Ginkgo de cara. Deixe o aluno investigar.",
+        "Se o aluno for empático, mude o tom de defensiva para alívio, como se finalmente alguém a compreendesse.",
+        "Fale 'Eranz' e 'Seroquel'; se o aluno não souber o que é, diga 'é o da memória e o de acalmar'."
+      ],
+      "encontros": [
+        {
+          "numero": 1,
+          "tipo": "anamnese",
+          "interlocutor": "cuidador",
+          "cartao": { "cenario": "Você está no balcão de uma farmácia comunitária. Uma cliente chega com uma sacola de medicamentos.", "tarefa": "Conduza o atendimento farmacêutico e registre o que levantar na ficha." }
+        },
+        {
+          "numero": 2,
+          "tipo": "discussao_prescritor",
+          "interlocutor": "prescritor",
+          "cartao": { "cenario": "Depois do atendimento, você identificou questões na farmacoterapia de Dona Lurdes. O médico da UBS que a acompanha pode ser contatado.", "tarefa": "Entre em contato com o médico para discutir o caso." },
+          "persona_interlocutor": {
+            "nome": "Dr. Paulo",
+            "perfil": "Clínico geral da UBS, 15 anos de carreira, atende 25 pacientes por turno.",
+            "temperamento": "Educado, apressado, desconfia de intervenções sem fundamento, mas respeita quem traz dados.",
+            "resistencias": [
+              "O AAS foi mantido 'pro coração' e ele não quer mexer sem justificativa.",
+              "Acha que quetiapina em dose baixa é o que se faz com idosos agitados.",
+              "Não conhecia o uso de Ginkgo e Dramin pela família."
+            ],
+            "criterios_para_ceder": [
+              "Se o farmacêutico apresentar o risco de sangramento (equimoses + AAS + Ginkgo) com critérios de Beers/STOPP, ele aceita suspender o AAS.",
+              "Se explicar que o Dramin antagoniza a donepezila e piora a confusão, ele concorda em orientar a suspensão.",
+              "Se propuser trocar o horário da donepezila para a manhã, ele aceita de imediato.",
+              "Sem dados concretos ou com tom de cobrança, ele adia a decisão e pede reavaliação em 30 dias."
+            ]
+          }
+        },
+        {
+          "numero": 3,
+          "tipo": "retorno",
+          "interlocutor": "cuidador",
+          "cartao": { "cenario": "Três semanas depois, Marta volta à farmácia para comprar os medicamentos do mês.", "tarefa": "Conduza o acompanhamento e as orientações farmacêuticas, e registre a evolução." },
+          "evolucao": [
+            { "quando": "o médico concordou em passar a donepezila para a manhã", "paciente_relata": "A mãe está dormindo melhor, com menos pesadelos; Marta cita que 'mudou o horário do Eranz pra manhã'." },
+            { "quando": "o AAS foi suspenso", "paciente_relata": "As manchas roxas diminuíram; Marta comenta que o médico 'tirou o remédio do coração'." },
+            { "quando": "o Dramin e o Ginkgo foram suspensos", "paciente_relata": "A confusão da mãe à noite diminuiu; Marta continua cansada, mas aliviada." },
+            { "quando": "a quetiapina voltou para meio comprimido", "paciente_relata": "As quedas pararam, embora o sono ainda seja irregular e Marta peça uma saída para isso." }
+          ],
+          "evolucao_sem_mudanca": "Tudo igual: a mãe continua agitada à noite, caiu mais uma vez e as manchas roxas persistem. Marta está mais desanimada."
+        }
+      ],
+      "gabarito": {
+        "problemas_esperados": [
+          { "problema": "Interação Ginkgo biloba + AAS com equimoses", "tipo": "PRM de segurança", "justificativa": "Dois agentes que aumentam o risco de sangramento, com equimoses extensas na idosa." },
+          { "problema": "AAS em prevenção primária em idosa", "tipo": "PRM de necessidade", "justificativa": "Sem indicação de prevenção primária aos 78 anos; risco de sangramento supera o benefício (Beers/STOPP)." },
+          { "problema": "Dramin (dimenidrinato) em idosa com demência", "tipo": "PRM de segurança", "justificativa": "Anticolinérgico inapropriado; antagoniza a donepezila e piora confusão e delírio." },
+          { "problema": "Quetiapina em dose acima da prescrita, por conta da cuidadora", "tipo": "PRM de segurança", "justificativa": "Sedação excessiva, hipotensão ortostática e risco de quedas." },
+          { "problema": "Donepezila administrada à noite", "tipo": "PRM de efetividade", "justificativa": "Pode causar insônia e pesadelos; o horário pode ser trocado para a manhã." },
+          { "problema": "Esquecimento da losartana noturna", "tipo": "problema de adesão", "justificativa": "Rotina noturna caótica; pressão em 140/90." }
+        ],
+        "red_flags": [
+          { "sinal": "Duas quedas recentes em idosa em uso de AAS, ginkgo e quetiapina, com equimoses extensas.", "conduta_esperada": "Priorizar a revisão com o prescritor e orientar sinais de sangramento e retorno imediato a serviço de saúde se queda com trauma." }
+        ],
+        "informacoes_alvo": [
+          { "id_informacao": "I1", "descricao": "Agitação noturna, pesadelos e duas quedas nos últimos dois meses.", "importancia": "Essencial" },
+          { "id_informacao": "I2", "descricao": "Equimoses extensas nos braços e pernas.", "importancia": "Essencial" },
+          { "id_informacao": "I3", "descricao": "Donepezila tomada à noite.", "importancia": "Importante" },
+          { "id_informacao": "I4", "descricao": "Dose de quetiapina dobrada pela filha.", "importancia": "Essencial" },
+          { "id_informacao": "I5", "descricao": "Uso de Ginkgo biloba.", "importancia": "Essencial" },
+          { "id_informacao": "I6", "descricao": "Uso de Dramin à noite.", "importancia": "Essencial" },
+          { "id_informacao": "I7", "descricao": "Adesão irregular à losartana da noite.", "importancia": "Importante" },
+          { "id_informacao": "I8", "descricao": "Sobrecarga da cuidadora e custo dos medicamentos.", "importancia": "Complementar" }
+        ],
+        "conduta_esperada": [
+          "Revisar todos os medicamentos da sacola e o uso real de cada um, e registrar na ficha.",
+          "Identificar a interação Ginkgo + AAS e o risco de sangramento.",
+          "Identificar o Dramin como anticolinérgico inapropriado na demência e o antagonismo com a donepezila.",
+          "Não indicar xarope ou melatonina como solução e explicar o motivo à cuidadora, sem julgamento.",
+          "Contatar o médico prescritor com os achados e propor suspender AAS, Dramin e Ginkgo, trocar o horário da donepezila e reavaliar a dose de quetiapina.",
+          "Reforçar a dose correta da quetiapina (meio comprimido) e as orientações de segurança contra quedas."
+        ],
+        "orientacoes_esperadas": [
+          "Orientar a Marta a não dar Dramin nem Ginkgo à mãe até a conversa com o médico.",
+          "Orientar o horário da donepezila pela manhã, após alinhamento com o prescritor.",
+          "Orientar medidas de higiene do sono e segurança da casa para evitar quedas.",
+          "Combinar a losartana em horário compatível com a rotina (por exemplo, dose única definida com o médico).",
+          "Acolher a sobrecarga da cuidadora e sugerir apoio na rede de cuidado."
+        ],
+        "encaminhamentos": [
+          "Contato com o médico prescritor da UBS para revisão da prescrição.",
+          "Retorno à farmácia em cerca de 3 semanas para acompanhamento.",
+          "Orientar retorno imediato ao serviço de saúde se houver sangramento, queda com trauma ou piora da confusão."
+        ],
+        "objetivos_aprendizagem": [
+          "Conduzir uma anamnese farmacêutica acolhedora com cuidador sobrecarregado.",
+          "Revisar a farmacoterapia do idoso e identificar PRM com critérios de Beers/STOPP.",
+          "Comunicar achados a um prescritor com dados e propor alternativas sem prescrever.",
+          "Realizar acompanhamento farmacoterapêutico e orientação ao cuidador."
+        ],
+        "referencias": [
+          "Critérios de Beers (AGS) para medicamentos potencialmente inapropriados em idosos.",
+          "Critérios STOPP/START.",
+          "Protocolo Clínico e Diretrizes Terapêuticas da Doença de Alzheimer (Ministério da Saúde)."
+        ]
+      }
+    }
+  }
+}

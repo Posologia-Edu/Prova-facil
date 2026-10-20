@@ -1149,6 +1149,7 @@ export type Database = {
           patient_id: string
           semester_id: string | null
           status: string
+          profession: string
         }
         Insert: {
           access_code?: string
@@ -1159,6 +1160,7 @@ export type Database = {
           patient_id: string
           semester_id?: string | null
           status?: string
+          profession?: string
         }
         Update: {
           access_code?: string
@@ -1169,6 +1171,7 @@ export type Database = {
           patient_id?: string
           semester_id?: string | null
           status?: string
+          profession?: string
         }
         Relationships: [
           {

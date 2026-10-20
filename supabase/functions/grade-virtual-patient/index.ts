@@ -2,6 +2,15 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
 import { adminClient, getUserId, forbidden } from "../_shared/auth-guard.ts";
+import { loadVpCase } from "../_shared/vp-cases.ts";
+import {
+  buildGabaritoText,
+  coberturaInformacoes,
+  isCaseDataV2,
+  resolveVersaoKey,
+  type Gabarito,
+  type VpCaseData,
+} from "../_shared/vp-case-schema.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -69,6 +78,18 @@ const GRADING_TOOL = {
     },
   },
 };
+
+// Com gabarito, a IA também informa quais informações alvo o aluno obteve (o servidor calcula a cobertura).
+function withObtidas(tool: typeof GRADING_TOOL) {
+  const t = JSON.parse(JSON.stringify(tool));
+  t.function.parameters.properties.informacoes_obtidas = {
+    type: "array",
+    items: { type: "string" },
+    description: "Ids das informações alvo que o estudante obteve do paciente.",
+  };
+  t.function.parameters.required.push("informacoes_obtidas");
+  return t;
+}
 
 const num = (v: unknown) => {
   const n = Number(v);
@@ -159,6 +180,23 @@ serve(async (req) => {
       .eq("id", session_id)
       .single();
 
+    // Gabarito do caso (esquema v2): referência da correção e base da cobertura das informações alvo.
+    let gabarito: Gabarito | null = null;
+    let gabaritoText = "";
+    const caseRec = await loadVpCase(sessionData?.patient_id);
+    if (caseRec && isCaseDataV2(caseRec.case_data)) {
+      const { data: cvpRow } = await supabase
+        .from("class_virtual_patients")
+        .select("profession")
+        .eq("id", class_virtual_patient_id)
+        .maybeSingle();
+      const cd = caseRec.case_data as VpCaseData;
+      let key = resolveVersaoKey((cvpRow as any)?.profession);
+      if (!cd.versoes[key]) key = Object.keys(cd.versoes)[0] as typeof key;
+      gabarito = cd.versoes[key]?.gabarito ?? null;
+      if (gabarito) gabaritoText = buildGabaritoText(cd, key);
+    }
+
     // Build full transcript (organized by encounter for clarity)
     const byEncounter: Record<number, typeof messages> = {};
     for (const m of messages) {
@@ -228,7 +266,10 @@ REGRAS DE OUTPUT
 - Seja honesto: se a anamnese foi pobre, dê notas baixas.
 - O tamanho da conversa NÃO deve influenciar a nota: avalie a cobertura e a qualidade, não a quantidade de mensagens.
 - Se o MAI não foi preenchido, atribua 0 a todas as dimensões do MAI e sinalize nas evidências.
-- Se o texto de qualquer campo vier em formato de lista, use um único string em markdown com bullets.`;
+- Se o texto de qualquer campo vier em formato de lista, use um único string em markdown com bullets.${gabarito ? `
+- Preencha informacoes_obtidas com os ids (I1, I2…) das informações alvo que o estudante EFETIVAMENTE obteve do paciente na conversa. Não inclua um id se o paciente não revelou aquela informação.
+
+${gabaritoText}` : ""}`;
 
     const userContent = `[CONTEXTO DA SESSÃO]
 Paciente virtual: ${sessionData?.patient_id || "?"}
@@ -258,7 +299,7 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
         ],
-        tools: [GRADING_TOOL],
+        tools: [gabarito ? withObtidas(GRADING_TOOL) : GRADING_TOOL],
         tool_choice: { type: "function", function: { name: "submit_grading" } },
       });
 
@@ -342,7 +383,11 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
 
     // Clinical Efficiency (0–5): cobertura da anamnese. O tamanho da conversa não entra
     // mais no cálculo (antes, passar de 25 mensagens reduzia o indicador).
-    const coverage = clamp(notaAnamnese / ANAMNESE_KEYS.length, 0, 1);
+    // Com gabarito: cobertura ponderada das informações alvo (Essencial 3, Importante 2, Complementar 1).
+    const obtidas: string[] = Array.isArray(gradeResult.informacoes_obtidas) ? gradeResult.informacoes_obtidas.map(String) : [];
+    const coverage = gabarito
+      ? coberturaInformacoes(gabarito, obtidas)
+      : clamp(notaAnamnese / ANAMNESE_KEYS.length, 0, 1);
     const efficiency = Math.round(coverage * 5 * 10) / 10;
 
     const payload = {
@@ -355,7 +400,7 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
       feedback_resumido: feedbackResumido,
       orientacoes_melhoria: orientacoes,
       flags_seguranca: Array.isArray(gradeResult.flags_seguranca) ? gradeResult.flags_seguranca : [],
-      rubric_version: RUBRIC_VERSION,
+      rubric_version: gabarito ? `${RUBRIC_VERSION}+gabarito` : RUBRIC_VERSION,
       grading_model: GRADING_MODEL,
       graded_at: new Date().toISOString(),
       raw_ai_response: rawResponse,

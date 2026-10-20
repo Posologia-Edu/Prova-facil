@@ -3,6 +3,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
 import { getUserId, rowExists, unauthorized } from "../_shared/auth-guard.ts";
 import { loadVpCase } from "../_shared/vp-cases.ts";
+import {
+  adaptTratamento,
+  buildEncounterBrief,
+  buildPatientPrompt,
+  isCaseDataV2,
+  resolveVersaoKey,
+  type VersaoKey,
+  type VpCaseData,
+} from "../_shared/vp-case-schema.ts";
 
 // Cadastro único de casos (inclui os 10 legados). Os PATIENTS abaixo ficam só como reserva.
 async function loadRegisteredPatient(patientId: string) {
@@ -15,6 +24,8 @@ async function loadRegisteredPatient(patientId: string) {
     module: data.category,
     description: data.description,
     systemPrompt: data.system_prompt,
+    // Casos no esquema v2 (núcleo + versão por profissão); nulo nos casos legados.
+    caseData: isCaseDataV2(data.case_data) ? (data.case_data as VpCaseData) : null,
   };
 }
 
@@ -534,7 +545,7 @@ serve(async (req) => {
 
   const startedAt = Date.now();
   try {
-    const { patientId, messages, encounter, sessionId } = await req.json();
+    const { patientId, messages, encounter, sessionId, profession: reqProfession } = await req.json();
 
     // AuthZ: signed-in caller, or an anonymous participant bound to a real session.
     const authedUserId = await getUserId(req);
@@ -542,7 +553,8 @@ serve(async (req) => {
       return unauthorized(corsHeaders);
     }
 
-    const patient = (await loadRegisteredPatient(patientId)) || PATIENTS[patientId];
+    const registered = await loadRegisteredPatient(patientId);
+    const patient = registered || PATIENTS[patientId];
     if (!patient) {
       return new Response(JSON.stringify({ error: "Paciente não encontrado" }), {
         status: 404,
@@ -691,7 +703,38 @@ REGRAS:
 `;
     }
 
-    const systemPrompt = patient.systemPrompt + encounterContext;
+    // Casos v2: o prompt do paciente é montado do núcleo + versão da profissão da turma.
+    // Casos legados seguem usando o systemPrompt escrito à mão.
+    let systemPrompt = patient.systemPrompt + encounterContext;
+    const caseData = registered?.caseData ?? null;
+    if (caseData) {
+      let profession: string | null = typeof reqProfession === "string" ? reqProfession : null;
+      if (sessionId) {
+        const adm = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const { data: sess } = await adm
+          .from("virtual_patient_sessions")
+          .select("class_virtual_patient_id")
+          .eq("id", sessionId)
+          .maybeSingle();
+        if (sess?.class_virtual_patient_id) {
+          const { data: cvp } = await adm
+            .from("class_virtual_patients")
+            .select("profession")
+            .eq("id", sess.class_virtual_patient_id)
+            .maybeSingle();
+          profession = (cvp as any)?.profession ?? profession;
+        }
+      }
+      let versaoKey: VersaoKey = resolveVersaoKey(profession);
+      if (!caseData.versoes[versaoKey]) {
+        versaoKey = (Object.keys(caseData.versoes)[0] as VersaoKey) || "farmaceutico";
+      }
+      const tratamento = caseData.versoes[versaoKey]?.cenario.tratamento || "doutor";
+      systemPrompt =
+        buildPatientPrompt(caseData, versaoKey) +
+        adaptTratamento(encounterContext, tratamento) +
+        "\n\n" + buildEncounterBrief(caseData, versaoKey, encounter);
+    }
 
     const aiMessages = [
       { role: "system", content: systemPrompt },
