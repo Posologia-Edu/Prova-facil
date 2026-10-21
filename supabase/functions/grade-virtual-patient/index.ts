@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
 import { adminClient, getUserId, forbidden } from "../_shared/auth-guard.ts";
 import { loadVpCase } from "../_shared/vp-cases.ts";
+import { ANAMNESE_KEYS, FICHA_KEYS, MAI_KEYS, baseScores } from "../_shared/vp-grade.ts";
 import {
   buildGabaritoText,
   coberturaInformacoes,
@@ -20,14 +21,11 @@ const corsHeaders = {
 // Versão da rubrica gravada em cada nota. Incrementar sempre que pesos, dimensões ou
 // penalidades mudarem, para que notas antigas e novas possam ser distinguidas.
 const RUBRIC_VERSION = "vp-2026-10-a";
+// Casos v2 com ficha eletrônica (P20): anamnese 4 + MAI 4 + ficha 2.
+const RUBRIC_VERSION_FICHA = "vp-2026-10-b";
 const GRADING_MODEL = "google/gemini-2.5-pro";
 const MAX_ATTEMPTS = 2;
 
-const ANAMNESE_KEYS = [
-  "identificacao_acolhimento", "queixa_principal_hda", "historia_medicamentosa",
-  "antecedentes_comorbidades", "habitos_estilo_vida", "escuta_raciocinio_clinico",
-];
-const MAI_KEYS = ["mai_completude", "mai_coerencia_clinica", "mai_justificativa_critica", "mai_seguranca_paciente"];
 
 const MAX_BONUS = 0.5;
 const MAX_PENALTY = 1.5;
@@ -88,6 +86,21 @@ function withObtidas(tool: typeof GRADING_TOOL) {
     description: "Ids das informações alvo que o estudante obteve do paciente.",
   };
   t.function.parameters.required.push("informacoes_obtidas");
+  return t;
+}
+
+// Com ficha, a IA também pontua o registro clínico do aluno (3 dimensões de 0 a 1).
+function withFicha(tool: typeof GRADING_TOOL) {
+  const t = JSON.parse(JSON.stringify(tool));
+  const p = t.function.parameters;
+  for (const k of FICHA_KEYS) p.properties.subscores.properties[k] = { type: "number" };
+  p.properties.subscores.required.push(...FICHA_KEYS);
+  p.properties.evidencias.properties.ficha = {
+    type: "array",
+    items: { type: "string" },
+    description: "Bullets sobre a ficha: o que foi bem registrado, o que foi anotado sem ter sido perguntado e o que foi coletado e não registrado.",
+  };
+  p.properties.evidencias.required.push("ficha");
   return t;
 }
 
@@ -197,6 +210,29 @@ serve(async (req) => {
       if (gabarito) gabaritoText = buildGabaritoText(cd, key);
     }
 
+    // Ficha eletrônica (P20): só existe nos casos v2. Fica na sessão primária, a mesma do chat.
+    const fichaEnabled = !!(caseRec && isCaseDataV2(caseRec.case_data));
+    let fichaText = "";
+    let fichaHasContent = false;
+    if (fichaEnabled) {
+      const { data: sections } = await supabase
+        .from("virtual_patient_record_sections")
+        .select("encounter, section_key, content")
+        .eq("session_id", session_id)
+        .order("encounter", { ascending: true });
+      const titles: Record<number, string> = { 1: "Ficha de anamnese", 2: "Comunicação ao prescritor (SBAR)", 3: "Evolução (SOAP)" };
+      const byEnc: Record<number, string[]> = {};
+      for (const r of (sections || []) as any[]) {
+        const txt = String(r.content || "").trim();
+        if (!txt) continue;
+        fichaHasContent = true;
+        (byEnc[r.encounter] ||= []).push(`- ${String(r.section_key).replace(/_/g, " ")}: ${txt}`);
+      }
+      for (const enc of [1, 2, 3]) {
+        fichaText += `\n--- ENCONTRO ${enc} · ${titles[enc]} ---\n${(byEnc[enc] || ["(não preenchida)"]).join("\n")}\n`;
+      }
+    }
+
     // Build full transcript (organized by encounter for clarity)
     const byEncounter: Record<number, typeof messages> = {};
     for (const m of messages) {
@@ -224,7 +260,7 @@ serve(async (req) => {
 Sua missão é avaliar OBJETIVAMENTE a interação completa do estudante com o paciente virtual, considerando duas grandes áreas de competência:
 
 ═══════════════════════════════════════════════
-A) QUALIDADE DA ANAMNESE (peso 60% — escala 0–6)
+A) QUALIDADE DA ANAMNESE (peso ${fichaEnabled ? "40% — vale 4 pontos" : "60% — escala 0–6"})
 ═══════════════════════════════════════════════
 Avalie 6 dimensões profissionais (cada uma 0–1, com casas decimais):
 
@@ -245,7 +281,18 @@ Avalie 4 dimensões do uso do Medication Appropriateness Index (cada uma 0–1):
 3. **mai_justificativa_critica** — O estudante demonstra raciocínio crítico ao classificar (mesmo implícito na coerência das respostas dos 10 critérios MAI)?
 4. **mai_seguranca_paciente** — Identificação correta de problemas de segurança: interações graves, contraindicações, duplicidades, doses inadequadas para idade/função renal/hepática.
 
+${fichaEnabled ? `═══════════════════════════════════════════════
+C) QUALIDADE DA FICHA (peso 20% — vale 2 pontos)
 ═══════════════════════════════════════════════
+O estudante (ou o grupo) manteve uma ficha eletrônica: anamnese no 1º encontro, comunicação ao prescritor (SBAR) no 2º e evolução (SOAP) no 3º. Avalie 3 dimensões (cada uma 0–1), SEMPRE comparando a ficha com a conversa:
+
+1. **ficha_completude** — O que foi coletado na conversa foi registrado? Há registro nos três encontros (anamnese, SBAR, SOAP)? As seções centrais estão preenchidas com informação útil?
+2. **ficha_fidelidade** — O que está escrito corresponde ao que foi dito na conversa? Informação anotada que o paciente ou o prescritor NÃO disse (invenção, suposição tratada como fato) reduz esta nota; liste cada caso em evidencias.ficha.
+3. **ficha_raciocinio** — A impressão/avaliação é coerente com os dados e o SBAR é claro e objetivo (situação, histórico, avaliação, recomendação)? O SOAP traz análise e plano compatíveis com o que aconteceu?
+
+Se a ficha NÃO foi preenchida, atribua 0 às três dimensões e sinalize nas evidências.
+
+` : ""}═══════════════════════════════════════════════
 PENALIDADES CRÍTICAS DE SEGURANÇA (até 1,5 no total)
 ═══════════════════════════════════════════════
 Liste em "flags_seguranca" e informe a magnitude (valor positivo) em bonus_penalidades:
@@ -265,7 +312,7 @@ REGRAS DE OUTPUT
 - Cite EVIDÊNCIAS curtas do transcript ("o aluno perguntou: …" / "o aluno NÃO investigou …").
 - Seja honesto: se a anamnese foi pobre, dê notas baixas.
 - O tamanho da conversa NÃO deve influenciar a nota: avalie a cobertura e a qualidade, não a quantidade de mensagens.
-- Se o MAI não foi preenchido, atribua 0 a todas as dimensões do MAI e sinalize nas evidências.
+- Se o MAI não foi preenchido, atribua 0 a todas as dimensões do MAI e sinalize nas evidências.${fichaEnabled ? "\n- Preencha também as dimensões da ficha (seção C) e evidencias.ficha. A ficha é um registro do estudante: não use o que está nela como prova de que a informação foi obtida do paciente; isso só vale se aparece na conversa." : ""}
 - Se o texto de qualquer campo vier em formato de lista, use um único string em markdown com bullets.${gabarito ? `
 - Preencha informacoes_obtidas com os ids (I1, I2…) das informações alvo que o estudante EFETIVAMENTE obteve do paciente na conversa. Não inclua um id se o paciente não revelou aquela informação.
 
@@ -283,7 +330,10 @@ ${transcript}
 
 [MAI – MEDICATION APPROPRIATENESS INDEX]
 ${maiSummary}
-
+${fichaEnabled ? `
+[FICHA ELETRÔNICA DO ESTUDANTE]
+${fichaText}
+` : ""}
 Avalie agora seguindo rigorosamente as regras do system prompt.`;
 
     // Correção com resposta estruturada, temperatura baixa e nova tentativa em caso de
@@ -299,7 +349,7 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
         ],
-        tools: [gabarito ? withObtidas(GRADING_TOOL) : GRADING_TOOL],
+        tools: [gabarito ? withObtidas(fichaEnabled ? withFicha(GRADING_TOOL) : GRADING_TOOL) : (fichaEnabled ? withFicha(GRADING_TOOL) : GRADING_TOOL)],
         tool_choice: { type: "function", function: { name: "submit_grading" } },
       });
 
@@ -345,6 +395,10 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
         evidLines.push("\n**Evidências — MAI:**");
         ev.mai.forEach((e: string) => evidLines.push(`- ${e}`));
       }
+      if (Array.isArray(ev.ficha) && ev.ficha.length) {
+        evidLines.push("\n**Evidências — Ficha:**");
+        ev.ficha.forEach((e: string) => evidLines.push(`- ${e}`));
+      }
       if (evidLines.length) {
         orientacoes = `${orientacoes}\n\n${evidLines.join("\n")}`.trim();
       }
@@ -356,9 +410,17 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
     for (const k of [...ANAMNESE_KEYS, ...MAI_KEYS]) subs[k] = round2(clamp(num(rawSubs[k]), 0, 1));
     // Sem MAI enviado, a seção B é zerada independentemente do que o modelo devolver.
     if (!maiData) for (const k of MAI_KEYS) subs[k] = 0;
+    // Com ficha, as três dimensões sempre são gravadas (mesmo zeradas): é isso que marca a nota como "com ficha".
+    // Ficha vazia zera a seção independentemente do que o modelo devolver.
+    if (fichaEnabled) {
+      for (const k of FICHA_KEYS) subs[k] = fichaHasContent ? round2(clamp(num(rawSubs[k]), 0, 1)) : 0;
+    }
 
-    const notaAnamnese = round2(ANAMNESE_KEYS.reduce((s, k) => s + subs[k], 0));
-    const notaMai = round2(MAI_KEYS.reduce((s, k) => s + subs[k], 0));
+    const rawAnamneseSum = ANAMNESE_KEYS.reduce((s, k) => s + subs[k], 0);
+    const base = baseScores(subs);
+    const notaAnamnese = base.anamnese;
+    const notaMai = base.mai;
+    const notaFicha = base.ficha;
 
     const rawBp = gradeResult.bonus_penalidades || {};
     const bonus = clamp(Math.abs(num(rawBp.comunicacao_empatica_bonus)), 0, MAX_BONUS);
@@ -372,7 +434,7 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
       erro_seguranca_penalidade: round2(Math.abs(num(rawBp.erro_seguranca_penalidade))),
       ignorou_alergia_penalidade: round2(Math.abs(num(rawBp.ignorou_alergia_penalidade))),
     };
-    const notaFinal = round2(clamp(notaAnamnese + notaMai + bonus - penalty, 0, 10));
+    const notaFinal = round2(clamp(base.total + bonus - penalty, 0, 10));
 
     // Upsert grade (overwrite if re-graded)
     const { data: existing } = await supabase
@@ -387,7 +449,7 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
     const obtidas: string[] = Array.isArray(gradeResult.informacoes_obtidas) ? gradeResult.informacoes_obtidas.map(String) : [];
     const coverage = gabarito
       ? coberturaInformacoes(gabarito, obtidas)
-      : clamp(notaAnamnese / ANAMNESE_KEYS.length, 0, 1);
+      : clamp(rawAnamneseSum / ANAMNESE_KEYS.length, 0, 1);
     const efficiency = Math.round(coverage * 5 * 10) / 10;
 
     const payload = {
@@ -400,7 +462,7 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
       feedback_resumido: feedbackResumido,
       orientacoes_melhoria: orientacoes,
       flags_seguranca: Array.isArray(gradeResult.flags_seguranca) ? gradeResult.flags_seguranca : [],
-      rubric_version: gabarito ? `${RUBRIC_VERSION}+gabarito` : RUBRIC_VERSION,
+      rubric_version: (fichaEnabled ? RUBRIC_VERSION_FICHA : RUBRIC_VERSION) + (gabarito ? "+gabarito" : ""),
       grading_model: GRADING_MODEL,
       graded_at: new Date().toISOString(),
       raw_ai_response: rawResponse,
@@ -420,8 +482,10 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
         ...gradeResult,
         subscores: subs,
         bonus_penalidades: bonusPenalidades,
+        nota_anamnese: notaAnamnese, // 0–6 sem ficha, 0–4 com ficha
         nota_anamnese_0a6: notaAnamnese,
         nota_mai_0a4: notaMai,
+        nota_ficha_0a2: notaFicha,
         nota_final_0a10: notaFinal,
       },
     }), {

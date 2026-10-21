@@ -605,6 +605,14 @@ async function findVirtualPatientResults(supabase: any, email: string) {
     const subs = grade.subscores || {};
     const anamnese = Object.fromEntries(VP_ANAMNESE_KEYS.map((k) => [VP_SUBSCORE_LABELS[k], Number(subs[k]) || 0]));
     const mai = Object.fromEntries(VP_MAI_KEYS.map((k) => [VP_SUBSCORE_LABELS[k], Number(subs[k]) || 0]));
+    // Casos com ficha eletrônica (P20) trazem três subnotas do registro clínico.
+    const fichaLabels: Record<string, string> = {
+      ficha_completude: "Ficha - completude do registro",
+      ficha_fidelidade: "Ficha - fidelidade à conversa",
+      ficha_raciocinio: "Ficha - raciocínio e clareza",
+    };
+    const temFicha = Object.keys(fichaLabels).some((k) => k in subs);
+    const ficha = temFicha ? Object.fromEntries(Object.keys(fichaLabels).map((k) => [fichaLabels[k], Number(subs[k]) || 0])) : undefined;
 
     return {
       paciente: patientName(session.patient_id),
@@ -616,6 +624,7 @@ async function findVirtualPatientResults(supabase: any, email: string) {
       eficiencia_clinica: grade.nota_microlearning,
       anamnese_por_item_0_a_1: anamnese,
       mai_por_item_0_a_1: mai,
+      ficha_por_item_0_a_1: ficha,
       bonus_penalidades: grade.bonus_penalidades || null,
       flags_seguranca: Array.isArray(grade.flags_seguranca) ? grade.flags_seguranca : [],
       feedback_resumido: grade.feedback_resumido || null,

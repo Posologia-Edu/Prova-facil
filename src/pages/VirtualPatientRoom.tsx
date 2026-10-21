@@ -65,6 +65,7 @@ export default function VirtualPatientRoom() {
   // Ficha eletrônica (P20): só nos casos v2; o chat informa se existe e qual versão da profissão.
   const [ficha, setFicha] = useState<{ versao: FichaVersao } | null>(null);
   const [showFicha, setShowFicha] = useState(false);
+  const [showSoapWarning, setShowSoapWarning] = useState(false);
 
 
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
@@ -551,6 +552,20 @@ export default function VirtualPatientRoom() {
     }
   };
 
+  // Antes do MAI: se a ficha existe e o SOAP do 3º encontro está em branco, avisa (a ficha vale parte da nota).
+  const requestFinish = async () => {
+    if (ficha && sessionId) {
+      const { data } = await (supabase as any)
+        .from("virtual_patient_record_sections")
+        .select("content")
+        .eq("session_id", sessionId)
+        .eq("encounter", 3);
+      const filled = ((data as any[]) || []).some((r) => String(r.content || "").trim());
+      if (!filled) { setShowSoapWarning(true); return; }
+    }
+    setShowMAI(true);
+  };
+
   const handleMAIComplete = async () => {
     setShowMAI(false);
     setSessionCompleted(true);
@@ -714,7 +729,7 @@ export default function VirtualPatientRoom() {
             </Button>
           )}
           {encounter === 3 && !sessionCompleted && (
-            <Button size="sm" onClick={() => setShowMAI(true)}>
+            <Button size="sm" onClick={requestFinish}>
               <ClipboardCheck className="h-4 w-4 mr-1" /> Preencher MAI
             </Button>
           )}
@@ -825,6 +840,22 @@ export default function VirtualPatientRoom() {
         sessionId={sessionId}
         onComplete={handleMAIComplete}
       />
+
+      <Dialog open={showSoapWarning} onOpenChange={setShowSoapWarning}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>A evolução (SOAP) está em branco</DialogTitle>
+            <DialogDescription>
+              O registro do 3º encontro ainda não foi preenchido. A ficha vale parte da nota (2 dos 10 pontos).
+              Você pode preencher agora ou concluir assim mesmo.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setShowSoapWarning(false); setShowMAI(true); }}>Concluir assim mesmo</Button>
+            <Button onClick={() => { setShowSoapWarning(false); setShowFicha(true); }}>Preencher o SOAP</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showConsent} onOpenChange={(o) => { if (!o && consentState !== null) setShowConsent(false); }}>
         <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>

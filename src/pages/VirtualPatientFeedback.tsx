@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { PEER_EVAL_MAX_ADJUST } from "@/lib/vp-peer-eval";
+import { FICHA_KEYS, FICHA_LABELS, hasFichaScores } from "@/lib/vp-grade";
 
 interface PeerEvalSummary {
   count: number;
@@ -280,6 +281,12 @@ export default function VirtualPatientFeedback() {
               {Object.entries(SUBSCORE_LABELS).map(([k, label]) => (
                 <div key={k} className="flex items-center justify-between text-sm">
                   <span>{label}</span>
+                  <Badge variant="secondary">{(Number(grade.subscores?.[k]) || 0).toFixed(2)}</Badge>
+                </div>
+              ))}
+              {hasFichaScores(grade.subscores) && FICHA_KEYS.map((k) => (
+                <div key={k} className="flex items-center justify-between text-sm">
+                  <span>Ficha · {FICHA_LABELS[k]}</span>
                   <Badge variant="secondary">{(Number(grade.subscores?.[k]) || 0).toFixed(2)}</Badge>
                 </div>
               ))}

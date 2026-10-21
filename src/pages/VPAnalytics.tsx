@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { useVpCatalog } from "@/lib/vp-catalog";
+import { FICHA_KEYS, FICHA_LABELS, baseScores, hasFichaScores } from "@/lib/vp-grade";
 import { Stethoscope, ClipboardList, Target } from "lucide-react";
 import { computePeerBonus, PEER_EVAL_MAX_ADJUST } from "@/lib/vp-peer-eval";
 
@@ -308,7 +309,8 @@ export default function VPAnalytics() {
     const subs = (grade.subscores && typeof grade.subscores === "object") ? grade.subscores : {};
     const flagsArr = Array.isArray(grade.flags_seguranca) ? grade.flags_seguranca : [];
     setEditForm({
-      subscores: subscoreKeys.reduce((acc, k) => ({ ...acc, [k]: Number(subs[k]) || 0 }), {} as Record<string, number>),
+      // Notas com ficha (P20) carregam também as subnotas da ficha; sem elas aqui, salvar a edição as apagaria.
+      subscores: [...subscoreKeys, ...(hasFichaScores(subs) ? FICHA_KEYS : [])].reduce((acc, k) => ({ ...acc, [k]: Number(subs[k]) || 0 }), {} as Record<string, number>),
       nota_final: grade.nota_final ?? 0,
       nota_microlearning: grade.nota_microlearning ?? 0,
       feedback_resumido: normalizeRichText(grade.feedback_resumido),
@@ -349,8 +351,8 @@ export default function VPAnalytics() {
   };
 
   const recomputeFinal = (subs: Record<string, number>) => {
-    const total = subscoreKeys.reduce((s, k) => s + (Number(subs[k]) || 0), 0);
-    return Math.max(0, Math.min(10, total));
+    // Mesma conta do servidor (com ficha: anamnese 4 + MAI 4 + ficha 2).
+    return Math.max(0, Math.min(10, baseScores(subs).total));
   };
 
   // Eficiência Clínica (0–5): cobertura da anamnese. O tamanho da conversa não entra no cálculo.
@@ -1248,7 +1250,7 @@ export default function VPAnalytics() {
 
                 {/* Subscores — Anamnese */}
                 <div>
-                  <h4 className="text-sm font-semibold mb-3">Anamnese (0–6)</h4>
+                  <h4 className="text-sm font-semibold mb-3">Anamnese (0–${hasFichaScores(detailGrade.subscores) ? 4 : 6})</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {subscoreKeys.slice(0, 6).map(key => (
                       <div key={key} className="p-3 rounded-lg border text-center">
@@ -1271,6 +1273,34 @@ export default function VPAnalytics() {
                     ))}
                   </div>
                 </div>
+
+                {/* Subscores — Ficha (P20) */}
+                {hasFichaScores(detailGrade.subscores) && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-3">Ficha do atendimento (0–2)</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      {FICHA_KEYS.map(key => (
+                        <div key={key} className="p-3 rounded-lg border text-center">
+                          <p className="text-xs text-muted-foreground">{FICHA_LABELS[key]}</p>
+                          {editMode ? (
+                            <Input
+                              type="number" step="0.05" min="0" max="1"
+                              className="mt-1 text-center font-bold"
+                              value={editForm.subscores[key] ?? 0}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value) || 0;
+                                const newSubs = { ...editForm.subscores, [key]: v };
+                                setEditForm({ ...editForm, subscores: newSubs, nota_final: recomputeFinal(newSubs) });
+                              }}
+                            />
+                          ) : (
+                            <p className="text-lg font-bold mt-1">{(detailGrade.subscores?.[key] || 0).toFixed(2)}/1</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Subscores — MAI */}
                 <div>
