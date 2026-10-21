@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users, Activity, ShieldCheck, Mail } from "lucide-react";
+import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users, Activity, ShieldCheck, Mail, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { VirtualPatientMAI } from "@/components/VirtualPatientMAI";
+import { RecordPanel } from "@/components/vp-room/RecordPanel";
+import type { FichaVersao } from "@/lib/vp-ficha";
 import { fetchPublicVpCase, sessionModuleFor } from "@/lib/vp-catalog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
@@ -60,10 +62,34 @@ export default function VirtualPatientRoom() {
   const [showConsent, setShowConsent] = useState(false);
   const [savingConsent, setSavingConsent] = useState(false);
   const [showPeerEvalNotice, setShowPeerEvalNotice] = useState(false);
+  // Ficha eletrônica (P20): só nos casos v2; o chat informa se existe e qual versão da profissão.
+  const [ficha, setFicha] = useState<{ versao: FichaVersao } | null>(null);
+  const [showFicha, setShowFicha] = useState(false);
 
 
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
   useEffect(() => { encounterRef.current = encounter; }, [encounter]);
+
+  useEffect(() => {
+    if (!sessionId || !patientId) return;
+    let active = true;
+    supabase.functions
+      .invoke("virtual-patient-chat", { body: { action: "encounter_brief", patientId, encounter, sessionId } })
+      .then(({ data }) => {
+        if (!active) return;
+        const v = data?.versao;
+        if (data?.ficha && (v === "farmaceutico" || v === "enfermeiro" || v === "medico")) {
+          setFicha((prev) => {
+            if (!prev) setShowFicha(true); // abre sozinha na primeira vez para o aluno perceber que existe
+            return { versao: v };
+          });
+        } else {
+          setFicha(null);
+        }
+      })
+      .catch(() => { /* sem ficha */ });
+    return () => { active = false; };
+  }, [sessionId, patientId, encounter]);
 
   const [patient, setPatient] = useState<{ name: string; age: number; module: string } | null>(null);
 
@@ -677,6 +703,11 @@ export default function VirtualPatientRoom() {
         </div>
 
         <div className="flex items-center gap-2">
+          {ficha && (
+            <Button variant={showFicha ? "secondary" : "outline"} size="sm" onClick={() => setShowFicha((v) => !v)}>
+              <FileText className="h-4 w-4 mr-1" /> Ficha
+            </Button>
+          )}
           {encounter < 3 && !sessionCompleted && (
             <Button variant="outline" size="sm" onClick={advanceEncounter}>
               Avançar Encontro <ChevronRight className="h-4 w-4 ml-1" />
@@ -695,6 +726,8 @@ export default function VirtualPatientRoom() {
         </div>
       </div>
 
+      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-col flex-1 min-w-0 min-h-0">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
@@ -767,6 +800,24 @@ export default function VirtualPatientRoom() {
           </Button>
         </div>
       )}
+
+      </div>
+
+      {ficha && showFicha && sessionId && (
+        <aside className="fixed inset-0 z-40 lg:static lg:z-auto lg:w-[400px] lg:flex-shrink-0 lg:border-l min-h-0">
+          <RecordPanel
+            sessionId={sessionId}
+            encounter={encounter}
+            versao={ficha.versao}
+            studentEmail={studentEmail}
+            studentName={studentName}
+            isGroup={isGroupSession}
+            locked={sessionCompleted}
+            onClose={() => setShowFicha(false)}
+          />
+        </aside>
+      )}
+      </div>
 
       <VirtualPatientMAI
         open={showMAI}

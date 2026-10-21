@@ -725,7 +725,8 @@ serve(async (req) => {
             tarefa: enc.cartao.tarefa,
           }
         : null;
-      return new Response(JSON.stringify({ brief }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // ficha: a ficha eletrônica (P20) só existe nos casos v2; versao diz qual profissão a turma escolheu.
+      return new Response(JSON.stringify({ brief, ficha: !!caseData, versao: versaoKey }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ========== Condutas do aluno nos encontros anteriores ==========
