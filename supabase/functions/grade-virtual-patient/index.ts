@@ -7,6 +7,7 @@ import { ANAMNESE_KEYS, FICHA_KEYS, MAI_KEYS, baseScores } from "../_shared/vp-g
 import {
   buildGabaritoText,
   coberturaInformacoes,
+  coberturaPorDimensao,
   isCaseDataV2,
   resolveVersaoKey,
   type Gabarito,
@@ -21,8 +22,10 @@ const corsHeaders = {
 // Versão da rubrica gravada em cada nota. Incrementar sempre que pesos, dimensões ou
 // penalidades mudarem, para que notas antigas e novas possam ser distinguidas.
 const RUBRIC_VERSION = "vp-2026-10-a";
-// Casos v2 com ficha eletrônica (P20): anamnese 4 + MAI 4 + ficha 2.
-const RUBRIC_VERSION_FICHA = "vp-2026-10-b";
+// Casos v2 (P20): anamnese 4 + MAI 4 + ficha 2; âncoras de nota; dimensões de conteúdo ligadas à cobertura calculada.
+const RUBRIC_VERSION_FICHA = "vp-2026-10-c";
+// Peso da cobertura calculada na nota das dimensões de conteúdo (o resto é o julgamento da IA).
+const COBERTURA_PESO = 0.5;
 const GRADING_MODEL = "google/gemini-2.5-pro";
 const MAX_ATTEMPTS = 2;
 
@@ -196,6 +199,7 @@ serve(async (req) => {
     // Gabarito do caso (esquema v2): referência da correção e base da cobertura das informações alvo.
     let gabarito: Gabarito | null = null;
     let gabaritoText = "";
+    let caseV2: VpCaseData | null = null;
     const caseRec = await loadVpCase(sessionData?.patient_id);
     if (caseRec && isCaseDataV2(caseRec.case_data)) {
       const { data: cvpRow } = await supabase
@@ -204,6 +208,7 @@ serve(async (req) => {
         .eq("id", class_virtual_patient_id)
         .maybeSingle();
       const cd = caseRec.case_data as VpCaseData;
+      caseV2 = cd;
       let key = resolveVersaoKey((cvpRow as any)?.profession);
       if (!cd.versoes[key]) key = Object.keys(cd.versoes)[0] as typeof key;
       gabarito = cd.versoes[key]?.gabarito ?? null;
@@ -316,6 +321,12 @@ REGRAS DE OUTPUT
 - Se o texto de qualquer campo vier em formato de lista, use um único string em markdown com bullets.${gabarito ? `
 - Preencha informacoes_obtidas com os ids (I1, I2…) das informações alvo que o estudante EFETIVAMENTE obteve do paciente na conversa. Não inclua um id se o paciente não revelou aquela informação.
 
+ÂNCORAS DE NOTA (use a escala inteira de 0 a 1 nas dimensões da anamnese e da ficha):
+- 0,0 = não fez; 0,25 = muito incompleto; 0,5 = metade do esperado, ou tudo porém superficial; 0,75 = a maior parte, com pequenas lacunas; 1,0 = completo e bem conduzido.
+- historia_medicamentosa: 1,0 = investigou ativamente TODOS os medicamentos (prescritos, sem receita, fitoterápicos), com dose, horário, tempo de uso e adesão. Só os prescritos, com dose = 0,5. Nada específico = 0.
+- Notas menores ou iguais a 0,3 só quando praticamente não houve investigação daquela dimensão.
+- Seja coerente com informacoes_obtidas: se o estudante obteve a maior parte das informações de uma área, não dê nota muito baixa nela; se obteve poucas, não dê nota alta.
+
 ${gabaritoText}` : ""}`;
 
     const userContent = `[CONTEXTO DA SESSÃO]
@@ -416,6 +427,18 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
       for (const k of FICHA_KEYS) subs[k] = fichaHasContent ? round2(clamp(num(rawSubs[k]), 0, 1)) : 0;
     }
 
+    // Cobertura calculada: nas dimensões de conteúdo, a nota é a média ponderada entre o julgamento da IA e a
+    // cobertura das informações alvo daquela área (o servidor calcula a cobertura a partir dos ids que a IA marcou).
+    const obtidas: string[] = Array.isArray(gradeResult.informacoes_obtidas) ? gradeResult.informacoes_obtidas.map(String) : [];
+    const subsIa = { ...subs };
+    let coberturaDim: Record<string, number> = {};
+    if (gabarito && caseV2) {
+      coberturaDim = coberturaPorDimensao(caseV2, gabarito, obtidas);
+      for (const [k, cov] of Object.entries(coberturaDim)) {
+        if (k in subs) subs[k] = round2(subs[k] * (1 - COBERTURA_PESO) + cov * COBERTURA_PESO);
+      }
+    }
+
     const rawAnamneseSum = ANAMNESE_KEYS.reduce((s, k) => s + subs[k], 0);
     const base = baseScores(subs);
     const notaAnamnese = base.anamnese;
@@ -446,7 +469,6 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
     // Clinical Efficiency (0–5): cobertura da anamnese. O tamanho da conversa não entra
     // mais no cálculo (antes, passar de 25 mensagens reduzia o indicador).
     // Com gabarito: cobertura ponderada das informações alvo (Essencial 3, Importante 2, Complementar 1).
-    const obtidas: string[] = Array.isArray(gradeResult.informacoes_obtidas) ? gradeResult.informacoes_obtidas.map(String) : [];
     const coverage = gabarito
       ? coberturaInformacoes(gabarito, obtidas)
       : clamp(rawAnamneseSum / ANAMNESE_KEYS.length, 0, 1);
@@ -465,7 +487,7 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
       rubric_version: (fichaEnabled ? RUBRIC_VERSION_FICHA : RUBRIC_VERSION) + (gabarito ? "+gabarito" : ""),
       grading_model: GRADING_MODEL,
       graded_at: new Date().toISOString(),
-      raw_ai_response: rawResponse,
+      raw_ai_response: rawResponse + "\n\n[SERVIDOR] " + JSON.stringify({ subscores_ia: subsIa, cobertura_por_dimensao: coberturaDim, cobertura_peso: gabarito ? COBERTURA_PESO : 0 }),
     };
 
     if (existing?.id) {

@@ -1250,7 +1250,7 @@ export default function VPAnalytics() {
 
                 {/* Subscores — Anamnese */}
                 <div>
-                  <h4 className="text-sm font-semibold mb-3">Anamnese (0–${hasFichaScores(detailGrade.subscores) ? 4 : 6})</h4>
+                  <h4 className="text-sm font-semibold mb-3">Anamnese (0–{hasFichaScores(detailGrade.subscores) ? 4 : 6})</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {subscoreKeys.slice(0, 6).map(key => (
                       <div key={key} className="p-3 rounded-lg border text-center">
@@ -1637,23 +1637,18 @@ export default function VPAnalytics() {
                       if (meds.length === 0) {
                         return <p className="text-sm text-muted-foreground italic">MAI vazio.</p>;
                       }
-                      const maxPerMed = 30; // 10 critérios × 3 (pior caso = inapropriado)
-                      const minPerMed = 10; // 10 critérios × 1 (apropriado em tudo)
-                      const maxTotal = meds.length * maxPerMed;
-                      const minTotal = meds.length * minPerMed;
-                      // Quanto MENOR o score, melhor (1=apropriado, 2=marginal, 3=inapropriado)
-                      // Qualidade normalizada 0–1: 1 = perfeito, 0 = totalmente inapropriado
-                      const quality = maxTotal > minTotal
-                        ? 1 - ((totalScore - minTotal) / (maxTotal - minTotal))
-                        : 0;
-                      const qualityPct = Math.round(quality * 100);
-                      const qualityLabel = quality >= 0.85 ? "Excelente" : quality >= 0.65 ? "Bom" : quality >= 0.45 ? "Regular" : "Baixo";
-                      const qualityCls = quality >= 0.85 ? "text-green-600" : quality >= 0.65 ? "text-emerald-600" : quality >= 0.45 ? "text-yellow-600" : "text-destructive";
+                      // O score bruto (soma dos 10 critérios) descreve o JULGAMENTO do aluno sobre cada medicamento
+                      // (menor = mais apropriado). Não mede a qualidade do preenchimento: quem mede é a nota do MAI (IA, 0–4).
+                      const maiNota = baseScores((detailGrade.subscores || {}) as Record<string, number>).mai;
+                      const judgement = (score: number | undefined) => {
+                        const avg = (Number(score) || 0) / 10;
+                        return avg <= 1.3 ? optionLabels.appropriate : avg <= 2.2 ? optionLabels.marginally : optionLabels.inappropriate;
+                      };
 
                       // Detectar critérios que mais impactaram cada uma das 4 dimensões MAI
                       const subs = (detailGrade.subscores || {}) as Record<string, number>;
                       const dimImpact = {
-                        completude: { sub: subs.mai_completude ?? 0, label: "Completude", desc: "% de critérios respondidos para todos os medicamentos.", evidence: `${meds.reduce((a: number, m: any) => a + Object.keys(m.answers || {}).length, 0)} / ${meds.length * 10} respostas preenchidas` },
+                        completude: { sub: subs.mai_completude ?? 0, label: "Completude", desc: "Quantos dos medicamentos do caso foram avaliados e se os critérios foram respondidos.", evidence: `${meds.length} medicamento(s) avaliado(s); ${meds.reduce((a: number, m: any) => a + Object.keys(m.answers || {}).length, 0)} de ${meds.length * 10} critérios respondidos` },
                         coerencia: { sub: subs.mai_coerencia_clinica ?? 0, label: "Coerência clínica", desc: "Consistência entre as escolhas (indicação ↔ efetividade ↔ duração ↔ dose) e o perfil do paciente.", evidence: "Avaliada pela IA com base no caso clínico e nas respostas escolhidas." },
                         critica: { sub: subs.mai_justificativa_critica ?? 0, label: "Justificativa crítica", desc: "Qualidade do raciocínio (por que classificou como apropriado/marginal/inapropriado).", evidence: "Comparada à conduta esperada do gabarito clínico." },
                         seguranca: { sub: subs.mai_seguranca_paciente ?? 0, label: "Segurança do paciente", desc: "Detecção de risco: interações, duplicidades, contraindicações, alergias e flags de segurança.", evidence: `Critérios de risco: ${meds.flatMap((m: any) => ["drug_drug","drug_disease","duplication"].filter((k) => ["marginally","inappropriate"].includes(m.answers?.[k]))).length} sinalizações de "marginal/inapropriado".` },
@@ -1667,13 +1662,14 @@ export default function VPAnalytics() {
                               <Info className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                               <div className="space-y-1.5">
                                 <p>
-                                  <strong>Como o Score é calculado:</strong> cada um dos 10 critérios MAI por medicamento
-                                  recebe <strong>1</strong> (Apropriado), <strong>2</strong> (Marginalmente Apropriado) ou
-                                  <strong> 3</strong> (Inapropriado). O score é a <em>soma</em> — portanto, <strong>quanto menor, melhor</strong>.
+                                  <strong>Como ler o MAI:</strong> cada medicamento avaliado recebe 10 critérios, marcados como
+                                  Apropriado (1), Marginalmente apropriado (2) ou Inapropriado (3). A soma mostra <em>o que o aluno concluiu
+                                  sobre o medicamento</em> (quanto menor, mais apropriado). Ela <strong>não</strong> mede a qualidade do preenchimento.
                                 </p>
                                 <p>
-                                  Para este envio: faixa possível = <strong>{minTotal}</strong> (perfeito) a <strong>{maxTotal}</strong> (totalmente inapropriado).
-                                  O grupo somou <strong>{totalScore}</strong> → qualidade normalizada de <strong className={qualityCls}>{qualityPct}% ({qualityLabel})</strong>.
+                                  A <strong>nota do MAI</strong> é dada pela IA (0–4): compara o julgamento do aluno com o caso e considera
+                                  <strong> quantos medicamentos foram avaliados</strong>. Neste envio: <strong>{maiNota.toFixed(2)}/4</strong> com{" "}
+                                  <strong>{meds.length}</strong> medicamento(s) avaliado(s).
                                 </p>
                               </div>
                             </div>
@@ -1681,7 +1677,7 @@ export default function VPAnalytics() {
 
                           {/* Como reflete nas 4 notas MAI */}
                           <div className="rounded-lg border p-3 space-y-2">
-                            <p className="text-xs font-semibold">Como o Score reflete nas 4 notas MAI (0–1 cada)</p>
+                            <p className="text-xs font-semibold">As 4 notas do MAI (0–1 cada, dadas pela IA)</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {Object.entries(dimImpact).map(([k, d]) => (
                                 <div key={k} className="rounded-md border p-2 text-xs space-y-1">
@@ -1700,11 +1696,9 @@ export default function VPAnalytics() {
                           </div>
 
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>{meds.length} medicamento(s)</span>
+                            <span>{meds.length} medicamento(s) avaliado(s)</span>
                             <span>•</span>
-                            <span>Score total: <strong className="text-foreground">{totalScore}</strong> (menor = melhor)</span>
-                            <span>•</span>
-                            <span>Qualidade: <strong className={qualityCls}>{qualityPct}%</strong></span>
+                            <span>Nota do MAI (IA): <strong className="text-foreground">{maiNota.toFixed(2)}/4</strong></span>
                           </div>
                           {meds.map((med: any, idx: number) => (
                             <div key={idx} className="border rounded-lg overflow-hidden">
@@ -1713,7 +1707,12 @@ export default function VPAnalytics() {
                                   <Pill className="h-3.5 w-3.5 text-primary" />
                                   <span className="font-medium text-sm">{med.medication_name || `Medicamento ${idx + 1}`}</span>
                                 </div>
-                                <Badge variant="outline" className="text-xs">Score: {med.score ?? 0}</Badge>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${judgement(med.score).cls}`}>
+                                    Aluno julgou: {judgement(med.score).label}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">Soma {med.score ?? 0}</Badge>
+                                </div>
                               </div>
                               <div className="divide-y">
                                 {Object.entries(criteriaLabels).map(([key, label]) => {

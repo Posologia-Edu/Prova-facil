@@ -429,3 +429,36 @@ export function coberturaInformacoes(g: Gabarito, obtidas: string[]): number {
   const got = g.informacoes_alvo.reduce((s, i) => s + (set.has(i.id_informacao) ? (PESO[i.importancia] ?? 1) : 0), 0);
   return Math.min(1, got / total);
 }
+
+// Cada categoria de fato do núcleo alimenta a dimensão da anamnese correspondente.
+const DIM_POR_CATEGORIA: Array<[string, RegExp]> = [
+  ["queixa_principal_hda", /queixa|sintoma|hda/],
+  ["historia_medicamentosa", /medicament|adesao|automedic|fitoter|suplement/],
+  ["antecedentes_comorbidades", /antecedente|comorbid|alergia|historico/],
+  ["habitos_estilo_vida", /habito|estilo|social|contexto|rotina|aliment/],
+];
+const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/**
+ * Cobertura (0–1) das informações alvo por dimensão da anamnese, pela categoria do fato no núcleo
+ * (mesmo peso Essencial 3 / Importante 2 / Complementar 1). Dimensões sem nenhuma informação alvo
+ * não aparecem no resultado (continuam só com o julgamento da IA).
+ */
+export function coberturaPorDimensao(d: VpCaseData, g: Gabarito, obtidas: string[]): Record<string, number> {
+  const set = new Set(obtidas);
+  const acc: Record<string, { tot: number; got: number }> = {};
+  for (const i of g.informacoes_alvo) {
+    const fato = d.nucleo.fatos.find((f) => f.id === i.id_informacao);
+    if (!fato) continue;
+    const cat = semAcento(fato.categoria || "");
+    const dim = DIM_POR_CATEGORIA.find(([, re]) => re.test(cat))?.[0];
+    if (!dim) continue;
+    const w = PESO[i.importancia] ?? 1;
+    const a = (acc[dim] ||= { tot: 0, got: 0 });
+    a.tot += w;
+    if (set.has(i.id_informacao)) a.got += w;
+  }
+  return Object.fromEntries(
+    Object.entries(acc).filter(([, a]) => a.tot > 0).map(([k, a]) => [k, Math.min(1, a.got / a.tot)]),
+  );
+}
