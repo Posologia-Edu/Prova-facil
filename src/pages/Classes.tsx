@@ -128,6 +128,7 @@ export default function ClassesPage() {
   const { entries: vpCatalog } = useVpCatalog();
   const [linkVPOpen, setLinkVPOpen] = useState(false);
   const [linkVPProfession, setLinkVPProfession] = useState<string>("farmaceutico");
+  const [removingVP, setRemovingVP] = useState<{ vp: ClassVirtualPatient; sessions: number } | null>(null);
   const [linkExamOpen, setLinkExamOpen] = useState(false);
 
   // VP student assignments
@@ -558,8 +559,23 @@ export default function ClassesPage() {
     toast.success(newStatus === "active" ? "Paciente virtual ativado!" : "Paciente virtual desativado.");
   };
 
+  const askRemoveVP = async (vp: ClassVirtualPatient) => {
+    const { count } = await supabase
+      .from("virtual_patient_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("class_virtual_patient_id", vp.id);
+    setRemovingVP({ vp, sessions: count ?? 0 });
+  };
+
   const removeVP = async (vpId: string) => {
-    await supabase.from("class_virtual_patients").delete().eq("id", vpId);
+    const { error } = await supabase.from("class_virtual_patients").delete().eq("id", vpId);
+    if (error) {
+      console.error("removeVP", error);
+      toast.error(error.code === "23503"
+        ? "Não foi possível remover: há sessões de alunos vinculadas a este paciente."
+        : "Não foi possível remover o paciente da turma.");
+      return;
+    }
     setClassVPs(prev => prev.filter(v => v.id !== vpId));
     toast.success("Paciente virtual removido da turma.");
   };
@@ -1148,7 +1164,7 @@ export default function ClassesPage() {
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/virtual-patients/analytics`)} title="Ver Resultados">
                               <BarChart3 className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeVP(vp.id)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => askRemoveVP(vp)} title="Remover da turma">
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -1623,6 +1639,28 @@ export default function ClassesPage() {
       {!selectedClass && manageStudentsContent}
 
       {/* Delete Confirmation */}
+      <AlertDialog open={!!removingVP} onOpenChange={(open) => !open && setRemovingVP(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover paciente da turma?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {removingVP && removingVP.sessions > 0
+                ? `Existem ${removingVP.sessions} sessão(ões) de alunos com este paciente. Remover apaga também as conversas e as notas dessas sessões, e não pode ser desfeito. Para só impedir novos acessos, desative o paciente em vez de removê-lo.`
+                : "O paciente deixa de aparecer nesta turma e o PIN deixa de funcionar."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (removingVP) removeVP(removingVP.vp.id); setRemovingVP(null); }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
