@@ -97,7 +97,8 @@ export interface Encontro {
   numero: 1 | 2 | 3;
   tipo: TipoEncontro;
   interlocutor: Interlocutor;
-  cartao: { cenario: string; tarefa: string };
+  /** tempo_min: referência de tempo do encontro (OSCE); sem valor, a sala usa 15, 10 e 10 minutos */
+  cartao: { cenario: string; tarefa: string; tempo_min?: number };
   persona_interlocutor?: PersonaInterlocutor;
   /** Como o paciente evolui conforme o que foi EFETIVAMENTE implementado (o que o prescritor aceitou, no encontro 3). */
   evolucao?: Array<{ quando: string; paciente_relata: string }>;

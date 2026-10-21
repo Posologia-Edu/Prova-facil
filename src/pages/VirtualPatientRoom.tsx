@@ -11,6 +11,7 @@ import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { VirtualPatientMAI } from "@/components/VirtualPatientMAI";
 import { RecordPanel } from "@/components/vp-room/RecordPanel";
 import { RolesDialog } from "@/components/vp-room/RolesDialog";
+import { EncounterIntroDialog, EncounterStrip, EncounterTimer, introKey, timerKey, type EncounterBrief } from "@/components/vp-room/EncounterCard";
 import type { FichaVersao } from "@/lib/vp-ficha";
 import { fetchPublicVpCase, sessionModuleFor } from "@/lib/vp-catalog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -75,6 +76,11 @@ export default function VirtualPatientRoom() {
   const [showRolesEdit, setShowRolesEdit] = useState(false);
   const [rolesChosenBy, setRolesChosenBy] = useState<Record<number, string>>({});
   const [pin, setPin] = useState("");
+  // Cartão do encontro estilo OSCE (P21): só nos casos v2.
+  const [brief, setBrief] = useState<EncounterBrief | null>(null);
+  const [briefVersao, setBriefVersao] = useState<FichaVersao | null>(null);
+  const [introManual, setIntroManual] = useState(false);
+  const [introTick, setIntroTick] = useState(0);
 
 
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
@@ -88,6 +94,8 @@ export default function VirtualPatientRoom() {
       .then(({ data }) => {
         if (!active) return;
         const v = data?.versao;
+        setBrief(data?.brief ? { ...data.brief, encounter } : null);
+        setBriefVersao(v === "farmaceutico" || v === "enfermeiro" || v === "medico" ? v : null);
         if (data?.ficha && (v === "farmaceutico" || v === "enfermeiro" || v === "medico")) {
           setFicha({ versao: v });
         } else {
@@ -109,6 +117,21 @@ export default function VirtualPatientRoom() {
     rolesActive && currentRegistrars ? (currentRegistrars.includes(studentEmail.toLowerCase()) ? "ficha" : "conversa") : null;
   const rolesPending = rolesActive && !sessionCompleted && (!rolesLoaded || !currentRegistrars);
   const chatBlocked = rolesActive && !sessionCompleted && (rolesPending || myRole === "ficha");
+  // Cartão do encontro: abre sozinho na primeira vez de cada encontro (depois das funções e do consentimento).
+  const activeBrief = brief && brief.encounter === encounter ? brief : null;
+  let introSeen = true;
+  try { introSeen = sessionStorage.getItem(introKey(sessionId, encounter)) === "1"; } catch { /* sem armazenamento: não insiste */ }
+  void introTick;
+  const introOpen = !!activeBrief && !sessionCompleted && !rolesPending && !showConsent && (!introSeen || introManual);
+  const confirmIntro = () => {
+    try {
+      sessionStorage.setItem(introKey(sessionId, encounter), "1");
+      if (!sessionStorage.getItem(timerKey(sessionId, encounter))) sessionStorage.setItem(timerKey(sessionId, encounter), String(Date.now()));
+    } catch { /* sem armazenamento */ }
+    setIntroManual(false);
+    setIntroTick((t) => t + 1);
+  };
+
   const namesOf = (emails: string[]) => roleMembers.filter((m) => emails.includes(m.email)).map((m) => m.name).join(", ");
 
   useEffect(() => {
@@ -807,6 +830,9 @@ export default function VirtualPatientRoom() {
               {myRole === "ficha" ? "Você registra a ficha" : "Você conduz a conversa"}
             </Badge>
           )}
+          {activeBrief && (
+            <EncounterTimer sessionId={sessionId} encounter={encounter} minutes={activeBrief.tempo_min} />
+          )}
           {myRole && !sessionCompleted && (
             <Button variant="ghost" size="sm" onClick={() => setShowRolesEdit(true)} title="Alterar as funções deste encontro">
               Funções
@@ -834,6 +860,8 @@ export default function VirtualPatientRoom() {
           )}
         </div>
       </div>
+
+      {activeBrief && <EncounterStrip brief={activeBrief} onOpen={() => setIntroManual(true)} />}
 
       <div className="flex flex-1 min-h-0">
       <div className="flex flex-col flex-1 min-w-0 min-h-0">
@@ -942,6 +970,19 @@ export default function VirtualPatientRoom() {
         sessionId={sessionId}
         onComplete={handleMAIComplete}
       />
+
+      {activeBrief && (
+        <EncounterIntroDialog
+          open={introOpen}
+          firstTime={!introSeen}
+          brief={activeBrief}
+          title={ENCOUNTER_LABELS[encounter - 1]}
+          versao={briefVersao}
+          hasFicha={!!ficha}
+          onStart={confirmIntro}
+          onClose={() => setIntroManual(false)}
+        />
+      )}
 
       <RolesDialog
         open={(rolesActive && rolesLoaded && !currentRegistrars && !sessionCompleted) || showRolesEdit}

@@ -182,6 +182,17 @@ function EncontroCard({ encontro, onChange, disabled }: { encontro: Encontro; on
       </div>
       <TextField label="Cartão de passagem: cenário" multiline value={encontro.cartao.cenario} disabled={disabled} hint="O que aconteceu desde o último encontro e onde o aluno está." onChange={(x) => onChange((e) => { e.cartao.cenario = x; })} />
       <TextField label="Cartão de passagem: tarefa" multiline value={encontro.cartao.tarefa} disabled={disabled} hint="O que o aluno vai fazer, sem listar os passos." onChange={(x) => onChange((e) => { e.cartao.tarefa = x; })} />
+      <TextField
+        label="Tempo sugerido (minutos)"
+        type="number"
+        value={encontro.cartao.tempo_min != null ? String(encontro.cartao.tempo_min) : ""}
+        disabled={disabled}
+        hint="Opcional. Sem valor, a sala usa 15, 10 e 10 minutos nos encontros 1, 2 e 3. É só uma referência: o cronômetro não bloqueia nada."
+        onChange={(x) => onChange((e) => {
+          const n = Number(x);
+          e.cartao.tempo_min = x.trim() !== "" && Number.isFinite(n) && n > 0 ? Math.round(n) : undefined;
+        })}
+      />
 
       {encontro.interlocutor === "prescritor" && persona && (
         <div className="rounded-md border bg-background p-3 space-y-3">

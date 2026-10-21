@@ -723,6 +723,8 @@ serve(async (req) => {
             interlocutor_nome: professionalEncs.has(encounter) ? enc.persona_interlocutor?.nome ?? null : null,
             cenario: enc.cartao.cenario,
             tarefa: enc.cartao.tarefa,
+            local: caseData && versaoKey ? caseData.versoes[versaoKey]?.cenario.local || null : null,
+            tempo_min: enc.cartao.tempo_min ?? [15, 10, 10][enc.numero - 1] ?? null,
           }
         : null;
       // ficha: a ficha eletrônica (P20) só existe nos casos v2; versao diz qual profissão a turma escolheu.
