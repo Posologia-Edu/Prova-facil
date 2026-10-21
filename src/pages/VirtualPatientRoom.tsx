@@ -72,6 +72,9 @@ export default function VirtualPatientRoom() {
   const [rolesByEncounter, setRolesByEncounter] = useState<Record<number, string[]>>({});
   const [rolesLoaded, setRolesLoaded] = useState(false);
   const [savingRoles, setSavingRoles] = useState(false);
+  const [showRolesEdit, setShowRolesEdit] = useState(false);
+  const [rolesChosenBy, setRolesChosenBy] = useState<Record<number, string>>({});
+  const [pin, setPin] = useState("");
 
 
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
@@ -86,10 +89,7 @@ export default function VirtualPatientRoom() {
         if (!active) return;
         const v = data?.versao;
         if (data?.ficha && (v === "farmaceutico" || v === "enfermeiro" || v === "medico")) {
-          setFicha((prev) => {
-            if (!prev) setShowFicha(true); // abre sozinha na primeira vez para o aluno perceber que existe
-            return { versao: v };
-          });
+          setFicha({ versao: v });
         } else {
           setFicha(null);
         }
@@ -97,6 +97,10 @@ export default function VirtualPatientRoom() {
       .catch(() => { /* sem ficha */ });
     return () => { active = false; };
   }, [sessionId, patientId, encounter]);
+
+  // A ficha abre sozinha na primeira vez para o aluno perceber que existe.
+  const fichaAvailable = !!ficha;
+  useEffect(() => { if (fichaAvailable) setShowFicha(true); }, [fichaAvailable]);
 
   const roleMembers = groupEmails.map((e, i) => ({ email: e.toLowerCase(), name: groupNames[i] || e }));
   const rolesActive = groupRolesOn && !!ficha && isGroupSession && groupEmails.length > 1;
@@ -113,12 +117,17 @@ export default function VirtualPatientRoom() {
     const load = async () => {
       const { data } = await (supabase as any)
         .from("virtual_patient_encounter_roles")
-        .select("encounter, registrars")
+        .select("encounter, registrars, chosen_by")
         .eq("session_id", sessionId);
       if (!active || !data) return;
       const m: Record<number, string[]> = {};
-      (data as any[]).forEach((r) => { m[r.encounter] = ((r.registrars as string[]) || []).map((x) => x.toLowerCase()); });
+      const by: Record<number, string> = {};
+      (data as any[]).forEach((r) => {
+        m[r.encounter] = ((r.registrars as string[]) || []).map((x) => x.toLowerCase());
+        if (r.chosen_by) by[r.encounter] = String(r.chosen_by).toLowerCase();
+      });
       setRolesByEncounter(m);
+      setRolesChosenBy(by);
       setRolesLoaded(true);
     };
     load();
@@ -140,6 +149,8 @@ export default function VirtualPatientRoom() {
     setSavingRoles(false);
     if (error) { toast.error("Não foi possível salvar as funções. Tente novamente."); return; }
     setRolesByEncounter((prev) => ({ ...prev, [encounter]: registrars }));
+    setRolesChosenBy((prev) => ({ ...prev, [encounter]: (studentEmail || "").toLowerCase() }));
+    setShowRolesEdit(false);
   };
 
   const [patient, setPatient] = useState<{ name: string; age: number; module: string } | null>(null);
@@ -281,7 +292,7 @@ export default function VirtualPatientRoom() {
     // Get the class_virtual_patient info
     const { data: cvp, error: cvpError } = await supabase
       .from("class_virtual_patients")
-      .select("id, patient_id, status")
+      .select("id, patient_id, status, access_code")
       .eq("id", cvpId)
       .single();
 
@@ -292,6 +303,7 @@ export default function VirtualPatientRoom() {
     }
 
     setPatientId(cvp.patient_id);
+    setPin((cvp as any).access_code || "");
 
     // Consulta separada e tolerante a erro: se a coluna ainda não existir, a sala segue sem divisão de funções.
     (supabase as any)
@@ -760,6 +772,16 @@ export default function VirtualPatientRoom() {
             </h2>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs">{patient.module}</Badge>
+              {pin && (
+                <Badge
+                  variant="outline"
+                  className="text-xs font-mono tracking-widest cursor-pointer"
+                  title="PIN da sala (clique para copiar). Outro integrante usa o PIN para entrar."
+                  onClick={() => { navigator.clipboard?.writeText(pin); toast.success("PIN copiado!"); }}
+                >
+                  PIN {pin}
+                </Badge>
+              )}
               <Badge variant="secondary" className="text-xs">{ENCOUNTER_LABELS[encounter - 1]}</Badge>
             </div>
             {isGroupSession ? (
@@ -777,9 +799,18 @@ export default function VirtualPatientRoom() {
 
         <div className="flex items-center gap-2">
           {myRole && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge
+              variant="secondary"
+              className="text-xs"
+              title={rolesChosenBy[encounter] ? `Funções definidas por ${namesOf([rolesChosenBy[encounter]]) || rolesChosenBy[encounter]}` : undefined}
+            >
               {myRole === "ficha" ? "Você registra a ficha" : "Você conduz a conversa"}
             </Badge>
+          )}
+          {myRole && !sessionCompleted && (
+            <Button variant="ghost" size="sm" onClick={() => setShowRolesEdit(true)} title="Alterar as funções deste encontro">
+              Funções
+            </Button>
           )}
           {ficha && (
             <Button variant={showFicha ? "secondary" : "outline"} size="sm" onClick={() => setShowFicha((v) => !v)}>
@@ -913,7 +944,9 @@ export default function VirtualPatientRoom() {
       />
 
       <RolesDialog
-        open={rolesActive && rolesLoaded && !currentRegistrars && !sessionCompleted}
+        open={(rolesActive && rolesLoaded && !currentRegistrars && !sessionCompleted) || showRolesEdit}
+        initial={showRolesEdit ? currentRegistrars : undefined}
+        onCancel={showRolesEdit ? () => setShowRolesEdit(false) : undefined}
         encounter={encounter}
         members={roleMembers}
         previousRegistrars={Object.entries(rolesByEncounter)
