@@ -99,9 +99,10 @@ FORMATO DA RESPOSTA — RETORNE APENAS JSON VÁLIDO (sem markdown, sem comentár
   "FR": número irpm,
   "Temp": número em °C com 1 decimal,
   "SatO2": número percentual,
-  "Glicemia": número mg/dL (apenas se relevante para o caso, senão null),
-  "justificativa": "1-2 frases explicando AO ESTUDANTE por que estes valores fazem sentido considerando o caso e suas condutas. Não repita o nome do paciente."
-}`;
+  "Glicemia": número mg/dL (apenas se relevante para o caso, senão null)
+}
+
+Devolva SOMENTE os valores aferidos, sem explicação nem interpretação: o estudante precisa interpretá-los sozinho.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -151,26 +152,20 @@ Gere os sinais vitais NESTE momento da consulta, ajustando coerentemente. Retorn
 
     if (!parsed) {
       // Fallback: devolve a baseline com nota
-      parsed = {
-        ...info.baseline,
-        justificativa: "Valores baseados na avaliação inicial — não foi possível ajustar dinamicamente neste momento.",
-      };
+      parsed = { ...info.baseline };
     }
 
     // Montar mensagem formatada para o chat
     const lines = [
       "**📊 Sinais Vitais aferidos**",
       "",
-      `- **PA:** ${parsed.PA} mmHg`,
+      `- **PA:** ${String(parsed.PA).replace(/\s*mmHg\s*/gi, "").trim()} mmHg`,
       `- **FC:** ${parsed.FC} bpm`,
       `- **FR:** ${parsed.FR} irpm`,
       `- **Temperatura:** ${Number(parsed.Temp).toFixed(1)} °C`,
       `- **SatO₂:** ${parsed.SatO2}%`,
     ];
     if (parsed.Glicemia != null) lines.push(`- **Glicemia capilar:** ${parsed.Glicemia} mg/dL`);
-    if (parsed.justificativa) {
-      lines.push("", `_${parsed.justificativa}_`);
-    }
 
     return new Response(
       JSON.stringify({

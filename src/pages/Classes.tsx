@@ -577,6 +577,8 @@ export default function ClassesPage() {
       return;
     }
     setClassVPs(prev => prev.filter(v => v.id !== vpId));
+    // O banco apaga as atribuições junto (cascata); a lista em memória precisa acompanhar para liberar os alunos.
+    setVpAssignments(prev => prev.filter(a => a.class_virtual_patient_id !== vpId));
     toast.success("Paciente virtual removido da turma.");
   };
 
