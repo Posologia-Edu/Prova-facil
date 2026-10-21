@@ -1178,6 +1178,29 @@ export default function ClassesPage() {
           </>
         )}
 
+        {/* Remove VP confirmation */}
+        <AlertDialog open={!!removingVP} onOpenChange={(open) => !open && setRemovingVP(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remover paciente da turma?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {removingVP && removingVP.sessions > 0
+                  ? `Existem ${removingVP.sessions} sessão(ões) de alunos com este paciente. Remover apaga também as conversas e as notas dessas sessões, e não pode ser desfeito. Para só impedir novos acessos, desative o paciente em vez de removê-lo.`
+                  : "O paciente deixa de aparecer nesta turma e o PIN deixa de funcionar."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => { if (removingVP) removeVP(removingVP.vp.id); setRemovingVP(null); }}
+              >
+                Remover
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Link VP Dialog */}
         <Dialog open={linkVPOpen} onOpenChange={setLinkVPOpen}>
           <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
@@ -1639,28 +1662,6 @@ export default function ClassesPage() {
       {!selectedClass && manageStudentsContent}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!removingVP} onOpenChange={(open) => !open && setRemovingVP(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover paciente da turma?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {removingVP && removingVP.sessions > 0
-                ? `Existem ${removingVP.sessions} sessão(ões) de alunos com este paciente. Remover apaga também as conversas e as notas dessas sessões, e não pode ser desfeito. Para só impedir novos acessos, desative o paciente em vez de removê-lo.`
-                : "O paciente deixa de aparecer nesta turma e o PIN deixa de funcionar."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => { if (removingVP) removeVP(removingVP.vp.id); setRemovingVP(null); }}
-            >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
