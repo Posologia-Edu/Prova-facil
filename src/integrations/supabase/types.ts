@@ -1145,6 +1145,7 @@ export type Database = {
           class_id: string
           created_at: string
           group_label: string | null
+          group_roles: boolean
           id: string
           patient_id: string
           profession: string
@@ -1156,6 +1157,7 @@ export type Database = {
           class_id: string
           created_at?: string
           group_label?: string | null
+          group_roles?: boolean
           id?: string
           patient_id: string
           profession?: string
@@ -1167,6 +1169,7 @@ export type Database = {
           class_id?: string
           created_at?: string
           group_label?: string | null
+          group_roles?: boolean
           id?: string
           patient_id?: string
           profession?: string
@@ -6883,6 +6886,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      virtual_patient_encounter_roles: {
+        Row: {
+          chosen_by: string | null
+          encounter: number
+          id: string
+          registrars: string[]
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          chosen_by?: string | null
+          encounter: number
+          id?: string
+          registrars?: string[]
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          chosen_by?: string | null
+          encounter?: number
+          id?: string
+          registrars?: string[]
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "virtual_patient_encounter_roles_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_patient_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       virtual_patient_grades: {
         Row: {
