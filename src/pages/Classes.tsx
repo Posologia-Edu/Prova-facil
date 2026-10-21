@@ -90,7 +90,17 @@ interface ClassVirtualPatient {
   access_code: string;
   status: string;
   group_label?: string | null;
+  profession?: string | null;
 }
+
+const VP_PROFESSIONS = [
+  { value: "farmaceutico", label: "Farmácia" },
+  { value: "enfermeiro", label: "Enfermagem" },
+  { value: "medico", label: "Medicina" },
+] as const;
+
+const vpProfessionLabel = (v?: string | null) =>
+  VP_PROFESSIONS.find(p => p.value === v)?.label ?? "Farmácia";
 
 interface VPAssignment {
   id: string;
@@ -117,6 +127,7 @@ export default function ClassesPage() {
   const [classVPs, setClassVPs] = useState<ClassVirtualPatient[]>([]);
   const { entries: vpCatalog } = useVpCatalog();
   const [linkVPOpen, setLinkVPOpen] = useState(false);
+  const [linkVPProfession, setLinkVPProfession] = useState<string>("farmaceutico");
   const [linkExamOpen, setLinkExamOpen] = useState(false);
 
   // VP student assignments
@@ -439,7 +450,7 @@ export default function ClassesPage() {
     const [studentsRes, examsData, vpsRes] = await Promise.all([
       supabase.from("class_students").select("*").eq("class_id", cls.id).order("student_name"),
       loadClassExams(cls.id),
-      supabase.from("class_virtual_patients").select("id, patient_id, access_code, status, group_label").eq("class_id", cls.id).order("created_at"),
+      supabase.from("class_virtual_patients").select("id, patient_id, access_code, status, group_label, profession").eq("class_id", cls.id).order("created_at"),
     ]);
 
     setStudents(studentsRes.data || []);
@@ -527,6 +538,7 @@ export default function ClassesPage() {
     const { error } = await supabase.from("class_virtual_patients").insert({
       class_id: selectedClass.id,
       patient_id: patientId,
+      profession: linkVPProfession,
     });
     if (error) {
       if (error.code === "23505") toast.error("Este paciente já está vinculado a esta turma.");
@@ -535,7 +547,7 @@ export default function ClassesPage() {
     }
     toast.success("Paciente virtual vinculado!");
     setLinkVPOpen(false);
-    const { data } = await supabase.from("class_virtual_patients").select("id, patient_id, access_code, status, group_label").eq("class_id", selectedClass.id).order("created_at");
+    const { data } = await supabase.from("class_virtual_patients").select("id, patient_id, access_code, status, group_label, profession").eq("class_id", selectedClass.id).order("created_at");
     setClassVPs((data as ClassVirtualPatient[]) || []);
   };
 
@@ -990,7 +1002,7 @@ export default function ClassesPage() {
                 <h3 className="text-sm font-semibold text-primary flex items-center gap-1.5">
                   <HeartPulse className="h-4 w-4" /> Pacientes Virtuais ({classVPs.length})
                 </h3>
-                <Button variant="outline" size="sm" onClick={() => setLinkVPOpen(true)}>
+                <Button variant="outline" size="sm" onClick={() => { setLinkVPProfession("farmaceutico"); setLinkVPOpen(true); }}>
                   <Plus className="h-3.5 w-3.5 mr-1.5" /> Vincular Paciente
                 </Button>
               </div>
@@ -1010,7 +1022,10 @@ export default function ClassesPage() {
                             <div>
                               <p className="text-sm font-semibold">{info?.name || vp.patient_id}</p>
                               <p className="text-xs text-muted-foreground">{info?.desc}</p>
-                              <Badge variant="outline" className="text-[10px] mt-1">{info?.module}</Badge>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <Badge variant="outline" className="text-[10px]">{info?.module}</Badge>
+                                <Badge variant="secondary" className="text-[10px]">{vpProfessionLabel(vp.profession)}</Badge>
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
@@ -1152,6 +1167,25 @@ export default function ClassesPage() {
           <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Vincular Paciente Virtual</DialogTitle></DialogHeader>
             <p className="text-sm text-muted-foreground mb-4">Selecione um paciente para vincular a esta turma. Um PIN será gerado automaticamente.</p>
+            <div className="mb-4">
+              <Label className="text-xs font-semibold">Profissão do aluno nesta atividade</Label>
+              <div className="grid grid-cols-3 gap-2 mt-1.5">
+                {VP_PROFESSIONS.map(p => (
+                  <Button
+                    key={p.value}
+                    type="button"
+                    size="sm"
+                    variant={linkVPProfession === p.value ? "default" : "outline"}
+                    onClick={() => setLinkVPProfession(p.value)}
+                  >
+                    {p.label}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                Define o papel do aluno, o cenário e o gabarito usados na conversa e na correção. Não pode ser trocada depois de vinculado.
+              </p>
+            </div>
             <div className="space-y-2">
               {vpCatalog.filter(p => p.published && !classVPs.some(v => v.patient_id === p.id)).map((p) => (
                 <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
