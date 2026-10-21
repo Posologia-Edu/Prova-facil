@@ -450,7 +450,19 @@ export default function VirtualPatientRoom() {
       supabase.from("virtual_patient_sessions").update({ current_encounter: next }).eq("id", id)
     ));
 
-    const noteContent = `---\n\n**📋 Transição para o ${ENCOUNTER_LABELS[next - 1]}**\n\nO paciente retorna para uma nova consulta. Continue a conversa.\n\n---`;
+    // Casos v2 trazem o cartão do encontro (cenário e tarefa, sem lista de passos); legados seguem com a nota padrão.
+    let body = "O paciente retorna para uma nova consulta. Continue a conversa.";
+    try {
+      const { data } = await supabase.functions.invoke("virtual-patient-chat", {
+        body: { action: "encounter_brief", patientId, encounter: next, sessionId },
+      });
+      const b = data?.brief;
+      if (b?.cenario) {
+        body = `**Cenário:** ${b.cenario}\n\n**Sua tarefa:** ${b.tarefa}`;
+        if (b.interlocutor_nome) body += `\n\n_Neste encontro você conversa com ${b.interlocutor_nome}, não com o paciente._`;
+      }
+    } catch (_) { /* nota padrão */ }
+    const noteContent = `---\n\n**📋 Transição para o ${ENCOUNTER_LABELS[next - 1]}**\n\n${body}\n\n---`;
     const systemNote: Message = { id: crypto.randomUUID(), role: "assistant", content: noteContent, encounter: next };
     seenMsgKeysRef.current.add(systemNote.id!);
     setMessages((prev) => [...prev, systemNote]);

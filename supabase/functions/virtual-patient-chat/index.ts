@@ -6,7 +6,9 @@ import { loadVpCase } from "../_shared/vp-cases.ts";
 import {
   adaptTratamento,
   buildEncounterBrief,
+  buildInterlocutorPrompt,
   buildPatientPrompt,
+  getEncontroProfissional,
   isCaseDataV2,
   resolveVersaoKey,
   type VersaoKey,
@@ -47,6 +49,109 @@ function groupStudentTurnsByEncounter(msgs: Turn[], currentEncounter: number): R
     }
   }
   return out;
+}
+
+const TRANSITION_RE = /Transição para o\s+[23]º Encontro/i;
+
+// Marca cada mensagem com o encontro a que pertence (campo enviado pelo front; infere pelo marcador se faltar).
+function tagEncounters(msgs: Turn[]): Array<Turn & { enc: number }> {
+  let inferred = 1;
+  return msgs.map((m) => {
+    const c = String(m.content || "");
+    if (m.role === "assistant" && /Transição para o\s+2º Encontro/i.test(c)) inferred = 2;
+    else if (m.role === "assistant" && /Transição para o\s+3º Encontro/i.test(c)) inferred = 3;
+    const enc = Number.isInteger(m.encounter) && (m.encounter as number) >= 1 ? (m.encounter as number) : inferred;
+    return { ...m, enc };
+  });
+}
+
+const NO_ACCEPT_TEXT = "(nenhuma proposta do aluno foi aceita pelo prescritor; o tratamento não foi alterado)";
+
+const ACCEPT_TOOL = {
+  type: "function",
+  function: {
+    name: "register_decisions",
+    description: "Registra cada proposta que o aluno fez ao prescritor e a decisão do prescritor.",
+    parameters: {
+      type: "object",
+      properties: {
+        propostas: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              proposta: { type: "string", description: "O que o aluno propôs (fármaco, dose, exame, monitorização, encaminhamento)." },
+              decisao: { type: "string", enum: ["aceita", "aceita_com_modificacao", "recusada", "sem_decisao"] },
+              implementado: { type: "string", description: "O que ficou combinado de fato (vazio se recusada ou sem decisão)." },
+            },
+            required: ["proposta", "decisao"],
+          },
+        },
+      },
+      required: ["propostas"],
+    },
+  },
+};
+
+const ACCEPT_SYSTEM = `Você lê a conversa entre um estudante e um médico prescritor em um encontro clínico simulado e registra, para cada proposta do ESTUDANTE, a decisão do PRESCRITOR.
+- Considere "aceita" ou "aceita_com_modificacao" somente quando o prescritor afirmou claramente que aceita, e descreva em "implementado" o que ficou combinado (com as modificações dele).
+- Hesitação, "vou pensar" ou pedido de mais dados sem decisão final = "sem_decisao". Recusa explícita = "recusada".
+- NÃO invente propostas nem decisões. Perguntas e relatos do estudante que não sejam proposta não entram.`;
+
+function formatDecisions(parsed: any): string | null {
+  const list = Array.isArray(parsed?.propostas) ? parsed.propostas : null;
+  if (!list) return null;
+  if (list.length === 0) return NO_ACCEPT_TEXT;
+  const label: Record<string, string> = {
+    aceita: "ACEITA",
+    aceita_com_modificacao: "ACEITA COM MODIFICAÇÃO",
+    recusada: "RECUSADA",
+    sem_decisao: "SEM DECISÃO",
+  };
+  const rows = list.map((p: any) =>
+    `- ${String(p?.proposta || "").trim()} → ${label[p?.decisao] || "SEM DECISÃO"}${p?.implementado ? ` (combinado: ${String(p.implementado).trim()})` : ""}`);
+  const implemented = list
+    .filter((p: any) => p?.decisao === "aceita" || p?.decisao === "aceita_com_modificacao")
+    .map((p: any) => `- ${String(p?.implementado || p?.proposta || "").trim()}`);
+  return [
+    "Propostas do aluno e decisão do prescritor:",
+    ...rows,
+    "",
+    implemented.length
+      ? `EFETIVAMENTE IMPLEMENTADO (somente o que o prescritor aceitou):\n${implemented.join("\n")}`
+      : NO_ACCEPT_TEXT,
+  ].join("\n");
+}
+
+async function extractAcceptance(transcript: string): Promise<string | null> {
+  try {
+    const { response } = await callAiWithFallback({
+      model: "google/gemini-2.5-flash",
+      temperature: 0,
+      messages: [
+        { role: "system", content: ACCEPT_SYSTEM },
+        { role: "user", content: "Conversa:\n" + transcript },
+      ],
+      tools: [ACCEPT_TOOL],
+      tool_choice: { type: "function", function: { name: "register_decisions" } },
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const msg = data?.choices?.[0]?.message;
+    let parsed: any = null;
+    const args = msg?.tool_calls?.[0]?.function?.arguments;
+    if (args) {
+      try { parsed = typeof args === "string" ? JSON.parse(args) : args; } catch { parsed = null; }
+    }
+    if (!parsed) {
+      const braces = String(msg?.content || "").match(/\{[\s\S]*\}/);
+      try { parsed = braces ? JSON.parse(braces[0]) : null; } catch { parsed = null; }
+    }
+    return formatDecisions(parsed);
+  } catch (e) {
+    console.error("extractAcceptance failed:", e);
+    return null;
+  }
 }
 
 const CONDUCT_TOOL = {
@@ -545,7 +650,7 @@ serve(async (req) => {
 
   const startedAt = Date.now();
   try {
-    const { patientId, messages, encounter, sessionId, profession: reqProfession, previewCaseData } = await req.json();
+    const { patientId, messages, encounter, sessionId, profession: reqProfession, previewCaseData, action } = await req.json();
 
     // AuthZ: signed-in caller, or an anonymous participant bound to a real session.
     const authedUserId = await getUserId(req);
@@ -575,12 +680,61 @@ serve(async (req) => {
       });
     }
 
+    // ========== Versão do caso (profissão da turma) e encontros com interlocutor profissional ==========
+    const caseData = registered?.caseData ?? null;
+    let versaoKey: VersaoKey | null = null;
+    if (caseData) {
+      let profession: string | null = typeof reqProfession === "string" ? reqProfession : null;
+      if (sessionId) {
+        const adm = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const { data: sess } = await adm
+          .from("virtual_patient_sessions")
+          .select("class_virtual_patient_id")
+          .eq("id", sessionId)
+          .maybeSingle();
+        if (sess?.class_virtual_patient_id) {
+          const { data: cvp } = await adm
+            .from("class_virtual_patients")
+            .select("profession")
+            .eq("id", sess.class_virtual_patient_id)
+            .maybeSingle();
+          profession = (cvp as any)?.profession ?? profession;
+        }
+      }
+      versaoKey = resolveVersaoKey(profession);
+      if (!caseData.versoes[versaoKey]) {
+        versaoKey = (Object.keys(caseData.versoes)[0] as VersaoKey) || "farmaceutico";
+      }
+    }
+    // Encontros em que o aluno fala com um profissional (ex.: prescritor), não com o paciente.
+    const professionalEncs = new Set<number>();
+    if (caseData && versaoKey) {
+      for (const n of [1, 2, 3]) if (getEncontroProfissional(caseData, versaoKey, n)) professionalEncs.add(n);
+    }
+    const isProfessionalEncounter = professionalEncs.has(encounter);
+
+    // Cartão de passagem do encontro (cenário e tarefa), para a nota de transição da sala. Nada de roteiro ou gabarito.
+    if (action === "encounter_brief") {
+      const enc = caseData && versaoKey ? caseData.versoes[versaoKey]?.encontros.find((x) => x.numero === encounter) : null;
+      const brief = enc
+        ? {
+            tipo: enc.tipo,
+            interlocutor: enc.interlocutor,
+            interlocutor_nome: professionalEncs.has(encounter) ? enc.persona_interlocutor?.nome ?? null : null,
+            cenario: enc.cartao.cenario,
+            tarefa: enc.cartao.tarefa,
+          }
+        : null;
+      return new Response(JSON.stringify({ brief }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ========== Condutas do aluno nos encontros anteriores ==========
     // Para que o paciente só "saiba" o que o aluno realmente prescreveu/pediu. As condutas
     // de cada encontro são extraídas em lista estruturada (e guardadas na sessão), em vez de
     // truncar o texto bruto — as prescrições costumam estar no fim do encontro.
     const allMsgs: Turn[] = Array.isArray(messages) ? messages : [];
     const studentTurnsByEncounter = groupStudentTurnsByEncounter(allMsgs, encounter);
+    const tagged = tagEncounters(allMsgs);
 
     const admin = sessionId
       ? createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
@@ -597,9 +751,17 @@ serve(async (req) => {
 
     const conductsFor = async (enc: number): Promise<string> => {
       const turns = studentTurnsByEncounter[enc] || [];
-      if (turns.length === 0) return NO_CONDUCT_TEXT;
+      const professional = professionalEncs.has(enc);
+      if (turns.length === 0) return professional ? NO_ACCEPT_TEXT : NO_CONDUCT_TEXT;
       if (cachedConducts[String(enc)]) return cachedConducts[String(enc)];
-      const extracted = await extractConducts(turns);
+      // Encontro com o prescritor: o que vale é o que ele ACEITOU, então a extração lê os dois lados.
+      const transcript = professional
+        ? tagged
+            .filter((m) => m.enc === enc && !TRANSITION_RE.test(String(m.content || "")))
+            .map((m) => `${m.role === "user" ? "ESTUDANTE" : "PRESCRITOR"}: ${m.content}`)
+            .join("\n")
+        : "";
+      const extracted = professional ? await extractAcceptance(transcript) : await extractConducts(turns);
       if (!extracted) {
         // Fallback: texto bruto, mantendo o FIM da conversa (onde ficam as prescrições).
         const joined = turns.join("\n- ");
@@ -671,7 +833,31 @@ E) PEDIDOS DE RETORNO FUTURO COM EXAMES (CRÍTICO)
     // Build encounter context with student summary
     let encounterContext = universalRules;
 
-    if (encounter === 1) {
+    if (encounter === 3 && professionalEncs.has(2) && !isProfessionalEncounter) {
+      const r1 = await conductsFor(1);
+      const r2 = await conductsFor(2);
+      encounterContext += `
+[CONTEXTO DO SISTEMA — 3º ENCONTRO (RETORNO APÓS DISCUSSÃO COM O PRESCRITOR)]
+Você retorna para o último encontro. Entre o 1º e este encontro, o profissional discutiu o seu tratamento com o seu médico prescritor. Você NÃO presenciou essa conversa e não sabe o que foi proposto: só viveu o que foi EFETIVAMENTE implementado.
+
+⚠️ ESTE BLOCO SOBREPÕE A REGRA B ACIMA: neste caso o profissional NÃO prescreve; mudanças de tratamento dependem de o prescritor ter aceitado.
+
+== O que o profissional fez/orientou diretamente com você no 1º encontro ==
+${r1}
+
+== Decisões do prescritor sobre as propostas do profissional (2º encontro) ==
+${r2}
+== Fim do registro ==
+
+REGRAS:
+1. Só mudou no seu tratamento o que consta em "EFETIVAMENTE IMPLEMENTADO". Propostas recusadas ou sem decisão NÃO aconteceram: você continua como antes quanto a elas.
+2. Orientações dadas a você pelo profissional no 1º encontro valem e podem ter sido seguidas.
+3. Relate a evolução coerente com isso, APENAS sintomas e como se sentiu, em linguagem leiga, seguindo a EVOLUÇÃO do roteiro do encontro. Se nada foi implementado, use o que o roteiro diz para esse caso.
+4. Se o profissional perguntar o que o médico decidiu, diga só o que lhe foi comunicado: o que foi implementado (ex.: "o médico mudou meu remédio para..."); se nada, diga que não mudou nada.
+5. ⚠️ PROIBIDO trazer exames espontaneamente. Só apresente resultados (TABELA Markdown, regra C) se o profissional PERGUNTAR diretamente por eles.
+6. Ao final, induza naturalmente a avaliação da adequação do tratamento: "Será que o meu tratamento agora está mesmo adequado para mim?"
+`;
+    } else if (encounter === 1) {
       encounterContext += `
 [CONTEXTO DO SISTEMA — 1º ENCONTRO]
 Este é o primeiro contato. Inicie respondendo apenas ao cumprimento do aluno com uma queixa MUITO VAGA. Não revele nenhuma informação clínica até que o aluno pergunte. Mantenha-se rigorosamente no Momento 1.
@@ -716,42 +902,27 @@ REGRAS:
 `;
     }
 
-    // Casos v2: o prompt do paciente é montado do núcleo + versão da profissão da turma.
+    // Casos v2: o prompt do paciente (ou do interlocutor profissional) é montado do núcleo + versão da profissão da turma.
     // Casos legados seguem usando o systemPrompt escrito à mão.
     let systemPrompt = patient.systemPrompt + encounterContext;
-    const caseData = registered?.caseData ?? null;
-    if (caseData) {
-      let profession: string | null = typeof reqProfession === "string" ? reqProfession : null;
-      if (sessionId) {
-        const adm = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-        const { data: sess } = await adm
-          .from("virtual_patient_sessions")
-          .select("class_virtual_patient_id")
-          .eq("id", sessionId)
-          .maybeSingle();
-        if (sess?.class_virtual_patient_id) {
-          const { data: cvp } = await adm
-            .from("class_virtual_patients")
-            .select("profession")
-            .eq("id", sess.class_virtual_patient_id)
-            .maybeSingle();
-          profession = (cvp as any)?.profession ?? profession;
-        }
-      }
-      let versaoKey: VersaoKey = resolveVersaoKey(profession);
-      if (!caseData.versoes[versaoKey]) {
-        versaoKey = (Object.keys(caseData.versoes)[0] as VersaoKey) || "farmaceutico";
-      }
+    if (caseData && versaoKey) {
       const tratamento = caseData.versoes[versaoKey]?.cenario.tratamento || "doutor";
-      systemPrompt =
-        buildPatientPrompt(caseData, versaoKey) +
-        adaptTratamento(encounterContext, tratamento) +
-        "\n\n" + buildEncounterBrief(caseData, versaoKey, encounter);
+      systemPrompt = isProfessionalEncounter
+        ? buildInterlocutorPrompt(caseData, versaoKey, encounter)
+        : buildPatientPrompt(caseData, versaoKey) +
+          adaptTratamento(encounterContext, tratamento) +
+          "\n\n" + buildEncounterBrief(caseData, versaoKey, encounter);
     }
+
+    // O prescritor só vê a conversa dele com o aluno; o paciente nunca vê a conversa do aluno com o prescritor.
+    const visibleMsgs = tagged.filter((m) =>
+      isProfessionalEncounter
+        ? m.enc === encounter && !TRANSITION_RE.test(String(m.content || ""))
+        : !professionalEncs.has(m.enc));
 
     const aiMessages = [
       { role: "system", content: systemPrompt },
-      ...allMsgs.map((m) => ({ role: m.role, content: m.content })),
+      ...visibleMsgs.map((m) => ({ role: m.role, content: m.content })),
     ];
 
     const { response } = await callAiWithFallback({
