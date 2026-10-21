@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { VirtualPatientMAI } from "@/components/VirtualPatientMAI";
 import { RecordPanel } from "@/components/vp-room/RecordPanel";
+import { RolesDialog } from "@/components/vp-room/RolesDialog";
 import type { FichaVersao } from "@/lib/vp-ficha";
 import { fetchPublicVpCase, sessionModuleFor } from "@/lib/vp-catalog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -66,6 +67,11 @@ export default function VirtualPatientRoom() {
   const [ficha, setFicha] = useState<{ versao: FichaVersao } | null>(null);
   const [showFicha, setShowFicha] = useState(false);
   const [showSoapWarning, setShowSoapWarning] = useState(false);
+  // Divisão de funções do grupo: o docente liga por paciente; o grupo escolhe quem registra a ficha em cada encontro.
+  const [groupRolesOn, setGroupRolesOn] = useState(false);
+  const [rolesByEncounter, setRolesByEncounter] = useState<Record<number, string[]>>({});
+  const [rolesLoaded, setRolesLoaded] = useState(false);
+  const [savingRoles, setSavingRoles] = useState(false);
 
 
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
@@ -91,6 +97,50 @@ export default function VirtualPatientRoom() {
       .catch(() => { /* sem ficha */ });
     return () => { active = false; };
   }, [sessionId, patientId, encounter]);
+
+  const roleMembers = groupEmails.map((e, i) => ({ email: e.toLowerCase(), name: groupNames[i] || e }));
+  const rolesActive = groupRolesOn && !!ficha && isGroupSession && groupEmails.length > 1;
+  const currentRegistrars = rolesByEncounter[encounter];
+  const myRole: "ficha" | "conversa" | null =
+    rolesActive && currentRegistrars ? (currentRegistrars.includes(studentEmail.toLowerCase()) ? "ficha" : "conversa") : null;
+  const rolesPending = rolesActive && !sessionCompleted && (!rolesLoaded || !currentRegistrars);
+  const chatBlocked = rolesActive && !sessionCompleted && (rolesPending || myRole === "ficha");
+  const namesOf = (emails: string[]) => roleMembers.filter((m) => emails.includes(m.email)).map((m) => m.name).join(", ");
+
+  useEffect(() => {
+    if (!rolesActive || !sessionId) return;
+    let active = true;
+    const load = async () => {
+      const { data } = await (supabase as any)
+        .from("virtual_patient_encounter_roles")
+        .select("encounter, registrars")
+        .eq("session_id", sessionId);
+      if (!active || !data) return;
+      const m: Record<number, string[]> = {};
+      (data as any[]).forEach((r) => { m[r.encounter] = ((r.registrars as string[]) || []).map((x) => x.toLowerCase()); });
+      setRolesByEncounter(m);
+      setRolesLoaded(true);
+    };
+    load();
+    const poll = window.setInterval(() => { if (document.visibilityState === "visible") load(); }, 6000);
+    return () => { active = false; window.clearInterval(poll); };
+  }, [rolesActive, sessionId]);
+
+  // Quem registra a ficha precisa do painel aberto.
+  useEffect(() => { if (myRole === "ficha") setShowFicha(true); }, [myRole, encounter]);
+
+  const saveRoles = async (registrars: string[]) => {
+    setSavingRoles(true);
+    const { error } = await (supabase as any)
+      .from("virtual_patient_encounter_roles")
+      .upsert(
+        { session_id: sessionId, encounter, registrars, chosen_by: studentEmail || null, updated_at: new Date().toISOString() },
+        { onConflict: "session_id,encounter" },
+      );
+    setSavingRoles(false);
+    if (error) { toast.error("Não foi possível salvar as funções. Tente novamente."); return; }
+    setRolesByEncounter((prev) => ({ ...prev, [encounter]: registrars }));
+  };
 
   const [patient, setPatient] = useState<{ name: string; age: number; module: string } | null>(null);
 
@@ -242,6 +292,14 @@ export default function VirtualPatientRoom() {
     }
 
     setPatientId(cvp.patient_id);
+
+    // Consulta separada e tolerante a erro: se a coluna ainda não existir, a sala segue sem divisão de funções.
+    (supabase as any)
+      .from("class_virtual_patients")
+      .select("group_roles")
+      .eq("id", cvp.id)
+      .maybeSingle()
+      .then(({ data, error }: any) => { if (!error) setGroupRolesOn(!!data?.group_roles); });
 
     // Nome, idade e categoria vêm do cadastro único (função pública: não expõe roteiro nem gabarito).
     const pub = await fetchPublicVpCase(cvp.patient_id);
@@ -718,6 +776,11 @@ export default function VirtualPatientRoom() {
         </div>
 
         <div className="flex items-center gap-2">
+          {myRole && (
+            <Badge variant="secondary" className="text-xs">
+              {myRole === "ficha" ? "Você registra a ficha" : "Você conduz a conversa"}
+            </Badge>
+          )}
           {ficha && (
             <Button variant={showFicha ? "secondary" : "outline"} size="sm" onClick={() => setShowFicha((v) => !v)}>
               <FileText className="h-4 w-4 mr-1" /> Ficha
@@ -800,7 +863,7 @@ export default function VirtualPatientRoom() {
       )}
 
       {/* Input */}
-      {!sessionCompleted && (
+      {!sessionCompleted && !chatBlocked && (
         <div className="border-t p-4 flex gap-2 flex-shrink-0">
           <Textarea
             value={input}
@@ -816,6 +879,13 @@ export default function VirtualPatientRoom() {
         </div>
       )}
 
+      {chatBlocked && (
+        <div className="border-t p-4 text-sm text-muted-foreground flex-shrink-0">
+          {rolesPending
+            ? "Definam as funções do grupo para continuar."
+            : `Neste encontro você registra a ficha. Quem conduz a conversa: ${namesOf(roleMembers.map((m) => m.email).filter((e) => !(currentRegistrars || []).includes(e)))}.`}
+        </div>
+      )}
       </div>
 
       {ficha && showFicha && sessionId && (
@@ -828,6 +898,7 @@ export default function VirtualPatientRoom() {
             studentName={studentName}
             isGroup={isGroupSession}
             locked={sessionCompleted}
+            roleLockedReason={myRole === "conversa" ? `Neste encontro você conduz a conversa; a ficha é de ${namesOf(currentRegistrars || [])}.` : rolesPending ? "Definam as funções do grupo para editar a ficha." : undefined}
             onClose={() => setShowFicha(false)}
           />
         </aside>
@@ -839,6 +910,17 @@ export default function VirtualPatientRoom() {
         onOpenChange={setShowMAI}
         sessionId={sessionId}
         onComplete={handleMAIComplete}
+      />
+
+      <RolesDialog
+        open={rolesActive && rolesLoaded && !currentRegistrars && !sessionCompleted}
+        encounter={encounter}
+        members={roleMembers}
+        previousRegistrars={Object.entries(rolesByEncounter)
+          .filter(([e]) => Number(e) < encounter)
+          .flatMap(([, v]) => v)}
+        saving={savingRoles}
+        onConfirm={saveRoles}
       />
 
       <Dialog open={showSoapWarning} onOpenChange={setShowSoapWarning}>

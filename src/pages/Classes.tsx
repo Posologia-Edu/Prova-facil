@@ -91,6 +91,7 @@ interface ClassVirtualPatient {
   status: string;
   group_label?: string | null;
   profession?: string | null;
+  group_roles?: boolean;
 }
 
 const VP_PROFESSIONS = [
@@ -457,6 +458,7 @@ export default function ClassesPage() {
     setStudents(studentsRes.data || []);
     const vps = (vpsRes.data as ClassVirtualPatient[]) || [];
     setClassVPs(vps);
+    void loadGroupRoles(cls.id);
     await loadVPAssignments(cls.id);
 
     // Determine mode based on existing data
@@ -580,6 +582,21 @@ export default function ClassesPage() {
     // O banco apaga as atribuições junto (cascata); a lista em memória precisa acompanhar para liberar os alunos.
     setVpAssignments(prev => prev.filter(a => a.class_virtual_patient_id !== vpId));
     toast.success("Paciente virtual removido da turma.");
+  };
+
+  // Divisão de funções no grupo. Consulta à parte e tolerante a erro: a lista de pacientes não depende da coluna.
+  const loadGroupRoles = async (classId: string) => {
+    const { data, error } = await (supabase as any).from("class_virtual_patients").select("id, group_roles").eq("class_id", classId);
+    if (error || !data) return;
+    const m = new Map((data as any[]).map((r) => [r.id, !!r.group_roles]));
+    setClassVPs(prev => prev.map(v => ({ ...v, group_roles: m.get(v.id) ?? false })));
+  };
+
+  const toggleGroupRoles = async (vp: ClassVirtualPatient, value: boolean) => {
+    const { error } = await (supabase as any).from("class_virtual_patients").update({ group_roles: value }).eq("id", vp.id);
+    if (error) { toast.error("Não foi possível alterar a divisão de funções."); return; }
+    setClassVPs(prev => prev.map(v => v.id === vp.id ? { ...v, group_roles: value } : v));
+    toast.success(value ? "Divisão de funções ligada para este paciente." : "Divisão de funções desligada.");
   };
 
   const updateVPGroupLabel = async (vpId: string, label: string) => {
@@ -1148,6 +1165,21 @@ export default function ClassesPage() {
                           )}
                         </div>
 
+                        {assigned.length > 1 && (
+                          <label className="mt-3 flex items-start gap-2 text-xs cursor-pointer">
+                            <Checkbox
+                              checked={!!vp.group_roles}
+                              onCheckedChange={(c) => toggleGroupRoles(vp, c === true)}
+                              className="mt-0.5"
+                            />
+                            <span>
+                              <span className="font-medium">Dividir funções no grupo</span>
+                              <span className="block text-muted-foreground">
+                                Um conduz a conversa e outro registra a ficha, com rodízio entre os encontros. Cada aluno precisa usar o próprio dispositivo.
+                              </span>
+                            </span>
+                          </label>
+                        )}
                         <div className="mt-3 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <KeyRound className="h-3 w-3 text-muted-foreground" />

@@ -17,6 +17,8 @@ interface Props {
   isGroup: boolean;
   /** atendimento concluído: a ficha vira somente leitura */
   locked: boolean;
+  /** divisão de funções do grupo: quem conduz a conversa só lê a ficha (texto explica o motivo) */
+  roleLockedReason?: string;
   onClose: () => void;
 }
 
@@ -26,7 +28,7 @@ const k = (enc: number, key: string) => `${enc}:${key}`;
 
 // Ficha do atendimento: uma linha por seção no banco, para dois integrantes do grupo
 // editarem seções diferentes sem sobrescrever um ao outro.
-export function RecordPanel({ sessionId, encounter, versao, studentEmail, studentName, isGroup, locked, onClose }: Props) {
+export function RecordPanel({ sessionId, encounter, versao, studentEmail, studentName, isGroup, locked, roleLockedReason, onClose }: Props) {
   const [tab, setTab] = useState(encounter);
   const [values, setValues] = useState<Record<string, string>>({});
   const [editors, setEditors] = useState<Record<string, string>>({});
@@ -134,7 +136,7 @@ export function RecordPanel({ sessionId, encounter, versao, studentEmail, studen
   };
 
   const schema = useMemo(() => fichaSchema(tab, versao), [tab, versao]);
-  const readOnly = locked || tab < encounter;
+  const readOnly = locked || tab < encounter || !!roleLockedReason;
   const encounters = useMemo(() => Array.from({ length: encounter }, (_, i) => i + 1), [encounter]);
 
   return (
@@ -195,7 +197,7 @@ export function RecordPanel({ sessionId, encounter, versao, studentEmail, studen
         {error ? (
           <span className="text-destructive">Não foi possível salvar. Verifique a conexão; vamos tentar de novo.</span>
         ) : readOnly ? (
-          <span>{locked ? "Atendimento concluído: ficha somente leitura." : "Encontro anterior: somente leitura."}</span>
+          <span>{locked ? "Atendimento concluído: ficha somente leitura." : tab < encounter ? "Encontro anterior: somente leitura." : roleLockedReason}</span>
         ) : pendingCount > 0 ? (
           <><Loader2 className="h-3 w-3 animate-spin" /> Salvando…</>
         ) : (
