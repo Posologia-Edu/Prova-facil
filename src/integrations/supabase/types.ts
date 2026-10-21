@@ -7126,6 +7126,47 @@ export type Database = {
           },
         ]
       }
+      virtual_patient_record_sections: {
+        Row: {
+          content: string
+          encounter: number
+          id: string
+          section_key: string
+          session_id: string
+          updated_at: string
+          updated_by_email: string | null
+          updated_by_name: string | null
+        }
+        Insert: {
+          content?: string
+          encounter: number
+          id?: string
+          section_key: string
+          session_id: string
+          updated_at?: string
+          updated_by_email?: string | null
+          updated_by_name?: string | null
+        }
+        Update: {
+          content?: string
+          encounter?: number
+          id?: string
+          section_key?: string
+          session_id?: string
+          updated_at?: string
+          updated_by_email?: string | null
+          updated_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "virtual_patient_record_sections_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_patient_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       virtual_patient_sessions: {
         Row: {
           class_virtual_patient_id: string | null
