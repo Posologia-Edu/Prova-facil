@@ -174,7 +174,7 @@ function EncontroCard({ encontro, onChange, disabled }: { encontro: Encontro; on
           disabled={disabled}
           onChange={(x) => onChange((e) => {
             e.interlocutor = x as Encontro["interlocutor"];
-            if (x === "prescritor" && !e.persona_interlocutor) {
+            if ((x === "prescritor" || x === "equipe") && !e.persona_interlocutor) {
               e.persona_interlocutor = { nome: "", perfil: "", temperamento: "", resistencias: [], criterios_para_ceder: [] };
             }
           })}
@@ -194,9 +194,9 @@ function EncontroCard({ encontro, onChange, disabled }: { encontro: Encontro; on
         })}
       />
 
-      {encontro.interlocutor === "prescritor" && persona && (
+      {(encontro.interlocutor === "prescritor" || encontro.interlocutor === "equipe") && persona && (
         <div className="rounded-md border bg-background p-3 space-y-3">
-          <p className="text-sm font-medium">Persona do prescritor</p>
+          <p className="text-sm font-medium">Persona do interlocutor (prescritor ou equipe)</p>
           <TextField label="Nome" value={persona.nome} disabled={disabled} onChange={(x) => onChange((e) => { e.persona_interlocutor!.nome = x; })} />
           <TextField label="Perfil" multiline value={persona.perfil} disabled={disabled} onChange={(x) => onChange((e) => { e.persona_interlocutor!.perfil = x; })} />
           <TextField label="Temperamento" multiline value={persona.temperamento} disabled={disabled} onChange={(x) => onChange((e) => { e.persona_interlocutor!.temperamento = x; })} />

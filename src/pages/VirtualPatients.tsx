@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { GenerateCaseDialog } from "@/components/vp-case/GenerateCaseDialog";
 
 interface PatientInfo {
   id: string;
@@ -23,6 +24,7 @@ interface PatientInfo {
   description: string;
   module: string;
   custom?: boolean;
+  status?: string;
 }
 
 const SYSTEM_PATIENTS: PatientInfo[] = [
@@ -43,9 +45,6 @@ export default function VirtualPatients() {
   const [customPatients, setCustomPatients] = useState<PatientInfo[]>([]);
   const [activeTab, setActiveTab] = useState("Dor");
   const [genOpen, setGenOpen] = useState(false);
-  const [genCategory, setGenCategory] = useState("");
-  const [genContext, setGenContext] = useState("");
-  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     loadCustom();
@@ -56,7 +55,7 @@ export default function VirtualPatients() {
     if (!user) return;
     const { data } = await supabase
       .from("custom_virtual_patients")
-      .select("id, name, age, profession, description, category")
+      .select("id, name, age, profession, description, category, status")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (data) {
@@ -68,37 +67,13 @@ export default function VirtualPatients() {
         description: p.description,
         module: p.category,
         custom: true,
+        status: p.status,
       })));
     }
   };
 
   const startSession = (patient: PatientInfo) => {
     navigate(`/virtual-patients/chat/${patient.id}?ephemeral=1`);
-  };
-
-  const handleGenerate = async () => {
-    if (!genCategory.trim() || !genContext.trim()) {
-      toast.error("Informe categoria e contexto clínico.");
-      return;
-    }
-    setGenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-virtual-patient", {
-        body: { category: genCategory.trim(), clinical_context: genContext.trim() },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
-      toast.success(`Paciente "${data.patient.name}" criado com sucesso!`);
-      setGenOpen(false);
-      setGenContext("");
-      const newCategory = data.patient.category;
-      await loadCustom();
-      setActiveTab(newCategory);
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao gerar paciente.");
-    } finally {
-      setGenerating(false);
-    }
   };
 
   const deleteCustom = async (id: string) => {
@@ -135,6 +110,7 @@ export default function VirtualPatients() {
         <div className="flex flex-wrap gap-2 mb-3">
           <Badge variant="outline">{patient.description}</Badge>
           {patient.custom && <Badge variant="secondary"><Sparkles className="h-3 w-3 mr-1" />Meu paciente</Badge>}
+          {patient.custom && patient.status === "draft" && <Badge variant="outline">Rascunho</Badge>}
         </div>
         <p className="text-xs text-muted-foreground mb-4">
           Converse livremente com o paciente para testar o comportamento. As mensagens não são salvas — o atendimento real ocorre nas Salas Virtuais.
@@ -205,45 +181,12 @@ export default function VirtualPatients() {
         ))}
       </Tabs>
 
-      <Dialog open={genOpen} onOpenChange={setGenOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Gerar Paciente Virtual</DialogTitle>
-            <DialogDescription>
-              Informe a categoria e o contexto clínico. A IA criará um paciente completo no mesmo padrão dos existentes (3 encontros, comportamento realista, respostas a condutas).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="category">Categoria do paciente</Label>
-              <Input
-                id="category"
-                placeholder="Ex.: Diabetes, Hipertensão, Asma, Dor, Inflamação..."
-                value={genCategory}
-                onChange={(e) => setGenCategory(e.target.value)}
-                disabled={generating}
-              />
-            </div>
-            <div>
-              <Label htmlFor="context">Contexto clínico</Label>
-              <Textarea
-                id="context"
-                placeholder="Descreva brevemente o cenário clínico desejado: idade aproximada, comorbidades, gravidade, contexto social, objetivo educacional..."
-                value={genContext}
-                onChange={(e) => setGenContext(e.target.value)}
-                disabled={generating}
-                rows={5}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGenOpen(false)} disabled={generating}>Cancelar</Button>
-            <Button onClick={handleGenerate} disabled={generating}>
-              {generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Gerando...</> : <><Sparkles className="h-4 w-4 mr-2" />Gerar</>}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <GenerateCaseDialog
+        open={genOpen}
+        onOpenChange={setGenOpen}
+        onCreated={async (category) => { await loadCustom(); setActiveTab(category); }}
+        onOpenEditor={(id) => navigate(`/virtual-patients/case/${id}`)}
+      />
     </div>
   );
 }

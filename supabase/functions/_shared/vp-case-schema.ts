@@ -190,7 +190,7 @@ export function validateCaseData(d: unknown): string[] {
     if (!ver.encontros || ver.encontros.length !== 3) errs.push(`${tag} precisa de exatamente 3 encontros`);
     (ver.encontros || []).forEach((e) => {
       if (!e.cartao?.cenario || !e.cartao?.tarefa) errs.push(`${tag} encontro ${e.numero} sem cartão de passagem`);
-      if (e.interlocutor === "prescritor" && !e.persona_interlocutor) errs.push(`${tag} encontro ${e.numero} com prescritor precisa de persona_interlocutor`);
+      if ((e.interlocutor === "prescritor" || e.interlocutor === "equipe") && !e.persona_interlocutor) errs.push(`${tag} encontro ${e.numero} com prescritor ou equipe precisa de persona_interlocutor`);
     });
     const g = ver.gabarito;
     if (!g) { errs.push(`${tag} sem gabarito`); continue; }
