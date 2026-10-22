@@ -313,10 +313,10 @@ export function buildEncounterBrief(d: VpCaseData, key: VersaoKey, encounter: nu
   return lines([
     `[ROTEIRO DO ENCONTRO ${e.numero} — ${e.tipo}, interlocutor: ${e.interlocutor}]`,
     `Cenário: ${e.cartao.cenario}`,
-    e.evolucao?.length
+    e.numero > 1 && e.evolucao?.length
       ? `Evolução conforme o que foi EFETIVAMENTE implementado até aqui:\n${e.evolucao.map((x) => `- Se ${x.quando} → ${x.paciente_relata}`).join("\n")}`
       : null,
-    e.evolucao_sem_mudanca ? `Se nada do que foi proposto chegou a ser implementado: ${e.evolucao_sem_mudanca}` : null,
+    e.numero > 1 && e.evolucao_sem_mudanca ? `Se nada do que foi proposto chegou a ser implementado: ${e.evolucao_sem_mudanca}` : null,
   ]);
 }
 

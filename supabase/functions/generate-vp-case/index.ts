@@ -205,13 +205,14 @@ PAPEL DO ALUNO: ${p.papel}
 
 REGRAS:
 - cenario.local: local de atendimento adequado à profissão. cenario.tratamento: ${p.tratamento} cenario.motivo_da_vinda: por que a pessoa veio. cenario.abertura: UMA frase curta e vaga, sem nenhuma informação clínica.
+- Coerência de presença: se o caso é contado por um CUIDADOR, deixe explícito no cenário e na abertura do encontro 1 se o paciente está PRESENTE (ex.: 'a filha chega com o pai na cadeira de rodas'). Achados de exame físico e sinais vitais do paciente só existem se ele estiver presente; se não estiver, não crie achado de exame físico acessível no encontro 1. A abertura nunca contradiz os achados.
 - revelacao: exatamente UMA entrada para CADA fato do núcleo (todos os ids, sem faltar nenhum). Níveis: espontanea (no máximo 2 fatos no caso inteiro), pergunta_aberta, direta e vinculo (ao menos 1 fato). Detalhes de medicamentos costumam ser 'direta'; temas delicados (uso incorreto, culpa, dinheiro) costumam ser 'vinculo'. 'quando' descreve o gatilho concreto. 'fala' é o que a pessoa diz, em linguagem natural e AUTO-SUFICIENTE (faz sentido sozinha, com contexto de quando e onde aconteceu), sem ids nem nomes de categoria.
 - gatilhos_achados: uma entrada para CADA achado do núcleo, dizendo quando ele só deve aparecer.
 - perguntas_do_paciente (2 a 4), fora_do_roteiro (2 a 4) e dicas_de_atuacao (3 a 5, sobre como atuar, sem entregar respostas).
 - encontros: exatamente 3 (numero 1, 2, 3): ${p.encontros}
   • cartao.cenario: onde o aluno está e o que aconteceu desde o último encontro. cartao.tarefa: o que fazer, SEM lista de passos e SEM dizer o que perguntar. O cartão não revela nome nem idade de quem fala, nem achados. tempo_min: 15, 10 e 10.
   • Encontro com prescritor ou equipe: persona_interlocutor completa (nome, perfil, temperamento, 2 a 4 resistencias, 2 a 4 criterios_para_ceder). A persona só conhece o prontuário, nunca o que o paciente contou.
-  • Encontro 3: 'evolucao' com 3 a 5 ramos que dependem do que o prescritor ou a equipe ACEITOU no encontro 2 (ex.: 'se o prescritor aceitou reduzir a dose X'), mais 'evolucao_sem_mudanca' (se nada foi aceito). Nunca condicione a evolução ao que o aluno apenas sugeriu.
+  • Encontro 3: 'evolucao' com 3 a 5 ramos que dependem do que o prescritor ou a equipe ACEITOU no encontro 2 (ex.: 'se o prescritor aceitou reduzir a dose X'), mais 'evolucao_sem_mudanca' (se nada foi aceito). Nunca condicione a evolução ao que o aluno apenas sugeriu. Os campos 'evolucao' e 'evolucao_sem_mudanca' existem SOMENTE no encontro 3: deixe-os FORA dos encontros 1 e 2 (no encontro 1 ainda não houve nada a evoluir).
 - gabarito: problemas_esperados (com tipo e justificativa), red_flags com conduta esperada, informacoes_alvo (ids de fatos do núcleo que o aluno deveria obter, com importância Essencial, Importante ou Complementar; cubra todos os fatos relevantes), conduta_esperada, orientacoes_esperadas, encaminhamentos, objetivos_aprendizagem e referencias. ${p.gabarito}
 - referencias: cite SOMENTE diretrizes, protocolos ou critérios que existem de fato e que você conhece bem (sem links). Se não tiver certeza, deixe a lista curta.`;
 }
@@ -264,6 +265,18 @@ async function callTool(system: string, user: string, tool: { function: { name: 
 function nucleoErrors(nucleo: Nucleo): string[] {
   const probe = { schema_version: 2, nucleo, versoes: {} } as unknown as VpCaseData;
   return validateCaseData(probe).filter((e) => e !== "nenhuma versão por profissão");
+}
+
+// A evolução do paciente conforme o que o prescritor aceitou pertence ao retorno (encontro 3). Mesmo que a IA a
+// escreva em outro encontro, o código remove: no encontro 1 ela induziria o paciente a "evoluir" antes de qualquer conduta.
+function limparVersao(v: Versao): Versao {
+  for (const e of v.encontros || []) {
+    if (e.numero !== 3) {
+      delete e.evolucao;
+      delete e.evolucao_sem_mudanca;
+    }
+  }
+  return v;
 }
 
 function versaoErrors(d: VpCaseData, key: VersaoKey): string[] {
@@ -369,6 +382,7 @@ ${JSON.stringify(d.nucleo, null, 1)}
 Escreva a versão para ${PERFIS[key].rotulo} com a ferramenta create_versao.`;
 
   let out = await callTool(systemVersao(key), userPrompt, VERSAO_TOOL, 0.6);
+  if (out?.versao) limparVersao(out.versao);
   let draft: VpCaseData = { ...d, versoes: { ...d.versoes, [key]: out?.versao as Versao } };
   let errs = out?.versao ? versaoErrors(draft, key) : ["sem versão"];
   if (errs.length > 0) {
@@ -379,6 +393,7 @@ Escreva a versão para ${PERFIS[key].rotulo} com a ferramenta create_versao.`;
       VERSAO_TOOL,
       0.4,
     );
+    if (out?.versao) limparVersao(out.versao);
     draft = { ...d, versoes: { ...d.versoes, [key]: out?.versao as Versao } };
     errs = out?.versao ? versaoErrors(draft, key) : ["sem versão"];
   }
