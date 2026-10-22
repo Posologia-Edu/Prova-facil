@@ -25,6 +25,7 @@ interface PatientInfo {
   module: string;
   custom?: boolean;
   status?: string;
+  legacy?: boolean;
 }
 
 const SYSTEM_PATIENTS: PatientInfo[] = [
@@ -111,6 +112,7 @@ export default function VirtualPatients() {
           <Badge variant="outline">{patient.description}</Badge>
           {patient.custom && <Badge variant="secondary"><Sparkles className="h-3 w-3 mr-1" />Meu paciente</Badge>}
           {patient.custom && patient.status === "draft" && <Badge variant="outline">Rascunho</Badge>}
+          {patient.legacy && <Badge variant="secondary">Legado</Badge>}
         </div>
         <p className="text-xs text-muted-foreground mb-4">
           Converse livremente com o paciente para testar o comportamento. As mensagens não são salvas — o atendimento real ocorre nas Salas Virtuais.
@@ -127,7 +129,7 @@ export default function VirtualPatients() {
     </Card>
   );
 
-  const all = [...SYSTEM_PATIENTS, ...customPatients];
+  const all = [...SYSTEM_PATIENTS.map((p) => ({ ...p, legacy: true })), ...customPatients];
   const categories = Array.from(new Set(all.map((p) => p.module)));
   // Garantir ordem: Dor, Inflamação, depois custom
   categories.sort((a, b) => {

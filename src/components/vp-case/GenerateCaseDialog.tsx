@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { CASOS_SUGERIDOS } from "@/lib/vp-casos-sugeridos";
 import type { VersaoKey } from "@/lib/vp-case-schema";
 
 const PROFS: Array<{ key: VersaoKey; label: string; note?: string }> = [
@@ -56,6 +57,7 @@ export function GenerateCaseDialog({ open, onOpenChange, onCreated, onOpenEditor
   const [quem, setQuem] = useState<"paciente" | "cuidador">("paciente");
   const [profs, setProfs] = useState<VersaoKey[]>(["farmaceutico"]);
   const [running, setRunning] = useState(false);
+  const [showSug, setShowSug] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
   const [caseId, setCaseId] = useState<string | null>(null);
   const [issues, setIssues] = useState<AuditIssue[]>([]);
@@ -144,6 +146,34 @@ export function GenerateCaseDialog({ open, onOpenChange, onCreated, onOpenEditor
 
         {showForm ? (
           <div className="space-y-4 py-1">
+            <div>
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowSug((v) => !v)}>
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />{showSug ? "Ocultar casos sugeridos" : "Casos sugeridos"}
+              </Button>
+              {showSug && (
+                <div className="mt-2 rounded-md border p-2 max-h-52 overflow-y-auto space-y-3">
+                  {(["Dor", "Inflamação"] as const).map((cat) => (
+                    <div key={cat}>
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">{cat}</p>
+                      <div className="space-y-1">
+                        {CASOS_SUGERIDOS.filter((c) => c.categoria === cat).map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="w-full text-left rounded px-2 py-1.5 text-sm hover:bg-muted transition-colors"
+                            onClick={() => { setCategory(c.categoria); setContext(c.contexto); setQuem(c.quem_conta); setShowSug(false); }}
+                          >
+                            {c.titulo}
+                            {c.quem_conta === "cuidador" && <span className="ml-2 text-[11px] text-muted-foreground">(cuidador)</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-[11px] text-muted-foreground">Um clique preenche o formulário; você pode editar o texto antes de gerar.</p>
+                </div>
+              )}
+            </div>
             <div>
               <Label htmlFor="gen-category">Categoria do paciente</Label>
               <Input id="gen-category" placeholder="Ex.: Dor, Inflamação, Diabetes, Polifarmácia..." value={category} onChange={(e) => setCategory(e.target.value)} />
