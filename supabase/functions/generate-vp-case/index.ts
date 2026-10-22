@@ -151,6 +151,12 @@ const AUDIT_TOOL = {
 
 // ───────────────────────── prompts ─────────────────────────
 
+// As aulas dos módulos Dor e Inflamação são sobre o TRATAMENTO da dor e da inflamação. Outras condições entram só
+// como contexto ou comorbidade que muda a escolha, a dose ou a segurança dessa terapia.
+const FOCO_DOR = `FOCO EDUCACIONAL OBRIGATÓRIO: este caso é de um módulo sobre TRATAMENTO DA DOR E DA INFLAMAÇÃO. Os problemas esperados, as condutas, as orientações, os objetivos de aprendizagem e a evolução devem girar em torno da ESCOLHA, DOSE, SEGURANÇA, INTERAÇÕES e MONITORIZAÇÃO da terapia analgésica e anti-inflamatória (analgésicos simples, AINE, opioides, corticoides, adjuvantes, terapias tópicas e medidas não farmacológicas). A doença de base e as comorbidades entram só como contexto que modifica essa escolha; terapias de outra finalidade (por exemplo, hipouricemiante ou controle glicêmico) aparecem como contexto e não como foco do gabarito.`;
+
+const isFocoDor = (category: string) => /^(dor|inflama)/i.test(category.trim());
+
 const SYSTEM_NUCLEO = `Você é um especialista em educação clínica e em pacientes simulados (OSCE). Você cria o NÚCLEO CLÍNICO de um caso: tudo o que é verdade sobre o paciente, independentemente da profissão que o atenderá.
 
 REGRAS:
@@ -328,7 +334,7 @@ async function acaoNucleo(body: any, userId: string) {
 CONTEXTO CLÍNICO INFORMADO PELO DOCENTE: ${contexto}
 QUEM CONTA A HISTÓRIA AO ALUNO: ${quem === "cuidador" ? "um CUIDADOR (o paciente não consegue contar sozinho)" : "o próprio PACIENTE"}
 
-Crie o núcleo clínico com a ferramenta create_nucleo.`;
+${isFocoDor(category) ? FOCO_DOR + "\n\n" : ""}Crie o núcleo clínico com a ferramenta create_nucleo.`;
 
   let out = await callTool(SYSTEM_NUCLEO, userPrompt, NUCLEO_TOOL, 0.8);
   let errs = out?.nucleo ? nucleoErrors(out.nucleo) : ["sem núcleo"];
@@ -379,7 +385,7 @@ async function acaoVersao(body: any, userId: string) {
   const userPrompt = `NÚCLEO CLÍNICO DO CASO (única verdade; não altere):
 ${JSON.stringify(d.nucleo, null, 1)}
 
-Escreva a versão para ${PERFIS[key].rotulo} com a ferramenta create_versao.`;
+${isFocoDor(row.category) ? FOCO_DOR + "\n\n" : ""}Escreva a versão para ${PERFIS[key].rotulo} com a ferramenta create_versao.`;
 
   let out = await callTool(systemVersao(key), userPrompt, VERSAO_TOOL, 0.6);
   if (out?.versao) limparVersao(out.versao);
