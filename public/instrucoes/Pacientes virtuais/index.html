@@ -591,7 +591,7 @@
           <div class="encounter-list" style="margin-top: 10px">
             <article class="encounter"><div class="encounter-label">1º encontro</div><div><h3>Anamnese</h3><p>Você atende o paciente (ou o cuidador, quando é ele quem conta a história). Investigue a queixa, os medicamentos como são usados de fato, antecedentes, hábitos e contexto, e registre na ficha de anamnese.</p><p class="encounter-note"><strong>Como interagir:</strong> escreva como se falasse com a pessoa. Ela só responde ao que for perguntado.</p></div></article>
             <article class="encounter"><div class="encounter-label">2º encontro</div><div><h3>Conversa com quem decide</h3><p>O interlocutor muda. Na <strong>Farmácia</strong>, você conversa com o médico prescritor (uma persona de IA) e comunica o que encontrou. Na <strong>Enfermagem</strong>, é a passagem de plantão em formato SBAR. Na <strong>Medicina</strong>, é a interconsulta ou a discussão de resultados.</p><p class="encounter-note"><strong>Importante:</strong> na Farmácia você <strong>não prescreve</strong>. Você propõe o ajuste ao prescritor, orienta, define a monitorização, encaminha e indica apenas medicamentos isentos de prescrição ou protocolos. Seja objetivo, como em uma comunicação profissional, e registre na ficha (SBAR) o que foi combinado.</p></div></article>
-            <article class="encounter"><div class="encounter-label">3º encontro</div><div><h3>Retorno do paciente</h3><p>O paciente volta e a situação depende do que o prescritor <strong>aceitou</strong> no encontro anterior: se a sua proposta foi aceita, modificada ou recusada, o quadro seguirá de modo diferente. Verifique o que mudou e o que persiste.</p><p class="encounter-note"><strong>Quando terminar:</strong> registre a evolução na ficha (SOAP) e, na Farmácia, preencha o MAI. O envio do MAI marca a atividade como concluída.</p></div></article>
+            <article class="encounter"><div class="encounter-label">3º encontro</div><div><h3>Retorno do paciente</h3><p>O paciente volta e a situação depende do que o prescritor <strong>aceitou</strong> no encontro anterior: se a sua proposta foi aceita, modificada ou recusada, o quadro seguirá de modo diferente. Verifique o que mudou e o que persiste.</p><p class="encounter-note"><strong>Quando terminar:</strong> registre a evolução na ficha (SOAP). Na Farmácia, clique em “Preencher MAI” e envie o formulário. Na Enfermagem e na Medicina não há MAI: clique em “Concluir atendimento”. Em ambos os casos, o envio marca a atividade como concluída.</p></div></article>
           </div>
 
           <p class="section-kicker" style="margin-top: 36px">Pacientes do formato anterior</p>
@@ -634,7 +634,7 @@
         <section class="section" id="mai">
           <p class="section-kicker">Etapa 5</p>
           <h2>Como preencher o MAI</h2>
-          <p class="section-intro">O MAI avalia a adequação de cada medicamento prescrito para aquele paciente. Você deve adicionar todos os medicamentos relevantes e preencher os 10 critérios para cada um.</p>
+          <p class="section-intro">O MAI avalia a adequação de cada medicamento prescrito para aquele paciente. Você deve adicionar todos os medicamentos relevantes e preencher os 10 critérios para cada um. Ele é feito na Farmácia e nos pacientes do formato anterior; na Enfermagem e na Medicina, o atendimento é concluído sem MAI.</p>
 
           <div class="screen-card">
             <img src="assets/tela-mai.svg" alt="Representação do formulário MAI com um medicamento e opções apropriado, marginalmente apropriado e inapropriado." loading="lazy" />
@@ -672,17 +672,20 @@
               <tr><td><strong>Qualidade do MAI</strong></td><td><p>Completude; coerência clínica; justificativa crítica; segurança do paciente.</p></td><td>0–4</td><td>0–4</td></tr>
               <tr><td><strong>Ficha de registro</strong></td><td><p>Completude do registro, fidelidade à conversa e raciocínio e clareza. Ficha vazia vale zero.</p></td><td>0–2</td><td>não há</td></tr>
               <tr><td><strong>Penalidades de segurança</strong></td><td><p>Erros críticos como ignorar alergia, aceitar medicamento contraindicado ou não identificar interação grave.</p></td><td>até −1,5</td><td>até −1,5</td></tr>
-              <tr><td><strong>Bônus de comunicação</strong></td><td><p>Comunicação especialmente empática e clara. Não há bônus por conversas longas.</p></td><td>até +0,5</td><td>até +0,5</td></tr>
+              <tr><td><strong>Bônus de comunicação</strong></td><td><p>Comunicação especialmente empática e clara. Entra na nota calculada pela correção.</p></td><td>até +0,5</td><td>até +0,5</td></tr>
+              <tr><td><strong>Bônus de eficiência clínica</strong></td><td><p>Mede a cobertura dos pontos essenciais da anamnese (indicador de 0 a 5, convertido em até 1 ponto). Conversas rasas reduzem esse indicador; o tamanho da conversa, por si só, não é penalizado nem premiado.</p></td><td>até +1,0</td><td>até +1,0</td></tr>
               <tr><td><strong>Avaliação entre pares</strong></td><td><p>Aplica-se às atividades em grupo e ajusta individualmente a nota de acordo com participação, contribuição técnica e colaboração.</p></td><td>−1,0 a +1,0</td><td>−1,0 a +1,0</td></tr>
             </tbody>
           </table>
 
+          <div class="highlight" style="margin-top: 20px"><strong>Enfermagem e Medicina: sem MAI</strong><span>Nesses papéis o MAI não é feito. A anamnese passa a valer 0–6 e a ficha 0–4, somando os mesmos 10 pontos de base. Os bônus, as penalidades e o ajuste entre pares seguem iguais.</span></div>
+
           <div class="formula">
             <h3>Fórmula resumida da nota final</h3>
             <div class="formula-line" aria-label="Fórmula: nota base mais bônus de eficiência clínica mais ajuste entre pares, limitado de zero a dez">
-              <span class="formula-chip">Anamnese + MAI + ficha</span><span>+</span><span class="formula-chip gold">bônus de comunicação</span><span>−</span><span class="formula-chip">penalidades</span><span>±</span><span class="formula-chip">ajuste entre pares</span>
+              <span class="formula-chip">Anamnese + MAI + ficha</span><span>+</span><span class="formula-chip gold">bônus de comunicação</span><span>−</span><span class="formula-chip">penalidades</span><span>+</span><span class="formula-chip gold">bônus de eficiência</span><span>±</span><span class="formula-chip">ajuste entre pares</span>
             </div>
-            <p>O resultado é limitado ao intervalo de 0 a 10. No resultado você também vê um indicador de eficiência clínica (0 a 5), que mede a cobertura dos pontos essenciais da anamnese. Ele é informativo e não soma pontos à nota.</p>
+            <p>O resultado é limitado ao intervalo de 0 a 10. A correção calcula anamnese, MAI, ficha, bônus de comunicação e penalidades; em seguida, o resultado acrescenta o bônus de eficiência clínica (indicador de 0 a 5 convertido em até +1 ponto) e, em grupo, o ajuste entre pares.</p>
           </div>
 
           <div class="info-grid">

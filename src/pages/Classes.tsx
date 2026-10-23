@@ -1276,6 +1276,13 @@ export default function ClassesPage() {
               {vpCatalog.filter(p => p.published && !classVPs.some(v => v.patient_id === p.id)).length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">Todos os pacientes já estão vinculados.</p>
               )}
+              {vpCatalog.some(p => !p.published) && (
+                <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-xs text-muted-foreground">
+                  <strong>{vpCatalog.filter(p => !p.published).length} caso(s) em rascunho não aparecem aqui.</strong>{" "}
+                  Abra o caso em Pacientes Virtuais, revise e publique para poder vinculá-lo à turma:{" "}
+                  {vpCatalog.filter(p => !p.published).map(p => p.label).join("; ")}.
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>

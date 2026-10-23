@@ -68,6 +68,7 @@ export default function VirtualPatientRoom() {
   const [ficha, setFicha] = useState<{ versao: FichaVersao } | null>(null);
   const [showFicha, setShowFicha] = useState(false);
   const [showSoapWarning, setShowSoapWarning] = useState(false);
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   // Divisão de funções do grupo: o docente liga por paciente; o grupo escolhe quem registra a ficha em cada encontro.
   const [groupRolesOn, setGroupRolesOn] = useState(false);
   const [rolesByEncounter, setRolesByEncounter] = useState<Record<number, string[]>>({});
@@ -582,7 +583,7 @@ export default function VirtualPatientRoom() {
         if (b.interlocutor_nome) body += `\n\n_Neste encontro você conversa com ${b.interlocutor_nome}, não com o paciente._`;
       }
     } catch (_) { /* nota padrão */ }
-    const noteContent = `---\n\n**📋 Transição para o ${ENCOUNTER_LABELS[next - 1]}**\n\n${body}\n\n---`;
+    const noteContent = `---\n\n**📋 Transição para o ${encounterLabel(next)}**\n\n${body}\n\n---`;
     const systemNote: Message = { id: crypto.randomUUID(), role: "assistant", content: noteContent, encounter: next };
     seenMsgKeysRef.current.add(systemNote.id!);
     setMessages((prev) => [...prev, systemNote]);
@@ -646,6 +647,11 @@ export default function VirtualPatientRoom() {
   };
 
   // Antes do MAI: se a ficha existe e o SOAP do 3º encontro está em branco, avisa (a ficha vale parte da nota).
+  // O MAI só existe na Farmácia e nos pacientes do formato anterior (sem ficha). Enfermagem e Medicina concluem sem ele.
+  const maiRequired = !ficha || ficha.versao === "farmaceutico";
+  const encounterLabel = (n: number) => (n === 3 && !maiRequired ? "3º Encontro – Ajustes Finais" : ENCOUNTER_LABELS[n - 1]);
+  const goToFinish = () => { if (maiRequired) setShowMAI(true); else setShowFinishConfirm(true); };
+
   const requestFinish = async () => {
     if (ficha && sessionId) {
       const { data } = await (supabase as any)
@@ -656,7 +662,7 @@ export default function VirtualPatientRoom() {
       const filled = ((data as any[]) || []).some((r) => String(r.content || "").trim());
       if (!filled) { setShowSoapWarning(true); return; }
     }
-    setShowMAI(true);
+    goToFinish();
   };
 
   const handleMAIComplete = async () => {
@@ -805,7 +811,7 @@ export default function VirtualPatientRoom() {
                   PIN {pin}
                 </Badge>
               )}
-              <Badge variant="secondary" className="text-xs">{ENCOUNTER_LABELS[encounter - 1]}</Badge>
+              <Badge variant="secondary" className="text-xs">{encounterLabel(encounter)}</Badge>
             </div>
             {isGroupSession ? (
               <div className="flex items-center gap-1.5 mt-1">
@@ -850,7 +856,7 @@ export default function VirtualPatientRoom() {
           )}
           {encounter === 3 && !sessionCompleted && (
             <Button size="sm" onClick={requestFinish}>
-              <ClipboardCheck className="h-4 w-4 mr-1" /> Preencher MAI
+              <ClipboardCheck className="h-4 w-4 mr-1" /> {maiRequired ? "Preencher MAI" : "Concluir atendimento"}
             </Button>
           )}
           {sessionCompleted && (
@@ -976,7 +982,7 @@ export default function VirtualPatientRoom() {
           open={introOpen}
           firstTime={!introSeen}
           brief={activeBrief}
-          title={ENCOUNTER_LABELS[encounter - 1]}
+          title={encounterLabel(encounter)}
           versao={briefVersao}
           hasFicha={!!ficha}
           onStart={confirmIntro}
@@ -997,17 +1003,33 @@ export default function VirtualPatientRoom() {
         onConfirm={saveRoles}
       />
 
+      <Dialog open={showFinishConfirm} onOpenChange={setShowFinishConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Concluir o atendimento?</DialogTitle>
+            <DialogDescription>
+              Ao concluir, a conversa e a ficha serão enviadas para correção e não será possível editar mais nada.
+              {isGroupSession && groupSessionIds.length > 1 ? " Os colegas do grupo receberão o convite para a avaliação entre pares." : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowFinishConfirm(false)}>Voltar</Button>
+            <Button onClick={() => { setShowFinishConfirm(false); handleMAIComplete(); }}>Concluir atendimento</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showSoapWarning} onOpenChange={setShowSoapWarning}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>A evolução (SOAP) está em branco</DialogTitle>
             <DialogDescription>
-              O registro do 3º encontro ainda não foi preenchido. A ficha vale parte da nota (2 dos 10 pontos).
+              O registro do 3º encontro ainda não foi preenchido. A ficha vale parte da nota ({maiRequired ? 2 : 4} dos 10 pontos).
               Você pode preencher agora ou concluir assim mesmo.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setShowSoapWarning(false); setShowMAI(true); }}>Concluir assim mesmo</Button>
+            <Button variant="outline" onClick={() => { setShowSoapWarning(false); goToFinish(); }}>Concluir assim mesmo</Button>
             <Button onClick={() => { setShowSoapWarning(false); setShowFicha(true); }}>Preencher o SOAP</Button>
           </DialogFooter>
         </DialogContent>

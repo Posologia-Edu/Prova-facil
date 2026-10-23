@@ -1250,7 +1250,7 @@ export default function VPAnalytics() {
 
                 {/* Subscores — Anamnese */}
                 <div>
-                  <h4 className="text-sm font-semibold mb-3">Anamnese (0–{hasFichaScores(detailGrade.subscores) ? 4 : 6})</h4>
+                  <h4 className="text-sm font-semibold mb-3">Anamnese (0–{baseScores(detailGrade.subscores || {}).comFicha && baseScores(detailGrade.subscores || {}).comMai ? 4 : 6})</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {subscoreKeys.slice(0, 6).map(key => (
                       <div key={key} className="p-3 rounded-lg border text-center">
@@ -1277,7 +1277,7 @@ export default function VPAnalytics() {
                 {/* Subscores — Ficha (P20) */}
                 {hasFichaScores(detailGrade.subscores) && (
                   <div>
-                    <h4 className="text-sm font-semibold mb-3">Ficha do atendimento (0–2)</h4>
+                    <h4 className="text-sm font-semibold mb-3">Ficha do atendimento (0–{baseScores(detailGrade.subscores || {}).comMai ? 2 : 4})</h4>
                     <div className="grid grid-cols-3 gap-3">
                       {FICHA_KEYS.map(key => (
                         <div key={key} className="p-3 rounded-lg border text-center">
@@ -1302,8 +1302,9 @@ export default function VPAnalytics() {
                   </div>
                 )}
 
-                {/* Subscores — MAI */}
+                {/* Subscores — MAI (não existe em Enfermagem e Medicina) */}
                 <div>
+                  {baseScores(detailGrade.subscores || {}).comMai && (<>
                   <h4 className="text-sm font-semibold mb-3">MAI – Medication Appropriateness Index (0–4)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {subscoreKeys.slice(6).map(key => (
@@ -1345,6 +1346,7 @@ export default function VPAnalytics() {
                       </div>
                     ))}
                   </div>
+                  </>)}
                   <div className="mt-3 grid grid-cols-2 gap-3">
                     <div className="p-3 rounded-lg border text-center bg-primary/5">
                       <div className="flex items-center justify-center gap-1">

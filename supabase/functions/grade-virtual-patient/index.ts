@@ -107,6 +107,17 @@ function withFicha(tool: typeof GRADING_TOOL) {
   return t;
 }
 
+// Enfermagem e Medicina não fazem o MAI: a IA não pontua a seção B e a nota não a considera.
+function withoutMai(tool: typeof GRADING_TOOL) {
+  const t = JSON.parse(JSON.stringify(tool));
+  const p = t.function.parameters;
+  for (const k of MAI_KEYS) delete p.properties.subscores.properties[k];
+  p.properties.subscores.required = p.properties.subscores.required.filter((k: string) => !MAI_KEYS.includes(k));
+  delete p.properties.evidencias.properties.mai;
+  p.properties.evidencias.required = p.properties.evidencias.required.filter((k: string) => k !== "mai");
+  return t;
+}
+
 const num = (v: unknown) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -200,6 +211,7 @@ serve(async (req) => {
     let gabarito: Gabarito | null = null;
     let gabaritoText = "";
     let caseV2: VpCaseData | null = null;
+    let profKey: string | null = null;
     const caseRec = await loadVpCase(sessionData?.patient_id);
     if (caseRec && isCaseDataV2(caseRec.case_data)) {
       const { data: cvpRow } = await supabase
@@ -211,12 +223,18 @@ serve(async (req) => {
       caseV2 = cd;
       let key = resolveVersaoKey((cvpRow as any)?.profession);
       if (!cd.versoes[key]) key = Object.keys(cd.versoes)[0] as typeof key;
+      profKey = key;
       gabarito = cd.versoes[key]?.gabarito ?? null;
       if (gabarito) gabaritoText = buildGabaritoText(cd, key);
     }
 
     // Ficha eletrônica (P20): só existe nos casos v2. Fica na sessão primária, a mesma do chat.
     const fichaEnabled = !!(caseRec && isCaseDataV2(caseRec.case_data));
+    // O MAI só existe para a Farmácia (casos v2). Legados e casos v2 de Farmácia seguem com MAI.
+    const maiEnabled = !fichaEnabled || profKey === "farmaceutico";
+    // Pesos de cada bloco na nota (precisam bater com _shared/vp-grade.ts).
+    const pesoAnamnese = !fichaEnabled ? 6 : maiEnabled ? 4 : 6;
+    const pesoFicha = maiEnabled ? 2 : 4;
     let fichaText = "";
     let fichaHasContent = false;
     if (fichaEnabled) {
@@ -256,8 +274,10 @@ serve(async (req) => {
       }
     }
 
-    const maiSummary = maiData
-      ? `MAI preenchido pelo estudante:\n${JSON.stringify(maiData.mai_json, null, 2)}\n(Score bruto: ${maiData.total_score})`
+    const maiSummary = !maiEnabled
+      ? "Esta atividade não inclui o MAI."
+      : maiData
+      ?`MAI preenchido pelo estudante:\n${JSON.stringify(maiData.mai_json, null, 2)}\n(Score bruto: ${maiData.total_score})`
       : "MAI NÃO foi preenchido pelo estudante.";
 
     const systemPrompt = `Você é um AGENTE CORRETOR PROFISSIONAL de simulações clínicas com pacientes virtuais para a disciplina de Farmacologia Aplicada / Cuidado Farmacêutico.
@@ -265,7 +285,7 @@ serve(async (req) => {
 Sua missão é avaliar OBJETIVAMENTE a interação completa do estudante com o paciente virtual, considerando duas grandes áreas de competência:
 
 ═══════════════════════════════════════════════
-A) QUALIDADE DA ANAMNESE (peso ${fichaEnabled ? "40% — vale 4 pontos" : "60% — escala 0–6"})
+A) QUALIDADE DA ANAMNESE (peso ${pesoAnamnese * 10}% — ${fichaEnabled ? `vale ${pesoAnamnese} pontos` : "escala 0–6"})
 ═══════════════════════════════════════════════
 Avalie 6 dimensões profissionais (cada uma 0–1, com casas decimais):
 
@@ -276,7 +296,7 @@ Avalie 6 dimensões profissionais (cada uma 0–1, com casas decimais):
 5. **habitos_estilo_vida** — Tabagismo, etilismo, atividade física, dieta, sono, ocupação, gestação/lactação quando aplicável.
 6. **escuta_raciocinio_clinico** — Capacidade de fazer perguntas abertas, escuta ativa, reformulação, hipóteses farmacoterapêuticas coerentes, identificação de problemas relacionados a medicamentos (PRM/RNM).
 
-═══════════════════════════════════════════════
+${maiEnabled ? `═══════════════════════════════════════════════
 B) QUALIDADE DO PREENCHIMENTO MAI (peso 40% — escala 0–4)
 ═══════════════════════════════════════════════
 Avalie 4 dimensões do uso do Medication Appropriateness Index (cada uma 0–1):
@@ -286,8 +306,8 @@ Avalie 4 dimensões do uso do Medication Appropriateness Index (cada uma 0–1):
 3. **mai_justificativa_critica** — O estudante demonstra raciocínio crítico ao classificar (mesmo implícito na coerência das respostas dos 10 critérios MAI)?
 4. **mai_seguranca_paciente** — Identificação correta de problemas de segurança: interações graves, contraindicações, duplicidades, doses inadequadas para idade/função renal/hepática.
 
-${fichaEnabled ? `═══════════════════════════════════════════════
-C) QUALIDADE DA FICHA (peso 20% — vale 2 pontos)
+` : "Esta atividade NÃO inclui o MAI (o aluno atua como " + (profKey === "enfermeiro" ? "enfermeiro" : "médico") + "). Não avalie nem mencione o MAI.\n\n"}${fichaEnabled ? `═══════════════════════════════════════════════
+C) QUALIDADE DA FICHA (peso ${pesoFicha * 10}% — vale ${pesoFicha} pontos)
 ═══════════════════════════════════════════════
 O estudante (ou o grupo) manteve uma ficha eletrônica: anamnese no 1º encontro, comunicação ao prescritor (SBAR) no 2º e evolução (SOAP) no 3º. Avalie 3 dimensões (cada uma 0–1), SEMPRE comparando a ficha com a conversa:
 
@@ -317,7 +337,7 @@ REGRAS DE OUTPUT
 - Cite EVIDÊNCIAS curtas do transcript ("o aluno perguntou: …" / "o aluno NÃO investigou …").
 - Seja honesto: se a anamnese foi pobre, dê notas baixas.
 - O tamanho da conversa NÃO deve influenciar a nota: avalie a cobertura e a qualidade, não a quantidade de mensagens.
-- Se o MAI não foi preenchido, atribua 0 a todas as dimensões do MAI e sinalize nas evidências.${fichaEnabled ? "\n- Preencha também as dimensões da ficha (seção C) e evidencias.ficha. A ficha é um registro do estudante: não use o que está nela como prova de que a informação foi obtida do paciente; isso só vale se aparece na conversa." : ""}
+${maiEnabled ? "- Se o MAI não foi preenchido, atribua 0 a todas as dimensões do MAI e sinalize nas evidências." : "- Não há MAI nesta atividade: não devolva subnotas nem evidências do MAI."}${fichaEnabled ? "\n- Preencha também as dimensões da ficha (seção C) e evidencias.ficha. A ficha é um registro do estudante: não use o que está nela como prova de que a informação foi obtida do paciente; isso só vale se aparece na conversa." : ""}
 - Se o texto de qualquer campo vier em formato de lista, use um único string em markdown com bullets.${gabarito ? `
 - Preencha informacoes_obtidas com os ids (I1, I2…) das informações alvo que o estudante EFETIVAMENTE obteve do paciente na conversa. Não inclua um id se o paciente não revelou aquela informação.
 
@@ -360,7 +380,12 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
         ],
-        tools: [gabarito ? withObtidas(fichaEnabled ? withFicha(GRADING_TOOL) : GRADING_TOOL) : (fichaEnabled ? withFicha(GRADING_TOOL) : GRADING_TOOL)],
+        tools: [(() => {
+          let tool: typeof GRADING_TOOL = GRADING_TOOL;
+          if (fichaEnabled) tool = withFicha(tool);
+          if (!maiEnabled) tool = withoutMai(tool);
+          return gabarito ? withObtidas(tool) : tool;
+        })()],
         tool_choice: { type: "function", function: { name: "submit_grading" } },
       });
 
@@ -418,9 +443,10 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
     // ===== Cálculo da nota no servidor (a IA só devolve subnotas) =====
     const rawSubs = gradeResult.subscores || {};
     const subs: Record<string, number> = {};
-    for (const k of [...ANAMNESE_KEYS, ...MAI_KEYS]) subs[k] = round2(clamp(num(rawSubs[k]), 0, 1));
+    for (const k of [...ANAMNESE_KEYS, ...(maiEnabled ? MAI_KEYS : [])]) subs[k] = round2(clamp(num(rawSubs[k]), 0, 1));
     // Sem MAI enviado, a seção B é zerada independentemente do que o modelo devolver.
-    if (!maiData) for (const k of MAI_KEYS) subs[k] = 0;
+    // Sem MAI na atividade (Enfermagem/Medicina), as subnotas do MAI nem são gravadas: é isso que marca a nota como "sem MAI".
+    if (maiEnabled && !maiData) for (const k of MAI_KEYS) subs[k] = 0;
     // Com ficha, as três dimensões sempre são gravadas (mesmo zeradas): é isso que marca a nota como "com ficha".
     // Ficha vazia zera a seção independentemente do que o modelo devolver.
     if (fichaEnabled) {
@@ -484,7 +510,7 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
       feedback_resumido: feedbackResumido,
       orientacoes_melhoria: orientacoes,
       flags_seguranca: Array.isArray(gradeResult.flags_seguranca) ? gradeResult.flags_seguranca : [],
-      rubric_version: (fichaEnabled ? RUBRIC_VERSION_FICHA : RUBRIC_VERSION) + (gabarito ? "+gabarito" : ""),
+      rubric_version: (fichaEnabled ? RUBRIC_VERSION_FICHA : RUBRIC_VERSION) + (maiEnabled ? "" : "+sem-mai") + (gabarito ? "+gabarito" : ""),
       grading_model: GRADING_MODEL,
       graded_at: new Date().toISOString(),
       raw_ai_response: rawResponse + "\n\n[SERVIDOR] " + JSON.stringify({ subscores_ia: subsIa, cobertura_por_dimensao: coberturaDim, cobertura_peso: gabarito ? COBERTURA_PESO : 0 }),
