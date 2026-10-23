@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// ÚNICO provedor de IA do sistema: Gemini (Google), com a chave paga cadastrada em ai_api_keys (provider = 'google').
+// Não há fallback para outro provedor nem para o Lovable AI gateway: se o Google falhar, o erro dele volta ao chamador.
+// (Decisão do usuário: ver memória "gemini-only-no-lovable-gateway".)
+
 interface AiCallOptions {
   messages: Array<{ role: string; content: string | any[] }>;
   model?: string;
@@ -15,100 +19,37 @@ interface AiUsageContext {
   promptType: string;
 }
 
-interface ProviderConfig {
-  provider: string;
-  api_key: string;
-  baseUrl: string;
-  defaultModel: string;
+const GOOGLE_OPENAI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const GOOGLE_NATIVE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+
+/**
+ * Modelos Gemini em uso, num só lugar. Para trocar o modelo de todo o sistema, altere aqui.
+ *  - pro: raciocínio e julgamento (correção, geração de casos, revisões)
+ *  - flash: conversa e tarefas leves
+ *  - image: geração de imagem (API nativa do Gemini)
+ * Os nomes precisam existir para a chave do Google em uso (lista: GET /v1beta/models).
+ */
+export const GEMINI_MODELS = {
+  pro: "gemini-3.1-pro-preview",
+  flash: "gemini-3.8-flash",
+  image: "gemini-2.5-flash-image",
+} as const;
+
+/**
+ * Converte o nome pedido pelo código (ex.: "google/gemini-2.5-pro", "google/gemini-3-flash-preview") no modelo
+ * Gemini configurado acima. Quem pede "pro" recebe o modelo pro; "image", o de imagem; o resto, o flash.
+ */
+export function resolveGeminiModel(requested?: string): string {
+  const m = (requested || "").replace(/^(google\/|models\/)/, "").toLowerCase();
+  if (!m) return GEMINI_MODELS.flash;
+  if (m.includes("image")) return GEMINI_MODELS.image;
+  if (m.includes("pro")) return GEMINI_MODELS.pro;
+  return GEMINI_MODELS.flash;
 }
 
-function resolveModelForProvider(provider: ProviderConfig, requestedModel?: string): string {
-  if (!requestedModel) return provider.defaultModel;
-
-  const normalizedModel = requestedModel.replace(/^(google|openai)\//, "");
-
-  if (provider.provider === "groq") {
-    return normalizedModel.includes("llama") || normalizedModel.includes("mixtral")
-      ? normalizedModel
-      : provider.defaultModel;
-  }
-
-  if (provider.provider === "openai") {
-    return normalizedModel.startsWith("gpt-") || normalizedModel.startsWith("o")
-      ? normalizedModel
-      : provider.defaultModel;
-  }
-
-  if (provider.provider === "anthropic") {
-    return normalizedModel.startsWith("claude") ? normalizedModel : provider.defaultModel;
-  }
-
-  if (provider.provider === "openrouter") {
-    return requestedModel;
-  }
-
-  if (provider.provider !== "google") {
-    return provider.defaultModel;
-  }
-
-  if (normalizedModel.includes("flash-image")) {
-    return "gemini-2.5-flash-image";
-  }
-
-  if (
-    normalizedModel.includes("3.1-pro-preview") ||
-    normalizedModel.includes("2.5-pro")
-  ) {
-    return "gemini-2.5-pro";
-  }
-
-  if (
-    normalizedModel.includes("3-flash-preview") ||
-    normalizedModel.includes("3.1-flash") ||
-    normalizedModel.includes("2.5-flash-lite") ||
-    normalizedModel.includes("2.5-flash")
-  ) {
-    return "gemini-2.5-flash";
-  }
-
-  return normalizedModel.startsWith("gemini-")
-    ? normalizedModel
-    : provider.defaultModel;
-}
-
-const PROVIDER_CONFIGS: Record<string, { baseUrl: string; defaultModel: string }> = {
-  groq: {
-    baseUrl: "https://api.groq.com/openai/v1/chat/completions",
-    defaultModel: "llama-3.3-70b-versatile",
-  },
-  openai: {
-    baseUrl: "https://api.openai.com/v1/chat/completions",
-    defaultModel: "gpt-4o-mini",
-  },
-  anthropic: {
-    baseUrl: "https://api.anthropic.com/v1/messages",
-    defaultModel: "claude-sonnet-4-20250514",
-  },
-  openrouter: {
-    baseUrl: "https://openrouter.ai/api/v1/chat/completions",
-    defaultModel: "google/gemini-2.5-flash",
-  },
-  google: {
-    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-    defaultModel: "gemini-2.5-flash",
-  },
-};
-
-// Cost per 1M tokens (input/output) in USD - approximate
+// Custo aproximado por 1M de tokens (USD). Modelo fora da tabela = custo não estimado (0).
 const COST_PER_1M_TOKENS: Record<string, { input: number; output: number }> = {
-  "gpt-4o-mini": { input: 0.15, output: 0.60 },
-  "gpt-4o": { input: 2.50, output: 10.00 },
-  "llama-3.3-70b-versatile": { input: 0.59, output: 0.79 },
-  "claude-sonnet-4-20250514": { input: 3.00, output: 15.00 },
   "gemini-2.5-flash": { input: 0.15, output: 0.60 },
-  "google/gemini-2.5-flash": { input: 0.15, output: 0.60 },
-  "google/gemini-3-flash-preview": { input: 0.15, output: 0.60 },
-  "google/gemini-2.5-pro": { input: 1.25, output: 5.00 },
 };
 
 function estimateCost(model: string, tokensInput: number, tokensOutput: number): number {
@@ -128,6 +69,7 @@ function extractProviderErrorMessage(raw: string | null | undefined): string | n
     if (typeof parsed?.message === "string") return parsed.message;
     if (typeof parsed?.details === "string") return parsed.details;
     if (typeof parsed?.error?.message === "string") return parsed.error.message;
+    if (Array.isArray(parsed) && typeof parsed[0]?.error?.message === "string") return parsed[0].error.message;
   } catch {
     // Ignore JSON parse failures and fall back to raw text.
   }
@@ -137,7 +79,6 @@ function extractProviderErrorMessage(raw: string | null | undefined): string | n
 }
 
 async function logAiUsage(
-  provider: string,
   model: string,
   promptType: string,
   userId: string,
@@ -150,286 +91,158 @@ async function logAiUsage(
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const cost = estimateCost(model, tokensInput, tokensOutput);
-
     await supabase.from("ai_usage_log").insert({
       user_id: userId,
-      provider,
+      provider: "google",
       model,
       prompt_type: promptType,
       tokens_input: tokensInput,
       tokens_output: tokensOutput,
-      estimated_cost_usd: cost,
+      estimated_cost_usd: estimateCost(model, tokensInput, tokensOutput),
     });
   } catch (err) {
     console.warn("Failed to log AI usage:", (err as Error).message);
   }
 }
 
-// Priority order: Google first, then remaining providers alphabetically
-const PROVIDER_PRIORITY = ["google", "openai", "openrouter", "groq", "anthropic"];
-
-async function getActiveProviders(): Promise<ProviderConfig[]> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, serviceRoleKey);
-
+/** Chave do Google (Gemini) ativa em ai_api_keys. Só o provedor 'google' é considerado. */
+async function getGoogleKey(): Promise<string | null> {
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data } = await supabase
     .from("ai_api_keys")
-    .select("provider, api_key")
+    .select("api_key")
+    .eq("provider", "google")
     .eq("is_active", true)
-    .neq("api_key", "");
-
-  if (!data || data.length === 0) return [];
-
-  const providers = data.map((row: any) => {
-    const config = PROVIDER_CONFIGS[row.provider];
-    if (!config) return null;
-    return {
-      provider: row.provider,
-      api_key: row.api_key,
-      baseUrl: config.baseUrl,
-      defaultModel: config.defaultModel,
-    };
-  }).filter(Boolean) as ProviderConfig[];
-
-  // Sort by priority: Google first, then by PROVIDER_PRIORITY order
-  providers.sort((a, b) => {
-    const aIdx = PROVIDER_PRIORITY.indexOf(a.provider);
-    const bIdx = PROVIDER_PRIORITY.indexOf(b.provider);
-    return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
-  });
-
-  return providers;
+    .neq("api_key", "")
+    .limit(1)
+    .maybeSingle();
+  return (data as any)?.api_key || null;
 }
 
-async function callAnthropicApi(provider: ProviderConfig, options: AiCallOptions): Promise<Response> {
-  const systemMsg = options.messages.find((m) => m.role === "system");
-  const userMessages = options.messages.filter((m) => m.role !== "system");
-
-  const body: any = {
-    model: provider.defaultModel,
-    max_tokens: 4096,
-    messages: userMessages,
-  };
-  if (systemMsg) body.system = systemMsg.content;
-  if (options.temperature !== undefined) body.temperature = options.temperature;
-  if (options.stream) body.stream = true;
-
-  return await fetch(provider.baseUrl, {
-    method: "POST",
-    headers: {
-      "x-api-key": provider.api_key,
-      "Content-Type": "application/json",
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify(body),
-  });
+function jsonError(status: number, message: string): Response {
+  return new Response(JSON.stringify({ error: message }), { status, headers: { "Content-Type": "application/json" } });
 }
 
-async function callOpenAiCompatibleApi(provider: ProviderConfig, options: AiCallOptions): Promise<Response> {
-  const model = resolveModelForProvider(provider, options.model);
+const NO_KEY_MESSAGE =
+  "Chave do Google (Gemini) não configurada ou inativa. Cadastre uma chave ativa do provedor Google em Configurações de IA.";
 
-  const body: any = {
-    model,
-    messages: options.messages,
-  };
-  if (options.stream) body.stream = true;
-  if (options.tools) body.tools = options.tools;
-  if (options.tool_choice) body.tool_choice = options.tool_choice;
-  if (options.modalities) body.modalities = options.modalities;
-  if (options.temperature !== undefined) body.temperature = options.temperature;
-
-  return await fetch(provider.baseUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${provider.api_key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-}
-
-async function callLovableAi(options: AiCallOptions): Promise<Response> {
-  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!lovableApiKey) throw new Error("LOVABLE_API_KEY is not configured");
-
-  const body: any = {
-    model: options.model || "google/gemini-3-flash-preview",
-    messages: options.messages,
-  };
-  if (options.stream) body.stream = true;
-  if (options.tools) body.tools = options.tools;
-  if (options.tool_choice) body.tool_choice = options.tool_choice;
-  if (options.modalities) body.modalities = options.modalities;
-  if (options.temperature !== undefined) body.temperature = options.temperature;
-
-  return await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${lovableApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-}
+const approxTokens = (messages: AiCallOptions["messages"]) =>
+  Math.ceil(messages.reduce((sum, m) => sum + (typeof m.content === "string" ? m.content.length : JSON.stringify(m.content).length), 0) / 4);
 
 /**
- * Calls AI with fallback: tries external provider keys first, falls back to Lovable AI.
- * Returns the raw Response object.
- * 
- * If `usageContext` is provided, logs usage to ai_usage_log table.
- * For non-streaming responses, token counts are extracted from the response.
- * For streaming responses, logs with estimated tokens based on message length.
+ * Chamada de IA (Gemini). Mantém o nome histórico `callAiWithFallback`, mas NÃO há fallback: uma única tentativa
+ * no Google. Se falhar, devolve a resposta de erro do próprio Google (status e mensagem) para o chamador tratar.
+ *
+ * Com `usageContext`, registra o uso em ai_usage_log (não-streaming: tokens reais; streaming: estimativa de entrada).
  */
 export async function callAiWithFallback(
   options: AiCallOptions,
   usageContext?: AiUsageContext,
 ): Promise<{ response: Response; provider: string }> {
-  const providers = await getActiveProviders();
+  const apiKey = await getGoogleKey();
+  if (!apiKey) return { response: jsonError(503, NO_KEY_MESSAGE), provider: "google" };
 
-  let usedProvider = "lovable";
-  let usedModel = options.model || "google/gemini-3-flash-preview";
-  let response: Response | null = null;
+  const model = resolveGeminiModel(options.model);
+  const body: any = { model, messages: options.messages };
+  if (options.stream) body.stream = true;
+  if (options.tools) body.tools = options.tools;
+  if (options.tool_choice) body.tool_choice = options.tool_choice;
+  if (options.modalities) body.modalities = options.modalities;
+  if (options.temperature !== undefined) body.temperature = options.temperature;
 
-  // Try each external provider
-  for (const provider of providers) {
-    try {
-      console.log(`Trying external AI provider: ${provider.provider}`);
-
-      if (provider.provider === "anthropic") {
-        response = await callAnthropicApi(provider, options);
-      } else {
-        response = await callOpenAiCompatibleApi(provider, options);
-      }
-
-      if (response.ok) {
-        console.log(`Successfully used provider: ${provider.provider}`);
-        usedProvider = provider.provider;
-        usedModel = resolveModelForProvider(provider, options.model);
-        break;
-      }
-
-      const errBody = await response.text().catch(() => "");
-      console.warn(`Provider ${provider.provider} returned ${response.status}: ${errBody.slice(0, 500)}`);
-      response = null;
-    } catch (err) {
-      console.warn(`Provider ${provider.provider} failed:`, (err as Error).message);
-    }
+  let response: Response;
+  try {
+    response = await fetch(GOOGLE_OPENAI_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error(`Gemini (${model}) request failed:`, (err as Error).message);
+    return { response: jsonError(502, `Falha de rede ao chamar o Gemini: ${(err as Error).message}`), provider: "google" };
   }
 
-  // Fallback to Lovable AI
-  if (!response) {
-    console.log("Falling back to Lovable AI");
-    response = await callLovableAi(options);
-    usedProvider = "lovable";
-    usedModel = options.model || "google/gemini-3-flash-preview";
+  if (!response.ok) {
+    const errBody = await response.clone().text().catch(() => "");
+    console.error(`Gemini (${model}) returned ${response.status}: ${errBody.slice(0, 500)}`);
+    return { response, provider: "google" };
   }
 
-  // Log usage if context provided and response is OK
-  if (usageContext && response.ok) {
+  if (usageContext) {
     if (!options.stream) {
-      // For non-streaming: clone response, extract usage, then log
-      const cloned = response.clone();
       try {
-        const data = await cloned.json();
-        const usage = data.usage;
-        const tokensIn = usage?.prompt_tokens ?? 0;
-        const tokensOut = usage?.completion_tokens ?? 0;
-        // Fire and forget
-        logAiUsage(usedProvider, usedModel, usageContext.promptType, usageContext.userId, tokensIn, tokensOut);
+        const data = await response.clone().json();
+        logAiUsage(model, usageContext.promptType, usageContext.userId, data?.usage?.prompt_tokens ?? 0, data?.usage?.completion_tokens ?? 0);
       } catch {
-        // Estimate from message length if parsing fails
-        const totalChars = options.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0);
-        const estimatedTokens = Math.ceil(totalChars / 4);
-        logAiUsage(usedProvider, usedModel, usageContext.promptType, usageContext.userId, estimatedTokens, 0);
+        logAiUsage(model, usageContext.promptType, usageContext.userId, approxTokens(options.messages), 0);
       }
     } else {
-      // For streaming: estimate input tokens from prompt, output unknown
-      const totalChars = options.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0);
-      const estimatedInputTokens = Math.ceil(totalChars / 4);
-      logAiUsage(usedProvider, usedModel, usageContext.promptType, usageContext.userId, estimatedInputTokens, 0);
+      logAiUsage(model, usageContext.promptType, usageContext.userId, approxTokens(options.messages), 0);
     }
   }
 
-  return { response, provider: usedProvider };
+  return { response, provider: "google" };
 }
 
 /**
- * Calls AI for image generation with fallback.
- * Tries Google provider first (supports native image generation), then Lovable AI Gateway.
+ * Geração de imagem pela API NATIVA do Gemini (o endpoint compatível com OpenAI não gera imagem).
+ * A resposta é adaptada ao formato que os chamadores já leem: choices[0].message.images[0].image_url.url (data URL).
+ * Sem fallback: erro do Google volta como veio.
  */
 export async function callAiImageWithFallback(
   options: AiCallOptions,
   usageContext?: AiUsageContext,
 ): Promise<{ response: Response; provider: string }> {
-  const imageOptions: AiCallOptions = {
-    ...options,
-    model: options.model || "google/gemini-2.5-flash-image",
-    modalities: ["image", "text"],
-  };
+  const apiKey = await getGoogleKey();
+  if (!apiKey) return { response: jsonError(503, NO_KEY_MESSAGE), provider: "google" };
 
-  // Try Google provider first (native image support)
-  const providers = await getActiveProviders();
-  const googleProvider = providers.find(p => p.provider === "google");
-  let googleFailure: { status: number; message: string | null } | null = null;
+  const model = GEMINI_MODELS.image;
+  const prompt = options.messages
+    .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
+    .join("\n\n");
 
-  if (googleProvider) {
-    try {
-      console.log("Trying Google provider for image generation");
-      const response = await callOpenAiCompatibleApi(
-        { ...googleProvider, defaultModel: "gemini-2.5-flash-image" },
-        { ...imageOptions, model: "gemini-2.5-flash-image" },
-      );
-      if (response.ok) {
-        console.log("Successfully used Google for image generation");
-        if (usageContext) {
-          const totalChars = options.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0);
-          logAiUsage("google", "gemini-2.5-flash-image", usageContext.promptType, usageContext.userId, Math.ceil(totalChars / 4), 0);
-        }
-        return { response, provider: "google" };
-      }
-      const errorText = await response.text();
-      googleFailure = {
-        status: response.status,
-        message: extractProviderErrorMessage(errorText),
-      };
-      console.warn(`Google image generation returned ${response.status}, falling back`, googleFailure.message ?? "");
-    } catch (err) {
-      googleFailure = {
-        status: 500,
-        message: (err as Error).message,
-      };
-      console.warn("Google image generation failed:", (err as Error).message);
-    }
-  }
-
-  // Fallback to Lovable AI Gateway
-  console.log("Using Lovable AI Gateway for image generation");
-  const response = await callLovableAi(imageOptions);
-
-  if (!response.ok && googleFailure) {
-    const fallbackText = await response.text();
-    const fallbackMessage = extractProviderErrorMessage(fallbackText);
-    const googleRateLimited = googleFailure.status === 429;
-    const fallbackCreditsExhausted = response.status === 402;
-
-    const error = googleRateLimited && fallbackCreditsExhausted
-      ? "O provedor Google retornou limite/cota excedida (429) e o fallback do workspace também ficou indisponível por créditos insuficientes. Verifique a cota ou o faturamento da chave Google e tente novamente em alguns minutos."
-      : `Falha ao gerar imagem com o provedor Google (${googleFailure.status}${googleFailure.message ? `: ${googleFailure.message}` : ""}) e também no fallback (${response.status}${fallbackMessage ? `: ${fallbackMessage}` : ""}).`;
-
-    return {
-      response: new Response(JSON.stringify({ error }), {
-        status: googleRateLimited ? 429 : response.status,
-        headers: { "Content-Type": "application/json" },
+  let res: Response;
+  try {
+    res = await fetch(`${GOOGLE_NATIVE_URL}/${model}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
       }),
-      provider: "lovable",
-    };
+    });
+  } catch (err) {
+    console.error("Gemini image request failed:", (err as Error).message);
+    return { response: jsonError(502, `Falha de rede ao gerar imagem: ${(err as Error).message}`), provider: "google" };
   }
+
+  if (!res.ok) {
+    const errText = await res.clone().text().catch(() => "");
+    console.error(`Gemini image (${model}) returned ${res.status}: ${errText.slice(0, 500)}`);
+    // Normaliza a mensagem para os chamadores que leem { error }
+    return { response: jsonError(res.status, extractProviderErrorMessage(errText) || `Erro ${res.status} ao gerar imagem`), provider: "google" };
+  }
+
+  const data = await res.json();
+  const parts: any[] = data?.candidates?.[0]?.content?.parts || [];
+  const images = parts
+    .map((p) => p?.inlineData || p?.inline_data)
+    .filter((d) => d?.data)
+    .map((d) => ({ type: "image_url", image_url: { url: `data:${d.mimeType || d.mime_type || "image/png"};base64,${d.data}` } }));
+  const text = parts.filter((p) => typeof p?.text === "string").map((p) => p.text).join("\n");
 
   if (usageContext) {
-    const totalChars = options.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0);
-    logAiUsage("lovable", imageOptions.model || "google/gemini-2.5-flash-image", usageContext.promptType, usageContext.userId, Math.ceil(totalChars / 4), 0);
+    logAiUsage(model, usageContext.promptType, usageContext.userId, approxTokens(options.messages), 0);
   }
-  return { response, provider: "lovable" };
+
+  const adapted = {
+    choices: [{ message: { role: "assistant", content: text, images } }],
+    usage: data?.usageMetadata
+      ? { prompt_tokens: data.usageMetadata.promptTokenCount ?? 0, completion_tokens: data.usageMetadata.candidatesTokenCount ?? 0 }
+      : undefined,
+  };
+  return {
+    response: new Response(JSON.stringify(adapted), { status: 200, headers: { "Content-Type": "application/json" } }),
+    provider: "google",
+  };
 }

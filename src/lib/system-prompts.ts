@@ -1745,30 +1745,26 @@ REGRAS:
       description: "Sistema de chamada de IA com fallback entre provedores",
       edgeFunction: "_shared/ai-caller.ts",
       prompt: `═══════════════════════════════════════════════════════════════
-AI CALLER — SISTEMA DE FALLBACK ENTRE PROVEDORES
+AI CALLER — PROVEDOR ÚNICO (GEMINI), SEM FALLBACK
 ═══════════════════════════════════════════════════════════════
 
 1. CONCEITO:
 ────────────
-Todas as edge functions usam callAiWithFallback() para chamar a IA.
-Tenta provedores externos primeiro, cai para Lovable AI se falhar.
+Todas as edge functions usam callAiWithFallback() (supabase/functions/_shared/ai-caller.ts) para chamar a IA.
+O ÚNICO provedor é o Gemini (Google), com a chave paga cadastrada em ai_api_keys (provider = google).
+Não há fallback para outros provedores nem para o Lovable AI gateway: se o Google falhar, o erro dele é devolvido.
 
-2. PROVEDORES SUPORTADOS:
-─────────────────────────
-- Groq (llama-3.3-70b-versatile)
-- OpenAI (gpt-4o-mini)
-- Anthropic (claude-sonnet-4)
-- OpenRouter (gemini-2.5-flash)
-- Google (gemini-2.5-flash)
-- Lovable AI (google/gemini-3-flash-preview) ← fallback padrão
+2. MODELOS:
+───────────
+Definidos em GEMINI_MODELS (ai-caller.ts): pro (raciocínio e correção), flash (conversa e tarefas leves) e image (imagens, API nativa).
+O nome pedido por cada função (ex.: google/gemini-2.5-pro) é convertido para o modelo configurado ali.
 
 3. FLUXO:
 ─────────
-1. Busca provedores ativos na tabela ai_api_keys (provider + api_key + is_active)
-2. Para cada provedor ativo, tenta chamar
-3. Se OK → retorna resposta + provider name
-4. Se falhar (429, 500, etc) → tenta próximo
-5. Se todos falharem → cai para Lovable AI (usa LOVABLE_API_KEY)
+1. Busca a chave ativa do provedor google na tabela ai_api_keys
+2. Chama o Gemini uma única vez com o modelo resolvido
+3. Se OK → retorna a resposta
+4. Se falhar → retorna a resposta de erro do Google (status e mensagem), sem trocar de provedor
 
 4. TABELA DE CHAVES:
 ────────────────────

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { callAiWithFallback } from "../_shared/ai-caller.ts";
+import { GEMINI_MODELS, callAiWithFallback } from "../_shared/ai-caller.ts";
 import { adminClient, getUserId, forbidden } from "../_shared/auth-guard.ts";
 import { loadVpCase } from "../_shared/vp-cases.ts";
 import { ANAMNESE_KEYS, FICHA_KEYS, MAI_KEYS, baseScores } from "../_shared/vp-grade.ts";
@@ -27,7 +27,8 @@ const RUBRIC_VERSION = "vp-2026-10-a";
 const RUBRIC_VERSION_FICHA = "vp-2026-10-c";
 // Peso da cobertura calculada na nota das dimensões de conteúdo (o resto é o julgamento da IA).
 const COBERTURA_PESO = 0.5;
-const GRADING_MODEL = "google/gemini-2.5-pro";
+// Modelo que de fato corrige (gravado em cada nota): o "pro" configurado em GEMINI_MODELS (ai-caller.ts).
+const GRADING_MODEL = GEMINI_MODELS.pro;
 const MAX_ATTEMPTS = 2;
 
 
