@@ -75,7 +75,7 @@ const GRADING_TOOL = {
           type: "string",
           description: "STRING única em markdown com 5 a 8 bullets iniciados por '- ' separados por \\n. Cada bullet com uma orientação concreta e acionável em 2ª pessoa ('Você deve...'), referenciando o caso específico. Mínimo 800 caracteres.",
         },
-        flags_seguranca: { type: "array", items: { type: "string" }, description: "Problemas críticos identificados, ou lista vazia." },
+        flags_seguranca: { type: "array", items: { type: "string" }, description: "Deixe a lista VAZIA quando houver condutas_inseguras: o servidor monta as flags a partir delas. Use só se não houver nenhuma conduta insegura listada." },
         condutas_inseguras: {
           type: "array",
           description: "UMA entrada para CADA erro de segurança penalizável (exceto ignorar alergia): conduta insegura proposta ou aceita na conversa OU na ficha, interação grave não identificada etc. Lista vazia se não houve nenhum. O servidor soma as penalidades a partir desta lista.",
@@ -143,7 +143,9 @@ O que conta como erro (uma entrada por erro):
 Penalidade por erro: 0,5 para contraindicação, interação grave (proposta ou não identificada) e conduta insegura proposta; 0,3 para opioide sem orientação e para gestação não investigada.
 
 O que NÃO conta: falas do paciente, do prescritor ou da equipe; informação que o estudante simplesmente não perguntou; falhas de anamnese; alergia ignorada (outro campo).
-Seja específico e cite o trecho. Se de fato não houve nenhum erro, devolva lista vazia. Não deixe de listar um erro que você identificou.`;
+Seja específico e cite o trecho. Se de fato não houve nenhum erro, devolva lista vazia. Não deixe de listar um erro que você identificou.
+
+CUIDADO COM FALSOS POSITIVOS: justificativa fraca, imprecisa ou mal fundamentada NÃO é erro de segurança (isso é qualidade de raciocínio e é avaliado em outro lugar). Só liste quando a conduta ou omissão trouxer risco real e claro para ESTE paciente (contraindicação, interação grave, dose inadequada, fármaco de risco semelhante ao que causou o problema). Alternativas terapêuticas aceitas na prática, mesmo com justificativa ruim, NÃO entram. Diante de dúvida clínica razoável, NÃO liste.`;
 
 const SAFETY_TOOL = {
   type: "function",
@@ -172,13 +174,14 @@ const SAFETY_TOOL = {
 };
 
 async function auditarSeguranca(
+  model: string,
   transcript: string,
   fichaText: string,
   gabaritoText: string,
 ): Promise<Array<{ registro: string; descricao: string; penalidade: number }> | null> {
   try {
     const { response } = await callAiWithFallback({
-      model: GRADING_MODEL,
+      model,
       temperature: 0.1,
       messages: [
         { role: "system", content: SAFETY_SYSTEM },
@@ -235,7 +238,9 @@ serve(async (req) => {
   }
 
   try {
-    const { session_id, class_virtual_patient_id } = await req.json();
+    const { session_id, class_virtual_patient_id, grading_model: gradingModelParam } = await req.json();
+    // Experimento de calibração: o chamador pode pedir o modelo "flash" ou "pro". Sem o parâmetro, vale o pro.
+    const gradingModel = gradingModelParam === "flash" ? GEMINI_MODELS.flash : GRADING_MODEL;
 
     if (!session_id || !class_virtual_patient_id) {
       return new Response(JSON.stringify({ error: "Missing session_id or class_virtual_patient_id" }), {
@@ -476,14 +481,14 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
     // Correção com resposta estruturada, temperatura baixa e nova tentativa em caso de
     // falha ou resposta malformada (antes, um JSON inválido virava erro 500 sem retry).
     // A auditoria de segurança não depende da correção principal: roda em paralelo para não somar tempo.
-    const segurancaPromise = auditarSeguranca(transcript, fichaEnabled ? fichaText : "", gabaritoText);
+    const segurancaPromise = auditarSeguranca(gradingModel, transcript, fichaEnabled ? fichaText : "", gabaritoText);
 
     let gradeResult: any = null;
     let rawResponse = "";
     let lastError = "";
     for (let attempt = 1; attempt <= MAX_ATTEMPTS && !gradeResult; attempt++) {
       const { response } = await callAiWithFallback({
-        model: GRADING_MODEL,
+        model: gradingModel,
         temperature: 0.2,
         messages: [
           { role: "system", content: systemPrompt },
@@ -638,10 +643,11 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
       flags_seguranca: (() => {
         const doModelo: string[] = Array.isArray(gradeResult.flags_seguranca) ? gradeResult.flags_seguranca.map(String) : [];
         const dasCondutas = condutas.map((c) => `[${c.registro === "ficha" ? "ficha" : "conversa"}] ${c.descricao} (−${c.penalidade.toFixed(1).replace(".", ",")})`);
-        return [...dasCondutas, ...doModelo.filter((f) => !condutas.some((c) => f.includes(c.descricao.slice(0, 25))))];
+        // Com a lista da auditoria, só ela vira flag (cada flag corresponde a uma penalidade). Sem lista, valem as flags da IA.
+        return condutas.length > 0 ? dasCondutas : doModelo;
       })(),
       rubric_version: (fichaEnabled ? RUBRIC_VERSION_FICHA : RUBRIC_VERSION) + (maiEnabled ? "" : "+sem-mai") + (gabarito ? "+gabarito" : ""),
-      grading_model: GRADING_MODEL,
+      grading_model: gradingModel,
       graded_at: new Date().toISOString(),
       raw_ai_response: rawResponse + "\n\n[SERVIDOR] " + JSON.stringify({ subscores_ia: subsIa, cobertura_por_dimensao: coberturaDim, cobertura_peso: gabarito ? COBERTURA_PESO : 0, informacoes_obtidas: gabarito ? obtidas : undefined }),
     };

@@ -1466,8 +1466,9 @@ export default function VPAnalytics() {
                       {Object.entries(detailGrade.bonus_penalidades as Record<string, number>).map(([key, val]) => (
                         <div key={key} className="p-2 rounded border text-center">
                           <p className="text-xs text-muted-foreground">{BONUS_LABELS[key] || key.replace(/_/g, " ")}</p>
-                          <p className={`font-bold ${val > 0 ? "text-green-600" : val < 0 ? "text-destructive" : ""}`}>
-                            {val > 0 ? "+" : ""}{val}
+                          {/* penalidades são gravadas como magnitude positiva: aparecem como perda (−, vermelho); só bônus fica verde */}
+                          <p className={`font-bold ${val > 0 ? (key.endsWith("_penalidade") ? "text-destructive" : "text-green-600") : val < 0 ? "text-destructive" : ""}`}>
+                            {val > 0 ? (key.endsWith("_penalidade") ? "−" : "+") : ""}{val}
                           </p>
                         </div>
                       ))}
