@@ -5,8 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Info { id: string; descricao: string; importancia: string; obtida: boolean | null }
-interface Debrief {
+export interface DebriefEncontro { numero: number; interlocutor: string; nome: string | null }
+
+export interface Debrief {
   available: boolean;
+  profissao?: string;
+  encontros?: DebriefEncontro[];
   obtidas_disponivel?: boolean;
   cobertura?: number | null;
   informacoes?: Info[];
@@ -32,14 +36,16 @@ function Lista({ titulo, itens }: { titulo: string; itens?: string[] }) {
 
 // Debrief (P15): o caminho esperado do caso ao lado do que o aluno conseguiu levantar. Só aparece depois que o docente
 // libera o feedback; a função vp-debrief é quem garante isso. Casos sem gabarito (legados) não mostram o cartão.
-export function DebriefCard({ cvpId, email }: { cvpId: string; email: string }) {
+export function DebriefCard({ cvpId, email, onLoaded }: { cvpId: string; email: string; onLoaded?: (d: Debrief) => void }) {
   const [data, setData] = useState<Debrief | null>(null);
 
   useEffect(() => {
     let active = true;
     supabase.functions
       .invoke("vp-debrief", { body: { class_virtual_patient_id: cvpId, email } })
-      .then(({ data: d, error }) => { if (active && !error && d?.available) setData(d as Debrief); })
+      .then(({ data: d, error }) => {
+        if (active && !error && d?.available) { setData(d as Debrief); onLoaded?.(d as Debrief); }
+      })
       .catch(() => {});
     return () => { active = false; };
   }, [cvpId, email]);

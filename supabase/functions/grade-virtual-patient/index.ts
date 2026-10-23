@@ -342,6 +342,7 @@ PENALIDADES CRÍTICAS DE SEGURANÇA (até 1,5 no total)
 Liste em "flags_seguranca" e informe a magnitude (valor positivo) em bonus_penalidades:
 - Recomendar/aceitar AINE em DRC, gestação avançada, úlcera ativa: 0,5 cada
 - Não identificar interação grave (ex.: varfarina + AINE, IECA + AINE em idoso): 0,5 cada
+- Recomendar ou propor, em QUALQUER registro do atendimento (conversa ou ficha), medicamento ou conduta insegura para o caso (ex.: trocar por outro serotoninérgico diante de suspeita de síndrome serotoninérgica; manter fármaco contraindicado): 0,5 cada. O que está escrito na ficha (SBAR ou SOAP) conta como proposta, mesmo que não tenha sido dito no chat: a ficha é lida pelo prescritor e pela equipe. Informe em flags_seguranca em qual registro estava.
 - Opioide sem orientação de constipação/sedação: 0,3
 - Ignorar alergia relatada: 0,5
 - Não investigar gestação em mulher em idade fértil antes de prescrever: 0,3

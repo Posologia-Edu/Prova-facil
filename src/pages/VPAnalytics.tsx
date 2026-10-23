@@ -29,6 +29,12 @@ import { FICHA_KEYS, FICHA_LABELS, baseScores, hasFichaScores } from "@/lib/vp-g
 import { Stethoscope, ClipboardList, Target } from "lucide-react";
 import { computePeerBonus, PEER_EVAL_MAX_ADJUST } from "@/lib/vp-peer-eval";
 
+const BONUS_LABELS: Record<string, string> = {
+  comunicacao_empatica_bonus: "Bônus de comunicação empática",
+  erro_seguranca_penalidade: "Penalidade por erro de segurança",
+  ignorou_alergia_penalidade: "Penalidade por ignorar alergia",
+};
+
 interface PeerEvalRow {
   evaluator_name: string | null;
   evaluator_email: string;
@@ -1459,7 +1465,7 @@ export default function VPAnalytics() {
                     <div className="grid grid-cols-3 gap-3 text-sm">
                       {Object.entries(detailGrade.bonus_penalidades as Record<string, number>).map(([key, val]) => (
                         <div key={key} className="p-2 rounded border text-center">
-                          <p className="text-xs text-muted-foreground">{key.replace(/_/g, " ")}</p>
+                          <p className="text-xs text-muted-foreground">{BONUS_LABELS[key] || key.replace(/_/g, " ")}</p>
                           <p className={`font-bold ${val > 0 ? "text-green-600" : val < 0 ? "text-destructive" : ""}`}>
                             {val > 0 ? "+" : ""}{val}
                           </p>

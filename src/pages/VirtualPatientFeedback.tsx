@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { PEER_EVAL_MAX_ADJUST } from "@/lib/vp-peer-eval";
 import { FICHA_KEYS, FICHA_LABELS, hasFichaScores } from "@/lib/vp-grade";
-import { DebriefCard } from "@/components/vp-room/DebriefCard";
+import { DebriefCard, type Debrief } from "@/components/vp-room/DebriefCard";
 
 interface PeerEvalSummary {
   count: number;
@@ -43,6 +43,32 @@ const SUBSCORE_LABELS: Record<string, string> = {
   escuta_raciocinio_clinico: "Escuta e Raciocínio Clínico",
 };
 
+// O MAI é gravado como { med_0: { medication_name, score, answers: { indication: "appropriate", ... } }, med_1: ... }.
+const MAI_CRITERIA: Array<[string, string]> = [
+  ["indication", "Indicação"],
+  ["effectiveness", "Efetividade"],
+  ["dosage", "Dosagem"],
+  ["correct_directions", "Técnica de administração"],
+  ["practical_directions", "Comodidade terapêutica"],
+  ["drug_drug", "Interação medicamento-medicamento"],
+  ["drug_disease", "Interação medicamento-doença"],
+  ["duplication", "Duplicidade"],
+  ["duration", "Duração"],
+  ["cost", "Custo"],
+];
+const MAI_ANSWER: Record<string, { label: string; cls: string }> = {
+  appropriate: { label: "Apropriado", cls: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  marginally: { label: "Marginalmente apropriado", cls: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
+  inappropriate: { label: "Inapropriado", cls: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+};
+const maiMeds = (mai: any): Array<{ medication_name?: string; score?: number; answers?: Record<string, string> }> =>
+  Object.keys(mai || {})
+    .filter((k) => /^med_\d+$/.test(k))
+    .sort((a, b) => Number(a.slice(4)) - Number(b.slice(4)))
+    .map((k) => mai[k]);
+
+const PROFISSAO_ROTULO: Record<string, string> = { farmaceutico: "farmacêutico", enfermeiro: "enfermeiro", medico: "médico" };
+
 const microBonus = (m: number | null | undefined) => Math.max(0, Math.min(1, (Number(m) || 0) / 5));
 const finalWithBonus = (base: number | null | undefined, m: number | null | undefined) =>
   Math.min(10, (Number(base) || 0) + microBonus(m));
@@ -57,6 +83,17 @@ export default function VirtualPatientFeedback() {
   const [studentName, setStudentName] = useState("");
   const [patientName, setPatientName] = useState("");
   const [peerSummary, setPeerSummary] = useState<PeerEvalSummary | null>(null);
+  const [debrief, setDebrief] = useState<Debrief | null>(null);
+
+  // Casos do novo formato dizem com quem o aluno falou em cada encontro (prescritor, equipe, cuidador); os demais, paciente.
+  const interlocutorLabel = (encounter: number) => {
+    const e = debrief?.encontros?.find((x) => x.numero === encounter);
+    if (!e) return "Paciente";
+    if (e.interlocutor === "prescritor") return e.nome ? `Prescritor (${e.nome})` : "Prescritor";
+    if (e.interlocutor === "equipe") return e.nome ? `Equipe (${e.nome})` : "Equipe";
+    if (e.interlocutor === "cuidador") return "Cuidador";
+    return "Paciente";
+  };
 
   useEffect(() => {
     load();
@@ -325,7 +362,7 @@ export default function VirtualPatientFeedback() {
         )}
 
         {/* Caminho esperado do caso (só casos com gabarito; já liberado junto com o feedback) */}
-        {cvpId && <DebriefCard cvpId={cvpId} email={(sessionStorage.getItem("vp_email") || "").trim().toLowerCase()} />}
+        {cvpId && <DebriefCard cvpId={cvpId} email={(sessionStorage.getItem("vp_email") || "").trim().toLowerCase()} onLoaded={setDebrief} />}
 
         {/* Flags de Segurança */}
         {flags.length > 0 && (
@@ -366,6 +403,32 @@ export default function VirtualPatientFeedback() {
                     </div>
                   ))}
                 </div>
+              ) : maiMeds(mai).length > 0 ? (
+                <div className="space-y-4">
+                  {maiMeds(mai).map((med, idx) => (
+                    <div key={idx} className="border rounded-md overflow-hidden">
+                      <div className="flex items-center justify-between gap-2 bg-muted/50 px-3 py-2">
+                        <strong className="text-sm">{med.medication_name || `Medicamento ${idx + 1}`}</strong>
+                        {typeof med.score === "number" && <Badge variant="secondary">Soma {med.score}</Badge>}
+                      </div>
+                      <ul className="divide-y text-sm">
+                        {MAI_CRITERIA.map(([k, label]) => {
+                          const v = MAI_ANSWER[String(med.answers?.[k] ?? "")];
+                          if (!v) return null;
+                          return (
+                            <li key={k} className="flex items-center justify-between gap-2 px-3 py-1.5">
+                              <span className="text-muted-foreground">{label}</span>
+                              <span className={`text-xs font-medium rounded px-2 py-0.5 ${v.cls}`}>{v.label}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                  <p className="text-xs text-muted-foreground">
+                    Cada critério é marcado como apropriado, marginalmente apropriado ou inapropriado. A soma mostra o que você concluiu sobre o medicamento (quanto menor, mais apropriado).
+                  </p>
+                </div>
               ) : (
                 <pre className="text-xs whitespace-pre-wrap text-muted-foreground">{JSON.stringify(mai, null, 2)}</pre>
               )}
@@ -390,7 +453,7 @@ export default function VirtualPatientFeedback() {
                     }`}
                   >
                     <div className="text-[10px] opacity-70 mb-1">
-                      {m.role === "user" ? "Você (farmacêutico)" : "Paciente"} • Encontro {m.encounter}
+                      {m.role === "user" ? `Você (${PROFISSAO_ROTULO[debrief?.profissao || ""] || "farmacêutico"})` : interlocutorLabel(m.encounter)} • Encontro {m.encounter}
                     </div>
                     <div
                       dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(m.content) }}

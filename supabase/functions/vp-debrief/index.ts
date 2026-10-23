@@ -70,6 +70,7 @@ Deno.serve(async (req) => {
 
     // As informações que a correção considerou obtidas ficam na parte "[SERVIDOR]" da resposta gravada.
     // Notas anteriores a essa gravação não têm a lista: o debrief mostra o caminho esperado sem marcar o que foi obtido.
+    // Para notas gravadas antes disso, a lista ainda está na resposta bruta da IA (argumentos da chamada da ferramenta).
     let obtidas: string[] | null = null;
     const raw = String((released as any).raw_ai_response || "");
     const idx = raw.lastIndexOf("[SERVIDOR] ");
@@ -77,13 +78,27 @@ Deno.serve(async (req) => {
       try {
         const parsed = JSON.parse(raw.slice(idx + "[SERVIDOR] ".length));
         if (Array.isArray(parsed?.informacoes_obtidas)) obtidas = parsed.informacoes_obtidas.map(String);
-      } catch { /* sem lista */ }
+      } catch { /* tenta a resposta bruta */ }
+    }
+    if (obtidas === null) {
+      try {
+        const bruta = JSON.parse(idx >= 0 ? raw.slice(0, idx).trim() : raw);
+        const args = bruta?.tool_calls?.[0]?.function?.arguments;
+        const parsed = typeof args === "string" ? JSON.parse(args) : args;
+        if (Array.isArray(parsed?.informacoes_obtidas)) obtidas = parsed.informacoes_obtidas.map(String);
+      } catch { /* sem lista: o debrief mostra só o caminho esperado */ }
     }
     const set = new Set(obtidas || []);
 
     return json({
       available: true,
       profissao: key,
+      // Com quem o aluno falou em cada encontro (a tela usa para rotular a conversa: prescritor, equipe, cuidador).
+      encontros: (cd.versoes[key]?.encontros || []).map((e) => ({
+        numero: e.numero,
+        interlocutor: e.interlocutor,
+        nome: e.persona_interlocutor?.nome ?? null,
+      })),
       obtidas_disponivel: obtidas !== null,
       cobertura: obtidas !== null ? coberturaInformacoes(gab, obtidas) : null,
       informacoes: gab.informacoes_alvo.map((i) => ({
