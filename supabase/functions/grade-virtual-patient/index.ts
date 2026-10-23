@@ -8,6 +8,7 @@ import {
   buildGabaritoText,
   coberturaInformacoes,
   coberturaPorDimensao,
+  getEncontroProfissional,
   isCaseDataV2,
   resolveVersaoKey,
   type Gabarito,
@@ -264,12 +265,30 @@ serve(async (req) => {
       byEncounter[e].push(m);
     }
 
+    // Encontros com prescritor ou equipe (ex.: o 2º da Farmácia): o interlocutor NÃO é o paciente.
+    // A correção precisa saber disso para não tratar o que o prescritor disse como informação obtida do paciente
+    // e para julgar o encontro como comunicação profissional (SBAR), não como anamnese.
+    const profEnc: Record<number, { rotulo: string; nome: string }> = {};
+    if (caseV2 && profKey) {
+      for (const n of [1, 2, 3]) {
+        const e = getEncontroProfissional(caseV2, profKey as any, n);
+        if (e?.persona_interlocutor) {
+          profEnc[n] = { rotulo: e.interlocutor === "equipe" ? "EQUIPE" : "PRESCRITOR", nome: e.persona_interlocutor.nome };
+        }
+      }
+    }
+    const temEncProf = Object.keys(profEnc).length > 0;
+
     let transcript = "";
     for (const enc of Object.keys(byEncounter).sort()) {
-      transcript += `\n=== ENCONTRO ${enc} ===\n`;
+      const pe = profEnc[Number(enc)];
+      transcript += pe
+        ? `\n=== ENCONTRO ${enc} · COMUNICAÇÃO COM ${pe.rotulo} (${pe.nome}); o interlocutor NÃO é o paciente ===\n`
+        : `\n=== ENCONTRO ${enc} ===\n`;
       for (const m of byEncounter[Number(enc)]) {
         const author = (m as any).author_name ? ` (${(m as any).author_name})` : "";
-        const role = (m as any).role === "user" ? `ESTUDANTE${author}` : "PACIENTE";
+        const resposta = pe ? `${pe.rotulo} (${pe.nome})` : "PACIENTE";
+        const role = (m as any).role === "user" ? `ESTUDANTE${author}` : resposta;
         transcript += `${role}: ${(m as any).content}\n`;
       }
     }
@@ -336,7 +355,8 @@ REGRAS DE OUTPUT
 - Em grupos, as falas do estudante vêm identificadas pelo nome de quem escreveu. Avalie a atuação do grupo como um todo.
 - Cite EVIDÊNCIAS curtas do transcript ("o aluno perguntou: …" / "o aluno NÃO investigou …").
 - Seja honesto: se a anamnese foi pobre, dê notas baixas.
-- O tamanho da conversa NÃO deve influenciar a nota: avalie a cobertura e a qualidade, não a quantidade de mensagens.
+${temEncProf ? `- ENCONTRO COM PRESCRITOR/EQUIPE: no transcript, o encontro marcado como "COMUNICAÇÃO COM PRESCRITOR/EQUIPE" é uma conversa profissional, não uma anamnese. (1) Nunca conte o que o prescritor ou a equipe disseram como informação obtida do paciente (informacoes_obtidas e dimensões da anamnese vêm só dos encontros com o paciente). (2) Julgue esse encontro em escuta_raciocinio_clinico: comunicação clara e objetiva (situação, histórico, avaliação, recomendação), problemas identificados e justificados com os dados do caso, proposta de conduta dentro do escopo da profissão e capacidade de argumentar e negociar diante da resistência. (3) NÃO penalize o aluno só porque o prescritor recusou a proposta (a persona de IA pode resistir); avalie a qualidade do argumento e como ele reagiu à resistência. (4) Um erro de segurança proposto ao prescritor (ex.: sugerir manter um medicamento contraindicado) conta como penalidade, igual a uma conduta aceita.
+` : ""}- O tamanho da conversa NÃO deve influenciar a nota: avalie a cobertura e a qualidade, não a quantidade de mensagens.
 ${maiEnabled ? "- Se o MAI não foi preenchido, atribua 0 a todas as dimensões do MAI e sinalize nas evidências." : "- Não há MAI nesta atividade: não devolva subnotas nem evidências do MAI."}${fichaEnabled ? "\n- Preencha também as dimensões da ficha (seção C) e evidencias.ficha. A ficha é um registro do estudante: não use o que está nela como prova de que a informação foi obtida do paciente; isso só vale se aparece na conversa." : ""}
 - Se o texto de qualquer campo vier em formato de lista, use um único string em markdown com bullets.${gabarito ? `
 - Preencha informacoes_obtidas com os ids (I1, I2…) das informações alvo que o estudante EFETIVAMENTE obteve do paciente na conversa. Não inclua um id se o paciente não revelou aquela informação.
