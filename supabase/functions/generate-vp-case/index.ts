@@ -381,6 +381,8 @@ async function acaoVersao(body: any, userId: string) {
   const admin = adminClient();
   const row = await loadOwnedCase(admin, String(body.id || ""), userId);
   const d = row.case_data;
+  // Não sobrescreve uma versão que já existe (o docente pode ter revisado e editado): só com pedido explícito.
+  if (d.versoes?.[key] && body.substituir !== true) throw new HttpError(409, "Este caso já tem essa versão.");
 
   const userPrompt = `NÚCLEO CLÍNICO DO CASO (única verdade; não altere):
 ${JSON.stringify(d.nucleo, null, 1)}
@@ -404,6 +406,10 @@ ${isFocoDor(row.category) ? FOCO_DOR + "\n\n" : ""}Escreva a versão para ${PERF
     errs = out?.versao ? versaoErrors(draft, key) : ["sem versão"];
   }
   if (!out?.versao) throw new HttpError(500, "A IA não devolveu a versão. Tente novamente.");
+
+  // salvar === false: devolve a versão sem gravar. O editor a coloca no rascunho para o docente revisar e salvar
+  // (assim um caso já publicado nunca muda sem revisão).
+  if (body.salvar === false) return { id: row.id, profession: key, errors: errs, versao: out.versao };
 
   // Salva mesmo com pendências: é rascunho e o editor mostra o que falta.
   const update: Record<string, unknown> = { case_data: draft };

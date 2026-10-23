@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, History, Loader2, Plus, Save, Send } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, History, Loader2, Plus, Save, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,7 @@ export default function VirtualPatientCaseEditor() {
   const [tab, setTab] = useState("nucleo");
   const [versions, setVersions] = useState<VersionRow[]>([]);
   const [rerunning, setRerunning] = useState(false);
+  const [generating, setGenerating] = useState<VersaoKey | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -149,6 +150,35 @@ export default function VirtualPatientCaseEditor() {
     setRow({ ...row, status: nextStatus, name: n.identidade.nome || row.name });
     toast.success(nextStatus === "published" ? "Caso publicado. Já pode ser vinculado a turmas." : "Rascunho salvo.");
     loadVersions(row.id);
+  };
+
+  // Gera com IA uma versão que falta. A função lê o núcleo salvo e devolve a versão sem gravar:
+  // ela entra no rascunho do editor para o docente revisar e salvar.
+  const gerarVersaoIA = async (key: VersaoKey) => {
+    if (!row || dirty) return;
+    setGenerating(key);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-vp-case", {
+        body: { action: "versao", id: row.id, profession: key, salvar: false },
+      });
+      if (error || data?.error) {
+        let msg = data?.error || error?.message || "Falha ao gerar a versão.";
+        try { const b = await (error as any)?.context?.json?.(); if (b?.error) msg = b.error; } catch { /* mantém */ }
+        throw new Error(msg);
+      }
+      mutate((d) => { d.versoes[key] = data.versao; });
+      setTab(key);
+      const n = (data.errors || []).length;
+      toast.success(
+        n
+          ? `Versão ${VERSAO_LABEL[key]} gerada com ${n} pendência(s) para revisar. Revise e salve o rascunho.`
+          : `Versão ${VERSAO_LABEL[key]} gerada. Revise e salve o rascunho; depois use "Revisar de novo".`,
+      );
+    } catch (e: any) {
+      toast.error(e.message || "Não foi possível gerar a versão.");
+    } finally {
+      setGenerating(null);
+    }
   };
 
   // Nova revisão de consistência: a função lê e grava o caso salvo, então o editor recarrega o caso do banco.
@@ -285,9 +315,17 @@ export default function VirtualPatientCaseEditor() {
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted-foreground">Adicionar versão:</span>
           {missing.map((k) => (
-            <Button key={k} type="button" size="sm" variant="outline" onClick={() => addVersao(k)}>
-              <Plus className="h-3.5 w-3.5 mr-1" />{VERSAO_LABEL[k]}
-            </Button>
+            <div key={k} className="flex items-center rounded-md border">
+              <Button type="button" size="sm" variant="ghost" onClick={() => gerarVersaoIA(k)} disabled={!!generating || dirty}
+                title={dirty ? "Salve o rascunho antes: a IA lê o núcleo salvo do caso." : `Gerar a versão ${VERSAO_LABEL[k]} com IA, a partir do núcleo clínico`}>
+                {generating === k ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+                {VERSAO_LABEL[k]} com IA
+              </Button>
+              <Button type="button" size="sm" variant="ghost" className="border-l rounded-l-none" onClick={() => addVersao(k)} disabled={!!generating}
+                title="Criar a partir de uma versão existente, para adaptar manualmente">
+                <Plus className="h-3.5 w-3.5 mr-1" />Manual
+              </Button>
+            </div>
           ))}
         </div>
       )}
