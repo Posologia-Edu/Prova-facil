@@ -244,7 +244,7 @@ export function GenerateCaseDialog({ open, onOpenChange, onCreated, onOpenEditor
                     ))}
                   </ul>
                 )}
-                <p className="text-xs text-muted-foreground">Estes pontos não estão salvos no caso: anote o que for corrigir antes de abrir o editor.</p>
+                <p className="text-xs text-muted-foreground">Estes pontos ficam salvos no caso: no editor, o painel "Revisão de consistência" os mostra e você marca cada um como resolvido.</p>
               </div>
             )}
           </div>

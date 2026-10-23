@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, CheckCircle2, History, Loader2, Plus, Save, Send } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, History, Loader2, Plus, Save, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,7 @@ import {
 import { LegacyView } from "@/components/vp-case/LegacyView";
 import { NucleoEditor } from "@/components/vp-case/NucleoEditor";
 import { PreviewChat } from "@/components/vp-case/PreviewChat";
+import { RevisaoPanel } from "@/components/vp-case/RevisaoPanel";
 import { VersaoEditor } from "@/components/vp-case/VersaoEditor";
 import { VERSAO_LABEL, cloneVersao, emptyVersao } from "@/components/vp-case/defaults";
 
@@ -45,6 +46,7 @@ export default function VirtualPatientCaseEditor() {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState("nucleo");
   const [versions, setVersions] = useState<VersionRow[]>([]);
+  const [rerunning, setRerunning] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -149,6 +151,27 @@ export default function VirtualPatientCaseEditor() {
     loadVersions(row.id);
   };
 
+  // Nova revisão de consistência: a função lê e grava o caso salvo, então o editor recarrega o caso do banco.
+  const rerunRevisao = async () => {
+    if (!row || dirty) return;
+    setRerunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-vp-case", { body: { action: "auditar", id: row.id } });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Falha na revisão.");
+      const { data: fresh } = await supabase.from("custom_virtual_patients").select("case_data").eq("id", row.id).maybeSingle();
+      if (fresh && isCaseDataV2(fresh.case_data)) {
+        const d = clone(fresh.case_data as unknown as VpCaseData);
+        setDraft(d);
+        setSavedJson(JSON.stringify(d));
+      }
+      toast.success(data?.revisao_salva === false ? "Revisão feita, mas não foi possível salvá-la no caso." : "Revisão atualizada.");
+    } catch (e: any) {
+      toast.error(e.message || "Não foi possível revisar o caso.");
+    } finally {
+      setRerunning(false);
+    }
+  };
+
   const restore = (v: VersionRow) => {
     const cd = v.snapshot?.case_data;
     if (!isCaseDataV2(cd)) {
@@ -229,6 +252,27 @@ export default function VirtualPatientCaseEditor() {
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertDescription>O caso está consistente: pode ser publicado.</AlertDescription>
         </Alert>
+      )}
+
+      {draft.revisao && (
+        <RevisaoPanel
+          revisao={draft.revisao}
+          canEdit={canEdit}
+          dirty={dirty}
+          rerunning={rerunning}
+          onToggle={(i, resolvido) => mutate((d) => { if (d.revisao?.problemas[i]) d.revisao.problemas[i].resolvido = resolvido; })}
+          onRerun={rerunRevisao}
+        />
+      )}
+
+      {!draft.revisao && canEdit && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Este caso ainda não tem revisão de consistência salva.</span>
+          <Button type="button" size="sm" variant="outline" onClick={rerunRevisao} disabled={rerunning || dirty} title={dirty ? "Salve o rascunho antes: a revisão lê a versão salva do caso." : undefined}>
+            {rerunning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <ClipboardCheck className="h-3.5 w-3.5 mr-1.5" />}
+            Fazer revisão agora
+          </Button>
+        </div>
       )}
 
       {!canEdit && (

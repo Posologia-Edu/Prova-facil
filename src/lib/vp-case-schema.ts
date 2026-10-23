@@ -127,10 +127,27 @@ export interface Versao {
   gabarito: Gabarito;
 }
 
+/** Um ponto de atenção da revisão de consistência. `resolvido` é marcado pelo docente no editor. */
+export interface RevisaoProblema {
+  gravidade: "alta" | "media" | "baixa";
+  onde: string;
+  descricao: string;
+  sugestao?: string;
+  resolvido?: boolean;
+}
+
+/** Última revisão de consistência do caso (gerada pela IA). Não participa da validação nem da conversa. */
+export interface RevisaoCaso {
+  gerada_em: string;
+  resumo: string;
+  problemas: RevisaoProblema[];
+}
+
 export interface VpCaseData {
   schema_version: 2;
   nucleo: Nucleo;
   versoes: Partial<Record<VersaoKey, Versao>>;
+  revisao?: RevisaoCaso;
 }
 
 export const NIVEL_LABEL: Record<NivelRevelacao, string> = {

@@ -422,13 +422,37 @@ ${isFocoDor(row.category) ? FOCO_DOR + "\n\n" : ""}Escreva a versão para ${PERF
 
 async function acaoAuditar(body: any, userId: string) {
   const row = await loadOwnedCase(adminClient(), String(body.id || ""), userId);
+  // A revisão anterior fica fora do que o revisor lê, para não contaminar a nova análise.
+  const { revisao: _anterior, ...casoSemRevisao } = row.case_data as Record<string, unknown>;
   const out = await callTool(
     SYSTEM_AUDIT,
-    `CASO COMPLETO:\n${JSON.stringify(row.case_data)}\n\nRegistre os problemas com a ferramenta report_audit.`,
+    `CASO COMPLETO:\n${JSON.stringify(casoSemRevisao)}\n\nRegistre os problemas com a ferramenta report_audit.`,
     AUDIT_TOOL,
     0.1,
   );
-  return { resumo: String(out?.resumo || ""), problemas: Array.isArray(out?.problemas) ? out.problemas : [] };
+  const problemas = Array.isArray(out?.problemas) ? out.problemas : [];
+  const resumo = String(out?.resumo || "");
+
+  // Salva a revisão dentro do caso para o docente consultá-la e marcar o que já corrigiu no editor.
+  // A revisão antiga é substituída; o conteúdo clínico do caso não é tocado.
+  const revisao = {
+    gerada_em: new Date().toISOString(),
+    resumo,
+    problemas: problemas.map((p: any) => ({
+      gravidade: p.gravidade === "alta" || p.gravidade === "baixa" ? p.gravidade : "media",
+      onde: String(p.onde || ""),
+      descricao: String(p.descricao || ""),
+      sugestao: p.sugestao ? String(p.sugestao) : undefined,
+      resolvido: false,
+    })),
+  };
+  const { error } = await adminClient()
+    .from("custom_virtual_patients")
+    .update({ case_data: { ...(row.case_data as Record<string, unknown>), revisao } })
+    .eq("id", row.id);
+  if (error) console.error("Não foi possível salvar a revisão no caso:", error);
+
+  return { resumo, problemas, revisao_salva: !error };
 }
 
 serve(async (req) => {
