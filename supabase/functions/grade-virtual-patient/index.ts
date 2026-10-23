@@ -132,6 +132,77 @@ function withoutMai(tool: typeof GRADING_TOOL) {
   return t;
 }
 
+const SAFETY_SYSTEM = `Você é um AUDITOR DE SEGURANÇA DO PACIENTE em simulações clínicas. Leia a conversa e a ficha do estudante e liste SOMENTE os erros de segurança COMETIDOS PELO ESTUDANTE. Não avalie anamnese, comunicação nem preenchimento de formulário.
+
+O que conta como erro (uma entrada por erro):
+- O estudante PROPÔS, ACEITOU ou ESCREVEU na conversa OU na ficha (anamnese, SBAR, SOAP) um medicamento ou conduta insegura para ESTE paciente: contraindicação, interação grave, dose inadequada para idade/função renal/hepática, trocar por outro fármaco de risco semelhante (ex.: outro serotoninérgico diante de suspeita de síndrome serotoninérgica), manter fármaco contraindicado. O que está na ficha conta como proposta mesmo que não tenha sido dito no chat, porque a ficha é lida pelo prescritor e pela equipe.
+- O estudante NÃO identificou uma interação grave ou problema de segurança central que o caso trazia (veja os problemas esperados do caso, se informados).
+- Opioide sem orientação de constipação/sedação.
+- Não investigar gestação em mulher em idade fértil antes de propor medicamento.
+Penalidade por erro: 0,5 para contraindicação, interação grave (proposta ou não identificada) e conduta insegura proposta; 0,3 para opioide sem orientação e para gestação não investigada.
+
+O que NÃO conta: falas do paciente, do prescritor ou da equipe; informação que o estudante simplesmente não perguntou; falhas de anamnese; alergia ignorada (outro campo).
+Seja específico e cite o trecho. Se de fato não houve nenhum erro, devolva lista vazia. Não deixe de listar um erro que você identificou.`;
+
+const SAFETY_TOOL = {
+  type: "function",
+  function: {
+    name: "report_safety",
+    description: "Registra os erros de segurança do estudante.",
+    parameters: {
+      type: "object",
+      properties: {
+        condutas_inseguras: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              registro: { type: "string", enum: ["chat", "ficha"], description: "Onde o erro está: conversa ('chat') ou ficha." },
+              descricao: { type: "string", description: "O que foi proposto, aceito ou deixou de ser identificado, citando o trecho." },
+              penalidade: { type: "number", description: "0,3 ou 0,5, conforme a tabela." },
+            },
+            required: ["registro", "descricao", "penalidade"],
+          },
+        },
+      },
+      required: ["condutas_inseguras"],
+    },
+  },
+};
+
+async function auditarSeguranca(
+  transcript: string,
+  fichaText: string,
+  gabaritoText: string,
+): Promise<Array<{ registro: string; descricao: string; penalidade: number }> | null> {
+  try {
+    const { response } = await callAiWithFallback({
+      model: GRADING_MODEL,
+      temperature: 0.1,
+      messages: [
+        { role: "system", content: SAFETY_SYSTEM },
+        {
+          role: "user",
+          content: `[CONVERSA]\n${transcript}\n${fichaText ? `\n[FICHA DO ESTUDANTE]\n${fichaText}\n` : ""}${gabaritoText ? `\n[REFERÊNCIA DO CASO]\n${gabaritoText}\n` : ""}\nListe os erros de segurança do estudante com a ferramenta report_safety.`,
+        },
+      ],
+      tools: [SAFETY_TOOL],
+      tool_choice: { type: "function", function: { name: "report_safety" } },
+    });
+    if (!response.ok) {
+      console.error("Safety pass AI error:", response.status);
+      return null;
+    }
+    const data = await response.json();
+    const args = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    const parsed = typeof args === "string" ? JSON.parse(args) : args;
+    return Array.isArray(parsed?.condutas_inseguras) ? parsed.condutas_inseguras : null;
+  } catch (e) {
+    console.error("Safety pass failed:", (e as Error).message);
+    return null;
+  }
+}
+
 const num = (v: unknown) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -403,6 +474,9 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
 
     // Correção com resposta estruturada, temperatura baixa e nova tentativa em caso de
     // falha ou resposta malformada (antes, um JSON inválido virava erro 500 sem retry).
+    // A auditoria de segurança não depende da correção principal: roda em paralelo para não somar tempo.
+    const segurancaPromise = auditarSeguranca(transcript, fichaEnabled ? fichaText : "", gabaritoText);
+
     let gradeResult: any = null;
     let rawResponse = "";
     let lastError = "";
@@ -445,6 +519,12 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Segunda passada, curta e separada, só para erros de segurança. Na correção principal o modelo chegava a descrever a
+    // conduta insegura nas evidências e mesmo assim deixar a lista vazia; aqui esta é a ÚNICA tarefa. Se der certo e
+    // achar algo, esta lista vale; se falhar ou não achar nada, vale a da correção principal.
+    const segurancaPass = await segurancaPromise;
+    if (segurancaPass && segurancaPass.length > 0) gradeResult.condutas_inseguras = segurancaPass;
 
     // Coerce array-shaped fields into markdown bullet strings (defensive normalization)
     const coerceToMarkdown = (val: any): string => {
