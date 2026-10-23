@@ -41,8 +41,8 @@ Exemplos de condutas inseguras:
 - clinical_adequacy_score — Adequação clínica geral.
 - naturalness_score — Naturalidade da conduta.
 
-═════ ROBUSTEZ INFORMACIONAL ═════
-- rag_accuracy (0–1) — Fração de respostas farmacologicamente corretas (verificar factualidade).
+═════ PRECISÃO FACTUAL ESTIMADA E ESTABILIDADE ═════
+- rag_accuracy (0–1) — Precisão factual ESTIMADA: fração de respostas do paciente farmacologicamente corretas. É uma estimativa feita por um modelo de IA a partir da conversa, sem recuperação de documentos (o nome do campo é histórico).
 - behavioral_stability_pct (0–100) — Estabilidade comportamental do estudante durante a sessão (%).
 
 ═════ ANÁLISE QUALITATIVA ═════

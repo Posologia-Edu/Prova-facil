@@ -533,7 +533,7 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
       rubric_version: (fichaEnabled ? RUBRIC_VERSION_FICHA : RUBRIC_VERSION) + (maiEnabled ? "" : "+sem-mai") + (gabarito ? "+gabarito" : ""),
       grading_model: GRADING_MODEL,
       graded_at: new Date().toISOString(),
-      raw_ai_response: rawResponse + "\n\n[SERVIDOR] " + JSON.stringify({ subscores_ia: subsIa, cobertura_por_dimensao: coberturaDim, cobertura_peso: gabarito ? COBERTURA_PESO : 0 }),
+      raw_ai_response: rawResponse + "\n\n[SERVIDOR] " + JSON.stringify({ subscores_ia: subsIa, cobertura_por_dimensao: coberturaDim, cobertura_peso: gabarito ? COBERTURA_PESO : 0, informacoes_obtidas: gabarito ? obtidas : undefined }),
     };
 
     if (existing?.id) {

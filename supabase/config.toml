@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.submit-mt-peer-evaluation]
 verify_jwt = false
+
+[functions.vp-debrief]
+verify_jwt = false

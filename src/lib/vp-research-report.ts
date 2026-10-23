@@ -37,7 +37,7 @@ export interface VPResearchRow {
   total_interactions?: number | null;
   operational_failures?: number | null;
 
-  // Realism / RAG
+  // Realism / precisão factual estimada (a coluna ainda se chama rag_accuracy por compatibilidade)
   realism_score?: number | null;
   empathy_verbal_score?: number | null;
   clinical_adequacy_score?: number | null;
@@ -247,7 +247,7 @@ export function generateVPResearchReport(input: VPResearchInput): jsPDF {
     "ISC (Índice de Segurança Clínica, soma ponderada das condutas inseguras dividida pelo número " +
     "de ocorrências, com gravidade 1=leve, 2=moderada, 3=grave); coerência semântica (similaridade " +
     "de cosseno entre respostas da IA a perguntas equivalentes, TF-IDF ≥ 0,35); realismo conversacional " +
-    "(Likert 1–5); precisão do módulo RAG; e robustez operacional (latência, tokens, falhas).";
+    "(Likert 1–5); precisão factual estimada das respostas do paciente (avaliação por modelo de IA, sem recuperação de documentos); e robustez operacional (latência, tokens, falhas).";
   const split = doc.splitTextToSize(methodText, w - 32);
   doc.text(split, 16, y);
   y += split.length * 4 + 4;
@@ -414,7 +414,7 @@ export function generateVPResearchReport(input: VPResearchInput): jsPDF {
   autoTable(doc, {
     ...tableStyle(),
     startY: y,
-    head: [["Grupo", "Interações", "Tokens totais", "Tokens/inter.", "Latência méd. (s)", "Falhas", "RAG"]],
+    head: [["Grupo", "Interações", "Tokens totais", "Tokens/inter.", "Latência méd. (s)", "Falhas", "Prec. factual"]],
     body: [
       ...rows.map((r) => [
         r.group_label,

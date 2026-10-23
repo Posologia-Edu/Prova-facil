@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { PEER_EVAL_MAX_ADJUST } from "@/lib/vp-peer-eval";
 import { FICHA_KEYS, FICHA_LABELS, hasFichaScores } from "@/lib/vp-grade";
+import { DebriefCard } from "@/components/vp-room/DebriefCard";
 
 interface PeerEvalSummary {
   count: number;
@@ -322,6 +323,9 @@ export default function VirtualPatientFeedback() {
             </CardContent>
           </Card>
         )}
+
+        {/* Caminho esperado do caso (só casos com gabarito; já liberado junto com o feedback) */}
+        {cvpId && <DebriefCard cvpId={cvpId} email={(sessionStorage.getItem("vp_email") || "").trim().toLowerCase()} />}
 
         {/* Flags de Segurança */}
         {flags.length > 0 && (
