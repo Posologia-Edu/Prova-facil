@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1d3a" />
+    <meta name="description" content="Orientações para participar da atividade avaliativa de Pacientes Virtuais." />
+    <title>Pacientes virtuais | Guia do aluno</title>
+    <style>
+      :root {
+        --navy-950: #07152f;
+        --navy-900: #0b1d3a;
+        --navy-800: #0d2b58;
+        --navy-700: #1d4b85;
+        --gold: #e5a31b;
+        --gold-soft: #fff6dc;
+        --ink: #172b4d;
+        --muted: #5f718a;
+        --line: #dfe7f1;
+        --paper: #ffffff;
+        --canvas: #f3f6fa;
+        --green: #19734b;
+        --green-soft: #eaf7f0;
+        --red: #a83e3e;
+        --red-soft: #fff0ef;
+        --radius: 18px;
+        --shadow: 0 18px 45px rgba(10, 28, 59, .10);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--canvas);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: var(--navy-700); }
+      img { display: block; max-width: 100%; height: auto; }
+      button { font: inherit; }
+
+      .skip-link {
+        position: absolute;
+        top: -50px;
+        left: 16px;
+        z-index: 20;
+        padding: 10px 14px;
+        border-radius: 8px;
+        color: #fff;
+        background: var(--navy-900);
+      }
+      .skip-link:focus { top: 16px; }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        color: #fff;
+        background:
+          radial-gradient(circle at 86% 12%, rgba(229, 163, 27, .22), transparent 24%),
+          radial-gradient(circle at 10% 100%, rgba(53, 103, 178, .32), transparent 35%),
+          linear-gradient(135deg, var(--navy-950), var(--navy-800));
+      }
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -5% -150px 40%;
+        height: 260px;
+        border: 1px solid rgba(255,255,255,.13);
+        border-radius: 50%;
+        transform: rotate(-12deg);
+      }
+      .hero-inner {
+        position: relative;
+        z-index: 1;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 22px 28px 92px;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 76px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 800;
+        letter-spacing: -.02em;
+      }
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        color: var(--navy-950);
+        background: var(--gold);
+        border-radius: 10px;
+        font-size: 20px;
+        font-weight: 900;
+      }
+      .topbar-actions { display: flex; align-items: center; gap: 10px; }
+      .topbar-link, .print-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 8px 13px;
+        color: #dbe7f8;
+        border: 1px solid rgba(255,255,255,.17);
+        border-radius: 9px;
+        background: rgba(255,255,255,.06);
+        text-decoration: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .topbar-link:hover, .print-btn:hover { background: rgba(255,255,255,.13); }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 18px;
+        color: #ffd978;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .13em;
+        text-transform: uppercase;
+      }
+      .eyebrow::before {
+        content: "";
+        width: 30px;
+        height: 2px;
+        background: var(--gold);
+      }
+      h1, h2, h3 { margin: 0; color: var(--navy-950); line-height: 1.16; letter-spacing: -.035em; }
+      .hero h1 { max-width: 760px; color: #fff; font-size: clamp(38px, 6vw, 68px); }
+      .hero-lede {
+        max-width: 690px;
+        margin: 24px 0 0;
+        color: #cfdbed;
+        font-size: clamp(17px, 2vw, 20px);
+      }
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+      .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 11px;
+        color: #ecf4ff;
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 999px;
+        background: rgba(255,255,255,.08);
+        font-size: 13px;
+      }
+      .meta-pill strong { color: #fff; }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 230px minmax(0, 1fr);
+        gap: 40px;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 52px 28px 90px;
+      }
+      .toc {
+        position: sticky;
+        top: 22px;
+        align-self: start;
+      }
+      .toc-title {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+      }
+      .toc nav { display: grid; gap: 3px; }
+      .toc a {
+        display: block;
+        padding: 9px 11px;
+        color: var(--muted);
+        border-left: 2px solid transparent;
+        border-radius: 0 8px 8px 0;
+        font-size: 13px;
+        line-height: 1.35;
+        text-decoration: none;
+      }
+      .toc a:hover, .toc a.active { color: var(--navy-800); border-left-color: var(--gold); background: #fff; font-weight: 700; }
+      .toc-note {
+        margin-top: 24px;
+        padding: 14px;
+        color: #70560d;
+        border: 1px solid #efd58e;
+        border-radius: 12px;
+        background: var(--gold-soft);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      main { min-width: 0; }
+      section { scroll-margin-top: 26px; }
+      .section { margin-bottom: 70px; }
+      .section-kicker {
+        margin: 0 0 10px;
+        color: var(--navy-700);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+      }
+      .section h2 { font-size: clamp(28px, 4vw, 40px); }
+      .section-intro { max-width: 760px; margin: 14px 0 0; color: var(--muted); font-size: 17px; }
+      .lead-card {
+        display: grid;
+        grid-template-columns: 1.1fr .9fr;
+        gap: 20px;
+        margin-bottom: 36px;
+        padding: 25px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        box-shadow: var(--shadow);
+      }
+      .lead-card h3 { margin-bottom: 10px; font-size: 23px; }
+      .lead-card p { margin: 0; color: var(--muted); }
+      .highlight {
+        padding: 18px;
+        border-left: 4px solid var(--gold);
+        border-radius: 0 12px 12px 0;
+        background: var(--gold-soft);
+      }
+      .highlight strong { display: block; color: #70560d; }
+      .highlight span { display: block; margin-top: 4px; color: #785f20; font-size: 13px; }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 28px;
+      }
+      .step {
+        position: relative;
+        min-height: 170px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: #fff;
+      }
+      .step-number {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        margin-bottom: 18px;
+        place-items: center;
+        color: #fff;
+        border-radius: 50%;
+        background: var(--navy-800);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .step h3 { font-size: 18px; }
+      .step p { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+      .screen-card {
+        margin-top: 30px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        box-shadow: var(--shadow);
+      }
+      .screen-card img { width: 100%; border-bottom: 1px solid var(--line); }
+      .screen-caption { padding: 13px 17px; color: var(--muted); font-size: 12px; }
+      .screen-caption strong { color: var(--ink); }
+
+      .info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }
+      .info-card { padding: 20px; border: 1px solid var(--line); border-radius: 15px; background: #fff; }
+      .info-card h3 { margin-bottom: 9px; font-size: 18px; }
+      .info-card p { margin: 0; color: var(--muted); font-size: 14px; }
+      .info-card ul, .content-list { margin: 12px 0 0; padding-left: 20px; }
+      .info-card li, .content-list li { margin: 6px 0; color: var(--muted); font-size: 14px; }
+      .info-card li strong, .content-list li strong { color: var(--ink); }
+      .mini-label { color: var(--navy-700); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+
+      .encounter-list { display: grid; gap: 14px; margin-top: 28px; }
+      .encounter {
+        display: grid;
+        grid-template-columns: 120px minmax(0, 1fr);
+        gap: 18px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: #fff;
+      }
+      .encounter-label { color: var(--navy-700); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+      .encounter h3 { margin-bottom: 6px; font-size: 19px; }
+      .encounter p { margin: 0; color: var(--muted); font-size: 14px; }
+      .encounter-note { margin-top: 9px !important; color: var(--ink) !important; font-size: 13px !important; }
+
+      .do-dont { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }
+      .do-dont > div { padding: 20px; border-radius: 15px; }
+      .do { border: 1px solid #bfe6cf; background: var(--green-soft); }
+      .dont { border: 1px solid #f0c5c1; background: var(--red-soft); }
+      .do-dont h3 { margin-bottom: 10px; font-size: 18px; }
+      .do h3 { color: var(--green); }
+      .dont h3 { color: var(--red); }
+      .do-dont ul { margin: 0; padding-left: 20px; }
+      .do-dont li { margin: 6px 0; color: #53647a; font-size: 14px; }
+
+      .formula {
+        margin-top: 28px;
+        padding: 22px;
+        color: #fff;
+        border-radius: var(--radius);
+        background: var(--navy-900);
+        box-shadow: var(--shadow);
+      }
+      .formula h3 { color: #fff; font-size: 20px; }
+      .formula-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin: 19px 0;
+        font-size: 17px;
+        font-weight: 800;
+      }
+      .formula-chip { padding: 8px 11px; color: #e8f0ff; border: 1px solid rgba(255,255,255,.17); border-radius: 9px; background: rgba(255,255,255,.08); }
+      .formula-chip.gold { color: #fff2b9; border-color: rgba(229,163,27,.4); background: rgba(229,163,27,.17); }
+      .formula p { margin: 0; color: #b6c8e0; font-size: 13px; }
+
+      .score-table { width: 100%; margin-top: 28px; border-collapse: collapse; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: #fff; font-size: 14px; }
+      .score-table th, .score-table td { padding: 14px 16px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+      .score-table th { color: var(--navy-800); background: #eef3f9; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+      .score-table tr:last-child td { border-bottom: 0; }
+      .score-table td:nth-child(n+3) { width: 110px; color: var(--navy-700); font-weight: 800; text-align: right; white-space: nowrap; }
+      .score-table td p { margin: 0; color: var(--muted); }
+      .score-table td strong { color: var(--ink); }
+      .criteria-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 22px; }
+      .criterion { padding: 14px 15px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+      .criterion strong { display: block; color: var(--ink); font-size: 14px; }
+      .criterion span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+      .warning { margin-top: 20px; padding: 16px 18px; border-left: 4px solid var(--red); border-radius: 0 12px 12px 0; background: var(--red-soft); }
+      .warning strong { color: var(--red); }
+      .warning p { margin: 4px 0 0; color: #745a5a; font-size: 13px; }
+
+      .peer-box { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 28px; }
+      .peer-box > div { padding: 20px; border: 1px solid var(--line); border-radius: 15px; background: #fff; }
+      .peer-box h3 { margin-bottom: 8px; font-size: 18px; }
+      .peer-box p { margin: 0; color: var(--muted); font-size: 14px; }
+      .scale { display: flex; gap: 6px; margin-top: 14px; }
+      .scale span { display: grid; width: 30px; height: 30px; place-items: center; color: var(--navy-700); border: 1px solid #cbd6e4; border-radius: 7px; font-size: 12px; font-weight: 800; }
+      .scale span.selected { color: #fff; border-color: var(--navy-800); background: var(--navy-800); }
+
+      .faq { display: grid; gap: 10px; margin-top: 28px; }
+      details { border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+      summary { padding: 16px 18px; color: var(--ink); cursor: pointer; font-weight: 750; list-style: none; }
+      summary::-webkit-details-marker { display: none; }
+      summary::after { content: "+"; float: right; color: var(--navy-700); font-size: 20px; font-weight: 400; line-height: 1; }
+      details[open] summary::after { content: "–"; }
+      .answer { padding: 0 18px 17px; color: var(--muted); font-size: 14px; }
+      .answer p { margin: 0; }
+
+      .checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 28px; }
+      .check-item { display: flex; gap: 10px; align-items: flex-start; padding: 13px 14px; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: var(--muted); font-size: 14px; }
+      .check-item::before { content: "✓"; display: grid; flex: 0 0 21px; width: 21px; height: 21px; place-items: center; color: var(--green); border: 1px solid #bfe6cf; border-radius: 50%; background: var(--green-soft); font-size: 12px; font-weight: 800; }
+
+      .footer {
+        padding: 26px 28px 38px;
+        color: #c6d4e8;
+        background: var(--navy-950);
+        font-size: 13px;
+      }
+      .footer-inner { display: flex; max-width: 1180px; margin: 0 auto; align-items: center; justify-content: space-between; gap: 16px; }
+      .footer p { margin: 0; }
+      .footer a { color: #fff; }
+
+      @media (max-width: 900px) {
+        .layout { grid-template-columns: 1fr; gap: 22px; padding-top: 32px; }
+        .toc { position: static; padding: 15px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+        .toc nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .toc-note { display: none; }
+        .lead-card { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 680px) {
+        .hero-inner { padding: 16px 18px 66px; }
+        .topbar { align-items: flex-start; margin-bottom: 55px; }
+        .topbar-actions { flex-direction: column; align-items: stretch; }
+        .topbar-link, .print-btn { justify-content: center; }
+        .layout { padding: 28px 18px 64px; }
+        .steps, .info-grid, .do-dont, .peer-box, .checklist, .criteria-grid { grid-template-columns: 1fr; }
+        .toc nav { grid-template-columns: 1fr; }
+        .encounter { grid-template-columns: 1fr; gap: 8px; }
+        .score-table { display: block; overflow-x: auto; }
+        .score-table th, .score-table td { min-width: 220px; }
+        .score-table td:nth-child(n+3) { min-width: 100px; }
+        .footer-inner { align-items: flex-start; flex-direction: column; }
+      }
+
+      @media print {
+        body { background: #fff; }
+        .hero { color: #000; background: #fff; border-bottom: 2px solid var(--navy-900); }
+        .hero h1 { color: var(--navy-950); }
+        .hero-lede, .meta-pill { color: var(--ink); }
+        .topbar-link, .print-btn, .toc { display: none; }
+        .hero-inner { padding: 20px 0 40px; }
+        .layout { display: block; max-width: 100%; padding: 30px 0; }
+        .section { break-inside: avoid; margin-bottom: 38px; }
+        .screen-card { box-shadow: none; }
+        .footer { color: var(--ink); background: #fff; border-top: 1px solid var(--line); }
+        .footer a { color: var(--navy-700); }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+    <header class="hero">
+      <div class="hero-inner">
+        <div class="topbar">
+          <a class="brand" href="/" aria-label="Voltar ao sistema Prova Fácil">
+            <span class="brand-mark">+</span>
+            <span>Prova Fácil</span>
+          </a>
+          <div class="topbar-actions">
+            <a class="topbar-link" href="/student/auth">Ir para o acesso do aluno <span aria-hidden="true">↗</span></a>
+            <button class="print-btn" type="button" onclick="window.print()">Imprimir / salvar PDF</button>
+          </div>
+        </div>
+
+        <p class="eyebrow">Guia do aluno · módulo 01</p>
+        <h1>Pacientes virtuais: participe com segurança e saiba como será avaliado.</h1>
+        <p class="hero-lede">Este guia explica o acesso, a sala virtual, o cartão de cada encontro, os três encontros, a ficha de registro, a divisão de funções no grupo, o preenchimento do MAI, a avaliação entre pares e todos os componentes da nota.</p>
+        <div class="hero-meta" aria-label="Resumo da atividade">
+          <span class="meta-pill"><strong>3</strong> encontros</span>
+          <span class="meta-pill"><strong>10</strong> critérios MAI por medicamento</span>
+          <span class="meta-pill"><strong>0–10</strong> nota final</span>
+          <span class="meta-pill">atividade individual ou em grupo</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="toc" aria-label="Navegação da página">
+        <p class="toc-title">Nesta página</p>
+        <nav>
+          <a href="#visao-geral">Visão geral</a>
+          <a href="#acesso">1. Como acessar</a>
+          <a href="#dinamica">2. Dinâmica da sala</a>
+          <a href="#encontros">3. Os três encontros</a>
+          <a href="#ficha">4. Ficha e funções do grupo</a>
+          <a href="#mai">5. Preenchimento do MAI</a>
+          <a href="#avaliacao">6. Como a nota é calculada</a>
+          <a href="#pares">7. Avaliação entre pares</a>
+          <a href="#feedback">8. Feedback e resultado</a>
+          <a href="#checklist">Checklist final</a>
+          <a href="#duvidas">Dúvidas frequentes</a>
+        </nav>
+        <div class="toc-note"><strong>Importante:</strong> o modo “exploração” serve apenas para testar um paciente. A atividade avaliativa acontece na sala acessada com PIN.</div>
+      </aside>
+
+      <main id="conteudo">
+        <section class="section" id="visao-geral">
+          <p class="section-kicker">Antes de começar</p>
+          <h2>O que é esta atividade?</h2>
+          <p class="section-intro">Você realizará um atendimento clínico simulado conversando com um paciente gerado por inteligência artificial. O seu papel (farmacêutico, enfermeiro ou médico) é definido pelo docente ao incluir o paciente na sala. O objetivo é demonstrar como você acolhe, investiga, organiza informações clínicas, raciocina sobre o tratamento e decide com segurança.</p>
+
+          <div class="highlight" style="margin-bottom: 20px"><strong>Dois formatos de paciente</strong><span>Os pacientes do <strong>novo formato</strong> abrem cada encontro com um cartão (local, cenário, papel e tarefa) e têm o botão <strong>Ficha</strong> na sala. Os do <strong>formato anterior</strong> não têm cartão nem ficha. Este guia indica o que vale para cada um.</span></div>
+
+          <div class="lead-card">
+            <div>
+              <h3>O atendimento tem começo, meio e fechamento.</h3>
+              <p>Durante a conversa, faça perguntas como faria em uma consulta real. O paciente responde de acordo com o caso clínico e pode fornecer informações sobre sintomas, medicamentos, hábitos, comorbidades, alergias e segurança.</p>
+            </div>
+            <div class="highlight">
+              <strong>O que fica registrado?</strong>
+              <span>Na sala avaliativa, as mensagens, os encontros e o formulário MAI são registrados para correção. No modo exploração, a conversa não é salva.</span>
+            </div>
+          </div>
+
+          <div class="steps" aria-label="Resumo do fluxo">
+            <article class="step"><span class="step-number">1</span><h3>Acesse a sala</h3><p>Informe o e-mail e o PIN fornecidos pelo docente. Escolha individual ou grupo quando a tela oferecer essa opção.</p></article>
+            <article class="step"><span class="step-number">2</span><h3>Converse e avance</h3><p>Realize os três encontros, investigando o caso e tomando decisões coerentes com as informações obtidas.</p></article>
+            <article class="step"><span class="step-number">3</span><h3>Registre e feche</h3><p>Registre o que levantou na ficha e, no terceiro encontro, avalie os medicamentos no MAI. O envio do MAI encerra o atendimento.</p></article>
+          </div>
+        </section>
+
+        <section class="section" id="acesso">
+          <p class="section-kicker">Etapa 1</p>
+          <h2>Como acessar a atividade</h2>
+          <p class="section-intro">O acesso da atividade avaliativa é feito pela tela de acesso do aluno. Você precisa do PIN da sala e do e-mail que está cadastrado na turma.</p>
+
+          <div class="info-grid">
+            <article class="info-card">
+              <span class="mini-label">Acesso individual</span>
+              <h3>Um aluno, uma sessão</h3>
+              <p>Selecione o modo individual, informe seu e-mail institucional e o PIN da atividade. A sessão e a nota ficam vinculadas ao seu e-mail.</p>
+            </article>
+            <article class="info-card">
+              <span class="mini-label">Acesso em grupo</span>
+              <h3>Uma sala compartilhada</h3>
+              <p>Selecione o modo grupo e informe o e-mail de cada integrante. Quando o grupo já estiver definido pelo docente, o sistema pode reconhecer essa configuração automaticamente.</p>
+            </article>
+          </div>
+
+          <ol class="content-list">
+            <li>Abra a plataforma e entre na área de <strong>acesso do aluno</strong>.</li>
+            <li>Escolha <strong>individual</strong> ou <strong>grupo</strong>, conforme a orientação do professor.</li>
+            <li>Digite o <strong>e-mail institucional</strong> exatamente como foi cadastrado na turma.</li>
+            <li>Digite o <strong>PIN</strong> da sala. O PIN diferencia a sala de pacientes virtuais das demais atividades.</li>
+            <li>Confirme a entrada e aguarde o carregamento do paciente e da sala.</li>
+          </ol>
+
+          <div class="screen-card">
+            <img src="assets/tela-acesso.svg" alt="Representação da tela de acesso do aluno, com campos de e-mail institucional e PIN da atividade." loading="lazy" />
+            <div class="screen-caption"><strong>Tela 1 — acesso:</strong> preencha os dados sem espaços extras. Se o sistema informar que você não está atribuído, confira o e-mail e fale com o docente.</div>
+          </div>
+
+          <div class="warning"><strong>Não confunda os dois modos.</strong><p>“Pacientes Virtuais” dentro da plataforma pode abrir uma área de exploração para testar conversas. Essa área é efêmera e não gera nota. Para ser avaliado, entre pela sala com PIN.</p></div>
+        </section>
+
+        <section class="section" id="dinamica">
+          <p class="section-kicker">Etapa 2</p>
+          <h2>Como funciona a sala virtual</h2>
+          <p class="section-intro">A sala é um chat clínico. No topo, você vê o nome do paciente, o módulo e o encontro atual. No centro, acompanha a conversa. Na parte inferior, escreve e envia suas mensagens.</p>
+
+          <div class="screen-card">
+            <img src="assets/tela-sala.svg" alt="Representação da sala virtual com o paciente Dona Helena, o primeiro encontro e a caixa para digitar mensagens." loading="lazy" />
+            <div class="screen-caption"><strong>Tela 2 — sala virtual:</strong> a mensagem do aluno aparece de um lado e a resposta do paciente do outro. Em uma atividade em grupo, todos os integrantes veem a conversa em tempo real.</div>
+          </div>
+
+          <div class="info-grid">
+            <article class="info-card">
+              <span class="mini-label">Na conversa</span>
+              <h3>Conduza uma anamnese realista</h3>
+              <ul>
+                <li>Apresente-se e acolha o paciente.</li>
+                <li>Use perguntas abertas e depois aprofunde os detalhes.</li>
+                <li>Confirme informações importantes antes de concluir.</li>
+                <li>Evite assumir dados que não foram investigados.</li>
+              </ul>
+            </article>
+            <article class="info-card">
+              <span class="mini-label">Ações úteis</span>
+              <h3>Use os recursos da sala</h3>
+              <ul>
+                <li>Pressione <strong>Enter</strong> para enviar; use <strong>Shift + Enter</strong> para quebrar linha.</li>
+                <li>Se você mencionar aferição, pressão, temperatura, glicemia ou sinais vitais, poderá aparecer o botão <strong>Medir Sinais Vitais</strong>.</li>
+                <li>Use <strong>Avançar encontro</strong> somente quando concluir a etapa atual.</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="info-grid">
+            <article class="info-card">
+              <span class="mini-label">Novo formato</span>
+              <h3>Cartão do encontro</h3>
+              <p>Ao começar cada encontro, você lê um cartão no estilo OSCE: <strong>local, cenário, seu papel, com quem vai conversar, sua tarefa e o tempo sugerido</strong>. O cartão diz o que fazer, não o que perguntar. Depois, uma faixa no topo da sala lembra a tarefa e o botão <strong>Ver cartão</strong> reabre o texto completo.</p>
+            </article>
+            <article class="info-card">
+              <span class="mini-label">Novo formato</span>
+              <h3>Sem lista de itens a cobrir</h3>
+              <p>Não há roteiro na tela. Sinais vitais, exames e os medicamentos que a pessoa trouxe só aparecem se você <strong>pedir</strong> ou disser que vai aferir. O valor medido aparece sem interpretação: quem interpreta é você. O cronômetro é só uma referência e nada é bloqueado quando o tempo acaba.</p>
+            </article>
+          </div>
+
+          <div class="do-dont">
+            <div class="do"><h3>Faça</h3><ul><li>Construa o raciocínio a partir das respostas do paciente.</li><li>Investigue medicamentos prescritos, isentos de prescrição, fitoterápicos e suplementos.</li><li>Explique suas orientações em linguagem acessível.</li></ul></div>
+            <div class="dont"><h3>Evite</h3><ul><li>Enviar várias perguntas desconectadas sem escutar a resposta.</li><li>Prescrever ou recomendar sem verificar alergias, comorbidades e riscos.</li><li>Avançar de encontro sem ter coberto os pontos essenciais.</li></ul></div>
+          </div>
+        </section>
+
+        <section class="section" id="encontros">
+          <p class="section-kicker">Etapa 3</p>
+          <h2>O que acontece em cada encontro</h2>
+          <p class="section-intro">A sala organiza a interação em três momentos. Você pode avançar quando entender que cumpriu o objetivo do encontro. Cada encontro tem um tipo e um interlocutor próprios, descritos no cartão.</p>
+
+          <p class="section-kicker" style="margin-top: 28px">Pacientes do novo formato</p>
+          <div class="encounter-list" style="margin-top: 10px">
+            <article class="encounter"><div class="encounter-label">1º encontro</div><div><h3>Anamnese</h3><p>Você atende o paciente (ou o cuidador, quando é ele quem conta a história). Investigue a queixa, os medicamentos como são usados de fato, antecedentes, hábitos e contexto, e registre na ficha de anamnese.</p><p class="encounter-note"><strong>Como interagir:</strong> escreva como se falasse com a pessoa. Ela só responde ao que for perguntado.</p></div></article>
+            <article class="encounter"><div class="encounter-label">2º encontro</div><div><h3>Conversa com quem decide</h3><p>O interlocutor muda. Na <strong>Farmácia</strong>, você conversa com o médico prescritor (uma persona de IA) e comunica o que encontrou. Na <strong>Enfermagem</strong>, é a passagem de plantão em formato SBAR. Na <strong>Medicina</strong>, é a interconsulta ou a discussão de resultados.</p><p class="encounter-note"><strong>Importante:</strong> na Farmácia você <strong>não prescreve</strong>. Você propõe o ajuste ao prescritor, orienta, define a monitorização, encaminha e indica apenas medicamentos isentos de prescrição ou protocolos. Seja objetivo, como em uma comunicação profissional, e registre na ficha (SBAR) o que foi combinado.</p></div></article>
+            <article class="encounter"><div class="encounter-label">3º encontro</div><div><h3>Retorno do paciente</h3><p>O paciente volta e a situação depende do que o prescritor <strong>aceitou</strong> no encontro anterior: se a sua proposta foi aceita, modificada ou recusada, o quadro seguirá de modo diferente. Verifique o que mudou e o que persiste.</p><p class="encounter-note"><strong>Quando terminar:</strong> registre a evolução na ficha (SOAP) e, na Farmácia, preencha o MAI. O envio do MAI marca a atividade como concluída.</p></div></article>
+          </div>
+
+          <p class="section-kicker" style="margin-top: 36px">Pacientes do formato anterior</p>
+          <div class="encounter-list" style="margin-top: 10px">
+            <article class="encounter"><div class="encounter-label">1º encontro</div><div><h3>Anamnese inicial</h3><p>Conheça o paciente e caracterize a queixa principal: início, duração, intensidade, localização, fatores de melhora ou piora e sintomas associados.</p><p class="encounter-note"><strong>Não deixe de investigar:</strong> medicamentos em uso, dose, posologia, adesão, automedicação, alergias e antecedentes.</p></div></article>
+            <article class="encounter"><div class="encounter-label">2º encontro</div><div><h3>Avaliação de eficácia e segurança</h3><p>Retome o caso como uma consulta de acompanhamento. Verifique resposta ao tratamento, eventos adversos, uso correto, adesão e mudanças no estado do paciente.</p><p class="encounter-note"><strong>Procure problemas:</strong> interações, contraindicações, duplicidades, doses inadequadas e necessidades não atendidas.</p></div></article>
+            <article class="encounter"><div class="encounter-label">3º encontro</div><div><h3>Ajustes finais + MAI</h3><p>Feche o plano de cuidado e registre o seu julgamento sobre cada medicamento no Medication Appropriateness Index.</p><p class="encounter-note"><strong>Quando terminar:</strong> clique em “Preencher MAI”, revise os medicamentos e envie o formulário. O envio marca a atividade como concluída.</p></div></article>
+          </div>
+
+          <div class="highlight" style="margin-top: 20px"><strong>Atividade em grupo</strong><span>O chat é compartilhado: todos acompanham a mesma conversa e cada mensagem fica registrada com o nome de quem a escreveu. Organizem-se para que a participação, as perguntas e as decisões clínicas sejam distribuídas entre os integrantes. Quando o docente ativa a divisão de funções, veja a próxima seção.</span></div>
+        </section>
+
+        <section class="section" id="ficha">
+          <p class="section-kicker">Novo formato</p>
+          <h2>Ficha de registro e funções do grupo</h2>
+          <p class="section-intro">A ficha é o seu prontuário do atendimento. Ela fica ao lado do chat (botão <strong>Ficha</strong>), é salva automaticamente e acompanha os três encontros. Vale cerca de 20% da nota.</p>
+
+          <div class="info-grid">
+            <article class="info-card"><span class="mini-label">1º encontro</span><h3>Ficha de anamnese</h3><ul><li>Identificação</li><li>Queixa principal e história da doença atual</li><li>Antecedentes pessoais e familiares</li><li>Medicamentos em uso</li><li>Alergias e reações adversas</li><li>Hábitos de vida e contexto social</li><li>Dados objetivos</li><li>Impressão (problemas relacionados a medicamentos, diagnósticos de enfermagem ou hipóteses, conforme o papel)</li></ul></article>
+            <article class="info-card"><span class="mini-label">2º e 3º encontros</span><h3>SBAR e SOAP</h3><ul><li><strong>2º encontro, SBAR:</strong> Situação, Histórico, Avaliação e Recomendação. Registre em Recomendação a decisão do prescritor.</li><li><strong>3º encontro, SOAP:</strong> Subjetivo, Objetivo, Avaliação e Plano. A evolução fecha o atendimento.</li></ul></article>
+          </div>
+
+          <div class="do-dont">
+            <div class="do"><h3>Faça</h3><ul><li>Anote só o que o paciente disse ou o que você verificou.</li><li>Escreva com clareza e use o raciocínio clínico na impressão e na avaliação.</li><li>Preencha a ficha durante o encontro, sem deixar tudo para o fim.</li></ul></div>
+            <div class="dont"><h3>Evite</h3><ul><li>Registrar dados que não foram investigados na conversa.</li><li>Deixar a ficha vazia: uma ficha em branco zera esse componente da nota.</li><li>Copiar o texto do chat sem organizar nem interpretar.</li></ul></div>
+          </div>
+
+          <div class="lead-card" style="margin-top: 28px">
+            <div>
+              <h3>Divisão de funções no grupo</h3>
+              <p>Quando o docente ativa essa opção, o grupo escolhe em cada encontro quem <strong>registra a ficha</strong> e quem <strong>conduz a conversa</strong> com o paciente. Quem registra edita a ficha e não escreve no chat; quem conduz escreve no chat e apenas lê a ficha. A primeira confirmação vale para o grupo todo e o botão <strong>Funções</strong> permite alterar no encontro atual.</p>
+            </div>
+            <div class="highlight">
+              <strong>Rodízio obrigatório</strong>
+              <span>As funções se alternam entre os encontros: quem já registrou só volta a registrar quando todos os outros registrarem. Assim, todos experimentam as duas funções. O bloqueio vale apenas na tela, então combinem entre vocês.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="mai">
+          <p class="section-kicker">Etapa 5</p>
+          <h2>Como preencher o MAI</h2>
+          <p class="section-intro">O MAI avalia a adequação de cada medicamento prescrito para aquele paciente. Você deve adicionar todos os medicamentos relevantes e preencher os 10 critérios para cada um.</p>
+
+          <div class="screen-card">
+            <img src="assets/tela-mai.svg" alt="Representação do formulário MAI com um medicamento e opções apropriado, marginalmente apropriado e inapropriado." loading="lazy" />
+            <div class="screen-caption"><strong>Tela 3 — formulário MAI:</strong> o contador mostra quantos critérios já foram respondidos. O sistema só permite enviar quando o nome e os 10 critérios de cada medicamento estiverem preenchidos.</div>
+          </div>
+
+          <div class="criteria-grid">
+            <div class="criterion"><strong>1. Indicação</strong><span>Existe indicação para o medicamento?</span></div>
+            <div class="criterion"><strong>2. Efetividade</strong><span>O medicamento é efetivo para a condição?</span></div>
+            <div class="criterion"><strong>3. Dosagem</strong><span>A dose está correta para o paciente?</span></div>
+            <div class="criterion"><strong>4. Técnica de administração</strong><span>A forma de administrar está correta?</span></div>
+            <div class="criterion"><strong>5. Comodidade terapêutica</strong><span>O esquema é prático e adequado para o uso?</span></div>
+            <div class="criterion"><strong>6. Interação medicamento–medicamento</strong><span>Há interação clinicamente significativa?</span></div>
+            <div class="criterion"><strong>7. Interação medicamento–doença</strong><span>O medicamento piora alguma condição?</span></div>
+            <div class="criterion"><strong>8. Duplicidade</strong><span>Há duplicidade terapêutica desnecessária?</span></div>
+            <div class="criterion"><strong>9. Duração</strong><span>A duração do tratamento é adequada?</span></div>
+            <div class="criterion"><strong>10. Custo</strong><span>É a opção mais custo-efetiva?</span></div>
+          </div>
+
+          <div class="info-grid">
+            <article class="info-card"><h3>Opções de resposta</h3><p><strong>Apropriado</strong>, <strong>Marginalmente apropriado</strong> ou <strong>Inapropriado</strong>. Escolha com base nas informações levantadas durante a anamnese e nos riscos e benefícios para aquele paciente.</p></article>
+            <article class="info-card"><h3>Antes de enviar</h3><p>Confira se todos os medicamentos relevantes foram incluídos. Se você esquecer um medicamento ou deixar um critério sem resposta, o sistema solicitará a correção antes do envio.</p></article>
+          </div>
+        </section>
+
+        <section class="section" id="avaliacao">
+          <p class="section-kicker">Etapa 6</p>
+          <h2>Como a nota é calculada</h2>
+          <p class="section-intro">A nota final é apresentada em uma escala de 0 a 10. A correção considera a qualidade da anamnese, a ficha de registro (novo formato), o uso do MAI, a segurança das decisões e, quando houver grupo, a contribuição individual percebida pelos colegas. A conta da nota base é feita pelo sistema, não pela IA.</p>
+
+          <table class="score-table">
+            <thead><tr><th>Componente</th><th>O que é observado</th><th>Novo formato</th><th>Formato anterior</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Qualidade da anamnese</strong></td><td><p>Identificação e acolhimento; queixa principal/HDA; história medicamentosa; antecedentes e comorbidades; hábitos e estilo de vida; escuta e raciocínio clínico. Parte da nota vem da cobertura das informações essenciais do caso.</p></td><td>0–4</td><td>0–6</td></tr>
+              <tr><td><strong>Qualidade do MAI</strong></td><td><p>Completude; coerência clínica; justificativa crítica; segurança do paciente.</p></td><td>0–4</td><td>0–4</td></tr>
+              <tr><td><strong>Ficha de registro</strong></td><td><p>Completude do registro, fidelidade à conversa e raciocínio e clareza. Ficha vazia vale zero.</p></td><td>0–2</td><td>não há</td></tr>
+              <tr><td><strong>Penalidades de segurança</strong></td><td><p>Erros críticos como ignorar alergia, aceitar medicamento contraindicado ou não identificar interação grave.</p></td><td>até −1,5</td><td>até −1,5</td></tr>
+              <tr><td><strong>Bônus de comunicação</strong></td><td><p>Comunicação especialmente empática e clara. Não há bônus por conversas longas.</p></td><td>até +0,5</td><td>até +0,5</td></tr>
+              <tr><td><strong>Avaliação entre pares</strong></td><td><p>Aplica-se às atividades em grupo e ajusta individualmente a nota de acordo com participação, contribuição técnica e colaboração.</p></td><td>−1,0 a +1,0</td><td>−1,0 a +1,0</td></tr>
+            </tbody>
+          </table>
+
+          <div class="formula">
+            <h3>Fórmula resumida da nota final</h3>
+            <div class="formula-line" aria-label="Fórmula: nota base mais bônus de eficiência clínica mais ajuste entre pares, limitado de zero a dez">
+              <span class="formula-chip">Anamnese + MAI + ficha</span><span>+</span><span class="formula-chip gold">bônus de comunicação</span><span>−</span><span class="formula-chip">penalidades</span><span>±</span><span class="formula-chip">ajuste entre pares</span>
+            </div>
+            <p>O resultado é limitado ao intervalo de 0 a 10. No resultado você também vê um indicador de eficiência clínica (0 a 5), que mede a cobertura dos pontos essenciais da anamnese. Ele é informativo e não soma pontos à nota.</p>
+          </div>
+
+          <div class="info-grid">
+            <article class="info-card"><h3>O que aumenta a nota?</h3><ul><li>Perguntas completas, organizadas e pertinentes.</li><li>Raciocínio coerente com a história e os riscos do paciente.</li><li>MAI preenchido com completude e escolhas justificáveis.</li><li>Ficha organizada e fiel ao que foi conversado.</li><li>Cobrir os pontos essenciais do caso, sem abandonar nenhum.</li></ul></article>
+            <article class="info-card"><h3>O que pode reduzir a nota?</h3><ul><li>Não investigar medicamentos, alergias ou comorbidades.</li><li>Ignorar riscos de interação, contraindicação ou duplicidade.</li><li>Preencher o MAI sem relação com o caso clínico.</li><li>Participar pouco ou não colaborar com o grupo.</li></ul></article>
+          </div>
+
+          <div class="warning"><strong>Segurança vem antes da velocidade.</strong><p>Recomendar ou aceitar um medicamento inseguro pode gerar penalidade específica. Antes de concluir, verifique alergias, interações, gestação quando aplicável, função renal/hepática e riscos do paciente.</p></div>
+        </section>
+
+        <section class="section" id="pares">
+          <p class="section-kicker">Somente em grupo · Etapa 7</p>
+          <h2>Avaliação entre pares</h2>
+          <p class="section-intro">Depois que o grupo enviar o MAI, cada integrante recebe um link pessoal por e-mail para avaliar os colegas. Essa etapa influencia a nota individual, não a nota compartilhada do atendimento.</p>
+
+          <div class="screen-card">
+            <img src="assets/tela-pares.svg" alt="Representação do formulário de avaliação entre pares, com colegas e notas de zero a cinco." loading="lazy" />
+            <div class="screen-caption"><strong>Tela 4 — avaliação entre pares:</strong> avalie cada colega nos três critérios. O link é pessoal, não deve ser compartilhado e expira em 3 horas.</div>
+          </div>
+
+          <div class="peer-box">
+            <div><h3>Três critérios, de 0 a 5</h3><p><strong>Participação ativa:</strong> fez perguntas e se envolveu. <strong>Contribuição técnica:</strong> ajudou no raciocínio e no MAI. <strong>Colaboração:</strong> trabalhou de modo respeitoso e ativo.</p><div class="scale" aria-label="Escala de zero a cinco"><span>0</span><span>1</span><span class="selected">2</span><span>3</span><span>4</span><span>5</span></div></div>
+            <div><h3>Como isso entra na nota?</h3><p>O sistema calcula a média das avaliações recebidas e converte o resultado em um ajuste de até <strong>1 ponto para mais ou para menos</strong>. As respostas individuais não são mostradas aos colegas avaliados.</p></div>
+          </div>
+
+          <ol class="content-list">
+            <li>Ao concluir o atendimento, verifique o e-mail de cada integrante.</li>
+            <li>Abra o seu link pessoal dentro do prazo de 3 horas.</li>
+            <li>Avalie todos os colegas do grupo nos três critérios.</li>
+            <li>Use a escala com honestidade e, se desejar, escreva um comentário objetivo.</li>
+            <li>Envie a avaliação e aguarde a confirmação de registro.</li>
+          </ol>
+        </section>
+
+        <section class="section" id="feedback">
+          <p class="section-kicker">Depois da atividade</p>
+          <h2>Feedback, correção e resultado</h2>
+          <p class="section-intro">A correção é gerada a partir do histórico da interação e do MAI. O professor pode revisar e liberar o feedback antes que ele apareça para os alunos.</p>
+
+          <div class="screen-card">
+            <img src="assets/tela-feedback.svg" alt="Representação da tela de resultado com nota final, detalhamento por critério e orientações de melhoria." loading="lazy" />
+            <div class="screen-caption"><strong>Tela 5 — resultado:</strong> depois da liberação, você poderá consultar a nota final, os critérios, o bônus de eficiência, a avaliação entre pares, o feedback, as orientações de melhoria, o MAI e a conversa completa.</div>
+          </div>
+
+          <div class="info-grid">
+            <article class="info-card"><h3>Como consultar</h3><p>Volte à tela de acesso do aluno e entre novamente com o PIN e o e-mail usados na atividade. Se o feedback já estiver liberado, o sistema encaminhará você para a tela de resultado.</p></article>
+            <article class="info-card"><h3>Se ainda não aparecer</h3><p>Isso significa que a correção ainda não foi liberada pelo professor ou ainda está sendo processada. Tente novamente mais tarde; não é necessário refazer o atendimento.</p></article>
+          </div>
+        </section>
+
+        <section class="section" id="checklist">
+          <p class="section-kicker">Antes de sair da sala</p>
+          <h2>Checklist do aluno</h2>
+          <p class="section-intro">Use esta lista para verificar se você completou todas as etapas importantes.</p>
+          <div class="checklist">
+            <div class="check-item">Entrei com o e-mail correto e o PIN da sala.</div>
+            <div class="check-item">Apresentei-me e acolhi o paciente.</div>
+            <div class="check-item">Caracterizei a queixa principal e os sintomas associados.</div>
+            <div class="check-item">Investiguei medicamentos, dose, posologia, adesão e automedicação.</div>
+            <div class="check-item">Perguntei sobre alergias, comorbidades e hábitos relevantes.</div>
+            <div class="check-item">Avaliei eficácia, eventos adversos e segurança no acompanhamento.</div>
+            <div class="check-item">Li o cartão de cada encontro e cumpri a tarefa pedida.</div>
+            <div class="check-item">Registrei a ficha (anamnese, SBAR e SOAP) com o que levantei.</div>
+            <div class="check-item">Em grupo com funções, respeitei o rodízio entre registrar e conduzir.</div>
+            <div class="check-item">Completei os três encontros.</div>
+            <div class="check-item">Incluí todos os medicamentos no MAI.</div>
+            <div class="check-item">Respondi os 10 critérios do MAI para cada medicamento.</div>
+            <div class="check-item">Enviei o MAI e confirmei que o atendimento foi concluído.</div>
+            <div class="check-item">Em grupo, verifiquei o e-mail e enviei a avaliação entre pares.</div>
+            <div class="check-item">Se necessário, consultei o feedback após a liberação.</div>
+          </div>
+        </section>
+
+        <section class="section" id="duvidas">
+          <p class="section-kicker">Dúvidas frequentes</p>
+          <h2>Se algo der errado</h2>
+          <div class="faq">
+            <details><summary>Posso testar o paciente antes da atividade?</summary><div class="answer"><p>Sim. A área de exploração permite conversar com pacientes e conhecer o comportamento do sistema, mas essa conversa não é salva e não gera nota. Para a avaliação, use a sala com PIN.</p></div></details>
+            <details><summary>Posso fechar a página e continuar depois?</summary><div class="answer"><p>Na sala avaliativa, o histórico é registrado. Mesmo assim, evite sair durante a atividade sem orientação, pois o andamento do encontro e a sincronização do grupo dependem da conexão. Se a página recarregar, entre novamente com os mesmos dados.</p></div></details>
+            <details><summary>O grupo pode escrever ao mesmo tempo?</summary><div class="answer"><p>Todos acompanham a mesma conversa em tempo real, mas é melhor combinar quem fará cada pergunta para evitar mensagens duplicadas ou um fluxo confuso. Se o docente ativou a divisão de funções, só quem conduz escreve no chat e só quem registra edita a ficha.</p></div></details>
+            <details><summary>Posso prescrever no encontro com o médico prescritor?</summary><div class="answer"><p>Na Farmácia, não. Você propõe o ajuste ao prescritor, orienta, define a monitorização, encaminha e indica apenas medicamentos isentos de prescrição ou protocolos. O que o prescritor aceitar muda o retorno do paciente no 3º encontro.</p></div></details>
+            <details><summary>A ficha pode ficar para o final?</summary><div class="answer"><p>É melhor preencher durante cada encontro. A ficha é salva sozinha, mas uma ficha vazia zera esse componente e o registro precisa ser fiel ao que foi conversado.</p></div></details>
+            <details><summary>O que faço se eu esquecer um medicamento no MAI?</summary><div class="answer"><p>Revise a anamnese antes de enviar. Se o medicamento não for incluído, a completude da avaliação poderá ser prejudicada. O formulário exige que os critérios dos medicamentos adicionados estejam completos, mas não substitui a conferência clínica do aluno.</p></div></details>
+            <details><summary>Minha avaliação entre pares é obrigatória?</summary><div class="answer"><p>Em atividades de grupo, ela faz parte da nota individual. Verifique o e-mail após o envio do MAI e responda dentro do prazo indicado no link.</p></div></details>
+            <details><summary>Quem devo procurar em caso de problema?</summary><div class="answer"><p>Primeiro confira e-mail, PIN, conexão e modo de acesso. Se o problema persistir, registre uma captura de tela e procure o professor ou responsável pela atividade informando seu nome, turma e o horário do erro.</p></div></details>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <p><strong>Pacientes virtuais</strong> · guia do aluno</p>
+        <p>O módulo de júri simulado terá orientações próprias.</p>
+      </div>
+    </footer>
+
+    <script>
+      const links = Array.from(document.querySelectorAll('.toc a'));
+      const sections = links.map((link) => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          links.forEach((link) => link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id));
+        });
+      }, { rootMargin: '-18% 0px -68% 0px', threshold: 0 });
+      sections.forEach((section) => observer.observe(section));
+    </script>
+  </body>
+</html>
