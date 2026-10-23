@@ -75,8 +75,21 @@ const GRADING_TOOL = {
           description: "STRING única em markdown com 5 a 8 bullets iniciados por '- ' separados por \\n. Cada bullet com uma orientação concreta e acionável em 2ª pessoa ('Você deve...'), referenciando o caso específico. Mínimo 800 caracteres.",
         },
         flags_seguranca: { type: "array", items: { type: "string" }, description: "Problemas críticos identificados, ou lista vazia." },
+        condutas_inseguras: {
+          type: "array",
+          description: "UMA entrada para CADA erro de segurança penalizável (exceto ignorar alergia): conduta insegura proposta ou aceita na conversa OU na ficha, interação grave não identificada etc. Lista vazia se não houve nenhum. O servidor soma as penalidades a partir desta lista.",
+          items: {
+            type: "object",
+            properties: {
+              registro: { type: "string", enum: ["chat", "ficha"], description: "Onde está: na conversa ('chat') ou na ficha (SBAR/SOAP/anamnese)." },
+              descricao: { type: "string", description: "O que foi proposto, aceito ou deixou de ser identificado, citando o trecho." },
+              penalidade: { type: "number", description: "Valor da tabela de penalidades: 0,3 ou 0,5." },
+            },
+            required: ["registro", "descricao", "penalidade"],
+          },
+        },
       },
-      required: ["subscores", "evidencias", "bonus_penalidades", "feedback_resumido", "orientacoes_melhoria", "flags_seguranca"],
+      required: ["subscores", "evidencias", "bonus_penalidades", "feedback_resumido", "orientacoes_melhoria", "flags_seguranca", "condutas_inseguras"],
     },
   },
 };
@@ -339,13 +352,13 @@ Se a ficha NÃO foi preenchida, atribua 0 às três dimensões e sinalize nas ev
 ` : ""}═══════════════════════════════════════════════
 PENALIDADES CRÍTICAS DE SEGURANÇA (até 1,5 no total)
 ═══════════════════════════════════════════════
-Liste em "flags_seguranca" e informe a magnitude (valor positivo) em bonus_penalidades:
+Procure ATIVAMENTE estes erros em TODA a interação: na conversa e também em todos os campos da ficha (anamnese, SBAR, SOAP). Para CADA erro encontrado, acrescente UMA entrada em "condutas_inseguras" (registro, descrição com o trecho, penalidade da tabela). O servidor soma as penalidades dessa lista: não calcule o total. Se um erro foi encontrado, ele DEVE estar na lista; se você o citar no feedback ou nas evidências, ele também precisa estar na lista.
 - Recomendar/aceitar AINE em DRC, gestação avançada, úlcera ativa: 0,5 cada
 - Não identificar interação grave (ex.: varfarina + AINE, IECA + AINE em idoso): 0,5 cada
-- Recomendar ou propor, em QUALQUER registro do atendimento (conversa ou ficha), medicamento ou conduta insegura para o caso (ex.: trocar por outro serotoninérgico diante de suspeita de síndrome serotoninérgica; manter fármaco contraindicado): 0,5 cada. O que está escrito na ficha (SBAR ou SOAP) conta como proposta, mesmo que não tenha sido dito no chat: a ficha é lida pelo prescritor e pela equipe. Informe em flags_seguranca em qual registro estava.
+- Recomendar ou propor, em QUALQUER registro do atendimento (conversa ou ficha), medicamento ou conduta insegura para o caso (ex.: trocar por outro serotoninérgico diante de suspeita de síndrome serotoninérgica; manter fármaco contraindicado): 0,5 cada. O que está escrito na ficha (SBAR ou SOAP) conta como proposta, mesmo que não tenha sido dito no chat: a ficha é lida pelo prescritor e pela equipe. Use registro "ficha" nesses casos.
 - Opioide sem orientação de constipação/sedação: 0,3
-- Ignorar alergia relatada: 0,5
 - Não investigar gestação em mulher em idade fértil antes de prescrever: 0,3
+Ignorar alergia relatada (0,5) NÃO entra na lista: informe em bonus_penalidades.ignorou_alergia_penalidade. Em bonus_penalidades.erro_seguranca_penalidade pode devolver 0: o servidor usa a lista.
 
 BÔNUS: comunicacao_empatica_bonus de 0 a ${MAX_BONUS} para comunicação especialmente empática e clara.
 
@@ -494,14 +507,24 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
 
     const rawBp = gradeResult.bonus_penalidades || {};
     const bonus = clamp(Math.abs(num(rawBp.comunicacao_empatica_bonus)), 0, MAX_BONUS);
-    const penalty = clamp(
-      Math.abs(num(rawBp.erro_seguranca_penalidade)) + Math.abs(num(rawBp.ignorou_alergia_penalidade)),
-      0,
-      MAX_PENALTY,
-    );
+    // A penalidade por erro de segurança vem da lista de condutas inseguras (cada item vale o da tabela, no máximo 0,5).
+    // Sem lista, usa o número que o modelo devolveu (compatibilidade com respostas antigas).
+    const condutas: Array<{ registro: string; descricao: string; penalidade: number }> = Array.isArray(gradeResult.condutas_inseguras)
+      ? gradeResult.condutas_inseguras
+          .map((c: any) => ({
+            registro: c?.registro === "ficha" ? "ficha" : "chat",
+            descricao: String(c?.descricao || "").trim(),
+            penalidade: clamp(Math.abs(num(c?.penalidade)) || 0.3, 0.1, 0.5),
+          }))
+          .filter((c: { descricao: string }) => c.descricao)
+      : [];
+    const erroSeguranca = condutas.length > 0
+      ? condutas.reduce((s, c) => s + c.penalidade, 0)
+      : Math.abs(num(rawBp.erro_seguranca_penalidade));
+    const penalty = clamp(erroSeguranca + Math.abs(num(rawBp.ignorou_alergia_penalidade)), 0, MAX_PENALTY);
     const bonusPenalidades = {
       comunicacao_empatica_bonus: round2(bonus),
-      erro_seguranca_penalidade: round2(Math.abs(num(rawBp.erro_seguranca_penalidade))),
+      erro_seguranca_penalidade: round2(Math.min(erroSeguranca, MAX_PENALTY)),
       ignorou_alergia_penalidade: round2(Math.abs(num(rawBp.ignorou_alergia_penalidade))),
     };
     const notaFinal = round2(clamp(base.total + bonus - penalty, 0, 10));
@@ -530,7 +553,12 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
       nota_microlearning: efficiency,
       feedback_resumido: feedbackResumido,
       orientacoes_melhoria: orientacoes,
-      flags_seguranca: Array.isArray(gradeResult.flags_seguranca) ? gradeResult.flags_seguranca : [],
+      // Cada conduta insegura vira uma flag com o registro onde estava; as demais flags da IA entram sem repetir.
+      flags_seguranca: (() => {
+        const doModelo: string[] = Array.isArray(gradeResult.flags_seguranca) ? gradeResult.flags_seguranca.map(String) : [];
+        const dasCondutas = condutas.map((c) => `[${c.registro === "ficha" ? "ficha" : "conversa"}] ${c.descricao} (−${c.penalidade.toFixed(1).replace(".", ",")})`);
+        return [...dasCondutas, ...doModelo.filter((f) => !condutas.some((c) => f.includes(c.descricao.slice(0, 25))))];
+      })(),
       rubric_version: (fichaEnabled ? RUBRIC_VERSION_FICHA : RUBRIC_VERSION) + (maiEnabled ? "" : "+sem-mai") + (gabarito ? "+gabarito" : ""),
       grading_model: GRADING_MODEL,
       graded_at: new Date().toISOString(),
