@@ -558,8 +558,9 @@ export default function VPAnalytics() {
     if (selectedClass !== "all") filteredCvpIds = myCvps.filter((c: any) => c.class_id === selectedClass).map((c: any) => c.id);
     if (selectedCvp !== "all") filteredCvpIds = filteredCvpIds.filter(id => id === selectedCvp);
 
-    // Treino corrige sozinho ao fim do atendimento: "Corrigir Turma" só trata os avaliativos.
-    filteredCvpIds = await idsDoTipo(filteredCvpIds, "avaliativo");
+    // Treino corrige sozinho ao fim do atendimento. "Corrigir Turma" trata o tipo que está na tela: com "Avaliativos" nunca mexe no treino;
+    // com "Treino", serve para recorrigir um atendimento cuja correção automática falhou (o feedback é liberado ao aluno).
+    filteredCvpIds = await idsDoTipo(filteredCvpIds, modeFilter);
     if (filteredCvpIds.length === 0) { toast.info("Nenhum paciente virtual encontrado."); setGrading(false); return; }
 
     // Get ALL sessions (any status) for selected filters — sessions with any meaningful interaction can be graded

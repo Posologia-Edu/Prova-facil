@@ -59,6 +59,8 @@ export default function VirtualPatientRoom() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const sessionIdRef = useRef<string>("");
   const isTreinoRef = useRef(false);
+  const [isTreino, setIsTreino] = useState(false);
+  const [dificuldade, setDificuldade] = useState<string | null>(null);
   const encounterRef = useRef<number>(1);
   const seenMsgKeysRef = useRef<Set<string>>(new Set());
   const [consentState, setConsentState] = useState<null | boolean>(null);
@@ -338,13 +340,18 @@ export default function VirtualPatientRoom() {
       .maybeSingle()
       .then(({ data, error }: any) => { if (!error) setGroupRolesOn(!!data?.group_roles); });
 
-    // P14: paciente de treino recebe o feedback assim que a correção termina. Consulta à parte e tolerante a erro.
-    (supabase as any)
+    // P14: paciente de treino recebe o feedback assim que a correção termina e não pede consentimento de pesquisa.
+    // Consulta à parte e tolerante a erro (sem a coluna, a sala segue como avaliativa). Aguardada para valer na checagem do consentimento.
+    const { data: modeData, error: modeErr } = await (supabase as any)
       .from("class_virtual_patients")
-      .select("mode")
+      .select("mode, dificuldade")
       .eq("id", cvp.id)
-      .maybeSingle()
-      .then(({ data, error }: any) => { if (!error) isTreinoRef.current = data?.mode === "treino"; });
+      .maybeSingle();
+    if (!modeErr) {
+      isTreinoRef.current = modeData?.mode === "treino";
+      setIsTreino(isTreinoRef.current);
+      setDificuldade(modeData?.dificuldade ?? null);
+    }
 
     // Nome, idade e categoria vêm do cadastro único (função pública: não expõe roteiro nem gabarito).
     const pub = await fetchPublicVpCase(cvp.patient_id);
@@ -495,7 +502,7 @@ export default function VirtualPatientRoom() {
         .maybeSingle();
       const rc = (data as any)?.research_consent ?? null;
       setConsentState(rc);
-      if (rc === null) setShowConsent(true);
+      if (rc === null && !isTreinoRef.current) setShowConsent(true);
     }, 50);
 
   };
@@ -678,6 +685,11 @@ export default function VirtualPatientRoom() {
     setShowMAI(false);
     setSessionCompleted(true);
 
+    // Treino individual: o aluno vai direto à tela de feedback, que aguarda a correção terminar (ela segue rodando aqui).
+    if (isTreinoRef.current && !(isGroupSession && groupSessionIds.length > 1)) {
+      navigate(`/virtual-patients/feedback/${cvpId}?gerando=1`);
+    }
+
     // Case is considered finished the moment the group submits the MAI — this is
     // the trigger point for peer-eval invites, independent of AI grading below
     // (which can fail/be retried later without blocking the peer-eval e-mails).
@@ -751,9 +763,8 @@ export default function VirtualPatientRoom() {
         });
         if (gradeErr) throw gradeErr;
         if (isTreinoRef.current) {
-          // O servidor já liberou o feedback deste paciente de treino: leva o aluno direto a ele.
-          toast.success("Correção pronta. Abrindo o seu feedback.");
-          navigate(`/virtual-patients/feedback/${cvpId}`);
+          // O servidor já liberou o feedback deste paciente de treino; a tela de feedback detecta sozinha.
+          toast.success("Correção pronta. Seu feedback já está disponível.");
           return;
         }
         toast.success("Correção e feedback gerados com sucesso.");
@@ -816,6 +827,13 @@ export default function VirtualPatientRoom() {
             </h2>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs">{patient.module}</Badge>
+              {isTreino ? (
+                <Badge className="text-xs bg-sky-600 hover:bg-sky-600 text-white">
+                  Treino{dificuldade ? ` · ${({ facil: "Fácil", medio: "Médio", dificil: "Difícil" } as Record<string, string>)[dificuldade] || dificuldade}` : ""}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs">Avaliativo</Badge>
+              )}
               {pin && (
                 <Badge
                   variant="outline"

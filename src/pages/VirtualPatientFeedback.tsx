@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,6 +76,11 @@ const finalWithBonus = (base: number | null | undefined, m: number | null | unde
 export default function VirtualPatientFeedback() {
   const { cvpId } = useParams<{ cvpId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Vindo do treino logo após o envio do MAI: a correção ainda está rodando e esta tela aguarda o feedback ficar pronto.
+  const aguardando = new URLSearchParams(location.search).get("gerando") === "1";
+  const [tentativas, setTentativas] = useState(0);
+  const [modo, setModo] = useState<{ mode: string; dificuldade: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [grade, setGrade] = useState<Grade | null>(null);
   const [mai, setMai] = useState<any>(null);
@@ -99,14 +104,29 @@ export default function VirtualPatientFeedback() {
     load();
   }, [cvpId]);
 
-  const load = async () => {
+  // Enquanto a correção do treino não termina, consulta de novo a cada 5 s (até cerca de 3 minutos).
+  useEffect(() => {
+    if (!aguardando || loading || grade?.feedback_released || tentativas >= 36) return;
+    const t = setTimeout(() => { setTentativas((n) => n + 1); load(true); }, 5000);
+    return () => clearTimeout(t);
+  }, [aguardando, loading, grade, tentativas]);
+
+  const load = async (quiet = false) => {
     const email = (sessionStorage.getItem("vp_email") || "").trim().toLowerCase();
     if (!cvpId || !email) {
       toast.error("Sessão expirada. Acesse novamente com seu PIN e e-mail.");
       navigate("/student/auth");
       return;
     }
-    setLoading(true);
+    if (!quiet) setLoading(true);
+
+    // Tipo da atividade (treino ou avaliativo). Consulta tolerante a erro.
+    const { data: modeData, error: modeErr } = await (supabase as any)
+      .from("class_virtual_patients")
+      .select("mode, dificuldade")
+      .eq("id", cvpId)
+      .maybeSingle();
+    if (!modeErr && modeData) setModo({ mode: modeData.mode || "avaliativo", dificuldade: modeData.dificuldade ?? null });
 
     // Buscar a sessão do aluno neste paciente virtual
     const { data: session } = await supabase
@@ -199,6 +219,23 @@ export default function VirtualPatientFeedback() {
     );
   }
 
+  // Treino recém-concluído: a correção está rodando; mostra o andamento em vez de "feedback indisponível".
+  if (aguardando && (!grade || !grade.feedback_released) && tentativas < 36) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center space-y-4">
+            <Loader2 className="h-10 w-10 mx-auto animate-spin text-primary" />
+            <h2 className="text-lg font-semibold">Gerando o seu feedback…</h2>
+            <p className="text-sm text-muted-foreground">
+              Atendimento concluído. A correção leva cerca de 1 minuto. Esta tela atualiza sozinha; não feche a página.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!grade) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
@@ -250,7 +287,16 @@ export default function VirtualPatientFeedback() {
           <Button variant="ghost" size="sm" onClick={() => navigate("/student/auth")}>
             <ArrowLeft className="h-4 w-4 mr-1.5" /> Voltar
           </Button>
-          <Badge variant="outline">{studentName}</Badge>
+          <div className="flex items-center gap-2">
+            {modo && (modo.mode === "treino" ? (
+              <Badge className="bg-sky-600 hover:bg-sky-600 text-white">
+                Treino{modo.dificuldade ? ` · ${({ facil: "Fácil", medio: "Médio", dificil: "Difícil" } as Record<string, string>)[modo.dificuldade] || modo.dificuldade}` : ""}
+              </Badge>
+            ) : (
+              <Badge variant="outline">Avaliativo</Badge>
+            ))}
+            <Badge variant="outline">{studentName}</Badge>
+          </div>
         </div>
 
         {/* Nota final */}
