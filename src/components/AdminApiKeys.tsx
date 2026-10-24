@@ -14,12 +14,9 @@ interface ApiKeyEntry {
   is_active: boolean;
 }
 
+// Gemini (Google) é o único provedor de IA do sistema; as chaves de outros provedores não são mais usadas.
 const PROVIDER_INFO: Record<string, { label: string; link: string }> = {
-  groq: { label: "Groq", link: "https://console.groq.com/keys" },
-  openai: { label: "OpenAI", link: "https://platform.openai.com/api-keys" },
-  anthropic: { label: "Anthropic", link: "https://console.anthropic.com/settings/keys" },
-  openrouter: { label: "OpenRouter", link: "https://openrouter.ai/keys" },
-  google: { label: "Google AI", link: "https://aistudio.google.com/apikey" },
+  google: { label: "Google AI (Gemini)", link: "https://aistudio.google.com/apikey" },
 };
 
 function maskKey(key: string): string {
@@ -38,7 +35,7 @@ export default function AdminApiKeys() {
 
   const loadKeys = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("ai_api_keys").select("*").order("provider");
+    const { data, error } = await supabase.from("ai_api_keys").select("*").eq("provider", "google");
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
@@ -106,16 +103,19 @@ export default function AdminApiKeys() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Key className="h-5 w-5" />
-          API Keys externas
+          Chave de IA (Gemini)
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Configure as API Keys das suas LLMs favoritas. Elas serão usadas com prioridade nas funcionalidades de IA.
+          Todas as funcionalidades de IA do sistema usam o Gemini, do Google, com a chave cadastrada aqui.
         </p>
         <p className="text-xs text-muted-foreground/70">
-          Se nenhuma chave estiver configurada, o sistema usará o modelo padrão da plataforma. Se a chamada com sua chave falhar, o sistema fará fallback automático.
+          Sem uma chave ativa, as funcionalidades de IA deixam de funcionar e mostram erro. Não há outro provedor nem fallback automático.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {keys.length === 0 && (
+          <p className="text-sm text-muted-foreground">Nenhum registro de chave do Google encontrado no banco.</p>
+        )}
         {keys.map((entry) => {
           const info = PROVIDER_INFO[entry.provider] || { label: entry.provider, link: "#" };
           const hasKey = entry.api_key && entry.api_key.length > 0;
