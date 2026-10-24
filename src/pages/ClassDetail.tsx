@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,13 +20,14 @@ import {
 import {
   ArrowLeft, GraduationCap, Plus, Calendar, FileText, UserCog, Layers,
   Pencil, Trash2, Download, ExternalLink, Upload, Loader2, LayoutDashboard,
-  Users, BookOpenCheck, ClipboardCheck, Copy, CalendarOff,
+  Users, BookOpenCheck, ClipboardCheck, Copy, CalendarOff, ChevronRight, ListChecks,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LessonDialog, LessonItem } from "@/components/classes/LessonDialog";
 import { SeminarEvaluationDialog } from "@/components/classes/SeminarEvaluationDialog";
 import { SeminarRubric } from "@/lib/seminar-rubric";
 import { OverviewTab } from "@/components/classes/OverviewTab";
+import { ClassActivitiesTab } from "@/components/classes/ClassActivitiesTab";
 import { GradebookTab } from "@/components/classes/GradebookTab";
 import { AttendanceTab } from "@/components/classes/AttendanceTab";
 import { StudentsTab } from "@/components/classes/StudentsTab";
@@ -39,6 +42,8 @@ interface ClassRow {
   id: string;
   name: string;
   description: string | null;
+  semester?: string | null;
+  is_active?: boolean | null;
   user_id: string;
   weekly_schedule?: WeeklySlot[];
 }
@@ -75,6 +80,7 @@ const TEACHER_ROLES = [
 export default function ClassDetail() {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [klass, setKlass] = useState<ClassRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,7 +91,8 @@ export default function ClassDetail() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [semesterStudents, setSemesterStudents] = useState<{ id: string; student_name: string }[]>([]);
   const [allClassStudents, setAllClassStudents] = useState<{ id: string; student_name: string }[]>([]);
-  const [activeTab, setActiveTab] = useState<string>("overview");
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get("aba") || "overview");
+  const [editClass, setEditClass] = useState<{ open: boolean; name: string; semester: string; description: string; active: boolean }>({ open: false, name: "", semester: "", description: "", active: true });
 
   const [semDialog, setSemDialog] = useState<{ open: boolean; editing?: Semester | null }>({ open: false });
   const [teacherDialog, setTeacherDialog] = useState<{ open: boolean; editing?: Teacher | null }>({ open: false });
@@ -99,7 +106,7 @@ export default function ClassDetail() {
   async function load() {
     setLoading(true);
     const [c, sem, tch, doc] = await Promise.all([
-      supabase.from("classes").select("id,name,description,user_id,weekly_schedule").eq("id", classId!).single(),
+      supabase.from("classes").select("id,name,description,semester,is_active,user_id,weekly_schedule").eq("id", classId!).single(),
       supabase.from("class_semesters").select("*").eq("class_id", classId!).order("order_index"),
       supabase.from("class_teachers").select("*").eq("class_id", classId!).order("order_index"),
       supabase.from("class_documents").select("*").eq("class_id", classId!).order("created_at", { ascending: false }),
@@ -306,6 +313,7 @@ export default function ClassDetail() {
     "6": () => setActiveTab("semesters"),
     "7": () => setActiveTab("teachers"),
     "8": () => setActiveTab("documents"),
+    "9": () => setActiveTab("activities"),
     "n": () => { if (activeTab === "schedule" && activeSemesterId) setLessonDialog({ open: true, editing: null }); },
   });
 
@@ -318,49 +326,64 @@ export default function ClassDetail() {
 
   const activeSemester = semesters.find(s => s.id === activeSemesterId) || null;
 
+  const openEditClass = () => setEditClass({ open: true, name: klass.name, semester: klass.semester || "", description: klass.description || "", active: klass.is_active ?? true });
+  const saveEditClass = async () => {
+    if (!editClass.name.trim()) { toast.error("Informe o nome da turma."); return; }
+    const { error } = await supabase.from("classes")
+      .update({ name: editClass.name.trim(), semester: editClass.semester.trim(), description: editClass.description.trim(), is_active: editClass.active })
+      .eq("id", klass.id);
+    if (error) { toast.error("Erro ao editar turma."); return; }
+    setKlass({ ...klass, name: editClass.name.trim(), semester: editClass.semester.trim(), description: editClass.description.trim(), is_active: editClass.active });
+    setEditClass((e) => ({ ...e, open: false }));
+    toast.success("Turma atualizada!");
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {/* HERO */}
-      <div className="relative overflow-hidden border-b">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/80" />
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--secondary)),transparent_50%)]" />
-        <div className="relative container mx-auto px-6 py-6 max-w-7xl">
-          <div className="flex items-center gap-2 text-primary-foreground/70 text-sm mb-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/classes")} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 h-7 px-2">
-              <ArrowLeft className="w-4 h-4 mr-1" />Turmas
-            </Button>
-            <span>/</span>
-            <span className="text-primary-foreground/90">{klass.name}</span>
-            {activeSemester && <><span>/</span><span className="font-medium text-secondary">{activeSemester.label}</span></>}
-          </div>
+      {/* CABEÇALHO */}
+      <div className="border-b bg-card">
+        <div className="container mx-auto max-w-7xl px-6 py-6">
+          <nav aria-label="Você está em" className="mb-4 flex items-center gap-2 text-[13px] text-muted-foreground">
+            <button type="button" onClick={() => navigate("/classes")} className="inline-flex items-center gap-1 transition-colors hover:text-foreground">
+              <ArrowLeft className="h-3.5 w-3.5" />Turmas
+            </button>
+            <ChevronRight className="h-3.5 w-3.5" />
+            <b className="font-medium text-foreground">{klass.name}</b>
+            {activeSemester && <><ChevronRight className="h-3.5 w-3.5" /><span>{activeSemester.label}</span></>}
+          </nav>
 
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="text-3xl font-bold text-primary-foreground flex items-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-secondary/20 backdrop-blur flex items-center justify-center border border-secondary/30">
-                  <GraduationCap className="h-6 w-6 text-secondary" />
-                </div>
-                {klass.name}
-              </h1>
-              {klass.description && <p className="text-sm text-primary-foreground/80 mt-2 max-w-2xl">{klass.description}</p>}
+            <div className="flex min-w-0 items-center gap-4">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent-ink">
+                <GraduationCap className="h-7 w-7" />
+              </span>
+              <div className="min-w-0">
+                <div className="eyebrow mb-2">Turma{klass.semester ? ` · ${klass.semester}` : ""}</div>
+                <h1 className="font-heading text-[2rem] font-medium leading-[1.1]">{klass.name}</h1>
+                {klass.description && <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{klass.description}</p>}
+                {klass.is_active === false && <div className="mt-2"><StatusBadge tone="neutral">Turma inativa</StatusBadge></div>}
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 bg-background/10 backdrop-blur-md rounded-lg p-2 border border-primary-foreground/10">
-              <Label className="text-primary-foreground/90 text-xs uppercase tracking-wider">Semestre</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={openEditClass}><Pencil className="h-4 w-4" />Editar turma</Button>
               {semesters.length ? (
-                <Select value={activeSemesterId ?? ""} onValueChange={setActiveSemesterId}>
-                  <SelectTrigger className="w-48 bg-background/90 border-0 h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {semesters.map(s => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.label} {!s.is_active && "(arquivado)"} · {s.student_count} alunos
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2 rounded-lg border bg-sunken px-3 py-1.5">
+                  <span className="label-mono">Semestre</span>
+                  <Select value={activeSemesterId ?? ""} onValueChange={setActiveSemesterId}>
+                    <SelectTrigger className="h-9 w-48 border-0 bg-card"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {semesters.map(s => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.label} {!s.is_active && "(arquivado)"} · {s.student_count} alunos
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               ) : (
-                <Button size="sm" onClick={() => setSemDialog({ open: true })} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                  <Plus className="w-4 h-4 mr-1" />Criar semestre
+                <Button onClick={() => setSemDialog({ open: true })}>
+                  <Plus className="h-4 w-4" />Criar semestre
                 </Button>
               )}
             </div>
@@ -369,24 +392,30 @@ export default function ClassDetail() {
       </div>
 
       <div className="container mx-auto px-6 py-6 max-w-7xl">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <div className="-mx-2 px-2 overflow-x-auto md:overflow-visible">
-            <TabsList className="flex md:flex-wrap h-auto w-max md:w-auto">
-              <TabsTrigger value="overview"><LayoutDashboard className="w-4 h-4 mr-1" />Visão geral</TabsTrigger>
-              <TabsTrigger value="schedule"><Calendar className="w-4 h-4 mr-1" />Cronograma</TabsTrigger>
-              <TabsTrigger value="students"><Users className="w-4 h-4 mr-1" />Alunos</TabsTrigger>
-              <TabsTrigger value="grades"><BookOpenCheck className="w-4 h-4 mr-1" />Notas</TabsTrigger>
-              <TabsTrigger value="attendance"><ClipboardCheck className="w-4 h-4 mr-1" />Presença</TabsTrigger>
-              <TabsTrigger value="semesters"><Layers className="w-4 h-4 mr-1" />Semestres</TabsTrigger>
-              <TabsTrigger value="teachers"><UserCog className="w-4 h-4 mr-1" />Professores</TabsTrigger>
-              <TabsTrigger value="documents"><FileText className="w-4 h-4 mr-1" />Materiais</TabsTrigger>
-              <TabsTrigger value="holidays"><CalendarOff className="w-4 h-4 mr-1" />Feriados</TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="-mx-2 overflow-x-auto px-2">
+            <TabsListLine className="w-max min-w-full">
+              <TabsTriggerLine value="overview"><LayoutDashboard className="h-4 w-4" />Visão geral</TabsTriggerLine>
+              <TabsTriggerLine value="activities"><ListChecks className="h-4 w-4" />Atividades</TabsTriggerLine>
+              <TabsTriggerLine value="schedule"><Calendar className="h-4 w-4" />Cronograma</TabsTriggerLine>
+              <TabsTriggerLine value="students"><Users className="h-4 w-4" />Alunos</TabsTriggerLine>
+              <TabsTriggerLine value="grades"><BookOpenCheck className="h-4 w-4" />Notas</TabsTriggerLine>
+              <TabsTriggerLine value="attendance"><ClipboardCheck className="h-4 w-4" />Presença</TabsTriggerLine>
+              <TabsTriggerLine value="semesters"><Layers className="h-4 w-4" />Semestres</TabsTriggerLine>
+              <TabsTriggerLine value="teachers"><UserCog className="h-4 w-4" />Professores</TabsTriggerLine>
+              <TabsTriggerLine value="documents"><FileText className="h-4 w-4" />Materiais</TabsTriggerLine>
+              <TabsTriggerLine value="holidays"><CalendarOff className="h-4 w-4" />Feriados</TabsTriggerLine>
+            </TabsListLine>
           </div>
 
           {/* OVERVIEW */}
           <TabsContent value="overview">
             <OverviewTab classId={classId!} semesterId={activeSemesterId} onNavigateTab={setActiveTab} />
+          </TabsContent>
+
+          {/* ACTIVITIES */}
+          <TabsContent value="activities">
+            <ClassActivitiesTab classId={classId!} />
           </TabsContent>
 
           {/* SCHEDULE */}
@@ -557,6 +586,25 @@ export default function ClassDetail() {
             />
           </TabsContent>
         </Tabs>
+
+        <Dialog open={editClass.open} onOpenChange={(o) => setEditClass((e) => ({ ...e, open: o }))}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Editar turma</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2"><Label htmlFor="ec-name">Nome da turma *</Label><Input id="ec-name" value={editClass.name} onChange={(e) => setEditClass((c) => ({ ...c, name: e.target.value }))} /></div>
+              <div className="space-y-2"><Label htmlFor="ec-sem">Semestre</Label><Input id="ec-sem" value={editClass.semester} onChange={(e) => setEditClass((c) => ({ ...c, semester: e.target.value }))} /></div>
+              <div className="space-y-2"><Label htmlFor="ec-desc">Descrição</Label><Textarea id="ec-desc" rows={2} value={editClass.description} onChange={(e) => setEditClass((c) => ({ ...c, description: e.target.value }))} /></div>
+              <div className="flex items-center gap-2 pt-1">
+                <Checkbox id="ec-active" checked={editClass.active} onCheckedChange={(v) => setEditClass((c) => ({ ...c, active: Boolean(v) }))} />
+                <Label htmlFor="ec-active" className="cursor-pointer font-normal">Turma ativa</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditClass((e) => ({ ...e, open: false }))}>Cancelar</Button>
+              <Button onClick={saveEditClass}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <SemesterDialog state={semDialog} onClose={() => setSemDialog({ open: false })} onSave={saveSemester} />
         <TeacherDialog state={teacherDialog} onClose={() => setTeacherDialog({ open: false })} onSave={saveTeacher} />
