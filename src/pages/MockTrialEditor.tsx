@@ -316,6 +316,29 @@ export default function MockTrialEditor() {
     refetchCases();
   };
 
+  // Volta o(s) processo(s) ao estado "não iniciado": fase, cronômetro e pausa. Opcionalmente apaga respostas e avaliações.
+  const resetCaseSessions = async (caseIds: string[], label: string) => {
+    const sessionIds = sessions.filter((s: any) => caseIds.includes(s.case_id)).map((s: any) => s.id);
+    if (sessionIds.length === 0) { toast.info("Nada a reiniciar: este júri ainda não foi iniciado."); return; }
+    if (!window.confirm(`Reiniciar ${label}? A fase atual e o cronômetro voltam ao início, como se o júri não tivesse começado.`)) return;
+    const clearData = window.confirm("Apagar também as respostas dos formulários e as avaliações (de IA e do juiz) desta sessão?\n\nOK = apagar (definitivo)\nCancelar = manter");
+    if (clearData) {
+      const { error: evErr } = await supabase.from("mock_trial_evaluations").delete().in("session_id", sessionIds);
+      const { error: rsErr } = await supabase.from("mock_trial_responses").delete().in("session_id", sessionIds);
+      if (evErr || rsErr) { toast.error("Erro ao apagar respostas/avaliações: " + (evErr || rsErr)!.message); return; }
+    }
+    const { error } = await supabase.from("mock_trial_sessions").update({
+      status: "pending",
+      current_phase_started_at: null,
+      phase_duration_seconds: null,
+      is_paused: false,
+      paused_remaining_seconds: null,
+    }).in("id", sessionIds);
+    if (error) { toast.error("Erro ao reiniciar: " + error.message); return; }
+    toast.success(`${label} reiniciado`);
+    refetchSessions();
+  };
+
   const saveCaseContent = async (caseId: string, content: string) => {
     await supabase.from("mock_trial_cases").update({ process_content: content }).eq("id", caseId);
     refetchCases();
@@ -757,6 +780,14 @@ export default function MockTrialEditor() {
         <Badge variant={trial?.status === "active" ? "default" : trial?.status === "finished" ? "outline" : "secondary"}>
           {trial?.status === "active" ? "Ativo" : trial?.status === "finished" ? "Finalizado" : "Rascunho"}
         </Badge>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => resetCaseSessions(cases.map((c: any) => c.id), "todos os processos")}
+          title="Voltar todos os processos ao estado não iniciado"
+        >
+          <RefreshCw className="h-4 w-4 mr-1" /> Reiniciar
+        </Button>
         {trial?.status !== "active" ? (
           <Button
             size="sm"
@@ -902,6 +933,14 @@ export default function MockTrialEditor() {
                     >
                       <Save className="h-3 w-3 mr-1" />
                       {savingToBankId === c.id ? "Salvando..." : "Salvar no banco"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => resetCaseSessions([c.id], `o processo ${c.case_number || ""}`.trim())}
+                      title="Voltar este processo ao estado não iniciado"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />Reiniciar
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => deleteCase(c.id)}><Trash2 className="h-3 w-3" /></Button>
                   </div>
