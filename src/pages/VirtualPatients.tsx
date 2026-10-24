@@ -1,23 +1,19 @@
 import { useEffect, useState } from "react";
 import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Zap, User, MessageCircle, Info, Sparkles, Loader2, Trash2, FileText, BookOpen, Library } from "lucide-react";
+import { MessageCircle, Info, Sparkles, Trash2, FileText, BookOpen, Library } from "lucide-react";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { GenerateCaseDialog } from "@/components/vp-case/GenerateCaseDialog";
 import { CaseLibraryDialog } from "@/components/vp-case/CaseLibraryDialog";
 import { PublishToLibraryDialog } from "@/components/vp-case/PublishToLibraryDialog";
 import { useAdmin } from "@/hooks/use-admin";
+import { cn } from "@/lib/utils";
 
 interface PatientInfo {
   id: string;
@@ -44,10 +40,15 @@ const SYSTEM_PATIENTS: PatientInfo[] = [
   { id: "inflammation_jose", name: "José", age: 57, profession: "Contador", description: "Complicações do corticoide em AR", module: "Inflamação" },
 ];
 
+const TODOS = "__todos__";
+
+const initials = (name: string) =>
+  name.split(/\s+/).filter((p) => p && !/^(d[aeo]s?|seu|dona)$/i.test(p)).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
+
 export default function VirtualPatients() {
   const navigate = useNavigate();
   const [customPatients, setCustomPatients] = useState<PatientInfo[]>([]);
-  const [activeTab, setActiveTab] = useState("Dor");
+  const [activeTab, setActiveTab] = useState(TODOS);
   const [genOpen, setGenOpen] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
   const [publishing, setPublishing] = useState<PatientInfo | null>(null);
@@ -94,55 +95,59 @@ export default function VirtualPatients() {
   };
 
   const renderPatientCard = (patient: PatientInfo) => (
-    <Card key={patient.id} className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-base">{patient.name}, {patient.age} anos</CardTitle>
-              <CardDescription>{patient.profession}</CardDescription>
+    <Card key={patient.id} className="surface-hover flex flex-col">
+      <CardContent className="flex flex-1 flex-col gap-4 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand-soft font-heading text-lg font-medium text-brand-text">
+              {initials(patient.name)}
+            </span>
+            <div className="min-w-0">
+              <h3 className="truncate font-heading text-lg font-medium leading-tight">{patient.name}</h3>
+              <p className="truncate text-xs text-muted-foreground">{patient.age} anos · {patient.profession}</p>
             </div>
           </div>
+          {patient.custom ? (
+            patient.status === "draft"
+              ? <StatusBadge tone="warn" dot>Rascunho</StatusBadge>
+              : <StatusBadge tone="ok" dot>Publicado</StatusBadge>
+          ) : (
+            patient.legacy && <StatusBadge>Legado</StatusBadge>
+          )}
+        </div>
+
+        <p className="min-h-[2.5rem] text-sm leading-relaxed text-muted-foreground">{patient.description}</p>
+
+        <div className="flex flex-wrap gap-1.5">
+          <StatusBadge tone="neutral">{patient.module}</StatusBadge>
+          {patient.custom && <StatusBadge tone="accent"><Sparkles className="h-3 w-3" />Meu paciente</StatusBadge>}
+        </div>
+
+        <div className="mt-auto flex flex-wrap items-center gap-2">
+          <Button className="flex-1" onClick={() => startSession(patient)}>
+            <MessageCircle className="h-4 w-4" />Conversar
+          </Button>
+          <Button variant="outline" onClick={() => navigate(`/virtual-patients/case/${patient.id}`)}>
+            <FileText className="h-4 w-4" />Roteiro
+          </Button>
           {patient.custom && (
-            <Button variant="ghost" size="icon" onClick={() => deleteCustom(patient.id)} title="Excluir">
+            <Button variant="ghost" size="icon" onClick={() => deleteCustom(patient.id)} title="Excluir" aria-label="Excluir paciente">
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           )}
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2 mb-3">
-          <Badge variant="outline">{patient.description}</Badge>
-          {patient.custom && <Badge variant="secondary"><Sparkles className="h-3 w-3 mr-1" />Meu paciente</Badge>}
-          {patient.custom && patient.status === "draft" && <Badge variant="outline">Rascunho</Badge>}
-          {patient.legacy && <Badge variant="secondary">Legado</Badge>}
-        </div>
-        <p className="text-xs text-muted-foreground mb-4">
-          Converse livremente com o paciente para testar o comportamento. As mensagens não são salvas — o atendimento real ocorre nas Salas Virtuais.
-        </p>
-        <div className="space-y-2">
-          <Button className="w-full" onClick={() => startSession(patient)}>
-            <MessageCircle className="h-4 w-4 mr-2" />Conversar com Paciente
+        {isAdmin && patient.custom && (
+          <Button variant="ghost" size="sm" className="-mt-1 justify-start text-muted-foreground" onClick={() => setPublishing(patient)}>
+            <Library className="h-4 w-4" />Adicionar à biblioteca
           </Button>
-          <Button className="w-full" variant="outline" onClick={() => navigate(`/virtual-patients/case/${patient.id}`)}>
-            <FileText className="h-4 w-4 mr-2" />Roteiro e gabarito
-          </Button>
-          {isAdmin && patient.custom && (
-            <Button className="w-full" variant="ghost" size="sm" onClick={() => setPublishing(patient)}>
-              <Library className="h-4 w-4 mr-2" />Adicionar à biblioteca
-            </Button>
-          )}
-        </div>
+        )}
       </CardContent>
     </Card>
   );
 
   const all = [...SYSTEM_PATIENTS.map((p) => ({ ...p, legacy: true })), ...customPatients];
   const categories = Array.from(new Set(all.map((p) => p.module)));
-  // Garantir ordem: Dor, Inflamação, depois custom
+  // Ordem: Dor, Inflamação, depois as categorias criadas pelo docente.
   categories.sort((a, b) => {
     const order = ["Dor", "Inflamação"];
     const ai = order.indexOf(a); const bi = order.indexOf(b);
@@ -151,51 +156,59 @@ export default function VirtualPatients() {
     if (bi === -1) return -1;
     return ai - bi;
   });
+  const visible = activeTab === TODOS ? all : all.filter((p) => p.module === activeTab);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 md:p-8">
       <ModuleHelpGuide moduleKey="virtual_patients" />
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Pacientes Virtuais</h1>
-          <p className="text-muted-foreground">Converse com os pacientes virtuais para testá-los. O atendimento real (com persistência e avaliação) acontece nas Salas Virtuais com os alunos.</p>
+      <PageHeader
+        eyebrow="Praticar"
+        title="Pacientes Virtuais"
+        description="Converse com o paciente para testá-lo. O atendimento real, com avaliação, acontece nas Salas Virtuais com os alunos."
+        actions={
+          <>
+            <SystemPromptViewer toolKey="virtual-patients" />
+            <Button variant="outline" onClick={() => setLibOpen(true)}>
+              <BookOpen className="h-4 w-4" />Biblioteca de casos
+            </Button>
+            <Button variant="ai" onClick={() => setGenOpen(true)}>
+              <Sparkles className="h-4 w-4" />Gerar paciente
+            </Button>
+          </>
+        }
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Categorias">
+          {[TODOS, ...categories].map((cat) => {
+            const count = cat === TODOS ? all.length : all.filter((p) => p.module === cat).length;
+            const on = activeTab === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setActiveTab(cat)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  on ? "border-transparent bg-primary text-primary-foreground" : "border-input bg-card text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {cat === TODOS ? "Todos" : cat}
+                <span className={cn("font-mono text-[11px]", on ? "opacity-80" : "text-muted-foreground")}>{count}</span>
+              </button>
+            );
+          })}
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setLibOpen(true)}>
-            <BookOpen className="h-4 w-4 mr-2" />Biblioteca de casos
-          </Button>
-          <Button onClick={() => setGenOpen(true)}>
-            <Sparkles className="h-4 w-4 mr-2" />Gerar Paciente Virtual
-          </Button>
-          <SystemPromptViewer toolKey="virtual-patients" />
-        </div>
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Info className="h-3.5 w-3.5" />Conversas aqui são efêmeras e não ficam salvas. Pacientes que você gera são privados.
+        </p>
       </div>
 
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Modo exploração:</strong> as conversas aqui são efêmeras e não ficam salvas. Pacientes que você gerar são privados — só você os vê.
-        </AlertDescription>
-      </Alert>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex-wrap h-auto">
-          {categories.map((cat) => (
-            <TabsTrigger key={cat} value={cat}>
-              {cat === "Dor" ? <Zap className="h-4 w-4 mr-1" /> : cat === "Inflamação" ? <Flame className="h-4 w-4 mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
-              {cat}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        {categories.map((cat) => (
-          <TabsContent key={cat} value={cat} className="mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {all.filter((p) => p.module === cat).map(renderPatientCard)}
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {visible.map(renderPatientCard)}
+      </div>
 
       <CaseLibraryDialog
         open={libOpen}
