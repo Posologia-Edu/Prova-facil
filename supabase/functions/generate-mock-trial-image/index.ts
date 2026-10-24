@@ -1,18 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAiImageWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BUCKET = "mock-trial-images";
 
 async function tryGenerate(prompt: string, attempt: number, timeoutMs = 60000): Promise<string | null> {
-  if (!LOVABLE_API_KEY) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -20,18 +19,9 @@ async function tryGenerate(prompt: string, attempt: number, timeoutMs = 60000): 
       ? `Generate a HIGHLY REALISTIC medical imaging exam, as if officially issued by a hospital diagnostic department. Proper grayscale for X-ray/CT/MRI, proper colors and grid for ECG, proper microscopy appearance for histology. Include realistic anatomical orientation markers. NO captions, NO text overlays explaining the finding. Description: ${prompt}`
       : `Realistic medical exam image (radiology/ECG/microscopy as appropriate). Clean, no text overlay, no captions, single centered diagnostic image. ${prompt}`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
+    const { response: resp } = await callAiImageWithFallback({
       signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: enrichedPrompt }],
-        modalities: ["image", "text"],
-      }),
+      messages: [{ role: "user", content: enrichedPrompt }],
     });
     if (!resp.ok) {
       console.error(`Image gen attempt ${attempt} failed:`, resp.status, (await resp.text()).slice(0, 300));

@@ -6,73 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-
-// Generate a medical image (X-ray, CT, ECG, etc.) via Lovable AI image model.
-// Returns a data:image/png;base64,... URL or null on failure.
-// Has an individual timeout so a slow image never blocks the whole response.
-async function generateMedicalImage(prompt: string, timeoutMs = 45000): Promise<string | null> {
-  if (!LOVABLE_API_KEY) return null;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [
-          {
-            role: "user",
-            content: `Generate a HIGHLY REALISTIC medical imaging exam, as if it were officially issued by a hospital radiology/diagnostic department. The image must look authentic — proper grayscale for radiology (X-ray/CT/MRI), proper colors and grid for ECG, proper microscopy appearance for histology, etc. Include realistic patient header markers (laterality L/R, anatomical orientation), institutional watermark area, and visible diagnostic findings that match the description. NO captions, NO text overlays explaining the finding — the image should require interpretation. Description: ${prompt}`,
-          },
-        ],
-        modalities: ["image", "text"],
-      }),
-    });
-    if (!resp.ok) {
-      console.error("Image gen failed:", resp.status, await resp.text());
-      return null;
-    }
-    const data = await resp.json();
-    const msg = data.choices?.[0]?.message;
-    // Try multiple known shapes for image responses
-    let url: string | null =
-      msg?.images?.[0]?.image_url?.url ||
-      msg?.images?.[0]?.url ||
-      msg?.image_url?.url ||
-      null;
-
-    // Some providers embed the image as a markdown ![](data:...) inside content
-    if (!url && typeof msg?.content === "string") {
-      const m = msg.content.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/);
-      if (m) url = m[0];
-    }
-    // Some providers return an array content with image_url parts
-    if (!url && Array.isArray(msg?.content)) {
-      for (const part of msg.content) {
-        if (part?.type === "image_url" && part?.image_url?.url) {
-          url = part.image_url.url;
-          break;
-        }
-      }
-    }
-    if (!url) {
-      console.error("Image gen no URL in response:", JSON.stringify(data).slice(0, 500));
-    }
-    return url || null;
-  } catch (e) {
-    console.error("generateMedicalImage error:", (e as Error).message);
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 function extractExpectedAnnexCount(processContent: string): number {
   const match = processContent.match(/##\s+Lista de Provas([\s\S]*?)(?:\n---|\n##\s+ANEXO|$)/i);
   if (!match) return 6;
@@ -584,19 +517,10 @@ Gere AGORA o processo completo seguindo EXATAMENTE o padrão-ouro de qualidade d
 
 Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
 
-    // Call Lovable AI Gateway directly to avoid the multi-provider fallback chain
-    // (which currently has an invalid Google key and Groq fails on the large tool-call output).
-    // gemini-2.5-flash returns within ~60-90s for this prompt; gemini-2.5-pro often exceeds the
-    // 150s edge-function wall clock and the gateway connection is killed.
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY não configurado");
-    }
+    // Flash: o pro costuma passar do limite de 150 s da edge function para este prompt longo.
+    // Sem max_tokens: no Gemini o raciocínio do modelo conta no limite de saída e poderia truncar o processo.
     const aiPayload: any = {
-      model: "google/gemini-2.5-pro",
-      reasoning: {
-        effort: "medium",
-      },
-      max_tokens: 12000,
+      model: "flash",
       tools: [
         {
           type: "function",
@@ -659,18 +583,10 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
     const aiTimer = setTimeout(() => aiController.abort(), 140000);
     let response: Response;
     try {
-      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        signal: aiController.signal,
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(attemptPayload),
-      });
+      ({ response } = await callAiWithFallback({ ...attemptPayload, signal: aiController.signal }));
     } catch (e) {
       clearTimeout(aiTimer);
-      console.error("AI gateway error:", (e as Error).message);
+      console.error("Gemini error:", (e as Error).message);
       return new Response(
         JSON.stringify({ error: "A geração demorou demais. Tente novamente." }),
         { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -678,14 +594,18 @@ Se algum item falhar na autoverificação, REESCREVA antes de retornar.`;
     }
     clearTimeout(aiTimer);
 
+    if (aiController.signal.aborted) {
+      return new Response(
+        JSON.stringify({ error: "A geração demorou demais. Tente novamente." }),
+        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (!response.ok) {
       const errText = await response.text();
       console.error("AI error:", response.status, errText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       throw new Error("AI generation failed");
     }

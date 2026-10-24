@@ -12,6 +12,8 @@ interface AiCallOptions {
   tool_choice?: any;
   modalities?: string[];
   temperature?: number;
+  /** Cancela a chamada (ex.: AbortController com prazo menor que o limite da edge function). */
+  signal?: AbortSignal;
 }
 
 interface AiUsageContext {
@@ -154,6 +156,7 @@ export async function callAiWithFallback(
   try {
     response = await fetch(GOOGLE_OPENAI_URL, {
       method: "POST",
+      signal: options.signal,
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
@@ -205,6 +208,7 @@ export async function callAiImageWithFallback(
   try {
     res = await fetch(`${GOOGLE_NATIVE_URL}/${model}:generateContent`, {
       method: "POST",
+      signal: options.signal,
       headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],

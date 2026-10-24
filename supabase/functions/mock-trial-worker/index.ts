@@ -5,6 +5,7 @@
 // process" call into many small, validated steps.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { callAiWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +15,6 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -128,30 +128,22 @@ async function coerceRawTextToToolArgs(rawText: string, tool: Tool): Promise<{ o
   const timer = setTimeout(() => controller.abort(), 45_000);
 
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
+    const { response: resp } = await callAiWithFallback({
+      model: "flash",
       signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        max_tokens: 3000,
-        messages: [
-          {
-            role: "system",
-            content:
-              "Transforme a saída abaixo nos argumentos exatos da função indicada. Preserve o conteúdo original. Se o texto já for a resposta final de uma seção, mapeie-o para o campo correto do schema.",
-          },
-          {
-            role: "user",
-            content: `Função alvo: ${tool.function.name}\nSchema esperado:\n${JSON.stringify(tool.function.parameters)}\n\nSaída original:\n${rawText}`,
-          },
-        ],
-        tools: [tool],
-        tool_choice: { type: "function", function: { name: tool.function.name } },
-      }),
+      messages: [
+        {
+          role: "system",
+          content:
+            "Transforme a saída abaixo nos argumentos exatos da função indicada. Preserve o conteúdo original. Se o texto já for a resposta final de uma seção, mapeie-o para o campo correto do schema.",
+        },
+        {
+          role: "user",
+          content: `Função alvo: ${tool.function.name}\nSchema esperado:\n${JSON.stringify(tool.function.parameters)}\n\nSaída original:\n${rawText}`,
+        },
+      ],
+      tools: [tool],
+      tool_choice: { type: "function", function: { name: tool.function.name } },
     });
 
     clearTimeout(timer);
@@ -191,25 +183,19 @@ async function callJson(opts: {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 110_000);
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
+    // Sem max_tokens: no Gemini o raciocínio do modelo conta no limite de saída e poderia truncar a seção.
+    const { response: resp } = await callAiWithFallback({
+      model: opts.model || "pro",
       signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: opts.model || "google/gemini-2.5-pro",
-        max_tokens: opts.maxTokens ?? 8000,
-        messages: [
-          { role: "system", content: opts.system },
-          { role: "user", content: opts.user },
-        ],
-        tools: [opts.tool],
-        tool_choice: { type: "function", function: { name: opts.tool.function.name } },
-      }),
+      messages: [
+        { role: "system", content: opts.system },
+        { role: "user", content: opts.user },
+      ],
+      tools: [opts.tool],
+      tool_choice: { type: "function", function: { name: opts.tool.function.name } },
     });
     clearTimeout(timer);
+    if (controller.signal.aborted) return { ok: false, error: "Tempo esgotado na chamada à IA" };
     if (!resp.ok) {
       const txt = await resp.text();
       return { ok: false, status: resp.status, error: `AI ${resp.status}: ${txt.slice(0, 300)}` };
@@ -1055,7 +1041,7 @@ async function runOneStep(jobId: string): Promise<{ done: boolean; failed?: bool
         system: ROOT_RULES,
         user: buildBlueprintPrompt(objectives, job.case_number || "001/2026", job.pdf_content || "") + reinforced,
         tool: BLUEPRINT_TOOL,
-        model: "google/gemini-2.5-pro",
+        model: "pro",
         maxTokens: 5000,
         timeoutMs: 120_000,
       });
