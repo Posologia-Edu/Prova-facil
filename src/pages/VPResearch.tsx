@@ -139,7 +139,10 @@ export default function VPResearch() {
     (cvps || []).forEach((c: any) => { cvpMap[c.id] = { group_label: c.group_label, class_id: c.class_id }; });
     setCvpLookup(cvpMap);
 
-    const cvpIds = (cvps || []).map((c: any) => c.id);
+    // P14: atendimentos de treino não entram na pesquisa. Consulta tolerante a erro: sem a coluna, todos entram.
+    const { data: modeRows, error: modeErr } = await (supabase as any).from("class_virtual_patients").select("id, mode").in("id", (cvps || []).map((c: any) => c.id));
+    const treinoIds = new Set<string>(!modeErr && modeRows ? (modeRows as any[]).filter((r) => r.mode === "treino").map((r) => r.id) : []);
+    const cvpIds = (cvps || []).map((c: any) => c.id).filter((id: string) => !treinoIds.has(id));
     if (!cvpIds.length) { setSessions([]); setMetrics({}); setLoading(false); return; }
 
     const { data: sess } = await supabase

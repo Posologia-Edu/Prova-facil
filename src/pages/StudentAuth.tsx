@@ -177,6 +177,18 @@ export default function StudentAuth() {
           }
         }
 
+        // P14: paciente de treino é individual (consulta tolerante a erro: sem a coluna, segue como avaliativo).
+        const { data: modeRow } = await (supabase as any)
+          .from("class_virtual_patients")
+          .select("mode")
+          .eq("id", vpRoom.id)
+          .maybeSingle();
+        if (modeRow?.mode === "treino" && assessmentType !== "individual") {
+          toast({ title: "Paciente de treino", description: "Este paciente é de treino e deve ser atendido individualmente. Escolha a opção individual.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+
         if (vpRoom.status !== "active") {
           toast({ title: "Sala não disponível", description: "Este paciente virtual ainda não foi ativado pelo professor.", variant: "destructive" });
           setLoading(false);
@@ -203,15 +215,27 @@ export default function StudentAuth() {
           class_student_id: string;
         }>;
 
+        // P14: pacientes de treino da turma. Não contam como "outro paciente" (o aluno pode treinar vários) e, neles,
+        // vários alunos atribuídos NÃO formam um grupo: cada um treina individualmente.
+        const isTreino = modeRow?.mode === "treino";
+        const { data: treinoRows } = await (supabase as any)
+          .from("class_virtual_patients")
+          .select("id")
+          .eq("class_id", vpRoom.class_id)
+          .eq("mode", "treino");
+        const treinoIds = new Set<string>(((treinoRows as any[]) || []).map((r) => r.id));
+
         // Assignment for THIS VP
         const vpAssignmentList = classAssignments.filter(a => a.class_virtual_patient_id === vpRoom.id);
         const hasAssignments = vpAssignmentList.length > 0;
-        const isAssignedGroup = vpAssignmentList.length > 1;
+        const isAssignedGroup = !isTreino && vpAssignmentList.length > 1;
 
         const findInVPAssignment = (em: string) =>
           vpAssignmentList.find(a => a.student_email.trim().toLowerCase() === em);
         const findInOtherVP = (em: string) =>
-          classAssignments.find(a => a.student_email.trim().toLowerCase() === em && a.class_virtual_patient_id !== vpRoom.id);
+          isTreino
+            ? undefined
+            : classAssignments.find(a => a.student_email.trim().toLowerCase() === em && a.class_virtual_patient_id !== vpRoom.id && !treinoIds.has(a.class_virtual_patient_id));
 
         // Helper: detect if user already has an active session in this VP under a DIFFERENT mode
         const fetchExistingSessionFor = async (em: string) => {

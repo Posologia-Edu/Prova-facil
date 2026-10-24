@@ -668,6 +668,18 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
       raw_ai_response: rawResponse + "\n\n[SERVIDOR] " + JSON.stringify({ subscores_ia: subsIa, cobertura_por_dimensao: coberturaDim, cobertura_peso: gabarito ? COBERTURA_PESO : 0, informacoes_obtidas: gabarito ? obtidas : undefined }),
     };
 
+    // P14: paciente de treino libera o feedback ao aluno assim que a correção termina (o avaliativo continua liberado pelo docente).
+    // Se a coluna ainda não existir no banco, o erro é ignorado e a correção segue como avaliativa.
+    const { data: cvpMode } = await supabase
+      .from("class_virtual_patients")
+      .select("mode")
+      .eq("id", class_virtual_patient_id)
+      .maybeSingle();
+    if ((cvpMode as any)?.mode === "treino") {
+      (payload as any).feedback_released = true;
+      (payload as any).feedback_released_at = new Date().toISOString();
+    }
+
     if (existing?.id) {
       const { error: updErr } = await supabase.from("virtual_patient_grades").update(payload).eq("id", existing.id);
       if (updErr) console.error("Failed to update grade:", updErr);

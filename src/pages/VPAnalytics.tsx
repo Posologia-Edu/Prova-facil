@@ -84,6 +84,8 @@ export default function VPAnalytics() {
   const [cvps, setCvps] = useState<CVPOption[]>([]);
   const [selectedClass, setSelectedClass] = useState("all");
   const [selectedCvp, setSelectedCvp] = useState("all");
+  // P14: pacientes de treino ficam fora da análise e da correção em lote, a menos que o docente peça para vê-los.
+  const [modeFilter, setModeFilter] = useState<"avaliativo" | "treino">("avaliativo");
   const [grades, setGrades] = useState<GradeRow[]>([]);
 
   // Detail dialog
@@ -109,7 +111,15 @@ export default function VPAnalytics() {
   const [grading, setGrading] = useState(false);
 
   useEffect(() => { loadFilters(); }, []);
-  useEffect(() => { loadGrades(); }, [selectedClass, selectedCvp]);
+  useEffect(() => { loadGrades(); }, [selectedClass, selectedCvp, modeFilter]);
+
+  // Mantém só os pacientes do tipo escolhido. Consulta tolerante a erro: sem a coluna, todos contam como avaliativos.
+  const idsDoTipo = async (ids: string[], tipo: "avaliativo" | "treino") => {
+    if (ids.length === 0) return ids;
+    const { data, error } = await (supabase as any).from("class_virtual_patients").select("id, mode").in("id", ids);
+    if (error || !data) return tipo === "avaliativo" ? ids : [];
+    return (data as any[]).filter((r) => (r.mode || "avaliativo") === tipo).map((r) => r.id as string);
+  };
 
   const loadFilters = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -168,6 +178,7 @@ export default function VPAnalytics() {
       filteredCvpIds = filteredCvpIds.filter(id => id === selectedCvp);
     }
 
+    filteredCvpIds = await idsDoTipo(filteredCvpIds, modeFilter);
     if (filteredCvpIds.length === 0) { setGrades([]); setLoading(false); return; }
 
     const { data: sessionsData } = await supabase
@@ -547,6 +558,8 @@ export default function VPAnalytics() {
     if (selectedClass !== "all") filteredCvpIds = myCvps.filter((c: any) => c.class_id === selectedClass).map((c: any) => c.id);
     if (selectedCvp !== "all") filteredCvpIds = filteredCvpIds.filter(id => id === selectedCvp);
 
+    // Treino corrige sozinho ao fim do atendimento: "Corrigir Turma" só trata os avaliativos.
+    filteredCvpIds = await idsDoTipo(filteredCvpIds, "avaliativo");
     if (filteredCvpIds.length === 0) { toast.info("Nenhum paciente virtual encontrado."); setGrading(false); return; }
 
     // Get ALL sessions (any status) for selected filters — sessions with any meaningful interaction can be graded
@@ -917,6 +930,15 @@ export default function VPAnalytics() {
           </div>
         </div>
         <div className="flex gap-3 flex-wrap">
+          <Select value={modeFilter} onValueChange={(v) => setModeFilter(v as "avaliativo" | "treino")}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="avaliativo">Avaliativos</SelectItem>
+              <SelectItem value="treino">Treino</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={selectedCvp} onValueChange={setSelectedCvp}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Todos os pacientes" />

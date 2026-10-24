@@ -58,6 +58,7 @@ export default function VirtualPatientRoom() {
   const [remoteTyping, setRemoteTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const sessionIdRef = useRef<string>("");
+  const isTreinoRef = useRef(false);
   const encounterRef = useRef<number>(1);
   const seenMsgKeysRef = useRef<Set<string>>(new Set());
   const [consentState, setConsentState] = useState<null | boolean>(null);
@@ -336,6 +337,14 @@ export default function VirtualPatientRoom() {
       .eq("id", cvp.id)
       .maybeSingle()
       .then(({ data, error }: any) => { if (!error) setGroupRolesOn(!!data?.group_roles); });
+
+    // P14: paciente de treino recebe o feedback assim que a correção termina. Consulta à parte e tolerante a erro.
+    (supabase as any)
+      .from("class_virtual_patients")
+      .select("mode")
+      .eq("id", cvp.id)
+      .maybeSingle()
+      .then(({ data, error }: any) => { if (!error) isTreinoRef.current = data?.mode === "treino"; });
 
     // Nome, idade e categoria vêm do cadastro único (função pública: não expõe roteiro nem gabarito).
     const pub = await fetchPublicVpCase(cvp.patient_id);
@@ -741,6 +750,12 @@ export default function VirtualPatientRoom() {
           body: { session_id: sessionId, class_virtual_patient_id: cvpId },
         });
         if (gradeErr) throw gradeErr;
+        if (isTreinoRef.current) {
+          // O servidor já liberou o feedback deste paciente de treino: leva o aluno direto a ele.
+          toast.success("Correção pronta. Abrindo o seu feedback.");
+          navigate(`/virtual-patients/feedback/${cvpId}`);
+          return;
+        }
         toast.success("Correção e feedback gerados com sucesso.");
       }
     } catch (err) {

@@ -1144,9 +1144,11 @@ export type Database = {
           access_code: string
           class_id: string
           created_at: string
+          dificuldade: string | null
           group_label: string | null
           group_roles: boolean
           id: string
+          mode: string
           patient_id: string
           profession: string
           semester_id: string | null
@@ -1156,9 +1158,11 @@ export type Database = {
           access_code?: string
           class_id: string
           created_at?: string
+          dificuldade?: string | null
           group_label?: string | null
           group_roles?: boolean
           id?: string
+          mode?: string
           patient_id: string
           profession?: string
           semester_id?: string | null
@@ -1168,9 +1172,11 @@ export type Database = {
           access_code?: string
           class_id?: string
           created_at?: string
+          dificuldade?: string | null
           group_label?: string | null
           group_roles?: boolean
           id?: string
+          mode?: string
           patient_id?: string
           profession?: string
           semester_id?: string | null
@@ -1252,6 +1258,7 @@ export type Database = {
       }
       class_vp_assignments: {
         Row: {
+          is_treino: boolean
           class_id: string
           class_student_id: string
           class_virtual_patient_id: string
@@ -1261,6 +1268,7 @@ export type Database = {
           student_name: string
         }
         Insert: {
+          is_treino?: boolean
           class_id: string
           class_student_id: string
           class_virtual_patient_id: string
@@ -1270,6 +1278,7 @@ export type Database = {
           student_name: string
         }
         Update: {
+          is_treino?: boolean
           class_id?: string
           class_student_id?: string
           class_virtual_patient_id?: string

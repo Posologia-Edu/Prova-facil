@@ -92,7 +92,17 @@ interface ClassVirtualPatient {
   group_label?: string | null;
   profession?: string | null;
   group_roles?: boolean;
+  mode?: string;
+  dificuldade?: string | null;
 }
+
+const VP_DIFICULDADES = [
+  { value: "facil", label: "Fácil" },
+  { value: "medio", label: "Médio" },
+  { value: "dificil", label: "Difícil" },
+] as const;
+
+const vpDificuldadeLabel = (v?: string | null) => VP_DIFICULDADES.find(d => d.value === v)?.label ?? null;
 
 const VP_PROFESSIONS = [
   { value: "farmaceutico", label: "Farmácia" },
@@ -129,6 +139,8 @@ export default function ClassesPage() {
   const { entries: vpCatalog } = useVpCatalog();
   const [linkVPOpen, setLinkVPOpen] = useState(false);
   const [linkVPProfession, setLinkVPProfession] = useState<string>("farmaceutico");
+  const [linkVPMode, setLinkVPMode] = useState<"avaliativo" | "treino">("avaliativo");
+  const [linkVPDificuldade, setLinkVPDificuldade] = useState<string>("medio");
   const [removingVP, setRemovingVP] = useState<{ vp: ClassVirtualPatient; sessions: number } | null>(null);
   const [linkExamOpen, setLinkExamOpen] = useState(false);
 
@@ -459,6 +471,7 @@ export default function ClassesPage() {
     const vps = (vpsRes.data as ClassVirtualPatient[]) || [];
     setClassVPs(vps);
     void loadGroupRoles(cls.id);
+    void loadVpMode(cls.id);
     await loadVPAssignments(cls.id);
 
     // Determine mode based on existing data
@@ -542,7 +555,9 @@ export default function ClassesPage() {
       class_id: selectedClass.id,
       patient_id: patientId,
       profession: linkVPProfession,
-    });
+      // Só envia as colunas do modo treino quando é treino: o avaliativo funciona mesmo antes da migração.
+      ...(linkVPMode === "treino" ? { mode: "treino", dificuldade: linkVPDificuldade } : {}),
+    } as any);
     if (error) {
       if (error.code === "23505") toast.error("Este paciente já está vinculado a esta turma.");
       else toast.error("Erro ao vincular paciente.");
@@ -552,6 +567,8 @@ export default function ClassesPage() {
     setLinkVPOpen(false);
     const { data } = await supabase.from("class_virtual_patients").select("id, patient_id, access_code, status, group_label, profession").eq("class_id", selectedClass.id).order("created_at");
     setClassVPs((data as ClassVirtualPatient[]) || []);
+    void loadGroupRoles(selectedClass.id);
+    void loadVpMode(selectedClass.id);
   };
 
   const toggleVPStatus = async (vp: ClassVirtualPatient) => {
@@ -590,6 +607,14 @@ export default function ClassesPage() {
     if (error || !data) return;
     const m = new Map((data as any[]).map((r) => [r.id, !!r.group_roles]));
     setClassVPs(prev => prev.map(v => ({ ...v, group_roles: m.get(v.id) ?? false })));
+  };
+
+  // Modo treino e dificuldade. Consulta à parte e tolerante a erro, como a divisão de funções.
+  const loadVpMode = async (classId: string) => {
+    const { data, error } = await (supabase as any).from("class_virtual_patients").select("id, mode, dificuldade").eq("class_id", classId);
+    if (error || !data) return;
+    const m = new Map((data as any[]).map((r) => [r.id, r]));
+    setClassVPs(prev => prev.map(v => ({ ...v, mode: m.get(v.id)?.mode ?? "avaliativo", dificuldade: m.get(v.id)?.dificuldade ?? null })));
   };
 
   const toggleGroupRoles = async (vp: ClassVirtualPatient, value: boolean) => {
@@ -669,13 +694,15 @@ export default function ClassesPage() {
         class_student_id: s.id,
         student_email: (s.student_email || "").trim().toLowerCase(),
         student_name: s.student_name,
+        // Só envia a coluna no treino: a atribuição avaliativa funciona mesmo antes da migração.
+        ...(assigningVP.mode === "treino" ? { is_treino: true } : {}),
       }));
 
     if (inserts.length > 0) {
       const { error } = await supabase.from("class_vp_assignments" as any).insert(inserts);
       if (error) {
         if (error.code === "23505") {
-          toast.error("Um ou mais alunos já estão atribuídos a outro paciente desta turma.");
+          toast.error(assigningVP.mode === "treino" ? "Um ou mais alunos já estão atribuídos a este paciente." : "Um ou mais alunos já estão atribuídos a outro paciente desta turma.");
         } else {
           toast.error("Erro ao salvar atribuições.");
         }
@@ -687,12 +714,14 @@ export default function ClassesPage() {
     await loadVPAssignments(selectedClass.id);
     setAssignSaving(false);
     setAssignDialogOpen(false);
-    const mode = targetIds.length > 1 ? "grupo" : targetIds.length === 1 ? "individual" : "sem alunos";
+    const mode = assigningVP.mode === "treino" ? "treino individual" : targetIds.length > 1 ? "grupo" : targetIds.length === 1 ? "individual" : "sem alunos";
     toast.success(`Atribuições salvas (${mode}).`);
   };
 
   const getVPAssignedStudents = (vpId: string) =>
     vpAssignments.filter(a => a.class_virtual_patient_id === vpId);
+
+  const isTreinoVP = (vpId: string | undefined) => !!vpId && classVPs.find(v => v.id === vpId)?.mode === "treino";
 
 
   // Handle assessment mode change
@@ -1037,7 +1066,7 @@ export default function ClassesPage() {
                 <h3 className="text-sm font-semibold text-primary flex items-center gap-1.5">
                   <HeartPulse className="h-4 w-4" /> Pacientes Virtuais ({classVPs.length})
                 </h3>
-                <Button variant="outline" size="sm" onClick={() => { setLinkVPProfession("farmaceutico"); setLinkVPOpen(true); }}>
+                <Button variant="outline" size="sm" onClick={() => { setLinkVPProfession("farmaceutico"); setLinkVPMode("avaliativo"); setLinkVPDificuldade("medio"); setLinkVPOpen(true); }}>
                   <Plus className="h-3.5 w-3.5 mr-1.5" /> Vincular Paciente
                 </Button>
               </div>
@@ -1048,7 +1077,7 @@ export default function ClassesPage() {
                   {classVPs.map((vp) => {
                     const info = getVPInfo(vp.patient_id);
                     const assigned = getVPAssignedStudents(vp.id);
-                    const mode = assigned.length > 1 ? "Grupo" : assigned.length === 1 ? "Individual" : null;
+                    const mode = vp.mode === "treino" ? (assigned.length > 0 ? "Treino individual" : null) : assigned.length > 1 ? "Grupo" : assigned.length === 1 ? "Individual" : null;
                     return (
                       <Card key={vp.id} className="p-4">
                         <div className="flex items-start justify-between">
@@ -1060,6 +1089,11 @@ export default function ClassesPage() {
                               <div className="flex items-center gap-1.5 mt-1">
                                 <Badge variant="outline" className="text-[10px]">{info?.module}</Badge>
                                 <Badge variant="secondary" className="text-[10px]">{vpProfessionLabel(vp.profession)}</Badge>
+                                {vp.mode === "treino" && (
+                                  <Badge className="text-[10px] bg-sky-600 hover:bg-sky-600 text-white">
+                                    Treino{vpDificuldadeLabel(vp.dificuldade) ? ` · ${vpDificuldadeLabel(vp.dificuldade)}` : ""}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1165,7 +1199,7 @@ export default function ClassesPage() {
                           )}
                         </div>
 
-                        {assigned.length > 1 && (
+                        {assigned.length > 1 && vp.mode !== "treino" && (
                           <label className="mt-3 flex items-start gap-2 text-xs cursor-pointer">
                             <Checkbox
                               checked={!!vp.group_roles}
@@ -1259,8 +1293,30 @@ export default function ClassesPage() {
                 Define o papel do aluno, o cenário e o gabarito usados na conversa e na correção. Não pode ser trocada depois de vinculado.
               </p>
             </div>
+            <div className="mb-4">
+              <Label className="text-xs font-semibold">Tipo da atividade</Label>
+              <div className="grid grid-cols-2 gap-2 mt-1.5">
+                <Button type="button" size="sm" variant={linkVPMode === "avaliativo" ? "default" : "outline"} onClick={() => setLinkVPMode("avaliativo")}>Avaliativo</Button>
+                <Button type="button" size="sm" variant={linkVPMode === "treino" ? "default" : "outline"} onClick={() => setLinkVPMode("treino")}>Treino</Button>
+              </div>
+              {linkVPMode === "treino" ? (
+                <>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {VP_DIFICULDADES.map(d => (
+                      <Button key={d.value} type="button" size="sm" variant={linkVPDificuldade === d.value ? "default" : "outline"} onClick={() => setLinkVPDificuldade(d.value)}>{d.label}</Button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    Treino: individual, uma tentativa, feedback e nota liberados ao aluno assim que a correção termina. Não entra nas médias da turma nem na pesquisa. A dificuldade é só um selo informativo.
+                  </p>
+                </>
+              ) : (
+                <p className="text-[11px] text-muted-foreground mt-1.5">Avaliativo: você libera o feedback depois, como hoje.</p>
+              )}
+            </div>
             <div className="space-y-2">
               {vpCatalog.filter(p => p.published && !classVPs.some(v => v.patient_id === p.id)).map((p) => (
+
                 <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                   <div>
                     <p className="text-sm font-medium">{p.label}</p>
@@ -1296,8 +1352,9 @@ export default function ClassesPage() {
             {assigningVP && (
               <p className="text-sm text-muted-foreground mb-3">
                 <strong>{getVPInfo(assigningVP.patient_id)?.name || assigningVP.patient_id}</strong>.
-                Selecione 1 aluno para atendimento <strong>individual</strong> ou 2+ alunos para atendimento <strong>em grupo</strong>.
-                Cada aluno só pode ser atribuído a um único paciente nesta turma.
+                {assigningVP.mode === "treino"
+                  ? <>Paciente de <strong>treino</strong>: cada aluno atribuído treina <strong>individualmente</strong>, com o próprio e-mail, e vários alunos podem treinar o mesmo paciente. Um aluno pode ser atribuído a mais de um paciente de treino.</>
+                  : <>Selecione 1 aluno para atendimento <strong>individual</strong> ou 2+ alunos para atendimento <strong>em grupo</strong>. Cada aluno só pode ser atribuído a um único paciente avaliativo nesta turma.</>}
               </p>
             )}
             <div className="space-y-1 border rounded-md p-2 max-h-[50vh] overflow-y-auto">
@@ -1305,8 +1362,9 @@ export default function ClassesPage() {
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno cadastrado nesta turma.</p>
               )}
               {students.map(s => {
-                const otherAssignment = vpAssignments.find(
-                  a => a.class_student_id === s.id && a.class_virtual_patient_id !== assigningVP?.id
+                // Treino não conflita com nada: o aluno pode treinar vários pacientes. No avaliativo, só os outros avaliativos contam.
+                const otherAssignment = assigningVP?.mode === "treino" ? undefined : vpAssignments.find(
+                  a => a.class_student_id === s.id && a.class_virtual_patient_id !== assigningVP?.id && !isTreinoVP(a.class_virtual_patient_id)
                 );
                 const otherVP = otherAssignment
                   ? classVPs.find(v => v.id === otherAssignment.class_virtual_patient_id)
@@ -1343,8 +1401,9 @@ export default function ClassesPage() {
               <div className="flex w-full items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">
                   {assignSelectedIds.size === 0 && "Nenhum selecionado"}
-                  {assignSelectedIds.size === 1 && "1 aluno → atendimento individual"}
-                  {assignSelectedIds.size > 1 && `${assignSelectedIds.size} alunos → atendimento em grupo`}
+                  {assigningVP?.mode === "treino" && assignSelectedIds.size > 0 && `${assignSelectedIds.size} aluno(s) → treino individual`}
+                  {assigningVP?.mode !== "treino" && assignSelectedIds.size === 1 && "1 aluno → atendimento individual"}
+                  {assigningVP?.mode !== "treino" && assignSelectedIds.size > 1 && `${assignSelectedIds.size} alunos → atendimento em grupo`}
                 </p>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setAssignDialogOpen(false)} disabled={assignSaving}>Cancelar</Button>
