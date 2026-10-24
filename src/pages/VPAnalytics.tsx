@@ -659,7 +659,7 @@ export default function VPAnalytics() {
       if (siblingIds.length === 0) return;
       const { data: primaryGrade } = await supabase
         .from("virtual_patient_grades")
-        .select("subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id")
+        .select("subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id, grading_model, rubric_version, graded_at")
         .eq("session_id", primaryId)
         .maybeSingle();
       if (!primaryGrade) return;
@@ -679,6 +679,9 @@ export default function VPAnalytics() {
           feedback_resumido: primaryGrade.feedback_resumido,
           orientacoes_melhoria: primaryGrade.orientacoes_melhoria,
           flags_seguranca: primaryGrade.flags_seguranca,
+          grading_model: primaryGrade.grading_model,
+          rubric_version: primaryGrade.rubric_version,
+          graded_at: primaryGrade.graded_at,
         };
         if (existing?.id) {
           await supabase.from("virtual_patient_grades").update(payload).eq("id", existing.id);
