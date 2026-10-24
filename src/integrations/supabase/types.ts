@@ -1258,32 +1258,32 @@ export type Database = {
       }
       class_vp_assignments: {
         Row: {
-          is_treino: boolean
           class_id: string
           class_student_id: string
           class_virtual_patient_id: string
           created_at: string
           id: string
+          is_treino: boolean
           student_email: string
           student_name: string
         }
         Insert: {
-          is_treino?: boolean
           class_id: string
           class_student_id: string
           class_virtual_patient_id: string
           created_at?: string
           id?: string
+          is_treino?: boolean
           student_email: string
           student_name: string
         }
         Update: {
-          is_treino?: boolean
           class_id?: string
           class_student_id?: string
           class_virtual_patient_id?: string
           created_at?: string
           id?: string
+          is_treino?: boolean
           student_email?: string
           student_name?: string
         }
