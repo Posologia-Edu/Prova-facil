@@ -1,37 +1,22 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Library,
-  FileEdit,
-  GraduationCap,
-  Stethoscope,
-  BarChart3,
-  MessageSquare,
-  Crown,
   BookOpen,
-  LogOut,
-  ShieldCheck,
-  CalendarDays,
+  ChevronDown,
+  ChevronsUpDown,
+  Crown,
   Globe,
+  LogOut,
+  MessageSquare,
   Settings,
+  ShieldCheck,
   Trash2,
-  Store,
-  HeartPulse,
-  UserRound,
-  BrainCircuit,
-  Target,
-  ClipboardCheck,
-  Scale,
-  TrendingUp,
-  Gavel,
-  Rocket,
-  Brain,
-  Link2,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/use-admin";
 import { useLanguage, LANGUAGE_LABELS, LANGUAGE_FLAGS, type Language } from "@/i18n/LanguageContext";
+import { buildNav, pathMatches, type NavItem } from "@/lib/app-nav";
+import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import {
   Sidebar,
@@ -40,7 +25,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
   SidebarHeader,
@@ -49,14 +33,26 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const LINK_BASE =
+  "relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground";
+// A barra âmbar à esquerda marca a página atual.
+const LINK_ACTIVE =
+  "bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:-left-3 before:bottom-2 before:top-2 before:w-[3px] before:rounded-r before:bg-highlight";
+
 export function AppSidebar() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { isAdmin } = useAdmin();
   const { t, language, setLanguage } = useLanguage();
   const [userName, setUserName] = useState<string>("");
+  const [formsOpen, setFormsOpen] = useState(false);
 
   useEffect(() => {
     const fetchName = async () => {
@@ -73,189 +69,125 @@ export function AppSidebar() {
     fetchName();
   }, []);
 
-  const principalNav = [
-    { title: t("nav_dashboard"), url: "/dashboard", icon: LayoutDashboard },
-  ];
-
-  const contentNav = [
-    { title: t("nav_questions"), url: "/questions", icon: Library },
-    { title: t("nav_composer"), url: "/composer", icon: FileEdit },
-    { title: t("sidebar_my_exams"), url: "/exams", icon: BookOpen },
-    { title: "OSCE", url: "/osce", icon: Stethoscope },
-    { title: t("sim_nav"), url: "/simulations", icon: HeartPulse },
-    { title: "Pacientes Virtuais", url: "/virtual-patients", icon: UserRound },
-    { title: "SCT", url: "/sct", icon: BrainCircuit },
-    { title: "KFE", url: "/kfe", icon: Target },
-    { title: "Mini-CEX/DOPS", url: "/clinical-observations", icon: ClipboardCheck },
-    { title: "SJT", url: "/sjt", icon: Scale },
-    { title: "Progress Test", url: "/progress-test", icon: TrendingUp },
-    { title: "Júri Simulado", url: "/mock-trials", icon: Gavel },
-  ];
-
-  const managementNav = [
-    { title: t("nav_classes"), url: "/classes", icon: GraduationCap },
-    { title: t("nav_calendar"), url: "/calendar", icon: CalendarDays },
-    { title: t("nav_analytics"), url: "/analytics", icon: BarChart3 },
-    { title: "Análises VP", url: "/virtual-patients/analytics", icon: BarChart3 },
-    { title: "Marketplace", url: "/marketplace", icon: Store },
-    { title: "Competências", url: "/competency-analysis", icon: Brain },
-    { title: "Integração LMS", url: "/lms-integration", icon: Link2 },
-    { title: "Atualizações", url: "/updates", icon: Rocket },
-  ];
+  const groups = buildNav(t);
+  const languages: Language[] = ["pt", "en", "es"];
+  const initials = (userName || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
   };
 
-  const languages: Language[] = ["pt", "en", "es"];
-
-  const renderNavGroup = (label: string, items: typeof principalNav) => (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-sidebar-foreground/40 text-[11px] font-semibold uppercase tracking-wider px-3 mb-1">
-        {label}
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.url}>
-              <SidebarMenuButton asChild>
+  const renderItem = (item: NavItem) => {
+    if (item.children) {
+      const hasActiveChild = item.children.some((c) => pathMatches(pathname, c.url));
+      const open = formsOpen || hasActiveChild;
+      return (
+        <SidebarMenuItem key={item.title}>
+          <button
+            type="button"
+            onClick={() => setFormsOpen((v) => !v)}
+            aria-expanded={open}
+            className={cn(LINK_BASE, "w-full", hasActiveChild && "text-sidebar-accent-foreground")}
+          >
+            <item.icon className="h-4 w-4" />
+            <span>{item.title}</span>
+            <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
+          </button>
+          {open && (
+            <div className="mt-0.5 space-y-0.5">
+              {item.children.map((c) => (
                 <NavLink
-                  to={item.url}
-                  end={item.url === "/dashboard"}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                  activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                  key={c.url}
+                  to={c.url}
+                  className={cn(LINK_BASE, "py-1.5 pl-10 text-[13px]")}
+                  activeClassName={LINK_ACTIVE}
                 >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.title}</span>
+                  {c.title}
                 </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
+              ))}
+            </div>
+          )}
+        </SidebarMenuItem>
+      );
+    }
+    return (
+      <SidebarMenuItem key={item.url}>
+        <NavLink to={item.url} end={item.url === "/dashboard"} className={LINK_BASE} activeClassName={LINK_ACTIVE}>
+          <item.icon className="h-4 w-4" />
+          <span>{item.title}</span>
+        </NavLink>
+      </SidebarMenuItem>
+    );
+  };
 
   return (
     <Sidebar className="w-64 gradient-sidebar border-r-0">
-      <SidebarHeader className="p-5 border-b border-sidebar-border">
+      <SidebarHeader className="border-b border-sidebar-border p-5">
         <Link to="/" className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center">
-            <BookOpen className="h-5 w-5 text-secondary-foreground" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#F7B93B] to-[#E39500] shadow-elev-1">
+            <BookOpen className="h-5 w-5 text-[#1A1200]" />
           </div>
-          <div>
-            <h1 className="text-base font-bold text-sidebar-primary-foreground tracking-tight">ProvaFácil</h1>
-            <p className="text-xs text-sidebar-foreground/60 truncate max-w-[140px]">{userName || t("app_subtitle")}</p>
+          <div className="min-w-0">
+            <div className="font-heading text-[17px] font-medium leading-tight tracking-tight text-white">ProvaFácil</div>
+            <p className="truncate text-[11px] text-sidebar-foreground">{t("app_subtitle")}</p>
           </div>
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="px-3 py-4 space-y-2">
-        {renderNavGroup(t("sidebar_principal"), principalNav)}
-        {renderNavGroup(t("sidebar_content"), contentNav)}
-        {renderNavGroup(t("sidebar_management"), managementNav)}
+      <SidebarContent className="px-3 py-3">
+        {groups.map((g) => (
+          <SidebarGroup key={g.label} className="p-0 pb-2">
+            <SidebarGroupLabel className="mb-1 h-auto px-3 pb-1 pt-4 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/55">
+              {g.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0.5">{g.items.map(renderItem)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
-      <SidebarFooter className="p-3 border-t border-sidebar-border">
-        <SidebarMenu>
-          {/* Language Switcher */}
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer w-full">
-                  <Globe className="h-4 w-4" />
-                  <span>{LANGUAGE_FLAGS[language]} {LANGUAGE_LABELS[language]}</span>
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start">
+      <SidebarFooter className="border-t border-sidebar-border p-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sidebar-accent-foreground transition-colors hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[hsl(var(--accent-soft))] font-heading text-[13px] font-medium text-[hsl(var(--accent-ink))]">
+                {initials}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13.5px] font-medium">{userName || t("app_subtitle")}</span>
+                <span className="block truncate text-[11px] text-sidebar-foreground">{t("nav_settings")}</span>
+              </span>
+              <ChevronsUpDown className="h-4 w-4 shrink-0 text-sidebar-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-60">
+            <DropdownMenuItem onSelect={() => navigate("/settings")}><Settings className="mr-2 h-4 w-4" />{t("nav_settings")}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => navigate("/pricing")}><Crown className="mr-2 h-4 w-4" />{t("nav_pricing")}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => navigate("/trash")}><Trash2 className="mr-2 h-4 w-4" />{t("sidebar_trash")}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => navigate("/contato")}><MessageSquare className="mr-2 h-4 w-4" />Contato</DropdownMenuItem>
+            {isAdmin && (
+              <DropdownMenuItem onSelect={() => navigate("/admin")}><ShieldCheck className="mr-2 h-4 w-4" />{t("nav_admin")}</DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger><Globe className="mr-2 h-4 w-4" />{LANGUAGE_FLAGS[language]} {LANGUAGE_LABELS[language]}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
                 {languages.map((lang) => (
-                  <DropdownMenuItem
-                    key={lang}
-                    onClick={() => setLanguage(lang)}
-                    className={language === lang ? "bg-accent" : ""}
-                  >
+                  <DropdownMenuItem key={lang} onSelect={() => setLanguage(lang)} className={language === lang ? "bg-accent" : ""}>
                     {LANGUAGE_FLAGS[lang]} {LANGUAGE_LABELS[lang]}
                   </DropdownMenuItem>
                 ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink
-                to="/pricing"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-              >
-                <Crown className="h-4 w-4" />
-                <span>{t("nav_pricing")}</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink
-                to="/trash"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-              >
-                <Trash2 className="h-4 w-4" />
-                <span>{t("sidebar_trash")}</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          {isAdmin && (
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <NavLink
-                  to="/admin"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                  activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>{t("nav_admin")}</span>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
-
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink
-                to="/contato"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-              >
-                <MessageSquare className="h-4 w-4" />
-                <span>Contato</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink
-                to="/settings"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-              >
-                <Settings className="h-4 w-4" />
-                <span>{t("nav_settings")}</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer">
-              <LogOut className="h-4 w-4" />
-              <span>{t("nav_logout")}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={handleLogout}><LogOut className="mr-2 h-4 w-4" />{t("nav_logout")}</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );

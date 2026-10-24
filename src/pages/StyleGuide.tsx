@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Moon, Plus, Sparkles, Sun } from "lucide-react";
+import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -157,5 +158,32 @@ export default function StyleGuide() {
         </section>
       </div>
     </div>
+  );
+}
+
+// Prévia da estrutura do aplicativo (menu, cabeçalho e área de conteúdo) com uma página de exemplo, sem login.
+export function StyleGuideApp() {
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tema") === "escuro") document.documentElement.classList.add("dark");
+  }, []);
+  return (
+    <AppLayout>
+      <div className="space-y-8 p-6 md:p-8">
+        <PageHeader
+          eyebrow="Praticar"
+          title="Pacientes Virtuais"
+          description="Converse com o paciente para testá-lo. O atendimento real, com avaliação, acontece nas salas com os alunos."
+          actions={<><Button variant="outline">Biblioteca de casos</Button><Button variant="ai"><Sparkles className="h-4 w-4" />Gerar paciente</Button></>}
+        />
+        <div className="grid gap-4 md:grid-cols-3">
+          {[["Roberto Mendes", "54 anos · Motorista de aplicativo", "Fácil"], ["Geraldo de Oliveira", "69 anos · Aposentado", "Médio"], ["Luciana Mendes", "34 anos · Professora", "Difícil"]].map(([n, s, d]) => (
+            <Card key={n} className="surface-hover">
+              <CardHeader><CardTitle className="font-heading text-xl font-medium">{n}</CardTitle><CardDescription>{s}</CardDescription></CardHeader>
+              <CardContent className="space-y-4"><StatusBadge tone={d === "Fácil" ? "ok" : d === "Médio" ? "warn" : "bad"}>{d}</StatusBadge><Button className="w-full">Conversar</Button></CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </AppLayout>
   );
 }

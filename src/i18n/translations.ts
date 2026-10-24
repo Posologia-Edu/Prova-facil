@@ -375,6 +375,11 @@ type TranslationKeys = {
   sidebar_principal: string;
   sidebar_content: string;
   sidebar_management: string;
+  sidebar_assess: string;
+  sidebar_practice: string;
+  sidebar_forms: string;
+  nav_go_to: string;
+  nav_go_to_hint: string;
   sidebar_my_exams: string;
   sidebar_trash: string;
 
@@ -889,6 +894,11 @@ const pt: TranslationKeys = {
   sidebar_principal: "Principal",
   sidebar_content: "Conteúdo",
   sidebar_management: "Gestão",
+  sidebar_assess: "Avaliar",
+  sidebar_practice: "Praticar",
+  sidebar_forms: "Formulários",
+  nav_go_to: "Ir para…",
+  nav_go_to_hint: "Digite o nome do módulo",
   sidebar_my_exams: "Minhas Provas",
   sidebar_trash: "Lixeira",
 
@@ -1398,6 +1408,11 @@ const en: TranslationKeys = {
   sidebar_principal: "Main",
   sidebar_content: "Content",
   sidebar_management: "Management",
+  sidebar_assess: "Assess",
+  sidebar_practice: "Practice",
+  sidebar_forms: "Forms",
+  nav_go_to: "Go to…",
+  nav_go_to_hint: "Type a module name",
   sidebar_my_exams: "My Exams",
   sidebar_trash: "Trash",
 
@@ -1907,6 +1922,11 @@ const es: TranslationKeys = {
   sidebar_principal: "Principal",
   sidebar_content: "Contenido",
   sidebar_management: "Gestión",
+  sidebar_assess: "Evaluar",
+  sidebar_practice: "Practicar",
+  sidebar_forms: "Formularios",
+  nav_go_to: "Ir a…",
+  nav_go_to_hint: "Escribe el nombre del módulo",
   sidebar_my_exams: "Mis Exámenes",
   sidebar_trash: "Papelera",
 

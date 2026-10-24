@@ -114,7 +114,7 @@ import VirtualPatientCaseEditor from "./pages/VirtualPatientCaseEditor";
 import VirtualPatientRoom from "./pages/VirtualPatientRoom";
 import VirtualPatientFeedback from "./pages/VirtualPatientFeedback";
 import VpPeerEvaluation from "./pages/VpPeerEvaluation";
-import StyleGuide from "./pages/StyleGuide";
+import StyleGuide, { StyleGuideApp } from "./pages/StyleGuide";
 import VPAnalytics from "./pages/VPAnalytics";
 import VPResearch from "./pages/VPResearch";
 import Features from "./pages/Features";
@@ -528,6 +528,7 @@ const App = () => (
             <Route path="/virtual-patients/feedback/:cvpId" element={<VirtualPatientFeedback />} />
             <Route path="/virtual-patients/peer-eval/:token" element={<VpPeerEvaluation />} />
             <Route path="/guia-de-estilo" element={<StyleGuide />} />
+            <Route path="/guia-de-estilo/app" element={<StyleGuideApp />} />
             {/* SCT Routes */}
             <Route
               path="/sct"
