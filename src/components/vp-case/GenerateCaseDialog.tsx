@@ -152,7 +152,7 @@ export function GenerateCaseDialog({ open, onOpenChange, onCreated, onOpenEditor
               </Button>
               {showSug && (
                 <div className="mt-2 rounded-md border p-2 max-h-52 overflow-y-auto space-y-3">
-                  {(["Dor", "Inflamação"] as const).map((cat) => (
+                  {Array.from(new Set(CASOS_SUGERIDOS.map((c) => c.categoria))).map((cat) => (
                     <div key={cat}>
                       <p className="text-xs font-semibold text-muted-foreground mb-1">{cat}</p>
                       <div className="space-y-1">
@@ -164,6 +164,7 @@ export function GenerateCaseDialog({ open, onOpenChange, onCreated, onOpenEditor
                             onClick={() => { setCategory(c.categoria); setContext(c.contexto); setQuem(c.quem_conta); setShowSug(false); }}
                           >
                             {c.titulo}
+                            {c.dificuldade && <span className="ml-2 text-[11px] text-muted-foreground">({c.dificuldade === "facil" ? "fácil" : c.dificuldade === "medio" ? "médio" : "difícil"})</span>}
                             {c.quem_conta === "cuidador" && <span className="ml-2 text-[11px] text-muted-foreground">(cuidador)</span>}
                           </button>
                         ))}

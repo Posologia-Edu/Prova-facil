@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Zap, User, MessageCircle, Info, Sparkles, Loader2, Trash2, FileText } from "lucide-react";
+import { Flame, Zap, User, MessageCircle, Info, Sparkles, Loader2, Trash2, FileText, BookOpen, Library } from "lucide-react";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,6 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { GenerateCaseDialog } from "@/components/vp-case/GenerateCaseDialog";
+import { CaseLibraryDialog } from "@/components/vp-case/CaseLibraryDialog";
+import { PublishToLibraryDialog } from "@/components/vp-case/PublishToLibraryDialog";
+import { useAdmin } from "@/hooks/use-admin";
 
 interface PatientInfo {
   id: string;
@@ -46,6 +49,9 @@ export default function VirtualPatients() {
   const [customPatients, setCustomPatients] = useState<PatientInfo[]>([]);
   const [activeTab, setActiveTab] = useState("Dor");
   const [genOpen, setGenOpen] = useState(false);
+  const [libOpen, setLibOpen] = useState(false);
+  const [publishing, setPublishing] = useState<PatientInfo | null>(null);
+  const { isAdmin } = useAdmin();
 
   useEffect(() => {
     loadCustom();
@@ -124,6 +130,11 @@ export default function VirtualPatients() {
           <Button className="w-full" variant="outline" onClick={() => navigate(`/virtual-patients/case/${patient.id}`)}>
             <FileText className="h-4 w-4 mr-2" />Roteiro e gabarito
           </Button>
+          {isAdmin && patient.custom && (
+            <Button className="w-full" variant="ghost" size="sm" onClick={() => setPublishing(patient)}>
+              <Library className="h-4 w-4 mr-2" />Adicionar à biblioteca
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -150,6 +161,9 @@ export default function VirtualPatients() {
           <p className="text-muted-foreground">Converse com os pacientes virtuais para testá-los. O atendimento real (com persistência e avaliação) acontece nas Salas Virtuais com os alunos.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setLibOpen(true)}>
+            <BookOpen className="h-4 w-4 mr-2" />Biblioteca de casos
+          </Button>
           <Button onClick={() => setGenOpen(true)}>
             <Sparkles className="h-4 w-4 mr-2" />Gerar Paciente Virtual
           </Button>
@@ -183,6 +197,18 @@ export default function VirtualPatients() {
         ))}
       </Tabs>
 
+      <CaseLibraryDialog
+        open={libOpen}
+        onOpenChange={setLibOpen}
+        onCopied={(id) => navigate(`/virtual-patients/case/${id}`)}
+      />
+      <PublishToLibraryDialog
+        caseId={publishing?.id ?? null}
+        defaultTitulo={publishing ? `${publishing.name} — ${publishing.description}` : ""}
+        defaultTema={publishing?.module ?? ""}
+        defaultResumo={publishing?.description ?? ""}
+        onOpenChange={(o) => { if (!o) setPublishing(null); }}
+      />
       <GenerateCaseDialog
         open={genOpen}
         onOpenChange={setGenOpen}

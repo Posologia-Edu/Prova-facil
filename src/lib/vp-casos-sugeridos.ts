@@ -4,7 +4,9 @@
 
 export interface CasoSugerido {
   id: string;
-  categoria: "Dor" | "Inflamação";
+  categoria: string;
+  /** só nos casos da biblioteca (P13): sugestão de dificuldade para o modo treino */
+  dificuldade?: "facil" | "medio" | "dificil";
   titulo: string;
   quem_conta: "paciente" | "cuidador";
   contexto: string;
@@ -92,5 +94,87 @@ export const CASOS_SUGERIDOS: CasoSugerido[] = [
     quem_conta: "paciente",
     contexto:
       "Homem de 28 anos, espondilite anquilosante com dor lombar inflamatória e rigidez matinal longa, em uso contínuo de anti-inflamatório em dose alta há 3 anos, com gastrite e hipertensão recente. Toma também suplemento proteico e creatina na academia, e bebe pouca água. Já ouviu falar de medicamento biológico e tem medo de injeção e de infecção, e não sabe como conseguir pelo SUS. Faz pouca fisioterapia e exercício. Embuta toxicidade do AINE crônico no estômago, rim e pressão, suplementos e creatina com função renal, o papel do exercício e da fisioterapia, e a dúvida sobre biológico e seu acesso. Objetivo educacional: segurança do uso crônico de AINE e orientação sobre terapia avançada.",
+  },
+  // ───────── Casos da biblioteca (P13): clínica geral de Farmácia, 3 níveis de dificuldade ─────────
+  {
+    id: "lib-has-adesao",
+    categoria: "Hipertensão",
+    dificuldade: "facil",
+    titulo: "Hipertensão com baixa adesão",
+    quem_conta: "paciente",
+    contexto:
+      "Homem de 54 anos, motorista de aplicativo, hipertenso há 6 anos, em uso de losartana 50 mg e anlodipino 5 mg, que toma só 'quando lembra' ou quando sente dor de cabeça. Acha que remédio de pressão 'vicia' e que só precisa tomar quando a pressão sobe. Come fora quase todo dia (muito sal), fuma 10 cigarros por dia e usa um descongestionante nasal com frequência. Não mede a pressão em casa. Embuta a baixa adesão por crença errada sobre o tratamento, o excesso de sal e o descongestionante que eleva a pressão. Problemas simples, bem identificáveis por quem pergunta como ele realmente toma cada remédio.",
+  },
+  {
+    id: "lib-dm2-insulina",
+    categoria: "Diabetes",
+    dificuldade: "facil",
+    titulo: "DM2 iniciando insulina com técnica de aplicação errada",
+    quem_conta: "paciente",
+    contexto:
+      "Mulher de 61 anos, diabética tipo 2 há 12 anos, em uso de metformina 850 mg 2x/dia e recém-iniciada em insulina NPH à noite. Não homogeneiza a suspensão, reutiliza a mesma agulha por semanas, aplica sempre no mesmo ponto do abdome (há um nódulo endurecido), guarda a insulina aberta na porta da geladeira e já teve duas hipoglicemias de madrugada que atribuiu a 'passar mal do estômago'. Tem medo de agulha e só mede a glicemia quando se sente mal. Embuta lipo-hipertrofia, armazenamento e técnica errados e hipoglicemia não reconhecida.",
+  },
+  {
+    id: "lib-asma-inalatoria",
+    categoria: "Asma",
+    dificuldade: "facil",
+    titulo: "Asma com técnica inalatória inadequada",
+    quem_conta: "paciente",
+    contexto:
+      "Jovem de 22 anos, universitária, asma desde a infância, usa salbutamol spray várias vezes por semana e uma bombinha de corticoide inalatório com formoterol que usa só nas crises. Não usa espaçador, não inspira lentamente nem prende a respiração, não enxágua a boca e tem candidíase oral recorrente. Acorda à noite com tosse duas vezes por semana. Dorme com tapete e bicho de pelúcia e mora com um gato. Embuta técnica inalatória errada, uso do resgate em excesso (asma não controlada) e fatores ambientais.",
+  },
+  {
+    id: "lib-polifarmacia-idoso",
+    categoria: "Polifarmácia",
+    dificuldade: "medio",
+    titulo: "Polifarmácia em idoso com medicamentos potencialmente inapropriados",
+    quem_conta: "paciente",
+    contexto:
+      "Mulher de 79 anos, viúva, mora sozinha, hipertensa, com insônia, artrose e incontinência urinária de urgência, 11 medicamentos. Usa diazepam à noite há 15 anos, amitriptilina, oxibutinina, ibuprofeno quase diário, omeprazol há 8 anos, anlodipino, hidroclorotiazida e AAS. Queixa de tontura, quedas (duas no último ano), boca seca, constipação e esquecimentos. Mistura os comprimidos num único pote por 'não caber tudo na caixinha'. Embuta critérios de Beers, cascata de prescrição, risco de queda e carga anticolinérgica.",
+  },
+  {
+    id: "lib-drc-ajuste",
+    categoria: "Doença renal",
+    dificuldade: "medio",
+    titulo: "DRC com ajuste de dose e nefrotóxicos",
+    quem_conta: "paciente",
+    contexto:
+      "Homem de 68 anos, hipertenso e diabético, com doença renal crônica estágio 3b (TFG em torno de 35 mL/min). Usa metformina 2 g/dia, enalapril, espironolactona, glibenclamida e sinvastatina, e toma diclofenaco e um suplemento de creatina por conta própria. Queixa de fraqueza, náusea e urina mais escura. Embuta ajuste de dose da metformina e risco de acidose, hipercalemia (IECA mais espironolactona mais AINE), hipoglicemia com glibenclamida e nefrotoxicidade do AINE. Exige consultar os exames e interpretar a função renal.",
+  },
+  {
+    id: "lib-varfarina-interacoes",
+    categoria: "Anticoagulação",
+    dificuldade: "medio",
+    titulo: "Varfarina, dieta e interações",
+    quem_conta: "paciente",
+    contexto:
+      "Mulher de 63 anos, fibrilação atrial e prótese valvar metálica, em uso de varfarina há 2 anos. INR muito instável (entre 1,4 e 5,2). Toma amiodarona há 2 meses, usou sulfametoxazol-trimetoprima para infecção urinária e toma chá verde e 'sucos verdes' de couve em grande quantidade, que começou para emagrecer. Às vezes dobra a dose esquecida. Notou hematomas e sangramento gengival. Embuta interação com amiodarona e antibiótico, vitamina K da dieta e erros de uso. Exige orientar o monitoramento do INR e os sinais de alerta.",
+  },
+  {
+    id: "lib-gestante-medicamentos",
+    categoria: "Gestação",
+    dificuldade: "dificil",
+    titulo: "Gestante com hipertensão, ansiedade e automedicação",
+    quem_conta: "paciente",
+    contexto:
+      "Mulher de 31 anos, 9 semanas de gestação não planejada, hipertensa crônica em uso de enalapril e atenolol, em uso de paroxetina por ansiedade, que toma ibuprofeno para cólicas e um fitoterápico para enjoo. Está com medo e pensa em parar tudo sozinha, inclusive a paroxetina. Ainda não começou o pré-natal nem usa ácido fólico. Embuta medicamentos contraindicados ou de risco na gestação (IECA, atenolol, paroxetina, AINE), o risco de suspensão abrupta e a necessidade de articular o encaminhamento ao pré-natal de alto risco.",
+  },
+  {
+    id: "lib-asma-stepup",
+    categoria: "Asma",
+    dificuldade: "dificil",
+    titulo: "Asma persistente não controlada: step up antes de tratar a adesão",
+    quem_conta: "paciente",
+    contexto:
+      "Mulher de 45 anos, asma persistente moderada há 10 anos, em uso apenas de corticoide inalatório em dose baixa e salbutamol de resgate quase todo dia, com despertares noturnos 3x por semana e duas idas ao pronto-socorro no último ano. Rinite alérgica não tratada, refluxo e uso ocasional de AAS e ibuprofeno. Parte da dificuldade é adesão, mas o tratamento atual está abaixo do que a gravidade exige. Embuta que o profissional deve reconhecer a necessidade de intensificar o tratamento (step up) antes de atribuir tudo à adesão, tratar a rinite e investigar o AINE como gatilho.",
+  },
+  {
+    id: "lib-automedicacao-fitoterapico",
+    categoria: "Automedicação",
+    dificuldade: "dificil",
+    titulo: "Automedicação e fitoterápicos com interação oculta",
+    quem_conta: "paciente",
+    contexto:
+      "Homem de 57 anos, empresário, transplantado renal há 3 anos, em uso de tacrolimo, micofenolato e prednisona. Com humor deprimido, começou por conta própria erva-de-são-joão comprada pela internet; toma também suco de toranja todas as manhãs 'para a imunidade', ibuprofeno para dor de cabeça e omeprazol sem indicação. Esconde isso do nefrologista por receio de bronca. Embuta interação grave da erva-de-são-joão (indução enzimática) e da toranja com o tacrolimo, risco de rejeição ou toxicidade, e o AINE com imunossupressor. Exige abordagem empática para o paciente contar o que realmente usa.",
   },
 ];
