@@ -145,7 +145,9 @@ Penalidade por erro: 0,5 para contraindicação, interação grave (proposta ou 
 O que NÃO conta: falas do paciente, do prescritor ou da equipe; informação que o estudante simplesmente não perguntou; falhas de anamnese; alergia ignorada (outro campo).
 Seja específico e cite o trecho. Se de fato não houve nenhum erro, devolva lista vazia. Não deixe de listar um erro que você identificou.
 
-CUIDADO COM FALSOS POSITIVOS: justificativa fraca, imprecisa ou mal fundamentada NÃO é erro de segurança (isso é qualidade de raciocínio e é avaliado em outro lugar). Só liste quando a conduta ou omissão trouxer risco real e claro para ESTE paciente (contraindicação, interação grave, dose inadequada, fármaco de risco semelhante ao que causou o problema). Alternativas terapêuticas aceitas na prática, mesmo com justificativa ruim, NÃO entram. Diante de dúvida clínica razoável, NÃO liste.`;
+CUIDADO COM FALSOS POSITIVOS: justificativa fraca, imprecisa ou mal fundamentada NÃO é erro de segurança (isso é qualidade de raciocínio e é avaliado em outro lugar). Só liste quando a conduta ou omissão trouxer risco real e claro para ESTE paciente (contraindicação, interação grave, dose inadequada, fármaco de risco semelhante ao que causou o problema). Alternativas terapêuticas aceitas na prática, mesmo com justificativa ruim, NÃO entram. Diante de dúvida clínica razoável, NÃO liste.
+
+SUGESTÃO AO PRESCRITOR NA CONVERSA: quando o estudante apenas sugere ou pergunta ao prescritor, no chat, uma alternativa terapêutica (ex.: "podemos introduzir X?"), a decisão final continua com o prescritor. Isso só entra se a proposta for claramente contraindicada para ESTE paciente (alergia, interação grave, dose tóxica, fármaco do mesmo mecanismo que causou o problema). Risco que se resolve com um plano de transição ou monitorização, e que o prescritor avaliaria, NÃO entra (ex.: sugerir buprenorfina em desmame de tramadol). O que o estudante registra na ficha como decisão ou recomendação própria continua sendo avaliado com o rigor normal.`;
 
 const SAFETY_TOOL = {
   type: "function",
