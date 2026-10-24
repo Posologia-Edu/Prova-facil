@@ -408,8 +408,26 @@ export default function VPAnalytics() {
       .maybeSingle();
     const existing: any = existingRaw;
     const { data: { user: me } } = await supabase.auth.getUser();
+    // Em grupo, a nota da IA fica na linha do integrante principal; os demais só a exibem. Sem linha própria,
+    // o original da IA vem de qualquer integrante do grupo que tenha nota.
+    let source: any = existing;
+    if (!source && detailGrade.group_id) {
+      const { data: sibs } = await supabase
+        .from("virtual_patient_sessions")
+        .select("id")
+        .eq("group_id", detailGrade.group_id);
+      const ids = (sibs || []).map((s: any) => s.id);
+      if (ids.length > 0) {
+        const { data: rows } = await supabase
+          .from("virtual_patient_grades")
+          .select(`id, adjusted_at, ia_original, ${GRADE_SNAPSHOT_SELECT}`)
+          .in("session_id", ids);
+        const list: any[] = (rows as any[]) || [];
+        source = list.find((r) => r.adjusted_at && r.ia_original) || list.find((r) => !r.adjusted_at) || null;
+      }
+    }
     // P16: guarda o que a IA deu, só na primeira vez que a nota da IA é ajustada (ajustes seguintes mantêm o original).
-    const iaOriginal = !existing ? null : (existing.adjusted_at && existing.ia_original) ? existing.ia_original : pickSnapshot(existing);
+    const iaOriginal = !source ? null : (source.adjusted_at && source.ia_original) ? source.ia_original : pickSnapshot(source);
     const payload = {
       subscores: editForm.subscores,
       nota_final: Number(editForm.nota_final) || 0,
