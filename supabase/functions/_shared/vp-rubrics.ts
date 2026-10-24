@@ -51,3 +51,52 @@ const LENTES: Record<VersaoKey, ProfessionalLens> = {
 export function getProfessionalLens(key: string | null | undefined): ProfessionalLens {
   return LENTES[(key as VersaoKey) || "farmaceutico"] ?? LENTES.farmaceutico;
 }
+
+// ───────────────────────── penalidades de segurança (P12, etapa 2) ─────────────────────────
+// O gabarito do caso pode trazer `penalidades_criticas`: as condutas que valem penalidade NESTE caso, com o valor de cada uma.
+// Sem a lista (casos antigos), vale a tabela genérica abaixo, como antes.
+
+export interface PenalidadeCritica {
+  conduta: string;
+  motivo: string;
+  valor: number;
+}
+
+export const VALORES_PENALIDADE = [0.3, 0.5];
+
+/** Entradas válidas da lista do caso (valor 0,3 ou 0,5, com conduta preenchida). */
+export function penalidadesDoCaso(g: { penalidades_criticas?: PenalidadeCritica[] } | null | undefined): PenalidadeCritica[] {
+  const lista = Array.isArray(g?.penalidades_criticas) ? g!.penalidades_criticas! : [];
+  return lista.filter((p) => p && String(p.conduta || "").trim() && VALORES_PENALIDADE.includes(Number(p.valor)));
+}
+
+const virgula = (v: number) => String(v).replace(".", ",");
+
+const linhasCaso = (pen: PenalidadeCritica[]) =>
+  pen.map((p) => `- ${p.conduta}${p.motivo ? ` (${p.motivo})` : ""}: ${virgula(Number(p.valor))}`).join("\n");
+
+/** Tabela de penalidades da correção principal. */
+export function penaltyTableText(pen: PenalidadeCritica[]): string {
+  if (pen.length === 0) {
+    return `- Recomendar/aceitar AINE em DRC, gestação avançada, úlcera ativa: 0,5 cada
+- Não identificar interação grave (ex.: varfarina + AINE, IECA + AINE em idoso): 0,5 cada
+- Recomendar ou propor, em QUALQUER registro do atendimento (conversa ou ficha), medicamento ou conduta insegura para o caso (ex.: trocar por outro serotoninérgico diante de suspeita de síndrome serotoninérgica; manter fármaco contraindicado): 0,5 cada. O que está escrito na ficha (SBAR ou SOAP) conta como proposta, mesmo que não tenha sido dito no chat: a ficha é lida pelo prescritor e pela equipe. Use registro "ficha" nesses casos.
+- Opioide sem orientação de constipação/sedação: 0,3
+- Não investigar gestação em mulher em idade fértil antes de prescrever: 0,3`;
+  }
+  return `Condutas críticas DESTE caso (o professor definiu; cada uma vale o valor indicado):
+${linhasCaso(pen)}
+Além delas, vale 0,5 por: recomendar ou propor, em QUALQUER registro (conversa ou ficha), medicamento ou conduta claramente insegura para ESTE paciente fora da lista, ou não identificar uma interação grave. O que está escrito na ficha (SBAR ou SOAP) conta como proposta, mesmo que não tenha sido dito no chat; use registro "ficha". Use esta regra geral com parcimônia e só com risco real e claro. Itens como opioide sem orientação ou gestação não investigada só valem se estiverem na lista do caso.`;
+}
+
+/** Trecho da auditoria de segurança que lista o que conta como erro e quanto vale. */
+export function safetyErrorTailText(pen: PenalidadeCritica[]): string {
+  if (pen.length === 0) {
+    return `- Opioide sem orientação de constipação/sedação.
+- Não investigar gestação em mulher em idade fértil antes de propor medicamento.
+Penalidade por erro: 0,5 para contraindicação, interação grave (proposta ou não identificada) e conduta insegura proposta; 0,3 para opioide sem orientação e para gestação não investigada.`;
+  }
+  return `- Condutas críticas DESTE caso, definidas pelo professor (cada uma vale o valor indicado):
+${linhasCaso(pen)}
+Penalidade por erro: 0,5 para contraindicação, interação grave (proposta ou não identificada) e conduta insegura proposta fora da lista; para as condutas críticas do caso, o valor da lista. Opioide sem orientação e gestação não investigada só valem se estiverem na lista do caso.`;
+}

@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { GEMINI_MODELS, callAiWithFallback } from "../_shared/ai-caller.ts";
 import { adminClient, getUserId, forbidden } from "../_shared/auth-guard.ts";
 import { loadVpCase } from "../_shared/vp-cases.ts";
-import { getProfessionalLens } from "../_shared/vp-rubrics.ts";
+import { getProfessionalLens, penalidadesDoCaso, penaltyTableText, safetyErrorTailText, type PenalidadeCritica } from "../_shared/vp-rubrics.ts";
 import { ANAMNESE_KEYS, FICHA_KEYS, MAI_KEYS, baseScores } from "../_shared/vp-grade.ts";
 import {
   buildGabaritoText,
@@ -134,14 +134,13 @@ function withoutMai(tool: typeof GRADING_TOOL) {
   return t;
 }
 
-const SAFETY_SYSTEM = `Você é um AUDITOR DE SEGURANÇA DO PACIENTE em simulações clínicas. Leia a conversa e a ficha do estudante e liste SOMENTE os erros de segurança COMETIDOS PELO ESTUDANTE. Não avalie anamnese, comunicação nem preenchimento de formulário.
+function buildSafetySystem(penalidades: PenalidadeCritica[]): string {
+  return `Você é um AUDITOR DE SEGURANÇA DO PACIENTE em simulações clínicas. Leia a conversa e a ficha do estudante e liste SOMENTE os erros de segurança COMETIDOS PELO ESTUDANTE. Não avalie anamnese, comunicação nem preenchimento de formulário.
 
 O que conta como erro (uma entrada por erro):
 - O estudante PROPÔS, ACEITOU ou ESCREVEU na conversa OU na ficha (anamnese, SBAR, SOAP) um medicamento ou conduta insegura para ESTE paciente: contraindicação, interação grave, dose inadequada para idade/função renal/hepática, trocar por outro fármaco de risco semelhante (ex.: outro serotoninérgico diante de suspeita de síndrome serotoninérgica), manter fármaco contraindicado. O que está na ficha conta como proposta mesmo que não tenha sido dito no chat, porque a ficha é lida pelo prescritor e pela equipe.
 - O estudante NÃO identificou uma interação grave ou problema de segurança central que o caso trazia (veja os problemas esperados do caso, se informados).
-- Opioide sem orientação de constipação/sedação.
-- Não investigar gestação em mulher em idade fértil antes de propor medicamento.
-Penalidade por erro: 0,5 para contraindicação, interação grave (proposta ou não identificada) e conduta insegura proposta; 0,3 para opioide sem orientação e para gestação não investigada.
+${safetyErrorTailText(penalidades)}
 
 O que NÃO conta: falas do paciente, do prescritor ou da equipe; informação que o estudante simplesmente não perguntou; falhas de anamnese; alergia ignorada (outro campo).
 Seja específico e cite o trecho. Se de fato não houve nenhum erro, devolva lista vazia. Não deixe de listar um erro que você identificou.
@@ -149,6 +148,7 @@ Seja específico e cite o trecho. Se de fato não houve nenhum erro, devolva lis
 CUIDADO COM FALSOS POSITIVOS: justificativa fraca, imprecisa ou mal fundamentada NÃO é erro de segurança (isso é qualidade de raciocínio e é avaliado em outro lugar). Só liste quando a conduta ou omissão trouxer risco real e claro para ESTE paciente (contraindicação, interação grave, dose inadequada, fármaco de risco semelhante ao que causou o problema). Alternativas terapêuticas aceitas na prática, mesmo com justificativa ruim, NÃO entram. Diante de dúvida clínica razoável, NÃO liste.
 
 SUGESTÃO AO PRESCRITOR NA CONVERSA: quando o estudante apenas sugere ou pergunta ao prescritor, no chat, uma alternativa terapêutica (ex.: "podemos introduzir X?"), a decisão final continua com o prescritor. Isso só entra se a proposta for claramente contraindicada para ESTE paciente (alergia, interação grave, dose tóxica, fármaco do mesmo mecanismo que causou o problema). Risco que se resolve com um plano de transição ou monitorização, e que o prescritor avaliaria, NÃO entra (ex.: sugerir buprenorfina em desmame de tramadol). O que o estudante registra na ficha como decisão ou recomendação própria continua sendo avaliado com o rigor normal.`;
+}
 
 const SAFETY_TOOL = {
   type: "function",
@@ -181,13 +181,14 @@ async function auditarSeguranca(
   transcript: string,
   fichaText: string,
   gabaritoText: string,
+  penalidades: PenalidadeCritica[],
 ): Promise<Array<{ registro: string; descricao: string; penalidade: number }> | null> {
   try {
     const { response } = await callAiWithFallback({
       model,
       temperature: 0.1,
       messages: [
-        { role: "system", content: SAFETY_SYSTEM },
+        { role: "system", content: buildSafetySystem(penalidades) },
         {
           role: "user",
           content: `[CONVERSA]\n${transcript}\n${fichaText ? `\n[FICHA DO ESTUDANTE]\n${fichaText}\n` : ""}${gabaritoText ? `\n[REFERÊNCIA DO CASO]\n${gabaritoText}\n` : ""}\nListe os erros de segurança do estudante com a ferramenta report_safety.`,
@@ -327,6 +328,7 @@ serve(async (req) => {
     // O MAI só existe para a Farmácia (casos v2). Legados e casos v2 de Farmácia seguem com MAI.
     const maiEnabled = !fichaEnabled || profKey === "farmaceutico";
     const lens = getProfessionalLens(profKey);
+    const penalidades = penalidadesDoCaso(gabarito);
     // Pesos de cada bloco na nota (precisam bater com _shared/vp-grade.ts).
     const pesoAnamnese = !fichaEnabled ? 6 : maiEnabled ? 4 : 6;
     const pesoFicha = maiEnabled ? 2 : 4;
@@ -434,11 +436,7 @@ Se a ficha NÃO foi preenchida, atribua 0 às três dimensões e sinalize nas ev
 PENALIDADES CRÍTICAS DE SEGURANÇA (até 1,5 no total)
 ═══════════════════════════════════════════════
 Procure ATIVAMENTE estes erros em TODA a interação: na conversa e também em todos os campos da ficha (anamnese, SBAR, SOAP). Para CADA erro encontrado, acrescente UMA entrada em "condutas_inseguras" (registro, descrição com o trecho, penalidade da tabela). O servidor soma as penalidades dessa lista: não calcule o total. Se um erro foi encontrado, ele DEVE estar na lista; se você o citar no feedback ou nas evidências, ele também precisa estar na lista.
-- Recomendar/aceitar AINE em DRC, gestação avançada, úlcera ativa: 0,5 cada
-- Não identificar interação grave (ex.: varfarina + AINE, IECA + AINE em idoso): 0,5 cada
-- Recomendar ou propor, em QUALQUER registro do atendimento (conversa ou ficha), medicamento ou conduta insegura para o caso (ex.: trocar por outro serotoninérgico diante de suspeita de síndrome serotoninérgica; manter fármaco contraindicado): 0,5 cada. O que está escrito na ficha (SBAR ou SOAP) conta como proposta, mesmo que não tenha sido dito no chat: a ficha é lida pelo prescritor e pela equipe. Use registro "ficha" nesses casos.
-- Opioide sem orientação de constipação/sedação: 0,3
-- Não investigar gestação em mulher em idade fértil antes de prescrever: 0,3
+${penaltyTableText(penalidades)}
 Ignorar alergia relatada (0,5) NÃO entra na lista: informe em bonus_penalidades.ignorou_alergia_penalidade. Em bonus_penalidades.erro_seguranca_penalidade pode devolver 0: o servidor usa a lista.
 
 BÔNUS: comunicacao_empatica_bonus de 0 a ${MAX_BONUS} para comunicação especialmente empática e clara.
@@ -485,7 +483,7 @@ Avalie agora seguindo rigorosamente as regras do system prompt.`;
     // Correção com resposta estruturada, temperatura baixa e nova tentativa em caso de
     // falha ou resposta malformada (antes, um JSON inválido virava erro 500 sem retry).
     // A auditoria de segurança não depende da correção principal: roda em paralelo para não somar tempo.
-    const segurancaPromise = auditarSeguranca(gradingModel, transcript, fichaEnabled ? fichaText : "", gabaritoText);
+    const segurancaPromise = auditarSeguranca(gradingModel, transcript, fichaEnabled ? fichaText : "", gabaritoText, penalidades);
 
     let gradeResult: any = null;
     let rawResponse = "";

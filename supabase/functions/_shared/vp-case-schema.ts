@@ -112,6 +112,8 @@ export interface Gabarito {
   encaminhamentos: string[];
   objetivos_aprendizagem: string[];
   referencias: string[];
+  /** Condutas que valem penalidade neste caso (0,3 ou 0,5). Sem a lista, a correção usa a tabela genérica. */
+  penalidades_criticas?: Array<{ conduta: string; motivo: string; valor: number }>;
 }
 
 export interface Versao {
@@ -218,6 +220,10 @@ export function validateCaseData(d: unknown): string[] {
       if (!["Essencial", "Importante", "Complementar"].includes(i.importancia)) errs.push(`${tag} importância inválida em ${i.id_informacao}`);
     });
     if (!g.conduta_esperada?.length) errs.push(`${tag} gabarito sem conduta esperada`);
+    (g.penalidades_criticas || []).forEach((p, i) => {
+      if (!String(p?.conduta || "").trim()) errs.push(`${tag} penalidade crítica ${i + 1} sem conduta`);
+      if (![0.3, 0.5].includes(Number(p?.valor))) errs.push(`${tag} penalidade crítica ${i + 1} com valor inválido (use 0,3 ou 0,5)`);
+    });
   }
   return errs;
 }
@@ -428,6 +434,8 @@ export function buildGabaritoText(d: VpCaseData, key: VersaoKey): string {
     "",
     g.orientacoes_esperadas.length ? "Orientações esperadas:" : null,
     ...g.orientacoes_esperadas.map((c) => `- ${c}`),
+    g.penalidades_criticas?.length ? "\nPenalidades críticas deste caso (valor de cada uma entre parênteses):" : null,
+    ...(g.penalidades_criticas || []).map((p) => `- ${p.conduta}${p.motivo ? ` — ${p.motivo}` : ""} (${String(p.valor).replace(".", ",")})`),
     g.encaminhamentos.length ? "\nEncaminhamentos:" : null,
     ...g.encaminhamentos.map((c) => `- ${c}`),
     g.objetivos_aprendizagem.length ? "\nObjetivos de aprendizagem:" : null,

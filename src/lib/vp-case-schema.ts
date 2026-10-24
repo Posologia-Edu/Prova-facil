@@ -114,6 +114,8 @@ export interface Gabarito {
   encaminhamentos: string[];
   objetivos_aprendizagem: string[];
   referencias: string[];
+  /** Condutas que valem penalidade neste caso (0,3 ou 0,5). Sem a lista, a correção usa a tabela genérica. */
+  penalidades_criticas?: Array<{ conduta: string; motivo: string; valor: number }>;
 }
 
 export interface Versao {
