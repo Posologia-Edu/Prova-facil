@@ -10,6 +10,11 @@ const NIVEIS: Option[] = [
   { value: "direta", label: "Só se perguntado diretamente" },
   { value: "vinculo", label: "Só com empatia e vínculo" },
 ];
+const PENALIDADES: Option[] = [
+  { value: "0.5", label: "0,5 (dano grave)" },
+  { value: "0.3", label: "0,3 (omissão de orientação ou monitorização)" },
+];
+
 const IMPORTANCIAS: Option[] = [
   { value: "Essencial", label: "Essencial" },
   { value: "Importante", label: "Importante" },
@@ -147,6 +152,20 @@ export function VersaoEditor({ versao, nucleo, onChange, disabled }: { versao: V
               { key: "id_informacao", label: "Fato", kind: "select", options: fatoOptions },
               { key: "importancia", label: "Importância", kind: "select", options: IMPORTANCIAS },
               { key: "descricao", label: "Descrição", kind: "area" },
+            ]}
+          />
+          <RowList<{ conduta: string; motivo: string; valor: string }>
+            label="Penalidades críticas"
+            hint="Condutas que valem penalidade de segurança neste caso. A correção usa esta lista (0,5 para dano grave; 0,3 para omissão de orientação ou monitorização). Sem a lista, vale uma tabela genérica de segurança."
+            items={(g.penalidades_criticas || []).map((p) => ({ conduta: p.conduta, motivo: p.motivo, valor: String(p.valor) }))}
+            disabled={disabled}
+            titleOf={(r) => r.conduta || "Conduta crítica"}
+            newRow={() => ({ conduta: "", motivo: "", valor: "0.5" })}
+            onChange={(items) => setG((x) => { x.penalidades_criticas = items.map((i) => ({ conduta: i.conduta, motivo: i.motivo, valor: Number(i.valor) || 0.5 })); })}
+            columns={[
+              { key: "conduta", label: "Conduta", kind: "area" },
+              { key: "motivo", label: "Motivo (por que é inseguro neste paciente)", kind: "area" },
+              { key: "valor", label: "Penalidade", kind: "select", options: PENALIDADES },
             ]}
           />
           <StringList label="Conduta esperada" items={g.conduta_esperada} disabled={disabled} onChange={(items) => setG((x) => { x.conduta_esperada = items; })} />

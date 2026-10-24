@@ -126,6 +126,11 @@ const VERSAO_TOOL = {
           encaminhamentos: arr(S()),
           objetivos_aprendizagem: arr(S()),
           referencias: arr(S()),
+          penalidades_criticas: arr(obj({
+            conduta: S("O que o aluno faria ou deixaria de fazer"),
+            motivo: S("Por que isso é inseguro neste paciente"),
+            valor: { type: "number", description: "0.5 ou 0.3" },
+          })),
         }),
       }),
     }),
@@ -219,7 +224,8 @@ REGRAS:
   • cartao.cenario: onde o aluno está e o que aconteceu desde o último encontro. cartao.tarefa: o que fazer, SEM lista de passos e SEM dizer o que perguntar. O cartão não revela nome nem idade de quem fala, nem achados. tempo_min: 15, 10 e 10.
   • Encontro com prescritor ou equipe: persona_interlocutor completa (nome, perfil, temperamento, 2 a 4 resistencias, 2 a 4 criterios_para_ceder). A persona só conhece o prontuário, nunca o que o paciente contou.
   • Encontro 3: 'evolucao' com 3 a 5 ramos que dependem do que o prescritor ou a equipe ACEITOU no encontro 2 (ex.: 'se o prescritor aceitou reduzir a dose X'), mais 'evolucao_sem_mudanca' (se nada foi aceito). Nunca condicione a evolução ao que o aluno apenas sugeriu. Os campos 'evolucao' e 'evolucao_sem_mudanca' existem SOMENTE no encontro 3: deixe-os FORA dos encontros 1 e 2 (no encontro 1 ainda não houve nada a evoluir).
-- gabarito: problemas_esperados (com tipo e justificativa), red_flags com conduta esperada, informacoes_alvo (ids de fatos do núcleo que o aluno deveria obter, com importância Essencial, Importante ou Complementar; cubra todos os fatos relevantes), conduta_esperada, orientacoes_esperadas, encaminhamentos, objetivos_aprendizagem e referencias. ${p.gabarito}
+- gabarito: problemas_esperados (com tipo e justificativa), red_flags com conduta esperada, informacoes_alvo (ids de fatos do núcleo que o aluno deveria obter, com importância Essencial, Importante ou Complementar; cubra todos os fatos relevantes), conduta_esperada, orientacoes_esperadas, encaminhamentos, objetivos_aprendizagem, referencias e penalidades_criticas. ${p.gabarito}
+- penalidades_criticas: de 2 a 5 condutas que, NESTE caso, tornam o atendimento inseguro e valem penalidade na correção (ex.: propor trocar por outro fármaco do mesmo risco que causou o problema; manter um fármaco contraindicado; não identificar a interação grave central; omitir a orientação obrigatória de um fármaco de risco). Cada uma com conduta, motivo (por que é inseguro neste paciente) e valor: 0.5 para conduta que expõe o paciente a dano grave, 0.3 para omissão de orientação ou monitorização obrigatória. Use só o que o núcleo do caso sustenta. Nunca penalize condutas alternativas aceitas na prática nem justificativas apenas fracas.
 - referencias: cite SOMENTE diretrizes, protocolos ou critérios que existem de fato e que você conhece bem (sem links). Se não tiver certeza, deixe a lista curta.`;
 }
 
