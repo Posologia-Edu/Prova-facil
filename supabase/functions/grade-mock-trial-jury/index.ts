@@ -4,6 +4,7 @@
 // Persiste resultados em mock_trial_evaluations (evaluator_type='ai_jury').
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { callAiWithFallback } from "../_shared/ai-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +12,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -21,8 +21,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY ausente");
-
     const { session_id } = await req.json();
     if (!session_id) {
       return new Response(JSON.stringify({ error: "session_id obrigatório" }), {
@@ -124,16 +122,8 @@ ${JSON.stringify(summarizeResponses(defenseResponses), null, 2).slice(0, 4000)}
 
 Retorne via tool call sua avaliação estruturada.`;
 
-    const aiResp = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+    const { response: aiResp } = await callAiWithFallback({
+          model: "pro",
           messages: [
             {
               role: "system",
@@ -199,26 +189,18 @@ Retorne via tool call sua avaliação estruturada.`;
             },
           ],
           tool_choice: { type: "function", function: { name: "submit_evaluation" } },
-        }),
-      }
-    );
+    });
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
-      console.error("AI gateway error:", aiResp.status, errText);
+      console.error("Gemini error:", aiResp.status, errText);
       if (aiResp.status === 429) {
         return new Response(
           JSON.stringify({ error: "Limite de requisições atingido. Tente novamente em instantes." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (aiResp.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos em Configurações > Workspace > Uso." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw new Error(`AI gateway: ${aiResp.status}`);
+      throw new Error(`IA (Gemini): ${aiResp.status}`);
     }
 
     const aiData = await aiResp.json();
