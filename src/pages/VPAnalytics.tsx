@@ -28,6 +28,8 @@ import { useVpCatalog } from "@/lib/vp-catalog";
 import { FICHA_KEYS, FICHA_LABELS, baseScores, hasFichaScores } from "@/lib/vp-grade";
 import { Stethoscope, ClipboardList, Target } from "lucide-react";
 import { computePeerBonus, PEER_EVAL_MAX_ADJUST } from "@/lib/vp-peer-eval";
+import { ADJUSTMENT_REASONS, GRADE_SNAPSHOT_SELECT, pickSnapshot, reasonLabel, subscoreDeltas } from "@/lib/vp-calibration";
+import { CalibrationPanel } from "@/components/vp-analytics/CalibrationPanel";
 
 const BONUS_LABELS: Record<string, string> = {
   comunicacao_empatica_bonus: "Bônus de comunicação empática",
@@ -67,6 +69,10 @@ interface GradeRow {
   group_label?: string | null;
   mai_json?: any;
   feedback_released?: boolean;
+  adjusted_at?: string | null;
+  adjustment_reason?: string | null;
+  adjustment_note?: string | null;
+  ia_original?: Record<string, any> | null;
 }
 interface TranscriptMsg { role: string; content: string; encounter: number; author_name?: string | null; author_email?: string | null; }
 
@@ -94,6 +100,8 @@ export default function VPAnalytics() {
     flags_seguranca: string;
   } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [adjReason, setAdjReason] = useState("");
+  const [adjNote, setAdjNote] = useState("");
   const [peerEvals, setPeerEvals] = useState<PeerEvalRow[]>([]);
   const [peerEvalsLoading, setPeerEvalsLoading] = useState(false);
 
@@ -186,7 +194,7 @@ export default function VPAnalytics() {
         .in("session_id", sessionIds),
       supabase
         .from("virtual_patient_grades")
-        .select("id, session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id, feedback_released")
+        .select("id, session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, class_virtual_patient_id, feedback_released, adjusted_at, adjustment_reason, adjustment_note, ia_original")
         .in("class_virtual_patient_id", filteredCvpIds),
     ]);
 
@@ -263,6 +271,10 @@ export default function VPAnalytics() {
           group_label: cvpLabelMap.get(session.class_virtual_patient_id) || null,
           mai_json: mai || null,
           feedback_released: !!grade?.feedback_released,
+          adjusted_at: grade?.adjusted_at ?? null,
+          adjustment_reason: grade?.adjustment_reason ?? null,
+          adjustment_note: grade?.adjustment_note ?? null,
+          ia_original: (grade?.ia_original as Record<string, any> | null) ?? null,
         };
       })
       .sort((a, b) => {
@@ -323,6 +335,8 @@ export default function VPAnalytics() {
       orientacoes_melhoria: normalizeRichText(grade.orientacoes_melhoria),
       flags_seguranca: flagsArr.join("\n"),
     });
+    setAdjReason(grade.adjustment_reason || "");
+    setAdjNote(grade.adjustment_note || "");
     setTranscriptLoading(true);
     // For groups, all members share the primary session's messages.
     // If this row's own session has no messages but it's part of a group,
@@ -386,6 +400,16 @@ export default function VPAnalytics() {
       .split("\n")
       .map((s) => s.trim())
       .filter(Boolean);
+    // Upsert: if a grade row already exists update; otherwise insert (allows manual grading of pending sessions)
+    const { data: existingRaw } = await supabase
+      .from("virtual_patient_grades")
+      .select(`id, adjusted_at, ia_original, ${GRADE_SNAPSHOT_SELECT}`)
+      .eq("session_id", detailGrade.session_id)
+      .maybeSingle();
+    const existing: any = existingRaw;
+    const { data: { user: me } } = await supabase.auth.getUser();
+    // P16: guarda o que a IA deu, só na primeira vez que a nota da IA é ajustada (ajustes seguintes mantêm o original).
+    const iaOriginal = !existing ? null : (existing.adjusted_at && existing.ia_original) ? existing.ia_original : pickSnapshot(existing);
     const payload = {
       subscores: editForm.subscores,
       nota_final: Number(editForm.nota_final) || 0,
@@ -393,13 +417,12 @@ export default function VPAnalytics() {
       feedback_resumido: editForm.feedback_resumido,
       orientacoes_melhoria: editForm.orientacoes_melhoria,
       flags_seguranca: flagsArr,
+      ia_original: iaOriginal,
+      adjusted_at: new Date().toISOString(),
+      adjusted_by: me?.id ?? null,
+      adjustment_reason: adjReason || null,
+      adjustment_note: adjNote.trim() || null,
     };
-    // Upsert: if a grade row already exists update; otherwise insert (allows manual grading of pending sessions)
-    const { data: existing } = await supabase
-      .from("virtual_patient_grades")
-      .select("id")
-      .eq("session_id", detailGrade.session_id)
-      .maybeSingle();
 
     let error;
     if (existing?.id) {
@@ -550,11 +573,55 @@ export default function VPAnalytics() {
       return;
     }
 
+    // P16: avaliações ajustadas pelo docente não são sobrescritas sem confirmação.
+    const { data: adjustedRaw } = await supabase
+      .from("virtual_patient_grades")
+      .select(`id, session_id, adjusted_at, adjustment_reason, adjustment_note, adjustment_history, ${GRADE_SNAPSHOT_SELECT}`)
+      .in("session_id", eligible.map((s) => s.id))
+      .not("adjusted_at", "is", null);
+    const adjustedList: any[] = (adjustedRaw as any[]) || [];
+    const adjustedIds = new Set<string>(adjustedList.map((r) => r.session_id));
+    let skipAdjusted = true;
+    if (adjustedIds.size > 0) {
+      const keep = window.confirm(
+        `${adjustedIds.size} avaliação(ões) foram ajustadas por você.\n\nOK = manter os ajustes e corrigir só o restante (recomendado)\nCancelar = ver outras opções`,
+      );
+      if (!keep) {
+        const replace = window.confirm(
+          "Corrigir também as ajustadas?\n\nSeus ajustes serão substituídos pela nova correção da IA (o ajuste fica guardado no histórico).\n\nOK = substituir os ajustes\nCancelar = cancelar a correção",
+        );
+        if (!replace) { setGrading(false); return; }
+        skipAdjusted = false;
+        for (const r of adjustedList) {
+          const history = Array.isArray(r.adjustment_history) ? r.adjustment_history : [];
+          await supabase.from("virtual_patient_grades").update({
+            adjustment_history: [...history, { at: r.adjusted_at, reason: r.adjustment_reason, note: r.adjustment_note, snapshot: pickSnapshot(r) }],
+            adjusted_at: null,
+            adjusted_by: null,
+            adjustment_reason: null,
+            adjustment_note: null,
+          }).eq("id", r.id);
+        }
+      }
+    }
+    const adjustedGroupIds = new Set<string>(
+      eligible.filter((s) => adjustedIds.has(s.id) && (s as any).group_id).map((s) => (s as any).group_id as string),
+    );
+    const toGrade = skipAdjusted
+      ? eligible.filter((s) => !adjustedIds.has(s.id) && !((s as any).group_id && adjustedGroupIds.has((s as any).group_id)))
+      : eligible;
+    const keptCount = eligible.length - toGrade.length;
+    if (toGrade.length === 0) {
+      toast.info("Todas as avaliações elegíveis foram ajustadas por você e foram mantidas.");
+      setGrading(false);
+      return;
+    }
+
     // Group sessions by group_id so each group is graded ONCE and mirrored to all members.
     // Sessions without group_id are treated individually.
     const groupBuckets = new Map<string, typeof eligible>();
     const individuals: typeof eligible = [];
-    for (const s of eligible) {
+    for (const s of toGrade) {
       if ((s as any).group_id) {
         const arr = groupBuckets.get((s as any).group_id) || [];
         arr.push(s);
@@ -665,7 +732,10 @@ export default function VPAnalytics() {
     }
 
     if (success > 0) {
-      toast.success(`${success}/${totalUnits} avaliação(ões) corrigida(s) com sucesso.`);
+      toast.success(
+        `${success}/${totalUnits} avaliação(ões) corrigida(s) com sucesso.` +
+          (keptCount > 0 ? ` ${keptCount} ajustada(s) por você foram mantidas.` : ""),
+      );
     }
     if (failures.length > 0) {
       toast.error(failures[0]);
@@ -1028,7 +1098,12 @@ export default function VPAnalytics() {
                       <TableCell className="text-muted-foreground text-sm">{g.student_email || "—"}</TableCell>
                       <TableCell className="text-center">
                         {g.correction_status === "graded" ? (
-                          <Badge variant="default">Corrigido</Badge>
+                          <>
+                            <Badge variant="default">Corrigido</Badge>
+                            {g.adjusted_at && (
+                              <Badge variant="outline" className="ml-1 text-[10px]" title="Nota ajustada pelo docente">Ajustada</Badge>
+                            )}
+                          </>
                         ) : (
                           <Badge variant="secondary">Pendente</Badge>
                         )}
@@ -1161,6 +1236,8 @@ export default function VPAnalytics() {
               })()}
             </CardContent>
           </Card>
+
+          <CalibrationPanel grades={grades as any} dimensionLabels={{ ...subscoreLabels, ...FICHA_LABELS }} />
         </>
       )}
 
@@ -1185,6 +1262,39 @@ export default function VPAnalytics() {
             return (
             <div className="flex-1 overflow-y-auto pr-4 -mr-2">
               <div className="space-y-6 pb-4">
+                {/* P16: o que a IA tinha dado antes do ajuste do docente */}
+                {detailGrade.adjusted_at && detailGrade.ia_original && (() => {
+                  const ia = detailGrade.ia_original as Record<string, any>;
+                  const deltas = Object.entries(subscoreDeltas(ia.subscores, detailGrade.subscores)).filter(([, v]) => v !== 0);
+                  const labels: Record<string, string> = { ...subscoreLabels, ...FICHA_LABELS };
+                  return (
+                    <div className="rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <Pencil className="h-3.5 w-3.5" />
+                        Ajustada pelo docente em {new Date(detailGrade.adjusted_at).toLocaleDateString("pt-BR")}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Nota base da IA: <strong>{Number(ia.nota_final ?? 0).toFixed(2)}</strong> → ajustada: <strong>{Number(detailGrade.nota_final ?? 0).toFixed(2)}</strong>
+                        {" · "}Modelo: {ia.grading_model || "—"} · Rubrica: {ia.rubric_version || "—"}
+                      </p>
+                      {(detailGrade.adjustment_reason || detailGrade.adjustment_note) && (
+                        <p className="text-xs">
+                          Motivo: {reasonLabel(detailGrade.adjustment_reason)}
+                          {detailGrade.adjustment_note ? ` — ${detailGrade.adjustment_note}` : ""}
+                        </p>
+                      )}
+                      {deltas.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {deltas.map(([k, v]) => (
+                            <Badge key={k} variant="secondary" className="text-[10px]">
+                              {labels[k] || k}: {v > 0 ? "+" : ""}{v.toFixed(2)}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {/* Patient context — clinical case summary for the teacher */}
                 {clinicalCase && (
                   <div className="rounded-lg border bg-primary/5 p-4 space-y-3">
@@ -1796,6 +1906,26 @@ export default function VPAnalytics() {
             </div>
             );
           })()}
+          {editMode && (
+            <div className="border-t pt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Motivo do ajuste (opcional)</Label>
+                <Select value={adjReason || "none"} onValueChange={(v) => setAdjReason(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem motivo</SelectItem>
+                    {ADJUSTMENT_REASONS.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Observação (opcional)</Label>
+                <Textarea value={adjNote} onChange={(e) => setAdjNote(e.target.value)} rows={2} placeholder="Ex.: o aluno investigou o tabagismo na 3ª mensagem" />
+              </div>
+            </div>
+          )}
           {editMode && (
             <DialogFooter className="border-t pt-4">
               <Button variant="ghost" onClick={() => setEditMode(false)} disabled={savingEdit}>Cancelar</Button>

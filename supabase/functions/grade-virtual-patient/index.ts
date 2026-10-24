@@ -272,6 +272,20 @@ serve(async (req) => {
       }
     }
 
+    // P16: nota ajustada pelo docente não é sobrescrita por uma nova correção. Para recorrigir, o docente precisa
+    // liberar o ajuste antes (a tela "Corrigir Turma" faz isso e guarda o ajuste no histórico).
+    // Se a coluna ainda não existir no banco, o erro é ignorado e a correção segue como antes.
+    const { data: adjustedRow } = await supabase
+      .from("virtual_patient_grades")
+      .select("adjusted_at")
+      .eq("session_id", session_id)
+      .maybeSingle();
+    if ((adjustedRow as any)?.adjusted_at) {
+      return new Response(JSON.stringify({ skipped: true, reason: "adjusted_by_teacher" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Fetch ALL messages from the conversation (full transcript across encounters)
     const { data: messages, error: msgErr } = await supabase
       .from("virtual_patient_messages")

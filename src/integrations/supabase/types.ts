@@ -6924,6 +6924,11 @@ export type Database = {
       }
       virtual_patient_grades: {
         Row: {
+          adjusted_at: string | null
+          adjusted_by: string | null
+          adjustment_history: Json
+          adjustment_note: string | null
+          adjustment_reason: string | null
           bonus_penalidades: Json | null
           class_virtual_patient_id: string
           created_at: string
@@ -6933,6 +6938,7 @@ export type Database = {
           flags_seguranca: Json | null
           graded_at: string | null
           grading_model: string | null
+          ia_original: Json | null
           id: string
           nota_final: number | null
           nota_microlearning: number | null
@@ -6943,6 +6949,11 @@ export type Database = {
           subscores: Json
         }
         Insert: {
+          adjusted_at?: string | null
+          adjusted_by?: string | null
+          adjustment_history?: Json
+          adjustment_note?: string | null
+          adjustment_reason?: string | null
           bonus_penalidades?: Json | null
           class_virtual_patient_id: string
           created_at?: string
@@ -6952,6 +6963,7 @@ export type Database = {
           flags_seguranca?: Json | null
           graded_at?: string | null
           grading_model?: string | null
+          ia_original?: Json | null
           id?: string
           nota_final?: number | null
           nota_microlearning?: number | null
@@ -6962,6 +6974,11 @@ export type Database = {
           subscores?: Json
         }
         Update: {
+          adjusted_at?: string | null
+          adjusted_by?: string | null
+          adjustment_history?: Json
+          adjustment_note?: string | null
+          adjustment_reason?: string | null
           bonus_penalidades?: Json | null
           class_virtual_patient_id?: string
           created_at?: string
@@ -6971,6 +6988,7 @@ export type Database = {
           flags_seguranca?: Json | null
           graded_at?: string | null
           grading_model?: string | null
+          ia_original?: Json | null
           id?: string
           nota_final?: number | null
           nota_microlearning?: number | null
