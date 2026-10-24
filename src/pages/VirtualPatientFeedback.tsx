@@ -3,7 +3,8 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
+import { ScoreRing } from "@/components/ui/score-ring";
 import { ArrowLeft, Loader2, Award, MessageSquare, Stethoscope, ShieldAlert, Pill, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -56,10 +57,10 @@ const MAI_CRITERIA: Array<[string, string]> = [
   ["duration", "Duração"],
   ["cost", "Custo"],
 ];
-const MAI_ANSWER: Record<string, { label: string; cls: string }> = {
-  appropriate: { label: "Apropriado", cls: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  marginally: { label: "Marginalmente apropriado", cls: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
-  inappropriate: { label: "Inapropriado", cls: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+const MAI_ANSWER: Record<string, { label: string; tone: StatusTone }> = {
+  appropriate: { label: "Apropriado", tone: "ok" },
+  marginally: { label: "Marginalmente apropriado", tone: "warn" },
+  inappropriate: { label: "Inapropriado", tone: "bad" },
 };
 const maiMeds = (mai: any): Array<{ medication_name?: string; score?: number; answers?: Record<string, string> }> =>
   Object.keys(mai || {})
@@ -225,8 +226,8 @@ export default function VirtualPatientFeedback() {
       <div className="min-h-screen flex items-center justify-center p-6">
         <Card className="max-w-md">
           <CardContent className="p-8 text-center space-y-4">
-            <Loader2 className="h-10 w-10 mx-auto animate-spin text-primary" />
-            <h2 className="text-lg font-semibold">Gerando o seu feedback…</h2>
+            <Loader2 className="h-10 w-10 mx-auto animate-spin text-highlight" />
+            <h2 className="font-heading text-xl font-medium">Gerando o seu feedback…</h2>
             <p className="text-sm text-muted-foreground">
               Atendimento concluído. A correção leva cerca de 1 minuto. Esta tela atualiza sozinha; não feche a página.
             </p>
@@ -242,7 +243,7 @@ export default function VirtualPatientFeedback() {
         <Card className="max-w-md">
           <CardContent className="p-8 text-center space-y-4">
             <Stethoscope className="h-10 w-10 mx-auto text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Feedback ainda não disponível</h2>
+            <h2 className="font-heading text-xl font-medium">Feedback ainda não disponível</h2>
             <p className="text-sm text-muted-foreground">
               Seu professor ainda não corrigiu ou liberou o feedback deste atendimento. Tente novamente mais tarde.
             </p>
@@ -261,7 +262,7 @@ export default function VirtualPatientFeedback() {
         <Card className="max-w-md">
           <CardContent className="p-8 text-center space-y-4">
             <Stethoscope className="h-10 w-10 mx-auto text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Feedback aguardando liberação</h2>
+            <h2 className="font-heading text-xl font-medium">Feedback aguardando liberação</h2>
             <p className="text-sm text-muted-foreground">
               Seu atendimento já foi corrigido, mas o professor ainda não liberou o feedback para visualização.
             </p>
@@ -279,77 +280,103 @@ export default function VirtualPatientFeedback() {
   const peerBonus = peerSummary?.count ? peerSummary.bonus : 0;
   const finalScore = Math.max(0, Math.min(10, baseWithMicroBonus + peerBonus));
   const flags = Array.isArray(grade.flags_seguranca) ? grade.flags_seguranca : [];
+  const aprovado = finalScore >= 6;
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card">
+        <div className="mx-auto flex h-14 max-w-4xl items-center justify-between gap-3 px-4 md:px-8">
           <Button variant="ghost" size="sm" onClick={() => navigate("/student/auth")}>
             <ArrowLeft className="h-4 w-4 mr-1.5" /> Voltar
           </Button>
           <div className="flex items-center gap-2">
             {modo && (modo.mode === "treino" ? (
-              <Badge className="bg-sky-600 hover:bg-sky-600 text-white">
+              <StatusBadge tone="info">
                 Treino{modo.dificuldade ? ` · ${({ facil: "Fácil", medio: "Médio", dificil: "Difícil" } as Record<string, string>)[modo.dificuldade] || modo.dificuldade}` : ""}
-              </Badge>
+              </StatusBadge>
             ) : (
-              <Badge variant="outline">Avaliativo</Badge>
+              <StatusBadge tone="brand">Avaliativo</StatusBadge>
             ))}
-            <Badge variant="outline">{studentName}</Badge>
+            {studentName && <span className="hidden text-sm text-muted-foreground sm:inline">{studentName}</span>}
           </div>
         </div>
+      </header>
 
+      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 md:px-8">
         {/* Nota final */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" /> Nota Final do Atendimento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-3">
-              <span className={`text-5xl font-bold ${finalScore >= 6 ? "text-primary" : "text-destructive"}`}>
-                {finalScore.toFixed(1)}
-              </span>
-              <span className="text-muted-foreground text-sm">/ 10</span>
+        <Card className="overflow-hidden">
+          <div className="grid grid-cols-1 items-center gap-6 bg-gradient-to-br from-brand-soft to-card p-6 sm:grid-cols-[auto_minmax(0,1fr)] md:p-8">
+            <ScoreRing
+              value={finalScore / 10}
+              size={132}
+              stroke={10}
+              tone={aprovado ? "ok" : "bad"}
+              label={finalScore.toFixed(1).replace(".", ",")}
+              aria-label={`Nota final ${finalScore.toFixed(1)} de 10`}
+            />
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Award className="h-4 w-4 text-accent-ink" />
+                <span className="eyebrow">Nota final do atendimento</span>
+              </div>
+              <h1 className="font-heading text-[1.75rem] font-medium leading-tight">
+                {aprovado ? "Bom atendimento" : "Há pontos importantes a rever"}
+              </h1>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <span>Base <b className="font-mono font-medium text-foreground">{(grade.nota_final || 0).toFixed(2)}</b></span>
+                <span>Eficiência clínica <b className="font-mono font-medium text-foreground">+{bonus.toFixed(2)}</b></span>
+                {peerSummary?.count ? (
+                  <span>Pares <b className="font-mono font-medium text-foreground">{peerBonus >= 0 ? "+" : ""}{peerBonus.toFixed(2)}</b></span>
+                ) : null}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Eficiência clínica: {(grade.nota_microlearning || 0).toFixed(1)} / 5
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Base: {(grade.nota_final || 0).toFixed(2)} + Bônus de Eficiência Clínica: {bonus.toFixed(2)}
-              {peerSummary?.count ? <> + Avaliação entre Pares: {peerBonus >= 0 ? "+" : ""}{peerBonus.toFixed(2)}</> : null}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Eficiência Clínica: {(grade.nota_microlearning || 0).toFixed(1)} / 5
-            </p>
-          </CardContent>
+          </div>
         </Card>
+
+        {/* Flags de Segurança: logo após a nota, porque são o que o aluno mais precisa ver */}
+        {flags.length > 0 && (
+          <div className="flex gap-3 rounded-card border border-destructive/30 bg-destructive-soft p-4 md:p-5">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-destructive">Pontos críticos de segurança</p>
+              <ul className="list-disc space-y-1 pl-5 text-sm">
+                {flags.map((f: any, i: number) => <li key={i}>{String(f)}</li>)}
+              </ul>
+            </div>
+          </div>
+        )}
 
         {/* Avaliação entre pares */}
         {peerSummary && peerSummary.count > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-base">
                 <Users className="h-4 w-4 text-primary" /> Avaliação entre Pares
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <p className="text-xs text-muted-foreground">
                 Média das notas dadas por {peerSummary.count} colega{peerSummary.count > 1 ? "s" : ""} de grupo
                 (as respostas individuais não são identificadas). Isso ajusta sua nota final em até{" "}
                 {PEER_EVAL_MAX_ADJUST.toFixed(1)} ponto{PEER_EVAL_MAX_ADJUST !== 1 ? "s" : ""}.
               </p>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="p-2 rounded border text-center">
-                  <p className="text-xs text-muted-foreground">Participação</p>
-                  <Badge variant="secondary">{(peerSummary.participacao_avg ?? 0).toFixed(1)} / 5</Badge>
-                </div>
-                <div className="p-2 rounded border text-center">
-                  <p className="text-xs text-muted-foreground">Contribuição técnica</p>
-                  <Badge variant="secondary">{(peerSummary.contribuicao_avg ?? 0).toFixed(1)} / 5</Badge>
-                </div>
-                <div className="p-2 rounded border text-center">
-                  <p className="text-xs text-muted-foreground">Colaboração</p>
-                  <Badge variant="secondary">{(peerSummary.colaboracao_avg ?? 0).toFixed(1)} / 5</Badge>
-                </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {[
+                  ["Participação", peerSummary.participacao_avg],
+                  ["Contribuição técnica", peerSummary.contribuicao_avg],
+                  ["Colaboração", peerSummary.colaboracao_avg],
+                ].map(([rotulo, valor]) => (
+                  <div key={rotulo as string} className="rounded-lg border bg-sunken/40 p-4">
+                    <p className="label-mono">{rotulo}</p>
+                    <p className="num mt-2 text-2xl">
+                      {(Number(valor) || 0).toFixed(1).replace(".", ",")}
+                      <span className="text-sm text-muted-foreground"> / 5</span>
+                    </p>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -359,19 +386,19 @@ export default function VirtualPatientFeedback() {
         {grade.subscores && Object.keys(grade.subscores).length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Detalhamento por Critério</CardTitle>
+              <CardTitle className="text-base">Detalhamento por critério</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="divide-y">
               {Object.entries(SUBSCORE_LABELS).map(([k, label]) => (
-                <div key={k} className="flex items-center justify-between text-sm">
+                <div key={k} className="flex items-center justify-between py-2.5 text-sm first:pt-0 last:pb-0">
                   <span>{label}</span>
-                  <Badge variant="secondary">{(Number(grade.subscores?.[k]) || 0).toFixed(2)}</Badge>
+                  <span className="font-mono font-medium tabular-nums">{(Number(grade.subscores?.[k]) || 0).toFixed(2)}</span>
                 </div>
               ))}
               {hasFichaScores(grade.subscores) && FICHA_KEYS.map((k) => (
-                <div key={k} className="flex items-center justify-between text-sm">
+                <div key={k} className="flex items-center justify-between py-2.5 text-sm last:pb-0">
                   <span>Ficha · {FICHA_LABELS[k]}</span>
-                  <Badge variant="secondary">{(Number(grade.subscores?.[k]) || 0).toFixed(2)}</Badge>
+                  <span className="font-mono font-medium tabular-nums">{(Number(grade.subscores?.[k]) || 0).toFixed(2)}</span>
                 </div>
               ))}
             </CardContent>
@@ -396,7 +423,7 @@ export default function VirtualPatientFeedback() {
         {grade.orientacoes_melhoria && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Orientações de Melhoria</CardTitle>
+              <CardTitle className="text-base">Orientações de melhoria</CardTitle>
             </CardHeader>
             <CardContent>
               <div
@@ -410,27 +437,11 @@ export default function VirtualPatientFeedback() {
         {/* Caminho esperado do caso (só casos com gabarito; já liberado junto com o feedback) */}
         {cvpId && <DebriefCard cvpId={cvpId} email={(sessionStorage.getItem("vp_email") || "").trim().toLowerCase()} onLoaded={setDebrief} />}
 
-        {/* Flags de Segurança */}
-        {flags.length > 0 && (
-          <Card className="border-destructive/40">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2 text-destructive">
-                <ShieldAlert className="h-4 w-4" /> Pontos críticos de segurança
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="text-sm space-y-1 list-disc pl-5">
-                {flags.map((f: any, i: number) => <li key={i}>{String(f)}</li>)}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
-
         {/* MAI */}
         {mai && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-base">
                 <Pill className="h-4 w-4 text-primary" /> Avaliação MAI (Medication Appropriateness Index)
               </CardTitle>
             </CardHeader>
@@ -438,9 +449,9 @@ export default function VirtualPatientFeedback() {
               {Array.isArray(mai?.medications) && mai.medications.length > 0 ? (
                 <div className="space-y-4">
                   {mai.medications.map((med: any, idx: number) => (
-                    <div key={idx} className="border rounded-md p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <strong className="text-sm">{med.name || `Medicamento ${idx + 1}`}</strong>
+                    <div key={idx} className="rounded-lg border p-3.5">
+                      <div className="mb-2 flex items-center justify-between">
+                        <strong className="text-sm font-medium">{med.name || `Medicamento ${idx + 1}`}</strong>
                         {typeof med.score === "number" && <Badge>{med.score.toFixed(1)}</Badge>}
                       </div>
                       {med.justification && (
@@ -452,19 +463,19 @@ export default function VirtualPatientFeedback() {
               ) : maiMeds(mai).length > 0 ? (
                 <div className="space-y-4">
                   {maiMeds(mai).map((med, idx) => (
-                    <div key={idx} className="border rounded-md overflow-hidden">
-                      <div className="flex items-center justify-between gap-2 bg-muted/50 px-3 py-2">
-                        <strong className="text-sm">{med.medication_name || `Medicamento ${idx + 1}`}</strong>
-                        {typeof med.score === "number" && <Badge variant="secondary">Soma {med.score}</Badge>}
+                    <div key={idx} className="overflow-hidden rounded-lg border">
+                      <div className="flex items-center justify-between gap-2 bg-sunken px-4 py-2.5">
+                        <strong className="text-sm font-medium">{med.medication_name || `Medicamento ${idx + 1}`}</strong>
+                        {typeof med.score === "number" && <StatusBadge tone="neutral">Soma {med.score}</StatusBadge>}
                       </div>
                       <ul className="divide-y text-sm">
                         {MAI_CRITERIA.map(([k, label]) => {
                           const v = MAI_ANSWER[String(med.answers?.[k] ?? "")];
                           if (!v) return null;
                           return (
-                            <li key={k} className="flex items-center justify-between gap-2 px-3 py-1.5">
+                            <li key={k} className="flex items-center justify-between gap-2 px-4 py-2">
                               <span className="text-muted-foreground">{label}</span>
-                              <span className={`text-xs font-medium rounded px-2 py-0.5 ${v.cls}`}>{v.label}</span>
+                              <StatusBadge tone={v.tone}>{v.label}</StatusBadge>
                             </li>
                           );
                         })}
@@ -486,19 +497,21 @@ export default function VirtualPatientFeedback() {
         {transcript.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-base">
                 <MessageSquare className="h-4 w-4" /> Conversa com o Paciente Virtual
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 max-h-[600px] overflow-y-auto">
+            <CardContent className="max-h-[600px] space-y-3 overflow-y-auto">
               {transcript.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`rounded-lg p-3 max-w-[80%] text-sm ${
-                      m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                    className={`max-w-[80%] p-3.5 text-sm leading-relaxed ${
+                      m.role === "user"
+                        ? "rounded-2xl rounded-br-sm bg-primary text-primary-foreground"
+                        : "rounded-2xl rounded-bl-sm border bg-card"
                     }`}
                   >
-                    <div className="text-[10px] opacity-70 mb-1">
+                    <div className="mb-1 text-[10px] opacity-70">
                       {m.role === "user" ? `Você (${PROFISSAO_ROTULO[debrief?.profissao || ""] || "farmacêutico"})` : interlocutorLabel(m.encounter)} • Encontro {m.encounter}
                     </div>
                     <div
@@ -510,7 +523,7 @@ export default function VirtualPatientFeedback() {
             </CardContent>
           </Card>
         )}
-      </div>
+      </main>
     </div>
   );
 }

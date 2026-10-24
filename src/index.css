@@ -1,89 +1,139 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 @import url('https://fonts.cdnfonts.com/css/opendyslexic');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Sistema visual "Precisão calma" (redesign 2026-10).
+  Marinho como marca, âmbar como único destaque, neutros azulados e quatro cores de estado.
+  Todo componente novo usa estes tokens; cor crua da paleta do Tailwind (bg-orange-500 etc.) não entra mais.
+  Space Grotesk e DM Sans continuam carregadas só porque a landing page (.landing-root) ainda as usa.
+*/
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    --background: 220 33% 97%;
+    --foreground: 216 50% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 216 50% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 216 50% 12%;
 
-    --primary: 220 60% 20%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 218 58% 19%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 38 92% 50%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 39 89% 52%;
+    --secondary-foreground: 40 100% 7%;
 
-    --muted: 220 14% 92%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 216 31% 94%;
+    --muted-foreground: 216 18% 36%;
 
-    --accent: 220 14% 92%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 216 31% 94%;
+    --accent-foreground: 216 50% 12%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 4 62% 47%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 89%;
-    --input: 220 13% 89%;
-    --ring: 220 60% 20%;
+    --border: 215 25% 91%;
+    --input: 215 22% 83%;
+    --ring: 219 63% 48%;
 
     --radius: 0.625rem;
+    --radius-card: 0.875rem;
 
-    --sidebar-background: 220 60% 16%;
-    --sidebar-foreground: 220 20% 85%;
-    --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 50% 22%;
-    --sidebar-accent-foreground: 220 20% 92%;
-    --sidebar-border: 220 40% 24%;
-    --sidebar-ring: 38 92% 50%;
+    --sidebar-background: 219 63% 16%;
+    --sidebar-foreground: 219 30% 75%;
+    --sidebar-primary: 39 89% 52%;
+    --sidebar-primary-foreground: 40 100% 7%;
+    --sidebar-accent: 219 45% 25%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 219 45% 22%;
+    --sidebar-ring: 39 89% 52%;
 
-    --success: 152 60% 40%;
+    /* estados: cor forte (texto/ícone/barra) e versão suave (fundo de selo e aviso) */
+    --success: 154 67% 32%;
     --success-foreground: 0 0% 100%;
+    --success-soft: 150 45% 92%;
+    --warning: 39 89% 52%;
+    --warning-foreground: 40 100% 7%;
+    --warning-soft: 40 100% 92%;
+    --warning-ink: 38 100% 33%;
+    --info: 219 63% 48%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 217 79% 94%;
+    --destructive-soft: 5 73% 94%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    /* marca e destaque */
+    --highlight: 39 89% 52%;
+    --brand-soft: 219 52% 94%;
+    --brand-text: 218 58% 19%;
+    --accent-soft: 41 100% 93%;
+    --accent-ink: 39 100% 27%;
+    --sunken: 216 31% 94%;
+
+    --shadow-1: 0 1px 2px rgb(15 27 45 / 0.06), 0 1px 1px rgb(15 27 45 / 0.04);
+    --shadow-2: 0 4px 14px rgb(15 27 45 / 0.08), 0 1px 3px rgb(15 27 45 / 0.06);
+    --shadow-3: 0 24px 56px rgb(15 27 45 / 0.16), 0 4px 12px rgb(15 27 45 / 0.08);
 
     --exam-paper: 40 33% 97%;
     --exam-text: 0 0% 12%;
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 96%;
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 38 92% 50%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 220 40% 24%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 220 30% 16%;
-    --muted-foreground: 220 10% 60%;
-    --accent: 220 30% 16%;
-    --accent-foreground: 210 40% 96%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 40% 96%;
-    --border: 220 30% 18%;
-    --input: 220 30% 18%;
-    --ring: 38 92% 50%;
-    --sidebar-background: 222 47% 6%;
-    --sidebar-foreground: 220 20% 80%;
-    --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 30% 14%;
-    --sidebar-accent-foreground: 220 20% 90%;
-    --sidebar-border: 220 30% 14%;
-    --sidebar-ring: 38 92% 50%;
+    --background: 220 51% 8%;
+    --foreground: 217 42% 94%;
+    --card: 219 46% 12%;
+    --card-foreground: 217 42% 94%;
+    --popover: 219 44% 15%;
+    --popover-foreground: 217 42% 94%;
+    --primary: 39 89% 52%;
+    --primary-foreground: 40 100% 7%;
+    --secondary: 219 40% 22%;
+    --secondary-foreground: 217 42% 94%;
+    --muted: 219 40% 15%;
+    --muted-foreground: 216 19% 71%;
+    --accent: 219 40% 15%;
+    --accent-foreground: 217 42% 94%;
+    --destructive: 4 75% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 219 38% 19%;
+    --input: 219 34% 26%;
+    --ring: 39 89% 52%;
+
+    --sidebar-background: 219 52% 10%;
+    --sidebar-foreground: 218 21% 64%;
+    --sidebar-primary: 39 89% 52%;
+    --sidebar-primary-foreground: 40 100% 7%;
+    --sidebar-accent: 219 40% 17%;
+    --sidebar-accent-foreground: 217 42% 94%;
+    --sidebar-border: 219 40% 16%;
+    --sidebar-ring: 39 89% 52%;
+
+    --success: 151 50% 53%;
+    --success-foreground: 150 60% 8%;
+    --success-soft: 154 39% 12%;
+    --warning: 38 85% 62%;
+    --warning-foreground: 40 100% 7%;
+    --warning-soft: 39 45% 11%;
+    --warning-ink: 38 85% 62%;
+    --info: 219 86% 73%;
+    --info-foreground: 219 60% 10%;
+    --info-soft: 218 52% 16%;
+    --destructive-soft: 5 37% 14%;
+
+    --highlight: 39 89% 52%;
+    --brand-soft: 220 45% 19%;
+    --brand-text: 219 100% 90%;
+    --accent-soft: 39 45% 11%;
+    --accent-ink: 40 91% 66%;
+    --sunken: 218 49% 10%;
+
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-2: 0 6px 18px rgb(0 0 0 / 0.4);
+    --shadow-3: 0 24px 56px rgb(0 0 0 / 0.55);
   }
 }
 
@@ -93,7 +143,37 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "ss01", "cv11";
   }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    letter-spacing: -0.02em;
+  }
+  ::selection {
+    background: hsl(var(--accent-soft));
+  }
+}
+
+/* Componentes do sistema visual (usados pelo PageHeader, StatusBadge e pelas telas redesenhadas). */
+@layer components {
+  .font-heading { font-family: 'Fraunces', Georgia, serif; font-variation-settings: "opsz" 72; }
+  .eyebrow {
+    @apply font-mono text-[11px] font-medium uppercase leading-none text-[hsl(var(--accent-ink))];
+    letter-spacing: 0.14em;
+  }
+  .label-mono {
+    @apply font-mono text-[10.5px] font-medium uppercase leading-none text-muted-foreground;
+    letter-spacing: 0.13em;
+  }
+  .num { font-family: 'Fraunces', Georgia, serif; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .surface-card {
+    @apply border bg-card text-card-foreground;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-1);
+  }
+  .surface-hover { transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s; }
+  .surface-hover:hover { box-shadow: var(--shadow-2); transform: translateY(-2px); border-color: hsl(var(--input)); }
+  @media (prefers-reduced-motion: reduce) { .surface-hover { transition: none; } .surface-hover:hover { transform: none; } }
 }
 
 @layer utilities {
@@ -158,7 +238,7 @@
     background-size: 100% 297mm;
   }
   .gradient-sidebar {
-    background: linear-gradient(180deg, hsl(220 60% 16%) 0%, hsl(220 55% 12%) 100%);
+    background: linear-gradient(180deg, hsl(var(--sidebar-background)) 0%, hsl(var(--sidebar-background) / 0.92) 100%);
   }
 
   /* ============ Landing Page — Midnight Indigo Theme ============ */
