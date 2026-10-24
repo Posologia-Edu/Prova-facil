@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { GEMINI_MODELS, callAiWithFallback } from "../_shared/ai-caller.ts";
 import { adminClient, getUserId, forbidden } from "../_shared/auth-guard.ts";
 import { loadVpCase } from "../_shared/vp-cases.ts";
+import { getProfessionalLens } from "../_shared/vp-rubrics.ts";
 import { ANAMNESE_KEYS, FICHA_KEYS, MAI_KEYS, baseScores } from "../_shared/vp-grade.ts";
 import {
   buildGabaritoText,
@@ -325,6 +326,7 @@ serve(async (req) => {
     const fichaEnabled = !!(caseRec && isCaseDataV2(caseRec.case_data));
     // O MAI só existe para a Farmácia (casos v2). Legados e casos v2 de Farmácia seguem com MAI.
     const maiEnabled = !fichaEnabled || profKey === "farmaceutico";
+    const lens = getProfessionalLens(profKey);
     // Pesos de cada bloco na nota (precisam bater com _shared/vp-grade.ts).
     const pesoAnamnese = !fichaEnabled ? 6 : maiEnabled ? 4 : 6;
     const pesoFicha = maiEnabled ? 2 : 4;
@@ -391,7 +393,7 @@ serve(async (req) => {
       ?`MAI preenchido pelo estudante:\n${JSON.stringify(maiData.mai_json, null, 2)}\n(Score bruto: ${maiData.total_score})`
       : "MAI NÃO foi preenchido pelo estudante.";
 
-    const systemPrompt = `Você é um AGENTE CORRETOR PROFISSIONAL de simulações clínicas com pacientes virtuais para a disciplina de Farmacologia Aplicada / Cuidado Farmacêutico.
+    const systemPrompt = `Você é um AGENTE CORRETOR PROFISSIONAL de simulações clínicas com pacientes virtuais para a disciplina de ${lens.disciplina}.
 
 Sua missão é avaliar OBJETIVAMENTE a interação completa do estudante com o paciente virtual, considerando duas grandes áreas de competência:
 
@@ -402,10 +404,10 @@ Avalie 6 dimensões profissionais (cada uma 0–1, com casas decimais):
 
 1. **identificacao_acolhimento** — Apresentação do estudante, cumprimento, postura empática, confirmação de identidade do paciente, comunicação acessível (sem jargão).
 2. **queixa_principal_hda** — Caracterização da queixa principal e história da doença atual: localização, intensidade (escala de dor), qualidade, duração, fatores de melhora/piora, irradiação, sintomas associados.
-3. **historia_medicamentosa** — Investigação ATIVA de TODOS os medicamentos em uso (prescritos, OTC, fitoterápicos, suplementos), dose, posologia, há quanto tempo, adesão, automedicação prévia.
+3. **historia_medicamentosa** — ${lens.historiaMedicamentosa}
 4. **antecedentes_comorbidades** — Doenças crônicas, cirurgias, hospitalizações, alergias medicamentosas e alimentares, antecedentes familiares relevantes.
 5. **habitos_estilo_vida** — Tabagismo, etilismo, atividade física, dieta, sono, ocupação, gestação/lactação quando aplicável.
-6. **escuta_raciocinio_clinico** — Capacidade de fazer perguntas abertas, escuta ativa, reformulação, hipóteses farmacoterapêuticas coerentes, identificação de problemas relacionados a medicamentos (PRM/RNM).
+6. **escuta_raciocinio_clinico** — ${lens.escutaRaciocinio}
 
 ${maiEnabled ? `═══════════════════════════════════════════════
 B) QUALIDADE DO PREENCHIMENTO MAI (peso 40% — escala 0–4)
@@ -456,7 +458,7 @@ ${maiEnabled ? "- Se o MAI não foi preenchido, atribua 0 a todas as dimensões 
 
 ÂNCORAS DE NOTA (use a escala inteira de 0 a 1 nas dimensões da anamnese e da ficha):
 - 0,0 = não fez; 0,25 = muito incompleto; 0,5 = metade do esperado, ou tudo porém superficial; 0,75 = a maior parte, com pequenas lacunas; 1,0 = completo e bem conduzido.
-- historia_medicamentosa: 1,0 = investigou ativamente TODOS os medicamentos (prescritos, sem receita, fitoterápicos), com dose, horário, tempo de uso e adesão. Só os prescritos, com dose = 0,5. Nada específico = 0.
+- ${lens.ancoraHistoria}
 - Notas menores ou iguais a 0,3 só quando praticamente não houve investigação daquela dimensão.
 - Seja coerente com informacoes_obtidas: se o estudante obteve a maior parte das informações de uma área, não dê nota muito baixa nela; se obteve poucas, não dê nota alta.
 
