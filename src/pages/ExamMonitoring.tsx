@@ -4,25 +4,13 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { PremiumGate } from "@/components/PremiumGate";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { ArrowLeft, Users, Clock, CheckCircle2, Loader2, Bot, Eye, MessageSquare, Shield, AlertTriangle, Camera } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { ArrowLeft, Users, Loader2, Eye, Shield, AlertTriangle, Camera } from "lucide-react";
 import { toast } from "sonner";
-import AITutorChat from "@/components/AITutorChat";
-import type { Json } from "@/integrations/supabase/types";
+import ExamAnswerReviewDialog, { getAnswerStatement, type ReviewAnswerRow } from "@/components/ExamAnswerReviewDialog";
 
 const PROCTORING_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/exam-proctoring`;
 
@@ -37,21 +25,7 @@ interface SessionRow {
   profiles: { full_name: string } | null;
 }
 
-interface AnswerRow {
-  id: string;
-  question_id: string;
-  answer_text: string | null;
-  answer_json: Json;
-  is_correct: boolean | null;
-  points_earned: number | null;
-  max_points: number | null;
-  ai_score: number | null;
-  ai_feedback: string | null;
-  teacher_score: number | null;
-  teacher_feedback: string | null;
-  grading_status: string;
-  question_bank: { type: string; content_json: Json } | null;
-}
+type AnswerRow = ReviewAnswerRow;
 
 export default function ExamMonitoring() {
   const { publicationId } = useParams<{ publicationId: string }>();
@@ -62,6 +36,8 @@ export default function ExamMonitoring() {
   const [examTitle, setExamTitle] = useState("");
   const [timeLimit, setTimeLimit] = useState(0);
   const [accessCode, setAccessCode] = useState("");
+  const [pubActive, setPubActive] = useState(true);
+  const [pubEndAt, setPubEndAt] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [selectedAnswers, setSelectedAnswers] = useState<AnswerRow[]>([]);
   const [loadingAnswers, setLoadingAnswers] = useState(false);
@@ -135,6 +111,8 @@ export default function ExamMonitoring() {
     setExamTitle((pub.exams as unknown as { title: string })?.title || "Prova");
     setTimeLimit(pub.time_limit_minutes);
     setAccessCode(pub.access_code);
+    setPubActive(!!pub.is_active && !(pub.end_at && new Date() > new Date(pub.end_at)));
+    setPubEndAt(pub.end_at || null);
 
     const { data: sess } = await supabase
       .from("exam_sessions")
@@ -405,7 +383,7 @@ export default function ExamMonitoring() {
   if (!isPremium) {
     return (
       <div className="p-6 max-w-2xl mx-auto space-y-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+        <Button variant="ghost" size="sm" onClick={() => navigate("/exams")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
@@ -418,389 +396,291 @@ export default function ExamMonitoring() {
 
   const inProgress = sessions.filter((s) => s.status === "in_progress").length;
   const submitted = sessions.filter((s) => s.status === "submitted" || s.status === "graded").length;
+  const blocked = sessions.filter((s) => s.status === "blocked").length;
+  const blockedNames = sessions.filter((s) => s.status === "blocked").map((s) => s.profiles?.full_name || "Aluno");
+  const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const pubStatus = !pubActive
+    ? { tone: "neutral" as const, label: "Encerrada" }
+    : { tone: "ok" as const, label: pubEndAt ? `Ativa até ${fmtTime(pubEndAt)}` : "Ativa" };
+
+  const sessionLabel = (status: string): { label: string; tone: "ok" | "bad" | "info" | "brand" } => {
+    switch (status) {
+      case "blocked": return { label: "Bloqueada", tone: "bad" };
+      case "in_progress": return { label: "Fazendo", tone: "info" };
+      case "submitted": return { label: "Enviada", tone: "brand" };
+      default: return { label: "Corrigida", tone: "ok" };
+    }
+  };
+  const initials = (name: string) =>
+    name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div>
+        <Button variant="ghost" size="sm" className="-ml-2 mb-3" onClick={() => navigate("/exams")}>
+          <ArrowLeft className="h-4 w-4" /> Provas
         </Button>
-        <div>
-          <h1 className="text-xl font-bold">{examTitle}</h1>
-          <p className="text-sm text-muted-foreground">
-            Código: <span className="font-mono font-bold text-foreground">{accessCode}</span> · {timeLimit} min
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Monitoramento · ao vivo"
+          title={examTitle}
+          actions={
+            <>
+              <StatusBadge tone={pubStatus.tone} dot>{pubStatus.label}</StatusBadge>
+              <span className="text-xs text-muted-foreground">
+                Código <span className="font-mono font-semibold text-foreground">{accessCode}</span> · {timeLimit} min
+              </span>
+            </>
+          }
+        />
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="py-4 text-center">
-            <Users className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-            <p className="text-2xl font-bold">{sessions.length}</p>
-            <p className="text-xs text-muted-foreground">Total</p>
-          </CardContent>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Card className="p-5">
+          <div className="label-mono">Total</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{sessions.length}</div>
+          <div className="mt-1 text-xs text-muted-foreground">participantes</div>
         </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <Clock className="h-5 w-5 mx-auto text-primary mb-1" />
-            <p className="text-2xl font-bold">{inProgress}</p>
-            <p className="text-xs text-muted-foreground">Em andamento</p>
-          </CardContent>
+        <Card className="p-5">
+          <div className="label-mono">Em andamento</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{inProgress}</div>
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            {inProgress > 0 && <span className="h-1.5 w-1.5 rounded-full bg-success" />}fazendo agora
+          </div>
         </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <CheckCircle2 className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-            <p className="text-2xl font-bold">{submitted}</p>
-            <p className="text-xs text-muted-foreground">Finalizadas</p>
-          </CardContent>
+        <Card className="p-5">
+          <div className="label-mono">Finalizadas</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{submitted}</div>
+          <div className="mt-1 text-xs text-muted-foreground">entregues</div>
+        </Card>
+        <Card className="p-5">
+          <div className="label-mono">Bloqueadas</div>
+          <div className={`mt-3 font-heading text-4xl font-medium tabular-nums ${blocked > 0 ? "text-destructive" : ""}`}>{blocked}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{blocked > 0 ? "aguardando desbloqueio" : "nenhuma"}</div>
         </Card>
       </div>
 
-      {/* Tabs: Monitoring and Security */}
       <Tabs value={activeTab} onValueChange={(v) => {
         setActiveTab(v);
         if (v === "security" && !securityData) loadSecurityData();
       }}>
-        <TabsList>
-          <TabsTrigger value="monitoring" className="gap-1.5">
-            <Users className="h-3.5 w-3.5" />
-            Monitoramento
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-1.5">
-            <Shield className="h-3.5 w-3.5" />
-            Segurança
-          </TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="monitoring"><Users className="h-4 w-4" />Monitoramento</TabsTriggerLine>
+          <TabsTriggerLine value="security"><Shield className="h-4 w-4" />Segurança</TabsTriggerLine>
+        </TabsListLine>
 
         {/* ===== MONITORING TAB ===== */}
-        <TabsContent value="monitoring" className="mt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Student list */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Alunos</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+        <TabsContent value="monitoring" className="mt-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-3">
+              <h3 className="label-mono">Alunos · tempo real</h3>
+              <Card className="divide-y overflow-hidden">
                 {sessions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno conectado ainda.</p>
+                  <p className="p-6 text-center text-sm text-muted-foreground">Nenhum aluno conectado ainda.</p>
                 ) : (
-                  sessions.map((s) => (
-                    <div
-                      key={s.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${
-                        selectedSession === s.id ? "border-primary bg-accent/30" : ""
-                      }`}
-                      onClick={() => loadStudentAnswers(s.id)}
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{s.profiles?.full_name || "Aluno"}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Início: {new Date(s.started_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {s.total_score != null && (
-                          <span className="text-sm font-semibold">{Number(s.total_score).toFixed(1)}/{Number(s.max_score).toFixed(1)}</span>
-                        )}
-                         <Badge
-                           variant={s.status === "blocked" ? "destructive" : s.status === "in_progress" ? "default" : s.status === "graded" ? "secondary" : "outline"}
-                           className="text-xs"
-                         >
-                           {s.status === "blocked" ? "Bloqueada" : s.status === "in_progress" ? "Fazendo" : s.status === "submitted" ? "Enviada" : "Corrigida"}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Selected student answers */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Respostas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!selectedSession ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">Selecione um aluno para ver as respostas.</p>
-                ) : loadingAnswers ? (
-                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
-                ) : selectedAnswers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma resposta ainda.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {selectedAnswers.map((a, i) => {
-                      const content = (a.question_bank?.content_json || {}) as Record<string, unknown>;
-                      const statement = (content.statement as string) || (content.title as string) || "Questão";
-                      const score = Number(a.teacher_score ?? a.ai_score ?? a.points_earned) || 0;
-
-                      return (
-                        <div key={a.id} className="p-3 border rounded-lg space-y-2">
-                          <div className="flex justify-between items-start">
-                            <p className="text-xs font-medium">Q{i + 1}: {statement.substring(0, 80)}...</p>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-xs font-semibold">{score}/{Number(a.max_points)}</span>
-                              {a.grading_status === "pending" && a.question_bank?.type === "open_ended" && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Bot className="h-3 w-3 mr-1" />
-                                  Aguardando IA
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
+                  sessions.map((s) => {
+                    const name = s.profiles?.full_name || "Aluno";
+                    const st = sessionLabel(s.status);
+                    return (
+                      <button
+                        type="button"
+                        key={s.id}
+                        onClick={() => loadStudentAnswers(s.id)}
+                        className={`flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-sunken ${selectedSession === s.id ? "bg-sunken" : ""}`}
+                      >
+                        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-medium ${s.status === "blocked" ? "bg-destructive/10 text-destructive" : "bg-brand-soft text-brand-text"}`}>{initials(name)}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{name}</p>
                           <p className="text-xs text-muted-foreground">
-                            R: {a.answer_text || (a.answer_json as Record<string, string>)?.selected || "—"}
+                            Início {fmtTime(s.started_at)}{s.finished_at && ` · Entrega ${fmtTime(s.finished_at)}`}
                           </p>
-                          {(a.question_bank?.type === "open_ended" || a.question_bank?.type === "matching") && (
-                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => openReview(a)}>
-                              <Eye className="h-3 w-3 mr-1" />
-                              Revisar nota
-                            </Button>
-                          )}
                         </div>
-                      );
-                    })}
-                  </div>
+                        {s.total_score != null && (
+                          <span className="font-mono text-sm font-medium">{Number(s.total_score).toFixed(1)}/{Number(s.max_score).toFixed(1)}</span>
+                        )}
+                        <StatusBadge tone={st.tone} dot={s.status === "in_progress" || s.status === "blocked"}>{st.label}</StatusBadge>
+                      </button>
+                    );
+                  })
                 )}
-              </CardContent>
-            </Card>
+              </Card>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="label-mono">Respostas</h3>
+              {!selectedSession ? (
+                <Card className="p-8 text-center text-sm text-muted-foreground">Selecione um aluno para ver as respostas.</Card>
+              ) : loadingAnswers ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin" /></div>
+              ) : selectedAnswers.length === 0 ? (
+                <Card className="p-8 text-center text-sm text-muted-foreground">Nenhuma resposta ainda.</Card>
+              ) : (
+                <Card className="divide-y overflow-hidden">
+                  {selectedAnswers.map((a, i) => {
+                    const statement = getAnswerStatement(a);
+                    const score = Number(a.teacher_score ?? a.ai_score ?? a.points_earned) || 0;
+                    const reviewable = a.question_bank?.type === "open_ended" || a.question_bank?.type === "matching";
+                    return (
+                      <div key={a.id} className="space-y-2 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-medium"><span className="mr-2 font-mono text-xs text-muted-foreground">Q{i + 1}</span>{statement.substring(0, 80)}{statement.length > 80 && "…"}</p>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="font-mono text-xs font-medium">{score}/{Number(a.max_points)}</span>
+                            {a.grading_status === "pending" && a.question_bank?.type === "open_ended" && (
+                              <StatusBadge tone="warn">Aguardando IA</StatusBadge>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          R: {a.answer_text || (a.answer_json as Record<string, string>)?.selected || "—"}
+                        </p>
+                        {reviewable && (
+                          <Button size="sm" variant="outline" onClick={() => openReview(a)}>
+                            <Eye className="h-3.5 w-3.5" />Revisar nota
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </Card>
+              )}
+            </div>
           </div>
         </TabsContent>
 
         {/* ===== SECURITY TAB ===== */}
-        <TabsContent value="security" className="mt-4">
+        <TabsContent value="security" className="mt-6">
           {loadingSecurity ? (
             <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
           ) : !securityData || securityData.sessions.length === 0 ? (
-            <div className="text-center py-16">
-              <Shield className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+            <Card className="py-16 text-center">
+              <Shield className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
               <p className="text-muted-foreground">Nenhum dado de segurança disponível.</p>
-              <p className="text-xs text-muted-foreground mt-1">Os logs aparecerão quando alunos iniciarem provas com proctoring ativo.</p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={loadSecurityData}>
-                Recarregar
-              </Button>
-            </div>
+              <p className="mt-1 text-xs text-muted-foreground">Os logs aparecerão quando alunos iniciarem provas com proctoring ativo.</p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={loadSecurityData}>Recarregar</Button>
+            </Card>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Students with violations */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    Alunos — Violações
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    Quando uma prova é bloqueada, o aluno só volta após desbloqueio manual do professor.
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {securityData.sessions.map(s => (
-                    <div
-                      key={s.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${
-                        selectedSecuritySession === s.id ? "border-primary bg-accent/30" : ""
-                      }`}
-                      onClick={() => setSelectedSecuritySession(s.id)}
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{s.student_name || s.student_email || "Aluno"}</p>
-                        {s.device_fingerprint && (
-                          <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">
-                            {s.device_fingerprint?.platform} · {s.device_fingerprint?.timezone}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {s.status === "blocked" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7"
-                            disabled={unlockingSessionId === s.id}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleUnlockSession(s.id);
-                            }}
-                          >
-                            {unlockingSessionId === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Desbloquear"}
-                          </Button>
-                        )}
-                        {s.photo_url && <Camera className="h-3.5 w-3.5 text-muted-foreground" />}
-                        <Badge
-                          variant={s.status === "blocked" || s.violation_count > 5 ? "destructive" : s.violation_count > 0 ? "secondary" : "outline"}
-                          className="text-xs"
+            <div className="space-y-6">
+              <div className="flex items-center justify-between gap-3">
+                {blocked > 0 ? (
+                  <div className="flex flex-1 items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning-ink">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span><strong>{blockedNames.join(", ")}</strong> {blocked === 1 ? "está bloqueado(a)" : "estão bloqueados"} e só volta{blocked === 1 ? "" : "m"} após desbloqueio manual.</span>
+                  </div>
+                ) : (
+                  <p className="flex-1 text-xs text-muted-foreground">Quando uma prova é bloqueada, o aluno só volta após desbloqueio manual do professor.</p>
+                )}
+                <Button variant="outline" size="sm" onClick={loadSecurityData}>Recarregar</Button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div className="space-y-3">
+                  <h3 className="label-mono">Alunos · violações</h3>
+                  <Card className="divide-y overflow-hidden">
+                    {securityData.sessions.map((s) => {
+                      const name = s.student_name || s.student_email || "Aluno";
+                      return (
+                        <div
+                          key={s.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedSecuritySession(s.id)}
+                          onKeyDown={(e) => { if (e.key === "Enter") setSelectedSecuritySession(s.id); }}
+                          className={`flex cursor-pointer items-center gap-3 p-4 transition-colors hover:bg-sunken ${selectedSecuritySession === s.id ? "bg-sunken" : ""}`}
                         >
-                          {s.status === "blocked" ? "Bloqueada" : `${s.violation_count} violação(ões)`}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Timeline for selected student */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Timeline de Eventos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {!selectedSecuritySession ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Selecione um aluno para ver os eventos.</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Photos */}
-                      {signedPhotoUrls[selectedSecuritySession] && signedPhotoUrls[selectedSecuritySession].length > 0 && (
-                        <div>
-                          <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                            <Camera className="h-3 w-3" /> Fotos capturadas
-                          </p>
-                          <div className="flex gap-2 overflow-x-auto pb-2">
-                            {signedPhotoUrls[selectedSecuritySession].map((url, i) => (
-                              <img
-                                key={i}
-                                src={url}
-                                alt={`Captura ${i + 1}`}
-                                className="h-20 w-auto rounded border object-cover shrink-0"
-                              />
-                            ))}
+                          <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-medium ${s.status === "blocked" ? "bg-destructive/10 text-destructive" : "bg-brand-soft text-brand-text"}`}>{initials(name)}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{name}</p>
+                            {s.device_fingerprint && (
+                              <p className="truncate text-[11px] text-muted-foreground">
+                                {s.device_fingerprint?.platform} · {s.device_fingerprint?.timezone}
+                              </p>
+                            )}
                           </div>
+                          {s.status === "blocked" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={unlockingSessionId === s.id}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleUnlockSession(s.id);
+                              }}
+                            >
+                              {unlockingSessionId === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Desbloquear"}
+                            </Button>
+                          )}
+                          {s.photo_url && <Camera className="h-3.5 w-3.5 text-muted-foreground" />}
+                          <StatusBadge tone={s.status === "blocked" || s.violation_count > 5 ? "bad" : s.violation_count > 0 ? "warn" : "neutral"}>
+                            {s.status === "blocked" ? "Bloqueada" : `${s.violation_count} ${s.violation_count === 1 ? "violação" : "violações"}`}
+                          </StatusBadge>
                         </div>
-                      )}
+                      );
+                    })}
+                  </Card>
+                </div>
 
-                      {/* Event log */}
-                      <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
-                        {securityData.logs
-                          .filter(l => l.session_id === selectedSecuritySession)
-                          .map(log => (
-                            <div key={log.id} className="flex items-start gap-2 p-2 rounded-lg bg-muted/40 text-xs">
-                              <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${
-                                log.event_type.includes("blocked") || log.event_type.includes("exit") || log.event_type.includes("lost")
-                                  ? "bg-destructive"
-                                  : log.event_type === "photo_captured"
-                                  ? "bg-primary"
-                                  : "bg-muted-foreground"
-                              }`} />
-                              <div className="flex-1 min-w-0">
-                                <span className="font-medium">{getEventLabel(log.event_type)}</span>
-                                <p className="text-muted-foreground">
-                                  {new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                                </p>
-                              </div>
+                <div className="space-y-3">
+                  <h3 className="label-mono">Timeline de eventos</h3>
+                  <Card className="p-5">
+                    {!selectedSecuritySession ? (
+                      <p className="py-4 text-center text-sm text-muted-foreground">Selecione um aluno para ver os eventos.</p>
+                    ) : (
+                      <div className="space-y-5">
+                        {signedPhotoUrls[selectedSecuritySession] && signedPhotoUrls[selectedSecuritySession].length > 0 && (
+                          <div>
+                            <p className="label-mono mb-2 flex items-center gap-1.5"><Camera className="h-3 w-3" /> Fotos capturadas</p>
+                            <div className="flex gap-2 overflow-x-auto pb-2">
+                              {signedPhotoUrls[selectedSecuritySession].map((url, i) => (
+                                <img key={i} src={url} alt={`Captura ${i + 1}`} className="h-20 w-auto shrink-0 rounded-md border object-cover" />
+                              ))}
                             </div>
-                          ))}
-                        {securityData.logs.filter(l => l.session_id === selectedSecuritySession).length === 0 && (
-                          <p className="text-xs text-muted-foreground text-center py-4">Nenhum evento registrado.</p>
+                          </div>
                         )}
+
+                        <div className="max-h-[400px] space-y-3 overflow-y-auto">
+                          {securityData.logs
+                            .filter((l) => l.session_id === selectedSecuritySession)
+                            .map((log) => {
+                              const bad = log.event_type.includes("blocked") || log.event_type.includes("exit") || log.event_type.includes("lost");
+                              return (
+                                <div key={log.id} className="flex items-start gap-3">
+                                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${bad ? "bg-destructive" : log.event_type === "photo_captured" ? "bg-primary" : "bg-muted-foreground/50"}`} />
+                                  <div className="min-w-0 flex-1 text-sm">
+                                    <span className="font-medium">{getEventLabel(log.event_type)}</span>
+                                    <p className="font-mono text-xs text-muted-foreground">
+                                      {new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          {securityData.logs.filter((l) => l.session_id === selectedSecuritySession).length === 0 && (
+                            <p className="py-4 text-center text-xs text-muted-foreground">Nenhum evento registrado.</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                    )}
+                  </Card>
+                </div>
+              </div>
             </div>
           )}
         </TabsContent>
       </Tabs>
 
-      {/* Review dialog */}
-      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-primary" />
-              Correção com Tutor de IA
-            </DialogTitle>
-          </DialogHeader>
-          {reviewAnswer && (
-            <Tabs value={reviewTab} onValueChange={setReviewTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="tutor" className="gap-1">
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  Tutor de IA
-                </TabsTrigger>
-                <TabsTrigger value="review" className="gap-1">
-                  <Eye className="h-3.5 w-3.5" />
-                  Nota Manual
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="tutor" className="mt-4">
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Enunciado</Label>
-                    <p className="text-sm bg-muted/50 rounded p-2 mt-1">
-                      {((reviewAnswer.question_bank?.content_json as Record<string, unknown>)?.statement as string) ||
-                        ((reviewAnswer.question_bank?.content_json as Record<string, unknown>)?.title as string) ||
-                        "Questão"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Resposta do aluno</Label>
-                    <p className="text-sm bg-muted/50 rounded p-2 mt-1">{reviewAnswer.answer_text || "Sem resposta"}</p>
-                  </div>
-                  <Separator />
-                  <AITutorChat
-                    answerId={reviewAnswer.id}
-                    studentAnswer={reviewAnswer.answer_text || ""}
-                    questionStatement={
-                      ((reviewAnswer.question_bank?.content_json as Record<string, unknown>)?.statement as string) || ""
-                    }
-                    aiScore={reviewAnswer.ai_score}
-                    aiFeedback={reviewAnswer.ai_feedback}
-                    teacherScore={reviewAnswer.teacher_score}
-                    maxPoints={Number(reviewAnswer.max_points) || 1}
-                    onSuggestScore={handleAISuggestScore}
-                  />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="review" className="mt-4">
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Resposta do aluno</Label>
-                    <p className="text-sm bg-muted/50 rounded p-3 mt-1">{reviewAnswer.answer_text || "Sem resposta"}</p>
-                  </div>
-                  {reviewAnswer.ai_feedback && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Bot className="h-3 w-3" /> Avaliação da IA ({reviewAnswer.ai_score}/{Number(reviewAnswer.max_points)})
-                      </Label>
-                      <p className="text-sm bg-primary/5 rounded p-3 mt-1">{reviewAnswer.ai_feedback}</p>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label>Nota do Professor (máx: {Number(reviewAnswer.max_points)})</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={Number(reviewAnswer.max_points)}
-                      step={0.5}
-                      value={teacherScore}
-                      onChange={(e) => setTeacherScore(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Feedback (opcional)</Label>
-                    <Textarea
-                      value={teacherFeedback}
-                      onChange={(e) => setTeacherFeedback(e.target.value)}
-                      rows={3}
-                      placeholder="Comentário para o aluno..."
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReviewOpen(false)}>Cancelar</Button>
-            <Button onClick={saveReview}>Salvar Nota</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ExamAnswerReviewDialog
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        answer={reviewAnswer}
+        tab={reviewTab}
+        onTabChange={setReviewTab}
+        teacherScore={teacherScore}
+        onTeacherScoreChange={setTeacherScore}
+        teacherFeedback={teacherFeedback}
+        onTeacherFeedbackChange={setTeacherFeedback}
+        onSave={saveReview}
+        onSuggestScore={handleAISuggestScore}
+      />
     </div>
   );
 }
