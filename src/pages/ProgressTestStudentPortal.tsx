@@ -169,7 +169,8 @@ export default function ProgressTestStudentPortal() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <TrendingUp className="h-10 w-10 mx-auto text-primary mb-2" />
-            <CardTitle>{test.title}</CardTitle>
+            <div className="eyebrow">Progress Test</div>
+            <CardTitle className="font-heading text-lg font-medium">{test.title}</CardTitle>
             {test.description && <CardDescription>{test.description}</CardDescription>}
           </CardHeader>
           <CardContent className="space-y-4">
@@ -214,7 +215,7 @@ export default function ProgressTestStudentPortal() {
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CheckCircle className="h-12 w-12 mx-auto text-success mb-2" />
-            <CardTitle className="text-xl">Teste de Progresso Finalizado</CardTitle>
+            <CardTitle className="font-heading text-lg font-medium">Teste de Progresso Finalizado</CardTitle>
             <CardDescription>Obrigado por participar!</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -252,7 +253,8 @@ export default function ProgressTestStudentPortal() {
     <div className="min-h-screen bg-muted/30 p-4">
       <div className="max-w-2xl mx-auto space-y-4">
         <div className="text-center">
-          <h1 className="text-lg font-bold text-foreground">{test?.title || "Teste de Progresso"}</h1>
+          <div className="eyebrow mb-1">Progress Test</div>
+          <h1 className="font-heading text-2xl font-medium">{test?.title || "Teste de Progresso"}</h1>
         </div>
         <div className="flex items-center justify-between">
           <Badge variant="outline">{currentIdx + 1} / {questions.length}</Badge>
@@ -266,7 +268,7 @@ export default function ProgressTestStudentPortal() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-bold">Questão {currentIdx + 1}</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Questão {currentIdx + 1}</CardTitle>
               {content?.subject_area && (
                 <Badge variant="outline" className="text-xs">{content.subject_area}</Badge>
               )}

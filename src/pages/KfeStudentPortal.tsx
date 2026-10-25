@@ -138,7 +138,7 @@ export default function KfeStudentPortal() {
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
             <Target className="h-16 w-16 text-muted-foreground/40 mx-auto" />
-            <h2 className="text-xl font-bold">Exame não disponível</h2>
+            <h2 className="font-heading text-2xl font-medium">Exame não disponível</h2>
             <p className="text-muted-foreground">Este exame KFE ainda não está aberto.</p>
           </CardContent>
         </Card>
@@ -152,8 +152,8 @@ export default function KfeStudentPortal() {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-xl font-bold">Exame Concluído!</h2>
+            <CheckCircle className="h-16 w-16 text-success mx-auto" />
+            <h2 className="font-heading text-2xl font-medium">Exame Concluído!</h2>
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-3xl font-bold text-primary">{pct}%</p>
               <p className="text-sm text-muted-foreground mt-1">Pontuação: {score?.total}/{score?.max}</p>
@@ -170,7 +170,8 @@ export default function KfeStudentPortal() {
         <Card className="max-w-md w-full mx-4">
           <CardHeader className="text-center">
             <Target className="h-8 w-8 text-primary mx-auto mb-2" />
-            <CardTitle>{examTitle}</CardTitle>
+            <div className="eyebrow">KFE</div>
+            <CardTitle className="font-heading text-lg font-medium">{examTitle}</CardTitle>
             <p className="text-sm text-muted-foreground">Key Feature Exam — {cases.length} casos clínicos</p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -199,7 +200,8 @@ export default function KfeStudentPortal() {
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold">{examTitle}</h1>
+            <div className="eyebrow mb-1">KFE</div>
+          <h1 className="font-heading text-2xl font-medium">{examTitle}</h1>
             <p className="text-xs text-muted-foreground">Caso {currentCaseIndex + 1} de {cases.length}</p>
           </div>
           <Badge variant="outline">{answeredCount}/{totalFeatures} respondidos</Badge>
@@ -209,7 +211,7 @@ export default function KfeStudentPortal() {
         {currentCase && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">{currentCase.title}</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">{currentCase.title}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="bg-muted/50 rounded-lg p-4">
@@ -221,7 +223,7 @@ export default function KfeStudentPortal() {
 
         {/* Current key feature */}
         {currentFeature && (
-          <Card className={isRevealed ? (isCorrect ? "border-green-500/50" : "border-destructive/50") : ""}>
+          <Card className={isRevealed ? (isCorrect ? "border-success/50" : "border-destructive/50") : ""}>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Badge variant="outline">Ponto-chave {currentFeatureIndex + 1} de {caseFeatures.length}</Badge>
@@ -243,14 +245,14 @@ export default function KfeStudentPortal() {
                         disabled={isRevealed}
                         onClick={() => handleAnswer(currentFeature.id, opt.id)}
                         className={`w-full text-left p-3 rounded-lg border-2 transition-all text-sm ${
-                          isCorrectOpt ? "border-green-500 bg-green-50 dark:bg-green-950/30" :
+                          isCorrectOpt ? "border-success bg-success/10" :
                           isWrongSelected ? "border-destructive bg-destructive/10" :
                           isSelected ? "border-primary bg-primary/10" :
                           "border-border hover:border-primary/50"
                         }`}
                       >
                         <span className="font-medium mr-2">{opt.id.toUpperCase()})</span> {opt.text}
-                        {isCorrectOpt && <CheckCircle className="h-4 w-4 text-green-500 inline ml-2" />}
+                        {isCorrectOpt && <CheckCircle className="h-4 w-4 text-success inline ml-2" />}
                         {isWrongSelected && <AlertCircle className="h-4 w-4 text-destructive inline ml-2" />}
                       </button>
                     );

@@ -128,7 +128,7 @@ export default function SjtStudentPortal() {
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
             <Scale className="h-16 w-16 text-muted-foreground/40 mx-auto" />
-            <h2 className="text-xl font-bold">Exame não disponível</h2>
+            <h2 className="font-heading text-2xl font-medium">Exame não disponível</h2>
             <p className="text-muted-foreground">Este exame SJT ainda não está aberto.</p>
           </CardContent>
         </Card>
@@ -142,8 +142,8 @@ export default function SjtStudentPortal() {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-xl font-bold">Respostas Enviadas!</h2>
+            <CheckCircle className="h-16 w-16 text-success mx-auto" />
+            <h2 className="font-heading text-2xl font-medium">Respostas Enviadas!</h2>
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-3xl font-bold text-primary">{pct}%</p>
               <p className="text-sm text-muted-foreground mt-1">Pontuação: {score?.total.toFixed(1)}/{score?.max}</p>
@@ -161,7 +161,8 @@ export default function SjtStudentPortal() {
         <Card className="max-w-md w-full mx-4">
           <CardHeader className="text-center">
             <Scale className="h-8 w-8 text-primary mx-auto mb-2" />
-            <CardTitle>{examTitle}</CardTitle>
+            <div className="eyebrow">SJT</div>
+            <CardTitle className="font-heading text-lg font-medium">{examTitle}</CardTitle>
             <p className="text-sm text-muted-foreground">Situational Judgment Test — {scenarios.length} cenários</p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -182,14 +183,14 @@ export default function SjtStudentPortal() {
     <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold">{examTitle}</h1>
+          <div><div className="eyebrow mb-1">SJT</div><h1 className="font-heading text-2xl font-medium">{examTitle}</h1></div>
           <Badge variant="outline">{currentIndex + 1}/{scenarios.length}</Badge>
         </div>
 
         {currentScenario && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Cenário {currentIndex + 1}</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Cenário {currentIndex + 1}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-muted/50 rounded-lg p-4">

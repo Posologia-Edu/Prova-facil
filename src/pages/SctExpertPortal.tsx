@@ -84,8 +84,8 @@ export default function SctExpertPortal() {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-xl font-bold">Obrigado!</h2>
+            <CheckCircle className="h-16 w-16 text-success mx-auto" />
+            <h2 className="font-heading text-2xl font-medium">Obrigado!</h2>
             <p className="text-muted-foreground">Suas respostas foram registradas com sucesso. Elas serão usadas para calcular a pontuação dos alunos.</p>
           </CardContent>
         </Card>
@@ -97,11 +97,10 @@ export default function SctExpertPortal() {
     <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-2">
+          <div className="eyebrow">SCT · Painel de especialistas</div>
           <div className="flex items-center justify-center gap-2">
-            <ClipboardList className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">Painel de Especialistas — SCT</h1>
+            <h1 className="font-heading text-2xl font-medium">{examTitle}</h1>
           </div>
-          <p className="text-lg font-medium text-foreground">{examTitle}</p>
           <p className="text-sm text-muted-foreground max-w-lg mx-auto">
             Para cada cenário, avalie como a nova informação afeta a probabilidade da hipótese proposta.
           </p>
@@ -125,19 +124,19 @@ export default function SctExpertPortal() {
         {scenarios.map((s, i) => (
           <Card key={s.id} className={answers[s.id] !== undefined ? "border-primary/30" : ""}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Cenário {i + 1} de {scenarios.length}</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Cenário {i + 1} de {scenarios.length}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-sm whitespace-pre-wrap">{s.clinical_vignette}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3">
-                  <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Se você estava pensando em...</p>
+                <div className="bg-info/10 rounded-lg p-3">
+                  <p className="text-xs font-medium text-info mb-1">Se você estava pensando em...</p>
                   <p className="text-sm">{s.hypothesis}</p>
                 </div>
-                <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3">
-                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">E então você descobre que...</p>
+                <div className="bg-warning/10 rounded-lg p-3">
+                  <p className="text-xs font-medium text-warning-ink mb-1">E então você descobre que...</p>
                   <p className="text-sm">{s.new_information}</p>
                 </div>
               </div>

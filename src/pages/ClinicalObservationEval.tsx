@@ -91,7 +91,7 @@ export default function ClinicalObservationEval() {
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
             <ClipboardCheck className="h-16 w-16 text-muted-foreground/40 mx-auto" />
-            <h2 className="text-xl font-bold">Avaliação não disponível</h2>
+            <h2 className="font-heading text-2xl font-medium">Avaliação não disponível</h2>
             <p className="text-muted-foreground">Esta avaliação ainda não está ativa.</p>
           </CardContent>
         </Card>
@@ -104,8 +104,8 @@ export default function ClinicalObservationEval() {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-xl font-bold">Avaliação Registrada!</h2>
+            <CheckCircle className="h-16 w-16 text-success mx-auto" />
+            <h2 className="font-heading text-2xl font-medium">Avaliação Registrada!</h2>
             <p className="text-muted-foreground">A ficha de observação foi salva com sucesso.</p>
           </CardContent>
         </Card>
@@ -117,8 +117,8 @@ export default function ClinicalObservationEval() {
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         <div className="text-center space-y-1">
-          <ClipboardCheck className="h-6 w-6 text-primary mx-auto" />
-          <h1 className="text-lg font-bold">{obs.title}</h1>
+          <div className="eyebrow mb-1">Mini-CEX / DOPS</div>
+          <h1 className="font-heading text-2xl font-medium">{obs.title}</h1>
           <p className="text-xs text-muted-foreground">{obs.type === "mini_cex" ? "Mini-CEX" : "DOPS"} — Ficha de Observação Direta</p>
         </div>
 

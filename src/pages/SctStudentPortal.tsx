@@ -132,7 +132,7 @@ export default function SctStudentPortal() {
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
             <ClipboardList className="h-16 w-16 text-muted-foreground/40 mx-auto" />
-            <h2 className="text-xl font-bold">Exame não disponível</h2>
+            <h2 className="font-heading text-2xl font-medium">Exame não disponível</h2>
             <p className="text-muted-foreground">Este exame SCT ainda não está aberto para alunos.</p>
           </CardContent>
         </Card>
@@ -146,8 +146,8 @@ export default function SctStudentPortal() {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-xl font-bold">Respostas Enviadas!</h2>
+            <CheckCircle className="h-16 w-16 text-success mx-auto" />
+            <h2 className="font-heading text-2xl font-medium">Respostas Enviadas!</h2>
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-3xl font-bold text-primary">{pct}%</p>
               <p className="text-sm text-muted-foreground mt-1">Pontuação: {score?.total.toFixed(2)} / {score?.max}</p>
@@ -165,7 +165,8 @@ export default function SctStudentPortal() {
         <Card className="max-w-md w-full mx-4">
           <CardHeader className="text-center">
             <ClipboardList className="h-8 w-8 text-primary mx-auto mb-2" />
-            <CardTitle>{examTitle}</CardTitle>
+            <div className="eyebrow">SCT</div>
+            <CardTitle className="font-heading text-lg font-medium">{examTitle}</CardTitle>
             <p className="text-sm text-muted-foreground">Script Concordance Test — {scenarios.length} cenários</p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -189,7 +190,8 @@ export default function SctStudentPortal() {
     <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-bold">{examTitle}</h1>
+          <div className="eyebrow mb-1">SCT</div>
+          <h1 className="font-heading text-2xl font-medium">{examTitle}</h1>
           <p className="text-sm text-muted-foreground">Para cada cenário, avalie como a nova informação afeta a probabilidade da hipótese.</p>
           <Badge variant="outline">{Object.keys(answers).length}/{scenarios.length} respondidos</Badge>
         </div>
@@ -197,19 +199,19 @@ export default function SctStudentPortal() {
         {scenarios.map((s, i) => (
           <Card key={s.id} className={answers[s.id] !== undefined ? "border-primary/30" : ""}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Cenário {i + 1} de {scenarios.length}</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Cenário {i + 1} de {scenarios.length}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-sm whitespace-pre-wrap">{s.clinical_vignette}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3">
-                  <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Se você estava pensando em...</p>
+                <div className="bg-info/10 rounded-lg p-3">
+                  <p className="text-xs font-medium text-info mb-1">Se você estava pensando em...</p>
                   <p className="text-sm">{s.hypothesis}</p>
                 </div>
-                <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3">
-                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">E então você descobre que...</p>
+                <div className="bg-warning/10 rounded-lg p-3">
+                  <p className="text-xs font-medium text-warning-ink mb-1">E então você descobre que...</p>
                   <p className="text-sm">{s.new_information}</p>
                 </div>
               </div>
