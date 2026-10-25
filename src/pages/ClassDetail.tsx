@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import VPAnalytics from "@/pages/VPAnalytics";
 import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, GraduationCap, Plus, Calendar, FileText, UserCog, Layers,
+  ArrowLeft, BarChart3, GraduationCap, Plus, Calendar, FileText, UserCog, Layers,
   Pencil, Trash2, Download, ExternalLink, Upload, Loader2, LayoutDashboard,
   Users, BookOpenCheck, ClipboardCheck, Copy, CalendarOff, ChevronRight, ListChecks,
 } from "lucide-react";
@@ -401,6 +402,7 @@ export default function ClassDetail() {
               <TabsTriggerLine value="students"><Users className="h-4 w-4" />Alunos</TabsTriggerLine>
               <TabsTriggerLine value="grades"><BookOpenCheck className="h-4 w-4" />Notas</TabsTriggerLine>
               <TabsTriggerLine value="attendance"><ClipboardCheck className="h-4 w-4" />Presença</TabsTriggerLine>
+              <TabsTriggerLine value="analytics"><BarChart3 className="h-4 w-4" />Análises</TabsTriggerLine>
               <TabsTriggerLine value="semesters"><Layers className="h-4 w-4" />Semestres</TabsTriggerLine>
               <TabsTriggerLine value="teachers"><UserCog className="h-4 w-4" />Professores</TabsTriggerLine>
               <TabsTriggerLine value="documents"><FileText className="h-4 w-4" />Materiais</TabsTriggerLine>
@@ -461,6 +463,11 @@ export default function ClassDetail() {
             ) : (
               <Card><CardContent className="py-10 text-center text-muted-foreground">Crie um semestre primeiro.</CardContent></Card>
             )}
+          </TabsContent>
+
+          {/* ANALYTICS (Pacientes Virtuais) */}
+          <TabsContent value="analytics">
+            {activeTab === "analytics" && <VPAnalytics classId={classId!} embedded />}
           </TabsContent>
 
           {/* ATTENDANCE */}

@@ -1,12 +1,15 @@
 import { useState, useEffect, Fragment } from "react";
 import {
-  BarChart3, Users, Award, AlertTriangle, Loader2, ArrowLeft,
+  BarChart3, Users, Award, AlertTriangle, Loader2, ArrowLeft, Sparkles,
   ChevronDown, Eye, MessageSquare, ShieldAlert, TrendingUp, BookOpen,
   GraduationCap, ChevronRight, Pill, Info,
 } from "lucide-react";
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -76,13 +79,20 @@ interface GradeRow {
 }
 interface TranscriptMsg { role: string; content: string; encounter: number; author_name?: string | null; author_email?: string | null; }
 
-export default function VPAnalytics() {
+interface VPAnalyticsProps {
+  /** turma de abertura (aba Análises dentro da Turma) */
+  classId?: string;
+  /** dentro da Turma: sem cabeçalho próprio nem lista de turmas */
+  embedded?: boolean;
+}
+
+export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsProps = {}) {
   const { byId: vpById } = useVpCatalog();
   const vpName = (id: string) => vpById[id]?.label || id;
   const [loading, setLoading] = useState(true);
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [cvps, setCvps] = useState<CVPOption[]>([]);
-  const [selectedClass, setSelectedClass] = useState("all");
+  const [selectedClass, setSelectedClass] = useState(classId ?? "all");
   const [selectedCvp, setSelectedCvp] = useState("all");
   // P14: pacientes de treino ficam fora da análise e da correção em lote, a menos que o docente peça para vê-los.
   const [modeFilter, setModeFilter] = useState<"avaliativo" | "treino">("avaliativo");
@@ -111,6 +121,7 @@ export default function VPAnalytics() {
   const [grading, setGrading] = useState(false);
 
   useEffect(() => { loadFilters(); }, []);
+  useEffect(() => { if (classId) { setSelectedClass(classId); setSelectedCvp("all"); } }, [classId]);
   useEffect(() => { loadGrades(); }, [selectedClass, selectedCvp, modeFilter]);
 
   // Mantém só os pacientes do tipo escolhido. Consulta tolerante a erro: sem a coluna, todos contam como avaliativos.
@@ -853,7 +864,7 @@ export default function VPAnalytics() {
   const currentClass = classes.find(c => c.id === selectedClass);
 
   // ===== CLASS OVERVIEW (no class selected) =====
-  if (selectedClass === "all") {
+  if (selectedClass === "all" && !embedded) {
     return (
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div>
@@ -911,377 +922,334 @@ export default function VPAnalytics() {
   }
 
   // ===== CLASS DETAIL VIEW =====
-  return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => { setSelectedClass("all"); setSelectedCvp("all"); }}
-            className="mt-1 -ml-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" /> Turmas
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{currentClass?.name || "Turma"}</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Resultados dos alunos desta turma nas interações com pacientes virtuais.
-            </p>
+  const adjustedCount = grades.filter((g) => g.adjusted_at).length;
+  const flagList = Object.entries(flagFreq).sort((a, b) => b[1] - a[1]);
+  const initialsOf = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
+  const num1 = (n: number) => n.toFixed(1).replace(".", ",");
+  const groupCount = new Set(grades.filter((g) => g.group_id).map((g) => g.group_id)).size;
+  const individualCount = grades.filter((g) => !g.group_id).length;
+  const quickRead = [
+    `${gradedCount} de ${eligibleCount} ${eligibleCount === 1 ? "sessão corrigida" : "sessões corrigidas"}`,
+    flagList.length > 0 ? `flag mais comum: ${flagList[0][0]} (${flagList[0][1]} ${flagList[0][1] === 1 ? "sessão" : "sessões"})` : "nenhuma flag de segurança",
+    adjustedCount > 0 ? `${adjustedCount} ${adjustedCount === 1 ? "correção ajustada" : "correções ajustadas"} por você` : "nenhuma correção ajustada por você",
+  ].join(" · ");
+
+  // Agrupa por grupo (sessões em grupo) ou por sessão (individuais)
+  type Bucket = { key: string; isGroup: boolean; label: string; cvpId: string; rows: GradeRow[] };
+  const buckets = new Map<string, Bucket>();
+  grades.forEach((g) => {
+    if (g.group_id) {
+      const k = `g:${g.group_id}`;
+      if (!buckets.has(k)) buckets.set(k, { key: k, isGroup: true, label: g.group_label || "Grupo", cvpId: g.class_virtual_patient_id, rows: [] });
+      buckets.get(k)!.rows.push(g);
+    } else {
+      const k = `i:${g.session_id}`;
+      buckets.set(k, { key: k, isGroup: false, label: g.group_label || "Individual", cvpId: g.class_virtual_patient_id, rows: [g] });
+    }
+  });
+  const bucketList = Array.from(buckets.values());
+
+  const renderRow = (g: GradeRow) => {
+    const flags = Array.isArray(g.flags_seguranca) ? g.flags_seguranca : [];
+    const graded = g.correction_status === "graded";
+    const finalScore = graded ? finalWithBonus(g.nota_final, g.nota_microlearning) : 0;
+    const bonus = graded ? microBonus(g.nota_microlearning) : 0;
+    return (
+      <TableRow key={g.id}>
+        <TableCell>
+          <div className="flex items-center gap-3">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-medium text-brand-text" aria-hidden>
+              {initialsOf(g.student_name || g.student_email || "?")}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{g.student_name || "—"}</p>
+              <p className="truncate text-xs text-muted-foreground">{g.student_email || "—"}</p>
+            </div>
           </div>
+        </TableCell>
+        <TableCell className="text-center">
+          {graded ? (
+            <span className="inline-flex items-center gap-1">
+              <StatusBadge tone="ok" dot>Corrigido</StatusBadge>
+              {g.adjusted_at && <StatusBadge tone="accent" title="Nota ajustada pelo docente">Ajustada</StatusBadge>}
+            </span>
+          ) : (
+            <StatusBadge tone="warn" dot>Pendente</StatusBadge>
+          )}
+        </TableCell>
+        <TableCell className="text-center">
+          {graded ? (
+            <TooltipProvider>
+              <UiTooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <StatusBadge tone={finalScore >= 6 ? "ok" : "bad"} className="font-mono text-sm">
+                      {finalScore.toFixed(1)}
+                      {bonus > 0 && <span className="ml-1 text-[10px] opacity-80">(+{bonus.toFixed(2)})</span>}
+                    </StatusBadge>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    Base: {(g.nota_final || 0).toFixed(2)} + Bônus Eficiência Clínica: {bonus.toFixed(2)} = <strong>{finalScore.toFixed(2)}</strong>
+                  </p>
+                </TooltipContent>
+              </UiTooltip>
+            </TooltipProvider>
+          ) : (
+            <span className="text-xs text-muted-foreground">Aguardando</span>
+          )}
+        </TableCell>
+        <TableCell className="text-center font-mono text-sm">
+          {graded ? <>{(g.nota_microlearning || 0).toFixed(1)}<span className="text-xs text-muted-foreground">/5</span></> : "—"}
+        </TableCell>
+        <TableCell className="text-center">
+          {flags.length > 0 ? <StatusBadge tone="bad">{flags.length}</StatusBadge> : <span className="text-xs text-muted-foreground">—</span>}
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end gap-1">
+            {graded && (
+              <Button
+                variant={g.feedback_released ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => toggleFeedbackRelease(g, !g.feedback_released)}
+                title={g.feedback_released ? "Feedback liberado para o aluno — clique para ocultar" : "Liberar feedback para o aluno"}
+              >
+                <Eye className={`h-3.5 w-3.5 ${g.feedback_released ? "" : "opacity-50"}`} />
+                {g.feedback_released ? "Liberado" : "Liberar"}
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
+              {graded ? "Detalhes" : "Ver / Avaliar"}
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const kpis: { label: string; value: number; detail?: string; tone?: string }[] = [
+    { label: "Sessões elegíveis", value: eligibleCount, detail: `${groupCount} ${groupCount === 1 ? "grupo" : "grupos"} · ${individualCount} ${individualCount === 1 ? "individual" : "individuais"}` },
+    { label: "Corrigidas", value: gradedCount, detail: eligibleCount ? `${Math.round((gradedCount / eligibleCount) * 100)}% do total` : undefined },
+    { label: "Pendentes", value: pendingCount, detail: "aguardando correção" },
+    { label: "Flags de segurança", value: flagCount, detail: `${flagList.length} ${flagList.length === 1 ? "tipo" : "tipos"}`, tone: flagCount > 0 ? "text-destructive" : undefined },
+  ];
+
+  return (
+    <div className={embedded ? "space-y-6" : "mx-auto max-w-7xl space-y-6 p-6"}>
+      {!embedded && (
+        <div className="space-y-3">
+          <Button variant="ghost" size="sm" className="-ml-3" onClick={() => { setSelectedClass("all"); setSelectedCvp("all"); }}>
+            <ArrowLeft className="h-4 w-4" /> Turmas
+          </Button>
+          <PageHeader
+            eyebrow="Pacientes Virtuais · Análises"
+            title={currentClass?.name || "Turma"}
+            description="Resultados dos alunos desta turma nas interações com pacientes virtuais."
+            actions={
+              <>
+                <Button variant="outline" onClick={() => window.location.assign(`/virtual-patients/research?class=${selectedClass}`)}>
+                  <BookOpen className="h-4 w-4" />Pesquisa
+                </Button>
+                <Button onClick={handleBatchGrade} disabled={grading}>
+                  {grading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  Corrigir turma
+                </Button>
+              </>
+            }
+          />
         </div>
-        <div className="flex gap-3 flex-wrap">
-          <Select value={modeFilter} onValueChange={(v) => setModeFilter(v as "avaliativo" | "treino")}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
+      )}
+
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center gap-3">
+        {embedded && (
+          <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setSelectedCvp("all"); }}>
+            <SelectTrigger className="w-[240px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="avaliativo">Avaliativos</SelectItem>
-              <SelectItem value="treino">Treino</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={selectedCvp} onValueChange={setSelectedCvp}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Todos os pacientes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os pacientes</SelectItem>
-              {filteredCvpOptions.map(c => (
-                <SelectItem key={c.id} value={c.id}>
-                  {vpName(c.patient_id)}
-                </SelectItem>
+              {classId && <SelectItem value={classId}>Escopo: esta turma</SelectItem>}
+              <SelectItem value="all">Escopo: todas as turmas</SelectItem>
+              {classes.filter((c) => c.id !== classId).map((c) => (
+                <SelectItem key={c.id} value={c.id}>Escopo: {c.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            onClick={() => window.location.assign(`/virtual-patients/research?class=${selectedClass}`)}
-          >
-            <BookOpen className="h-4 w-4 mr-1.5" />
-            Pesquisa científica
-          </Button>
-          <Button onClick={handleBatchGrade} disabled={grading} variant="outline">
-            {grading ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <BookOpen className="h-4 w-4 mr-1.5" />}
-            Corrigir Turma
-          </Button>
+        )}
+        <div className="flex gap-1.5" role="group" aria-label="Tipo de sessão">
+          {([["avaliativo", "Avaliativos"], ["treino", "Treino"]] as const).map(([v, label]) => (
+            <Button key={v} size="sm" variant={modeFilter === v ? "default" : "outline"} aria-pressed={modeFilter === v} onClick={() => setModeFilter(v)}>
+              {label}
+            </Button>
+          ))}
         </div>
+        <Select value={selectedCvp} onValueChange={setSelectedCvp}>
+          <SelectTrigger className="w-[220px]"><SelectValue placeholder="Paciente: todos" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Paciente: todos</SelectItem>
+            {filteredCvpOptions.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{vpName(c.patient_id)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {embedded && (
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => window.location.assign(`/virtual-patients/research?class=${selectedClass}`)}>
+              <BookOpen className="h-4 w-4" />Pesquisa
+            </Button>
+            <Button onClick={handleBatchGrade} disabled={grading}>
+              {grading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Corrigir turma
+            </Button>
+          </div>
+        )}
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-          ) : eligibleCount === 0 ? (
+      ) : eligibleCount === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
-            <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+            <BarChart3 className="mx-auto mb-4 h-12 w-12 text-muted-foreground/40" />
             <p className="text-muted-foreground">Nenhuma sessão elegível encontrada ainda.</p>
-            <p className="text-muted-foreground text-sm mt-1 max-w-md mx-auto">
-              Clique em <strong>"Corrigir Turma"</strong> para que o agente avalie automaticamente todas as sessões com interação suficiente
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+              Clique em <strong>"Corrigir turma"</strong> para que o agente avalie automaticamente todas as sessões com interação suficiente
               (anamnese + MAI), gerando notas multidimensionais por critério profissional.
             </p>
           </CardContent>
         </Card>
       ) : (
         <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-primary/10 p-2.5"><Users className="h-5 w-5 text-primary" /></div>
-                  <div>
-                     <p className="text-2xl font-bold">{eligibleCount}</p>
-                     <p className="text-xs text-muted-foreground">Sessões elegíveis</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-primary/10 p-2.5"><Award className="h-5 w-5 text-primary" /></div>
-                  <div>
-                    <p className="text-2xl font-bold">{gradedCount}</p>
-                    <p className="text-xs text-muted-foreground">Correções concluídas</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-primary/10 p-2.5"><TrendingUp className="h-5 w-5 text-primary" /></div>
-                  <div>
-                    <p className="text-2xl font-bold">{pendingCount}</p>
-                    <p className="text-xs text-muted-foreground">Pendentes de correção</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-destructive/10 p-2.5"><ShieldAlert className="h-5 w-5 text-destructive" /></div>
-                  <div>
-                    <p className="text-2xl font-bold">{flagCount}</p>
-                    <p className="text-xs text-muted-foreground">Flags de segurança</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {kpis.map((k) => (
+              <Card key={k.label} className="p-5">
+                <p className="label-mono">{k.label}</p>
+                <p className={`mt-2 font-heading text-4xl font-medium leading-none ${k.tone || ""}`}>{k.value}</p>
+                {k.detail && <p className="mt-2 text-xs text-muted-foreground">{k.detail}</p>}
+              </Card>
+            ))}
           </div>
 
-          {gradedCount > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Score Distribution */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" /> Distribuição de Notas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={scoreRanges}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="range" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="count" name="Alunos" radius={[4, 4, 0, 0]}>
-                      {scoreRanges.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Radar Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Award className="h-4 w-4" /> Desempenho por Critério
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <OsceRadarChart data={radarData} />
-              </CardContent>
-            </Card>
+          <div className="flex items-start gap-3 rounded-card border border-info/30 bg-info-soft px-4 py-3 text-sm">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-info" />
+            <p><b className="font-medium">Leitura rápida:</b> {quickRead}.</p>
           </div>
-          )}
 
-          {/* Flags de Segurança */}
-          {gradedCount > 0 && topFlags.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" /> Flags de Segurança Mais Comuns
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {topFlags.map(([flag, count], i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                      <span className="text-sm font-bold text-muted-foreground w-6">{i + 1}.</span>
-                      <div className="flex-1"><p className="text-sm">{flag}</p></div>
-                      <Badge variant="destructive">{count}x</Badge>
+          <Tabs defaultValue="resultados" className="space-y-4">
+            <TabsListLine>
+              <TabsTriggerLine value="resultados">Resultados <span className="ml-1.5 font-mono text-xs text-muted-foreground">{eligibleCount}</span></TabsTriggerLine>
+              <TabsTriggerLine value="desempenho">Desempenho</TabsTriggerLine>
+              <TabsTriggerLine value="flags">Flags <span className="ml-1.5 font-mono text-xs text-muted-foreground">{flagCount}</span></TabsTriggerLine>
+              <TabsTriggerLine value="calibracao">Calibração da IA</TabsTriggerLine>
+            </TabsListLine>
+
+            <TabsContent value="resultados">
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Aluno</TableHead>
+                      <TableHead className="text-center">Estado</TableHead>
+                      <TableHead className="text-center">Nota (0–10)</TableHead>
+                      <TableHead className="text-center">Eficiência clínica</TableHead>
+                      <TableHead className="text-center">Flags</TableHead>
+                      <TableHead className="text-right">Feedback e detalhes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bucketList.map((b) => {
+                      const cvp = cvps.find((c) => c.id === b.cvpId);
+                      const patientName = cvp ? vpName(cvp.patient_id) : "—";
+                      return (
+                        <Fragment key={b.key}>
+                          <TableRow className="bg-muted/40 hover:bg-muted/40">
+                            <TableCell colSpan={6} className="py-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <StatusBadge tone={b.isGroup ? "brand" : "neutral"}>{b.isGroup ? b.label : b.rows[0]?.group_label || "Individual"}</StatusBadge>
+                                <span className="text-xs text-muted-foreground">
+                                  {b.isGroup ? `${b.rows.length} integrante${b.rows.length > 1 ? "s" : ""}` : "1 aluno"}
+                                </span>
+                                <span className="text-xs text-muted-foreground">•</span>
+                                <span className="inline-flex items-center gap-1 text-xs font-medium">
+                                  <Stethoscope className="h-3 w-3 text-primary" />{patientName}
+                                </span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {b.rows.map(renderRow)}
+                        </Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+                  {modeFilter === "treino" ? "Sessões de treino são corrigidas automaticamente." : "Treino não aparece como pendente: é corrigido automaticamente."}
+                </p>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="desempenho">
+              {gradedCount > 0 ? (
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base"><BarChart3 className="h-4 w-4" /> Distribuição de notas</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <BarChart data={scoreRanges}>
+                          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                          <XAxis dataKey="range" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <Tooltip />
+                          <Bar dataKey="count" name="Alunos" radius={[4, 4, 0, 0]}>
+                            {scoreRanges.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base"><Award className="h-4 w-4" /> Desempenho por critério</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <OsceRadarChart data={radarData} />
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <p className="py-10 text-center text-sm text-muted-foreground">Os gráficos aparecem depois da primeira correção.</p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="flags">
+              {flagList.length > 0 ? (
+                <Card className="divide-y">
+                  {flagList.map(([flag, count]) => (
+                    <div key={flag} className="flex items-center gap-3 px-4 py-3">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-destructive/10 text-destructive"><ShieldAlert className="h-4 w-4" /></span>
+                      <p className="flex-1 text-sm">{flag}</p>
+                      <StatusBadge tone={count >= 3 ? "bad" : "warn"}>{count} {count === 1 ? "sessão" : "sessões"}</StatusBadge>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </Card>
+              ) : (
+                <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma flag de segurança nas sessões corrigidas.</p>
+              )}
+            </TabsContent>
 
-          {/* Student Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Resultados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                // Build groups: by group_id (group sessions) or per session (individual)
-                type Bucket = {
-                  key: string;
-                  isGroup: boolean;
-                  label: string;
-                  cvpId: string;
-                  rows: GradeRow[];
-                };
-                const buckets = new Map<string, Bucket>();
-                grades.forEach((g) => {
-                  if (g.group_id) {
-                    const k = `g:${g.group_id}`;
-                    if (!buckets.has(k)) {
-                      buckets.set(k, {
-                        key: k,
-                        isGroup: true,
-                        label: g.group_label || "Grupo",
-                        cvpId: g.class_virtual_patient_id,
-                        rows: [],
-                      });
-                    }
-                    buckets.get(k)!.rows.push(g);
-                  } else {
-                    const k = `i:${g.session_id}`;
-                    buckets.set(k, {
-                      key: k,
-                      isGroup: false,
-                      label: g.group_label || "Individual",
-                      cvpId: g.class_virtual_patient_id,
-                      rows: [g],
-                    });
-                  }
-                });
-                const list = Array.from(buckets.values());
-
-                const renderRow = (g: GradeRow) => {
-                  const flags = Array.isArray(g.flags_seguranca) ? g.flags_seguranca : [];
-                  return (
-                    <TableRow key={g.id}>
-                      <TableCell className="font-medium">{g.student_name || "—"}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{g.student_email || "—"}</TableCell>
-                      <TableCell className="text-center">
-                        {g.correction_status === "graded" ? (
-                          <>
-                            <Badge variant="default">Corrigido</Badge>
-                            {g.adjusted_at && (
-                              <Badge variant="outline" className="ml-1 text-[10px]" title="Nota ajustada pelo docente">Ajustada</Badge>
-                            )}
-                          </>
-                        ) : (
-                          <Badge variant="secondary">Pendente</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {g.correction_status === "graded" ? (() => {
-                          const finalScore = finalWithBonus(g.nota_final, g.nota_microlearning);
-                          const bonus = microBonus(g.nota_microlearning);
-                          return (
-                            <TooltipProvider>
-                              <UiTooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant={finalScore >= 6 ? "default" : "destructive"} className="cursor-help">
-                                    {finalScore.toFixed(1)}
-                                    {bonus > 0 && <span className="ml-1 text-[10px] opacity-80">(+{bonus.toFixed(2)})</span>}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">
-                                    Base: {(g.nota_final || 0).toFixed(2)} + Bônus Eficiência Clínica: {bonus.toFixed(2)} = <strong>{finalScore.toFixed(2)}</strong>
-                                  </p>
-                                </TooltipContent>
-                              </UiTooltip>
-                            </TooltipProvider>
-                          );
-                        })() : (
-                          <span className="text-muted-foreground text-xs">Aguardando</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {g.correction_status === "graded" ? (g.nota_microlearning || 0).toFixed(1) : "—"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {flags.length > 0 ? (
-                          <Badge variant="destructive" className="text-xs">{flags.length}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </TableCell>
-                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {g.correction_status === "graded" && (
-                            <Button
-                              variant={g.feedback_released ? "secondary" : "outline"}
-                              size="sm"
-                              onClick={() => toggleFeedbackRelease(g, !g.feedback_released)}
-                              title={g.feedback_released ? "Feedback liberado para o aluno — clique para ocultar" : "Liberar feedback para o aluno"}
-                            >
-                              {g.feedback_released ? (
-                                <><Eye className="h-3.5 w-3.5 mr-1" />Liberado</>
-                              ) : (
-                                <><Eye className="h-3.5 w-3.5 mr-1 opacity-50" />Liberar</>
-                              )}
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm" onClick={() => openDetail(g)}>
-                            <Eye className="h-3.5 w-3.5 mr-1" />
-                            {g.correction_status === "graded" ? "Detalhes" : "Ver / Avaliar"}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                };
-
-                return (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Aluno</TableHead>
-                        <TableHead>E-mail</TableHead>
-                        <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-center">Nota (0-10)</TableHead>
-                        <TableHead className="text-center">Eficiência Clínica</TableHead>
-                        <TableHead className="text-center">Flags</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {list.map((b) => {
-                        const cvp = cvps.find((c) => c.id === b.cvpId);
-                        const patientName = cvp ? vpName(cvp.patient_id) : "—";
-                        if (b.isGroup) {
-                          return (
-                            <Fragment key={b.key}>
-                              <TableRow className="bg-muted/40 hover:bg-muted/40">
-                                <TableCell colSpan={7} className="py-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <Badge variant="default" className="text-xs">{b.label}</Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {b.rows.length} integrante{b.rows.length > 1 ? "s" : ""}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">•</span>
-                                    <span className="text-xs font-medium text-foreground inline-flex items-center gap-1">
-                                      <Stethoscope className="h-3 w-3 text-primary" />
-                                      {patientName}
-                                    </span>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                              {b.rows.map(renderRow)}
-                            </Fragment>
-                          );
-                        }
-                        // Individual: show a thin header with the teacher's label (if any) and the patient name
-                        return (
-                          <Fragment key={b.key}>
-                            <TableRow className="bg-muted/20 hover:bg-muted/20">
-                              <TableCell colSpan={7} className="py-2">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <Badge variant="outline" className="text-xs">
-                                    {b.rows[0]?.group_label || "Individual"}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">1 aluno</span>
-                                  <span className="text-xs text-muted-foreground">•</span>
-                                  <span className="text-xs font-medium text-foreground inline-flex items-center gap-1">
-                                    <Stethoscope className="h-3 w-3 text-primary" />
-                                    {patientName}
-                                  </span>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                            {b.rows.map(renderRow)}
-                          </Fragment>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                );
-              })()}
-            </CardContent>
-          </Card>
-
-          <CalibrationPanel grades={grades as any} dimensionLabels={{ ...subscoreLabels, ...FICHA_LABELS }} />
+            <TabsContent value="calibracao">
+              {adjustedCount > 0 ? (
+                <CalibrationPanel grades={grades as any} dimensionLabels={{ ...subscoreLabels, ...FICHA_LABELS }} />
+              ) : (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  A calibração aparece depois que você ajustar alguma correção da IA. Cada ajuste compara a sua nota com a da IA.
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
         </>
       )}
 

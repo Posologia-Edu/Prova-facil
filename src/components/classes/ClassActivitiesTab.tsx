@@ -656,7 +656,7 @@ export function ClassActivitiesTab({ classId, onChanged }: { classId: string; on
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleVPStatus(vp)} title={vp.status === "active" ? "Desativar" : "Ativar"} aria-label={vp.status === "active" ? "Desativar" : "Ativar"}>
                           {vp.status === "active" ? <ToggleRight className="h-5 w-5 text-success" /> : <ToggleLeft className="h-5 w-5 text-muted-foreground" />}
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/virtual-patients/analytics`)} title="Ver resultados" aria-label="Ver resultados">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/classes/${classId}?aba=analytics`)} title="Ver resultados" aria-label="Ver resultados">
                           <BarChart3 className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => askRemoveVP(vp)} title="Remover da turma" aria-label="Remover da turma">
