@@ -186,9 +186,7 @@ export default function ExamEditorPage() {
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
   const [duration, setDuration] = useState("60");
-  const [participantSearch, setParticipantSearch] = useState("");
   const [classStudents, setClassStudents] = useState<ClassStudent[]>([]);
-  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [publishing, setPublishing] = useState(false);
   const [publication, setPublication] = useState<{ id: string; access_code: string; is_active: boolean } | null>(null);
 
@@ -406,8 +404,6 @@ export default function ExamEditorPage() {
         .eq("class_id", classId)
         .order("student_name");
       setClassStudents(data || []);
-      // Select all by default
-      if (data) setSelectedStudentIds(new Set(data.map(s => s.id)));
     };
     loadClassStudents();
   }, [classId]);
@@ -569,14 +565,6 @@ export default function ExamEditorPage() {
   };
 
 
-
-  const filteredStudents = classStudents.filter(s => {
-    if (!participantSearch.trim()) return true;
-    const search = participantSearch.toLowerCase();
-    return s.student_name.toLowerCase().includes(search) ||
-      (s.student_email?.toLowerCase().includes(search)) ||
-      (s.student_registration?.toLowerCase().includes(search));
-  });
 
   const finishedSessions = sessions.filter(s => s.status === "submitted" || s.status === "graded" || s.status === "finished");
   const avgScore = finishedSessions.length > 0
@@ -1003,19 +991,6 @@ export default function ExamEditorPage() {
           </div>
           <Separator />
           <h3 className="font-semibold text-sm">Configurações adicionais</h3>
-          <div className="space-y-2">
-            <Label>Ordem das questões:</Label>
-            <Select defaultValue="fixed">
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fixed">Fixa</SelectItem>
-                <SelectItem value="random">Aleatória</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator />
-
           {/* Proctoring / Security section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -1150,7 +1125,7 @@ export default function ExamEditorPage() {
                   <CardContent className="py-4">
                     <p className="text-sm text-amber-800">
                       <AlertTriangle className="h-4 w-4 inline mr-1" />
-                      Vincule esta prova a uma turma na aba <strong>Configurações</strong> para selecionar os participantes.
+                      Vincule esta prova a uma turma na aba <strong>Configurações</strong> para liberar o acesso aos alunos dela.
                     </p>
                   </CardContent>
                 </Card>
@@ -1178,46 +1153,11 @@ export default function ExamEditorPage() {
               <Separator />
 
               <div>
-                <h3 className="font-semibold text-base mb-3">Participantes</h3>
+                <h3 className="font-semibold text-base mb-3">Quem pode fazer a prova</h3>
                 {classId && classStudents.length > 0 ? (
-                  <>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Buscar por nome, email ou matrícula" value={participantSearch} onChange={(e) => setParticipantSearch(e.target.value)} className="pl-9" />
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => {
-                        if (selectedStudentIds.size === classStudents.length) setSelectedStudentIds(new Set());
-                        else setSelectedStudentIds(new Set(classStudents.map(s => s.id)));
-                      }}>
-                        {selectedStudentIds.size === classStudents.length ? "Desmarcar todos" : "Selecionar todos"}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      {selectedStudentIds.size} de {classStudents.length} alunos selecionados
-                    </p>
-                    <div className="space-y-2 max-h-[400px] overflow-auto">
-                      {filteredStudents.map(s => (
-                        <div key={s.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors">
-                          <Checkbox
-                            checked={selectedStudentIds.has(s.id)}
-                            onCheckedChange={(checked) => {
-                              setSelectedStudentIds(prev => {
-                                const next = new Set(prev);
-                                if (checked) next.add(s.id);
-                                else next.delete(s.id);
-                                return next;
-                              });
-                            }}
-                          />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{s.student_name}</p>
-                            <p className="text-xs text-muted-foreground">{s.student_email || "Sem email"} {s.student_registration ? `· ${s.student_registration}` : ""}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
+                  <p className="text-sm text-muted-foreground">
+                    <strong className="text-foreground">{classStudents.length} {classStudents.length === 1 ? "aluno" : "alunos"}</strong> da turma terão acesso: cada um entra com o código de acesso e o e-mail cadastrado na turma.
+                  </p>
                 ) : classId ? (
                   <p className="text-sm text-muted-foreground">Nenhum aluno cadastrado nesta turma.</p>
                 ) : (
@@ -1250,7 +1190,7 @@ export default function ExamEditorPage() {
               <Separator />
 
               <div className="flex justify-end">
-                <Button onClick={handlePublish} disabled={publishing || !classId || selectedStudentIds.size === 0} className="gap-2">
+                <Button onClick={handlePublish} disabled={publishing || !classId || classStudents.length === 0} className="gap-2">
                   {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
                   Publicar Prova Online
                 </Button>
