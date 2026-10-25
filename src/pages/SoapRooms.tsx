@@ -15,6 +15,9 @@ import { Plus, Users, Settings, Play, Trash2, FileText, GraduationCap, Copy, Sha
 import { toast } from "@/hooks/use-toast";
 import ShareRoomDialog from "@/components/ShareRoomDialog";
 import EditableRoomTitle from "@/components/EditableRoomTitle";
+import SimulationRoomCard from "@/components/SimulationRoomCard";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { ClipboardList as RoomIcon } from "lucide-react";
 
 export default function SoapRooms() {
   const navigate = useNavigate();
@@ -257,10 +260,11 @@ export default function SoapRooms() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Módulo SOAP</h1>
-          <p className="text-muted-foreground">Gerencie salas do módulo SOAP vinculadas à anamnese</p>
+          <div className="eyebrow mb-2.5">Praticar · Simulação</div>
+          <h1 className="font-heading text-[2rem] font-medium leading-[1.1] text-foreground">Módulo SOAP</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Gerencie salas do módulo SOAP vinculadas à anamnese</p>
         </div>
         <div className="flex items-center gap-2">
           <SystemPromptViewer toolKey="soap" />
@@ -270,7 +274,7 @@ export default function SoapRooms() {
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Criar Sala SOAP</DialogTitle>
+              <DialogTitle className="font-heading text-xl font-medium">Criar Sala SOAP</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -295,7 +299,7 @@ export default function SoapRooms() {
                   </SelectContent>
                 </Select>
                 {(!anamnesisRoomId || anamnesisRoomId === "none") && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  <p className="text-xs text-warning-ink mt-1">
                     ⚠️ Modo independente: use quando a anamnese foi realizada offline. Os participantes deverão ser adicionados manualmente.
                   </p>
                 )}
@@ -311,72 +315,53 @@ export default function SoapRooms() {
 
       {isLoading ? (
         <p className="text-muted-foreground">Carregando...</p>
-      ) : !rooms?.length ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma sala SOAP</h3>
-            <p className="text-muted-foreground mb-4">Crie uma sala para iniciar o módulo SOAP</p>
-          </CardContent>
+      ) : !(rooms || []).filter((r: any) => !r.is_archived).length ? (
+        <Card className="flex flex-col items-center justify-center py-14 text-center">
+          <RoomIcon className="mb-4 h-10 w-10 text-muted-foreground/40" />
+          <h3 className="font-heading text-lg font-medium">Nenhuma sala SOAP</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Crie uma sala para iniciar este módulo. Salas arquivadas ficam em Simulação, aba Inativas.</p>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {rooms.map((room) => {
+        <Card className="divide-y overflow-hidden">
+          {(rooms || []).filter((r: any) => !r.is_archived).map((room) => {
             const studentCount = participantCounts?.[room.id] || 0;
             const pendingCount = pendingTeacherEvals?.[room.id] || 0;
             return (
-              <Card key={room.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <EditableRoomTitle roomId={room.id} title={room.title} tableName="soap_rooms" invalidateKeys={["soap-rooms"]} />
-                      {room.description && <CardDescription>{room.description}</CardDescription>}
-                    </div>
-                    <Badge className={statusColor[room.status] || ""}>
-                      {room.status === "draft" ? "Rascunho" : room.status === "active" ? "Ativa" : "Concluída"}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                    <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{studentCount} alunos</span>
-                    <span className="font-mono text-xs">PIN: {room.access_code}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
-                    <GraduationCap className="h-3.5 w-3.5" />
+              <SimulationRoomCard
+                key={room.id}
+                icon={RoomIcon}
+                title={<EditableRoomTitle roomId={room.id} title={room.title} tableName="soap_rooms" invalidateKeys={["soap-rooms"]} />}
+                description={room.description}
+                status={room.status}
+                meta={
+                  <>
+                    <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{studentCount} {studentCount === 1 ? "aluno" : "alunos"}</span>
+                    <span>PIN <b className="font-mono font-medium text-foreground">{room.access_code}</b></span>
                     <span>{teacherName}</span>
-                  </div>
-                  {pendingCount > 0 && (
-                    <div className="mb-3">
-                      <Badge variant="destructive" className="text-xs">
-                        {pendingCount} aluno(s) aguardando sua avaliação (par ausente)
-                      </Badge>
-                    </div>
-                  )}
-                  <div className="flex gap-2 flex-wrap">
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/editor/${room.id}`)}>
-                      <Settings className="h-3.5 w-3.5 mr-1" />Editar
-                    </Button>
-                    {room.status !== "draft" && (
-                      <Button size="sm" onClick={() => navigate(`/simulations/soap/control/${room.id}`)}>
-                        <Play className="h-3.5 w-3.5 mr-1" />Controle
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" onClick={() => duplicateRoom.mutate(room.id)} title="Duplicar">
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); }} title="Enviar para professor">
-                      <Share2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  </>
+                }
+                  extra={pendingCount > 0 ? (
+                    <div className="mt-3"><StatusBadge tone="bad">{pendingCount} aluno(s) aguardando sua avaliação (par ausente)</StatusBadge></div>
+                  ) : undefined}
+                onEdit={() => navigate(`/simulations/soap/editor/${room.id}`)}
+                onActivate={async () => {
+                  await supabase.from("soap_rooms").update({ status: "active" }).eq("id", room.id);
+                  queryClient.invalidateQueries({ queryKey: ["soap-rooms"] });
+                  toast({ title: "Sala ativada!" });
+                }}
+                onControl={() => navigate(`/simulations/soap/control/${room.id}`)}
+                onDuplicate={() => duplicateRoom.mutate(room.id)}
+                onShare={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); }}
+                onArchive={async () => {
+                  await supabase.from("soap_rooms").update({ is_archived: true } as any).eq("id", room.id);
+                  queryClient.invalidateQueries({ queryKey: ["soap-rooms"] });
+                  toast({ title: "Sala arquivada" });
+                }}
+                onDelete={() => deleteRoom.mutate(room.id)}
+              />
             );
           })}
-        </div>
+        </Card>
       )}
 
       {shareRoomId && (

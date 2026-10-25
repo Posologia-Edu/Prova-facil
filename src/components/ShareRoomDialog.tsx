@@ -63,9 +63,9 @@ export default function ShareRoomDialog({ open, onOpenChange, roomId, roomTitle,
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 font-heading text-xl font-medium">
             <Share2 className="h-5 w-5" />
-            Enviar Sala para Professor
+            Enviar para professor
           </DialogTitle>
         </DialogHeader>
 

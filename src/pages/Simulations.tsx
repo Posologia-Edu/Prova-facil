@@ -1,140 +1,44 @@
 import { useState } from "react";
-import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/i18n/LanguageContext";
+import SystemPromptViewer from "@/components/SystemPromptViewer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Clock, Play, Settings, Trash2, Scissors, HeartPulse, ClipboardList, ArrowRight, Stethoscope, Handshake, FileText, BarChart3, Copy, Heart, Activity, Dumbbell, Microscope, ArrowLeft, Share2, Archive, ArchiveRestore } from "lucide-react";
+import { Tabs, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Plus, Users, ArrowLeft, ArrowRight, HeartPulse, ClipboardList, Stethoscope, Handshake, FileText, BarChart3, Heart, Activity, Dumbbell, Microscope, type LucideIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import SplitRoomDialog from "@/components/SplitRoomDialog";
 import GenericSplitRoomDialog from "@/components/GenericSplitRoomDialog";
 import ShareRoomDialog from "@/components/ShareRoomDialog";
 import EditableRoomTitle from "@/components/EditableRoomTitle";
+import SimulationRoomCard from "@/components/SimulationRoomCard";
 
-const pharmacyModules = [
-  {
-    id: "anamnesis",
-    title: "Anamnese",
-    description: "Simulação de coleta de história clínica com papéis de profissional, paciente, observador e professor.",
-    icon: Stethoscope,
-    tab: "anamnesis",
-    color: "text-primary",
-    bgColor: "bg-primary/10",
-  },
-  {
-    id: "soap",
-    title: "SOAP",
-    description: "Transcrição estruturada da anamnese no formato SOAP com avaliação entre pares.",
-    icon: ClipboardList,
-    tab: "soap",
-    color: "text-chart-2",
-    bgColor: "bg-chart-2/10",
-  },
-  {
-    id: "reconciliation",
-    title: "Reconciliação",
-    description: "Reconciliação em duplas com casos clínicos, ficha de reconciliação e correção por IA.",
-    icon: Handshake,
-    tab: "reconciliation",
-    color: "text-chart-3",
-    bgColor: "bg-chart-3/10",
-  },
-  {
-    id: "documentation",
-    title: "Documentação",
-    description: "Encaminhamento e quadro resumo de medicamentos com correção por IA e manual.",
-    icon: FileText,
-    tab: "documentation",
-    color: "text-chart-4",
-    bgColor: "bg-chart-4/10",
-  },
-  {
-    id: "aggregator",
-    title: "Agregador de Notas",
-    description: "Visão geral das notas de todos os módulos com média geral por aluno.",
-    icon: BarChart3,
-    route: "/simulations/aggregator",
-    color: "text-chart-5",
-    bgColor: "bg-chart-5/10",
-  },
+type ModuleId = "anamnesis" | "soap" | "reconciliation" | "documentation";
+
+const pharmacySteps: { id: ModuleId; title: string; description: string; icon: LucideIcon }[] = [
+  { id: "anamnesis", title: "Anamnese", description: "Coleta de história clínica com papéis de profissional, paciente, observador e professor.", icon: Stethoscope },
+  { id: "soap", title: "SOAP", description: "Transcrição estruturada da anamnese no formato SOAP, com avaliação entre pares.", icon: ClipboardList },
+  { id: "reconciliation", title: "Reconciliação", description: "Reconciliação em duplas com casos clínicos, ficha e correção por IA.", icon: Handshake },
+  { id: "documentation", title: "Documentação", description: "Encaminhamento e quadro resumo de medicamentos, com correção por IA e manual.", icon: FileText },
 ];
 
-const areas = [
-  {
-    id: "pharmacy",
-    title: "Farmácia Clínica",
-    description: "Anamnese, SOAP, Reconciliação e Documentação farmacêutica.",
-    icon: HeartPulse,
-    color: "text-primary",
-    bgColor: "bg-primary/10",
-    tab: "pharmacy",
-  },
-  {
-    id: "nursing",
-    title: "Enfermagem Clínica",
-    description: "Acolhimento, SAE, Evolução e Passagem de Plantão.",
-    icon: Heart,
-    color: "text-chart-2",
-    bgColor: "bg-chart-2/10",
-    route: "/nursing",
-  },
-  {
-    id: "nutrition",
-    title: "Nutrição Clínica",
-    description: "Anamnese Nutricional, Avaliação Antropométrica, Plano Alimentar e Orientação.",
-    icon: HeartPulse,
-    color: "text-chart-3",
-    bgColor: "bg-chart-3/10",
-    route: "/nutrition",
-  },
-  {
-    id: "dentistry",
-    title: "Odontologia Clínica",
-    description: "Anamnese Odontológica, Exame Clínico, Plano de Tratamento e Orientação.",
-    icon: Stethoscope,
-    color: "text-chart-4",
-    bgColor: "bg-chart-4/10",
-    route: "/dentistry",
-  },
-  {
-    id: "medicine",
-    title: "Medicina",
-    description: "Anamnese Médica, Exame Físico, Raciocínio Clínico e Plano Terapêutico.",
-    icon: Activity,
-    color: "text-chart-5",
-    bgColor: "bg-chart-5/10",
-    route: "/medicine",
-  },
-  {
-    id: "physiotherapy",
-    title: "Fisioterapia",
-    description: "Avaliação Funcional, Diagnóstico Cinético-Funcional, Plano e Evolução.",
-    icon: Dumbbell,
-    color: "text-primary",
-    bgColor: "bg-primary/10",
-    route: "/physiotherapy",
-  },
-  {
-    id: "biomedicine",
-    title: "Biomedicina",
-    description: "Análise Laboratorial, Controle de Qualidade, Interpretação e Laudo Técnico.",
-    icon: Microscope,
-    color: "text-chart-2",
-    bgColor: "bg-chart-2/10",
-    route: "/biomedicine",
-  },
+const otherAreas: { id: string; title: string; description: string; icon: LucideIcon; route: string }[] = [
+  { id: "nursing", title: "Enfermagem Clínica", description: "Acolhimento, SAE, Evolução e Passagem de Plantão.", icon: Heart, route: "/nursing" },
+  { id: "nutrition", title: "Nutrição Clínica", description: "Anamnese Nutricional, Avaliação Antropométrica, Plano Alimentar e Orientação.", icon: HeartPulse, route: "/nutrition" },
+  { id: "dentistry", title: "Odontologia Clínica", description: "Anamnese Odontológica, Exame Clínico, Plano de Tratamento e Orientação.", icon: Stethoscope, route: "/dentistry" },
+  { id: "medicine", title: "Medicina", description: "Anamnese Médica, Exame Físico, Raciocínio Clínico e Plano Terapêutico.", icon: Activity, route: "/medicine" },
+  { id: "physiotherapy", title: "Fisioterapia", description: "Avaliação Funcional, Diagnóstico Cinético-Funcional, Plano e Evolução.", icon: Dumbbell, route: "/physiotherapy" },
+  { id: "biomedicine", title: "Biomedicina", description: "Análise Laboratorial, Controle de Qualidade, Interpretação e Laudo Técnico.", icon: Microscope, route: "/biomedicine" },
 ];
 
 export default function Simulations() {
-  const { t } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -517,523 +421,284 @@ export default function Simulations() {
     onError: () => toast({ title: "Erro", description: "Erro ao duplicar sala.", variant: "destructive" }),
   });
 
-  const statusColor: Record<string, string> = {
-    draft: "bg-muted text-muted-foreground",
-    active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    completed: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  const { data: areaCounts } = useQuery({
+    queryKey: ["simulation-area-counts"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return {} as Record<string, number>;
+      const entries = await Promise.all(
+        otherAreas.map(async (a) => {
+          const { count } = await supabase
+            .from(`${a.id}_rooms` as any)
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", session.user.id);
+          return [a.id, count || 0] as const;
+        }),
+      );
+      return Object.fromEntries(entries) as Record<string, number>;
+    },
+  });
+
+  const activateRoom = async (table: string, listKey: string, id: string) => {
+    await supabase.from(table as any).update({ status: "active" }).eq("id", id);
+    queryClient.invalidateQueries({ queryKey: [listKey] });
+    toast({ title: "Sala ativada!" });
   };
 
-  const statusLabel: Record<string, string> = {
-    draft: t("sim_status_draft"),
-    active: t("sim_status_active"),
-    completed: t("sim_status_completed"),
+  const modules: Record<ModuleId, {
+    label: string;
+    icon: LucideIcon;
+    rooms: any[];
+    loading: boolean;
+    table: "simulation_rooms" | "soap_rooms" | "reconciliation_rooms" | "documentation_rooms";
+    listKey: string;
+    editPath: (id: string) => string;
+    controlPath: (id: string) => string;
+    shareType: string;
+    duplicate: (id: string) => void;
+    remove: (id: string) => void;
+    split: (id: string) => void;
+    canSplit: (room: any) => boolean;
+    onCreate: () => void;
+    createLabel: string;
+    emptyTitle: string;
+  }> = {
+    anamnesis: {
+      label: "Anamnese", icon: Stethoscope, rooms: rooms || [], loading: isLoading, table: "simulation_rooms", listKey: "simulation-rooms",
+      editPath: (id) => `/simulations/${id}/edit`, controlPath: (id) => `/simulations/${id}/control`, shareType: "simulation",
+      duplicate: (id) => duplicateAnamnesisRoom.mutate(id), remove: (id) => deleteRoom.mutate(id), split: setSplitRoomId,
+      canSplit: (room) => room.status === "draft" && (participantCounts?.[room.id] || 0) > 0,
+      onCreate: () => setOpen(true), createLabel: "Nova sala", emptyTitle: "Nenhuma sala de Anamnese",
+    },
+    soap: {
+      label: "SOAP", icon: ClipboardList, rooms: soapRooms || [], loading: soapLoading, table: "soap_rooms", listKey: "soap-rooms-list",
+      editPath: (id) => `/simulations/soap/editor/${id}`, controlPath: (id) => `/simulations/soap/control/${id}`, shareType: "soap",
+      duplicate: (id) => duplicateSoapRoom.mutate(id), remove: (id) => deleteSoapRoom.mutate(id), split: setSplitSoapRoomId,
+      canSplit: (room) => room.status === "draft",
+      onCreate: () => navigate("/simulations/soap"), createLabel: "Nova sala SOAP", emptyTitle: "Nenhuma sala SOAP",
+    },
+    reconciliation: {
+      label: "Reconciliação", icon: Handshake, rooms: reconciliationRooms || [], loading: reconciliationLoading, table: "reconciliation_rooms", listKey: "reconciliation-rooms-list",
+      editPath: (id) => `/simulations/reconciliation/editor/${id}`, controlPath: (id) => `/simulations/reconciliation/control/${id}`, shareType: "reconciliation",
+      duplicate: (id) => duplicateReconciliationRoom.mutate(id), remove: (id) => deleteReconciliationRoom.mutate(id), split: setSplitReconciliationRoomId,
+      canSplit: (room) => room.status === "draft",
+      onCreate: () => navigate("/simulations/reconciliation"), createLabel: "Nova sala de Reconciliação", emptyTitle: "Nenhuma sala de Reconciliação",
+    },
+    documentation: {
+      label: "Documentação", icon: FileText, rooms: documentationRooms || [], loading: documentationLoading, table: "documentation_rooms", listKey: "documentation-rooms-list",
+      editPath: (id) => `/simulations/documentation/editor/${id}`, controlPath: (id) => `/simulations/documentation/control/${id}`, shareType: "documentation",
+      duplicate: (id) => duplicateDocumentationRoom.mutate(id), remove: (id) => deleteDocumentationRoom.mutate(id), split: setSplitDocumentationRoomId,
+      canSplit: (room) => room.status === "draft",
+      onCreate: () => navigate("/simulations/documentation"), createLabel: "Nova sala de Documentação", emptyTitle: "Nenhuma sala de Documentação",
+    },
   };
 
+  const countOf = (id: ModuleId, archived: boolean) => modules[id].rooms.filter((r: any) => !!r.is_archived === archived).length;
   const showArchived = archiveFilter === "archived";
-  const filteredRooms = (rooms || []).filter((r: any) => !!r.is_archived === showArchived);
-  const filteredSoapRooms = (soapRooms || []).filter((r: any) => !!r.is_archived === showArchived);
-  const filteredReconciliationRooms = (reconciliationRooms || []).filter((r: any) => !!r.is_archived === showArchived);
-  const filteredDocumentationRooms = (documentationRooms || []).filter((r: any) => !!r.is_archived === showArchived);
-
-  const ArchiveFilterBar = ({ activeCount, archivedCount }: { activeCount: number; archivedCount: number }) => (
-    <Tabs value={archiveFilter} onValueChange={(v) => setArchiveFilter(v as "active" | "archived")}>
-      <TabsList>
-        <TabsTrigger value="active">Ativas ({activeCount})</TabsTrigger>
-        <TabsTrigger value="archived">Inativas ({archivedCount})</TabsTrigger>
-      </TabsList>
-    </Tabs>
-  );
+  const currentModule = (activeTab in modules ? modules[activeTab as ModuleId] : null);
+  const inModule = !!currentModule;
+  const inPharmacy = activeTab === "pharmacy" || inModule;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {activeTab === "areas" ? t("sim_title") : "Farmácia Clínica"}
-          </h1>
-          <p className="text-muted-foreground">
-            {activeTab === "areas" ? t("sim_subtitle") : "Simulação realística com módulos de anamnese, SOAP, reconciliação e documentação clínica."}
-          </p>
-        </div>
-        <SystemPromptViewer toolKey="simulations" />
+      <div className="space-y-3">
+        {inPharmacy && (
+          <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setActiveTab(inModule ? "pharmacy" : "areas")}>
+            <ArrowLeft className="h-4 w-4" />{inModule ? "Farmácia Clínica" : "Áreas"}
+          </Button>
+        )}
+        <PageHeader
+          eyebrow="Praticar"
+          title={inModule ? currentModule!.label : inPharmacy ? "Farmácia Clínica" : "Simulação Realística"}
+          description={
+            inPharmacy
+              ? "Simulação realística em quatro etapas encadeadas: anamnese, SOAP, reconciliação e documentação clínica."
+              : "Salas de simulação por área da saúde. Na Farmácia Clínica, as etapas se encadeiam: Anamnese, SOAP, Reconciliação e Documentação."
+          }
+          actions={
+            <>
+              <SystemPromptViewer toolKey="simulations" />
+              <Button variant="outline" onClick={() => navigate("/simulations/aggregator")}>
+                <BarChart3 className="h-4 w-4" />Agregador de notas
+              </Button>
+              {inModule && (
+                <Button onClick={currentModule!.onCreate}><Plus className="h-4 w-4" />{currentModule!.createLabel}</Button>
+              )}
+            </>
+          }
+        />
       </div>
 
       {activeTab === "areas" && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {areas.map((area) => (
-            <Card
-              key={area.id}
-              className="group cursor-pointer hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-primary/20"
-              onClick={() => {
-                if (area.route) {
-                  navigate(area.route);
-                } else if (area.tab) {
-                  setActiveTab(area.tab);
-                }
-              }}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start gap-4">
-                  <div className={`h-12 w-12 rounded-xl ${area.bgColor} flex items-center justify-center shrink-0`}>
-                    <area.icon className={`h-6 w-6 ${area.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg flex items-center justify-between">
-                      {area.title}
-                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </CardTitle>
-                    <CardDescription className="mt-1">{area.description}</CardDescription>
-                  </div>
+          <Card className="surface-hover cursor-pointer space-y-3 p-5" onClick={() => setActiveTab("pharmacy")}>
+            <div className="flex items-start justify-between">
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-soft text-brand-text"><HeartPulse className="h-5 w-5" /></span>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <h3 className="font-heading text-lg font-medium">Farmácia Clínica</h3>
+            <p className="text-xs text-muted-foreground">Anamnese, SOAP, Reconciliação e Documentação farmacêutica.</p>
+            <div className="flex flex-wrap gap-2">
+              <StatusBadge tone="ok">{pharmacySteps.reduce((s, m) => s + countOf(m.id, false), 0)} ativas</StatusBadge>
+              <StatusBadge tone="neutral">{pharmacySteps.reduce((s, m) => s + countOf(m.id, true), 0)} inativas</StatusBadge>
+            </div>
+          </Card>
+          {otherAreas.map((area) => {
+            const n = areaCounts?.[area.id];
+            return (
+              <Card key={area.id} className="surface-hover cursor-pointer space-y-3 p-5" onClick={() => navigate(area.route)}>
+                <div className="flex items-start justify-between">
+                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-soft text-brand-text"><area.icon className="h-5 w-5" /></span>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-              </CardHeader>
+                <h3 className="font-heading text-lg font-medium">{area.title}</h3>
+                <p className="text-xs text-muted-foreground">{area.description}</p>
+                {n !== undefined && (
+                  <StatusBadge tone={n > 0 ? "ok" : "neutral"}>{n === 0 ? "nenhuma sala" : `${n} ${n === 1 ? "sala" : "salas"}`}</StatusBadge>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {activeTab === "pharmacy" && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {pharmacySteps.map((step, i) => (
+            <Card key={step.id} className="surface-hover cursor-pointer space-y-3 p-5" onClick={() => setActiveTab(step.id)}>
+              <div className="flex items-center justify-between">
+                <span className="label-mono">Etapa {i + 1}</span>
+                <step.icon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <h3 className="font-heading text-lg font-medium">{step.title}</h3>
+              <p className="text-xs text-muted-foreground">{step.description}</p>
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge tone={countOf(step.id, false) > 0 ? "ok" : "neutral"}>{countOf(step.id, false)} {countOf(step.id, false) === 1 ? "ativa" : "ativas"}</StatusBadge>
+                <StatusBadge tone="neutral">{countOf(step.id, true)} {countOf(step.id, true) === 1 ? "inativa" : "inativas"}</StatusBadge>
+              </div>
             </Card>
           ))}
         </div>
       )}
 
-      {activeTab === "pharmacy" && (
-        <>
-          <Button variant="ghost" size="sm" onClick={() => setActiveTab("areas")} className="mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />Voltar para Áreas
-          </Button>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-            {pharmacyModules.map((mod) => (
-              <Card
-                key={mod.id}
-                className="group cursor-pointer hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-primary/20"
-                onClick={() => {
-                  if (mod.route) {
-                    navigate(mod.route);
-                  } else if (mod.tab) {
-                    setActiveTab(mod.tab);
-                  }
-                }}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start gap-4">
-                    <div className={`h-12 w-12 rounded-xl ${mod.bgColor} flex items-center justify-center shrink-0`}>
-                      <mod.icon className={`h-6 w-6 ${mod.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg flex items-center justify-between">
-                        {mod.title}
-                        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </CardTitle>
-                      <CardDescription className="mt-1">{mod.description}</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <Badge variant="outline" className="text-xs">
-                    {mod.id === "anamnesis" ? `${rooms?.length || 0} salas`
-                      : mod.id === "soap" ? `${soapRooms?.length || 0} salas`
-                      : mod.id === "reconciliation" ? `${reconciliationRooms?.length || 0} salas`
-                      : mod.id === "documentation" ? `${documentationRooms?.length || 0} salas`
-                      : "Acessar módulo"}
-                  </Badge>
-                </CardContent>
+      {inModule && (() => {
+        const mod = currentModule!;
+        const visible = mod.rooms.filter((r: any) => !!r.is_archived === showArchived);
+        return (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {pharmacySteps.map((step) => (
+                <Button key={step.id} size="sm" variant={activeTab === step.id ? "default" : "outline"} onClick={() => setActiveTab(step.id)}>
+                  {step.title}
+                  <span className="font-mono text-xs opacity-70">{countOf(step.id, false)}</span>
+                </Button>
+              ))}
+            </div>
+
+            <Tabs value={archiveFilter} onValueChange={(v) => setArchiveFilter(v as "active" | "archived")}>
+              <TabsListLine>
+                <TabsTriggerLine value="active">Ativas <span className="font-mono text-xs text-muted-foreground">{countOf(activeTab as ModuleId, false)}</span></TabsTriggerLine>
+                <TabsTriggerLine value="archived">Inativas <span className="font-mono text-xs text-muted-foreground">{countOf(activeTab as ModuleId, true)}</span></TabsTriggerLine>
+              </TabsListLine>
+            </Tabs>
+
+            {mod.loading ? (
+              <p className="text-muted-foreground">Carregando...</p>
+            ) : visible.length === 0 ? (
+              <Card className="flex flex-col items-center justify-center py-14 text-center">
+                <mod.icon className="mb-4 h-10 w-10 text-muted-foreground/40" />
+                <h3 className="font-heading text-lg font-medium">{showArchived ? "Nenhuma sala inativa" : mod.emptyTitle}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : "Crie a primeira sala para começar."}
+                </p>
+                {!showArchived && <Button className="mt-4" onClick={mod.onCreate}><Plus className="h-4 w-4" />{mod.createLabel}</Button>}
               </Card>
-            ))}
-          </div>
-        </>
-      )}
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className={activeTab === "areas" || activeTab === "pharmacy" ? "hidden" : ""}>
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="anamnesis">
-            <Stethoscope className="h-4 w-4 mr-1" />Salas de Anamnese
-          </TabsTrigger>
-          <TabsTrigger value="soap">
-            <ClipboardList className="h-4 w-4 mr-1" />Salas de SOAP
-          </TabsTrigger>
-          <TabsTrigger value="reconciliation">
-            <Handshake className="h-4 w-4 mr-1" />Salas de Reconciliação
-          </TabsTrigger>
-          <TabsTrigger value="documentation">
-            <FileText className="h-4 w-4 mr-1" />Salas de Documentação
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Anamnesis rooms */}
-        <TabsContent value="anamnesis" className="space-y-4">
-          <div className="flex justify-between">
-            <Button variant="ghost" size="sm" onClick={() => setActiveTab("pharmacy")}>
-              <ArrowLeft className="h-4 w-4 mr-2" />Farmácia Clínica
-            </Button>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button><Plus className="h-4 w-4 mr-2" />{t("sim_new")}</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t("sim_create_title")}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>{t("sim_name")}</Label>
-                    <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("sim_name_placeholder")} />
-                  </div>
-                  <div>
-                    <Label>{t("sim_description")}</Label>
-                    <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>{t("sim_duration")} ({t("sim_minutes")})</Label>
-                    <Input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} min={1} />
-                  </div>
-                  <Button onClick={() => createRoom.mutate()} disabled={!title || createRoom.isPending} className="w-full">
-                    {t("create")}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <ArchiveFilterBar activeCount={(rooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(rooms || []).filter((r: any) => r.is_archived).length} />
-
-          {isLoading ? (
-            <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !filteredRooms.length ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala inativa" : t("sim_empty")}</h3>
-                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : t("sim_empty_hint")}</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredRooms.map((room) => {
-                const studentCount = participantCounts?.[room.id] || 0;
-                return (
-                  <Card key={room.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <EditableRoomTitle roomId={room.id} title={room.title} tableName="simulation_rooms" invalidateKeys={["simulation-rooms"]} />
-                          {room.description && <CardDescription>{room.description}</CardDescription>}
+            ) : (
+              <Card className="divide-y overflow-hidden">
+                {visible.map((room: any) => {
+                  const studentCount = participantCounts?.[room.id] || 0;
+                  let extra: React.ReactNode = null;
+                  if (activeTab === "soap") {
+                    const peerForm = (soapFormsByRoom?.[room.id] || []).find((f: any) => f.form_type === "peer_evaluation");
+                    if (peerForm) {
+                      let peerTotal = 0;
+                      if (Array.isArray(peerForm.content_json)) {
+                        (peerForm.content_json as any[]).forEach((f: any) => { if (f.type !== "section_header") peerTotal += (f.max_score || 0); });
+                      }
+                      const peerValid = peerTotal === 10;
+                      extra = (
+                        <div className={`mt-3 rounded-md border px-3 py-2 text-xs ${peerValid ? "border-success/40 bg-success/5" : "bg-sunken"}`}>
+                          <span className="label-mono">Pontuação do formulário (vale 10)</span>
+                          <p className={`mt-1.5 ${peerValid ? "text-success" : "text-muted-foreground"}`}>
+                            Avaliação entre pares: <strong className="font-mono">{peerTotal}/10</strong>{peerValid && " ✓"} · a nota do aluno é a da avaliação entre pares
+                          </p>
                         </div>
-                        <Badge className={statusColor[room.status] || ""}>
-                          {statusLabel[room.status] || room.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                        <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{room.duration_minutes} min</span>
-                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{studentCount} alunos</span>
-                        <span className="font-mono text-xs">PIN: {room.access_code}</span>
-                      </div>
-                      <div className="flex gap-2 flex-wrap">
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/${room.id}/edit`)}>
-                          <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
-                        </Button>
-                        {room.status === "draft" && (
-                          <Button size="sm" onClick={async () => {
-                            await supabase.from("simulation_rooms").update({ status: "active" }).eq("id", room.id);
-                            queryClient.invalidateQueries({ queryKey: ["simulation-rooms"] });
-                            toast({ title: "Sala ativada!" });
-                          }}>
-                            <Play className="h-3.5 w-3.5 mr-1" />Ativar Sala
-                          </Button>
-                        )}
-                        {(room.status === "active" || room.status === "completed") && (
-                          <Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/simulations/${room.id}/control`)}>
-                            {room.status === "completed" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
-                            {room.status === "completed" ? "Resultados" : t("sim_control")}
-                          </Button>
-                        )}
-                        {room.status === "draft" && studentCount > 0 && (
-                          <Button variant="outline" size="sm" onClick={() => setSplitRoomId(room.id)}>
-                            <Scissors className="h-3.5 w-3.5 mr-1" />Dividir
-                          </Button>
-                        )}
-                        <Button variant="outline" size="sm" onClick={() => duplicateAnamnesisRoom.mutate(room.id)} title="Duplicar">
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("simulation"); }} title="Enviar para professor">
-                          <Share2 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ table: "simulation_rooms", id: room.id, archived: !room.is_archived })} title={room.is_archived ? "Reativar sala" : "Arquivar sala"}>
-                          {room.is_archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => deleteRoom.mutate(room.id)} title="Excluir">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* SOAP rooms */}
-        <TabsContent value="soap" className="space-y-4">
-          <div className="flex justify-between">
-            <Button onClick={() => navigate("/simulations/soap")}>
-              <Plus className="h-4 w-4 mr-2" />Nova Sala SOAP
-            </Button>
+                      );
+                    }
+                  }
+                  return (
+                    <SimulationRoomCard
+                      key={room.id}
+                      icon={mod.icon}
+                      title={<EditableRoomTitle roomId={room.id} title={room.title} tableName={mod.table} invalidateKeys={[mod.listKey]} />}
+                      description={room.description}
+                      status={room.status}
+                      archived={!!room.is_archived}
+                      meta={
+                        <>
+                          {activeTab === "anamnesis" && (
+                            <>
+                              <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{studentCount} {studentCount === 1 ? "aluno" : "alunos"}</span>
+                              <span>{room.duration_minutes} min</span>
+                            </>
+                          )}
+                          <span>PIN <b className="font-mono font-medium text-foreground">{room.access_code}</b></span>
+                        </>
+                      }
+                      extra={extra}
+                      onEdit={() => navigate(mod.editPath(room.id))}
+                      onActivate={() => activateRoom(mod.table, mod.listKey, room.id)}
+                      onControl={() => navigate(mod.controlPath(room.id))}
+                      onSplit={mod.canSplit(room) ? () => mod.split(room.id) : undefined}
+                      onDuplicate={() => mod.duplicate(room.id)}
+                      onShare={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType(mod.shareType); }}
+                      onArchive={() => archiveMutation.mutate({ table: mod.table, id: room.id, archived: !room.is_archived })}
+                      onDelete={() => mod.remove(room.id)}
+                    />
+                  );
+                })}
+              </Card>
+            )}
           </div>
-          <ArchiveFilterBar activeCount={(soapRooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(soapRooms || []).filter((r: any) => r.is_archived).length} />
-          {soapLoading ? (
-            <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !filteredSoapRooms.length ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala SOAP inativa" : "Nenhuma sala SOAP"}</h3>
-                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : "Crie uma sala SOAP a partir do módulo."}</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredSoapRooms.map((room) => {
-                const soapForms = soapFormsByRoom?.[room.id] || [];
-                const peerForm = soapForms.find((f: any) => f.form_type === "peer_evaluation");
-                let peerTotal = 0;
-                if (peerForm && Array.isArray(peerForm.content_json)) {
-                  (peerForm.content_json as any[]).forEach((f: any) => { if (f.type !== "section_header") peerTotal += (f.max_score || 0); });
-                }
-                const peerValid = peerTotal === 10;
-                return (
-                <Card key={room.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <EditableRoomTitle roomId={room.id} title={room.title} tableName="soap_rooms" invalidateKeys={["soap-rooms-list"]} />
-                        {room.description && <CardDescription>{room.description}</CardDescription>}
-                      </div>
-                      <Badge className={statusColor[room.status] || ""}>
-                        {statusLabel[room.status] || room.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                      <span className="font-mono text-xs">PIN: {room.access_code}</span>
-                    </div>
-                    {/* Scoring info */}
-                    {peerForm && (
-                      <div className={`p-2 rounded border mb-3 text-sm ${peerValid ? "border-green-500/50 bg-green-50 dark:bg-green-950/30" : "border-muted"}`}>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Pontuação do formulário (vale 10)</p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={peerValid ? "text-green-600" : "text-muted-foreground"}>
-                            Avaliação entre Pares: <strong>{peerTotal}/10</strong>{peerValid && " ✓"}
-                          </span>
-                          <span className="text-muted-foreground">→</span>
-                          <span className="text-xs text-muted-foreground">Nota do aluno = nota da avaliação entre pares</span>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex gap-2 flex-wrap">
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/soap/editor/${room.id}`)}>
-                        <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
-                      </Button>
-                      {room.status === "draft" && (
-                        <Button size="sm" onClick={async () => {
-                          await supabase.from("soap_rooms").update({ status: "active" }).eq("id", room.id);
-                          queryClient.invalidateQueries({ queryKey: ["soap-rooms-list"] });
-                          toast({ title: "Sala ativada!" });
-                        }}>
-                          <Play className="h-3.5 w-3.5 mr-1" />Ativar Sala
-                        </Button>
-                      )}
-                      {(room.status === "active" || room.status === "completed") && (
-                        <Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/simulations/soap/control/${room.id}`)}>
-                          {room.status === "completed" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
-                          {room.status === "completed" ? "Resultados" : t("sim_control")}
-                        </Button>
-                      )}
-                      {room.status === "draft" && (
-                        <Button variant="outline" size="sm" onClick={() => setSplitSoapRoomId(room.id)}>
-                          <Scissors className="h-3.5 w-3.5 mr-1" />Dividir
-                        </Button>
-                      )}
-                      <Button variant="outline" size="sm" onClick={() => duplicateSoapRoom.mutate(room.id)} title="Duplicar">
-                        <Copy className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("soap"); }} title="Enviar para professor">
-                        <Share2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ table: "soap_rooms", id: room.id, archived: !(room as any).is_archived })} title={(room as any).is_archived ? "Reativar sala" : "Arquivar sala"}>
-                        {(room as any).is_archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => deleteSoapRoom.mutate(room.id)} title="Excluir">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
+        );
+      })()}
 
-        {/* Reconciliation rooms */}
-        <TabsContent value="reconciliation" className="space-y-4">
-          <div className="flex justify-between">
-            <Button onClick={() => navigate("/simulations/reconciliation")}>
-              <Plus className="h-4 w-4 mr-2" />Nova Sala de Reconciliação
-            </Button>
-          </div>
-          <ArchiveFilterBar activeCount={(reconciliationRooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(reconciliationRooms || []).filter((r: any) => r.is_archived).length} />
-          {reconciliationLoading ? (
-            <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !filteredReconciliationRooms.length ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Handshake className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala de Reconciliação inativa" : "Nenhuma sala de Reconciliação"}</h3>
-                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : "Crie uma sala de Reconciliação a partir do módulo."}</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredReconciliationRooms.map((room) => (
-                <Card key={room.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <EditableRoomTitle roomId={room.id} title={room.title} tableName="reconciliation_rooms" invalidateKeys={["reconciliation-rooms-list"]} />
-                        {room.description && <CardDescription>{room.description}</CardDescription>}
-                      </div>
-                      <Badge className={statusColor[room.status] || ""}>
-                        {statusLabel[room.status] || room.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                      <span className="font-mono text-xs">PIN: {room.access_code}</span>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/reconciliation/editor/${room.id}`)}>
-                        <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
-                      </Button>
-                      {room.status === "draft" && (
-                        <Button size="sm" onClick={async () => {
-                          await supabase.from("reconciliation_rooms").update({ status: "active" }).eq("id", room.id);
-                          queryClient.invalidateQueries({ queryKey: ["reconciliation-rooms-list"] });
-                          toast({ title: "Sala ativada!" });
-                        }}>
-                          <Play className="h-3.5 w-3.5 mr-1" />Ativar Sala
-                        </Button>
-                      )}
-                      {(room.status === "active" || room.status === "completed") && (
-                        <Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/simulations/reconciliation/control/${room.id}`)}>
-                          {room.status === "completed" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
-                          {room.status === "completed" ? "Resultados" : t("sim_control")}
-                        </Button>
-                      )}
-                      {room.status === "draft" && (
-                        <Button variant="outline" size="sm" onClick={() => setSplitReconciliationRoomId(room.id)}>
-                          <Scissors className="h-3.5 w-3.5 mr-1" />Dividir
-                        </Button>
-                      )}
-                      <Button variant="outline" size="sm" onClick={() => duplicateReconciliationRoom.mutate(room.id)} title="Duplicar">
-                        <Copy className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("reconciliation"); }} title="Enviar para professor">
-                        <Share2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ table: "reconciliation_rooms", id: room.id, archived: !(room as any).is_archived })} title={(room as any).is_archived ? "Reativar sala" : "Arquivar sala"}>
-                        {(room as any).is_archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => deleteReconciliationRoom.mutate(room.id)} title="Excluir">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl font-medium">Nova sala de Anamnese</DialogTitle>
+            <DialogDescription>Você define participantes e formulários depois, no editor.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome da sala</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Anamnese · Turma A, 2026.1" />
             </div>
-          )}
-        </TabsContent>
-
-        {/* Documentation rooms */}
-        <TabsContent value="documentation" className="space-y-4">
-          <div className="flex justify-between">
-            <Button onClick={() => navigate("/simulations/documentation")}>
-              <Plus className="h-4 w-4 mr-2" />Nova Sala de Documentação
-            </Button>
-          </div>
-          <ArchiveFilterBar activeCount={(documentationRooms || []).filter((r: any) => !r.is_archived).length} archivedCount={(documentationRooms || []).filter((r: any) => r.is_archived).length} />
-          {documentationLoading ? (
-            <p className="text-muted-foreground">{t("loading")}</p>
-          ) : !filteredDocumentationRooms.length ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">{showArchived ? "Nenhuma sala de Documentação inativa" : "Nenhuma sala de Documentação"}</h3>
-                <p className="text-muted-foreground mb-4">{showArchived ? "Arquive salas de semestres anteriores para vê-las aqui." : "Crie uma sala de Documentação a partir do módulo."}</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredDocumentationRooms.map((room) => (
-                <Card key={room.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <EditableRoomTitle roomId={room.id} title={room.title} tableName="documentation_rooms" invalidateKeys={["documentation-rooms-list"]} />
-                        {room.description && <CardDescription>{room.description}</CardDescription>}
-                      </div>
-                      <Badge className={statusColor[room.status] || ""}>
-                        {statusLabel[room.status] || room.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                      <span className="font-mono text-xs">PIN: {room.access_code}</span>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/simulations/documentation/editor/${room.id}`)}>
-                        <Settings className="h-3.5 w-3.5 mr-1" />{t("sim_edit")}
-                      </Button>
-                      {room.status === "draft" && (
-                        <Button size="sm" onClick={async () => {
-                          await supabase.from("documentation_rooms").update({ status: "active" }).eq("id", room.id);
-                          queryClient.invalidateQueries({ queryKey: ["documentation-rooms-list"] });
-                          toast({ title: "Sala ativada!" });
-                        }}>
-                          <Play className="h-3.5 w-3.5 mr-1" />Ativar Sala
-                        </Button>
-                      )}
-                      {(room.status === "active" || room.status === "completed") && (
-                        <Button size="sm" variant={room.status === "completed" ? "outline" : "default"} onClick={() => navigate(`/simulations/documentation/control/${room.id}`)}>
-                          {room.status === "completed" ? <BarChart3 className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />}
-                          {room.status === "completed" ? "Resultados" : t("sim_control")}
-                        </Button>
-                      )}
-                      {room.status === "draft" && (
-                        <Button variant="outline" size="sm" onClick={() => setSplitDocumentationRoomId(room.id)}>
-                          <Scissors className="h-3.5 w-3.5 mr-1" />Dividir
-                        </Button>
-                      )}
-                      <Button variant="outline" size="sm" onClick={() => duplicateDocumentationRoom.mutate(room.id)} title="Duplicar">
-                        <Copy className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); setShareModuleType("documentation"); }} title="Enviar para professor">
-                        <Share2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ table: "documentation_rooms", id: room.id, archived: !(room as any).is_archived })} title={(room as any).is_archived ? "Reativar sala" : "Arquivar sala"}>
-                        {(room as any).is_archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => deleteDocumentationRoom.mutate(room.id)} title="Excluir">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            <div className="space-y-2">
+              <Label>Duração por rodada (minutos)</Label>
+              <Input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} min={1} className="w-32" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={() => createRoom.mutate()} disabled={!title || createRoom.isPending}>Criar sala</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {splitRoomId && (
         <SplitRoomDialog

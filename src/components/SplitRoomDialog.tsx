@@ -163,7 +163,7 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Dividir Sala — {room?.title}</DialogTitle>
+          <DialogTitle className="font-heading text-xl font-medium">Dividir sala — {room?.title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -181,13 +181,13 @@ export default function SplitRoomDialog({ roomId, open, onOpenChange, onComplete
             </Select>
           </div>
 
-          <div className="text-sm text-muted-foreground">
+          <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning-ink">
             A sala original será removida após a divisão. Cada sala nova receberá um PIN próprio e cópias dos formulários.
           </div>
 
           {subRooms.map((sr, idx) => (
-            <div key={idx} className="border rounded-lg p-4 space-y-3">
-              <h4 className="font-medium text-sm">Nova Sala {idx + 1}</h4>
+            <div key={idx} className="rounded-lg border bg-sunken p-4 space-y-3">
+              <h4 className="label-mono">Nova sala {idx + 1}</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Nome do Professor</Label>
