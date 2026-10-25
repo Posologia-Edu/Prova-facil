@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
 import {
   Library,
-  FileEdit,
   GraduationCap,
-  BarChart3,
   Plus,
   ArrowRight,
-  Clock,
   Loader2,
   Stethoscope,
   HeartPulse,
@@ -19,20 +16,18 @@ import {
   Gavel,
   BookOpen,
   CalendarDays,
-  Sparkles,
   Activity,
-  Users,
-  Zap,
-  Trophy,
-  Layers,
+  Sparkles,
+  Clock,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useVpCatalog } from "@/lib/vp-catalog";
 import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { RoadmapProactiveDialog } from "@/components/RoadmapProactiveDialog";
 
@@ -41,36 +36,58 @@ interface RecentActivity {
   title: string;
   type: string;
   date: string;
-  icon: typeof FileEdit;
+  icon: typeof BookOpen;
   url: string;
   status?: string;
 }
 
+interface Todo {
+  key: string;
+  icon: typeof BookOpen;
+  title: string;
+  detail: string;
+  action: string;
+  url: string;
+  primary?: boolean;
+}
+
 const MODULE_CARDS = [
-  { label: "Provas", icon: BookOpen, url: "/exams", color: "from-blue-500/20 to-blue-600/10", iconColor: "text-blue-600 dark:text-blue-400", key: "exams" },
-  { label: "OSCE", icon: Stethoscope, url: "/osce", color: "from-emerald-500/20 to-emerald-600/10", iconColor: "text-emerald-600 dark:text-emerald-400", key: "osce" },
-  { label: "Simulações", icon: HeartPulse, url: "/simulations", color: "from-rose-500/20 to-rose-600/10", iconColor: "text-rose-600 dark:text-rose-400", key: "simulations" },
-  { label: "Pac. Virtuais", icon: UserRound, url: "/virtual-patients", color: "from-purple-500/20 to-purple-600/10", iconColor: "text-purple-600 dark:text-purple-400", key: "virtual_patients" },
-  { label: "SCT", icon: BrainCircuit, url: "/sct", color: "from-amber-500/20 to-amber-600/10", iconColor: "text-amber-600 dark:text-amber-400", key: "sct" },
-  { label: "KFE", icon: Target, url: "/kfe", color: "from-cyan-500/20 to-cyan-600/10", iconColor: "text-cyan-600 dark:text-cyan-400", key: "kfe" },
-  { label: "Mini-CEX", icon: ClipboardCheck, url: "/clinical-observations", color: "from-teal-500/20 to-teal-600/10", iconColor: "text-teal-600 dark:text-teal-400", key: "minicex" },
-  { label: "SJT", icon: Scale, url: "/sjt", color: "from-indigo-500/20 to-indigo-600/10", iconColor: "text-indigo-600 dark:text-indigo-400", key: "sjt" },
-  { label: "Progress Test", icon: TrendingUp, url: "/progress-test", color: "from-orange-500/20 to-orange-600/10", iconColor: "text-orange-600 dark:text-orange-400", key: "progress_test" },
-  { label: "Júri Simulado", icon: Gavel, url: "/mock-trials", color: "from-slate-500/20 to-slate-600/10", iconColor: "text-slate-600 dark:text-slate-400", key: "mock_trials" },
+  { label: "Provas", icon: BookOpen, url: "/exams", key: "exams" },
+  { label: "OSCE", icon: Stethoscope, url: "/osce", key: "osce" },
+  { label: "Simulações", icon: HeartPulse, url: "/simulations", key: "simulations" },
+  { label: "Pacientes Virtuais", icon: UserRound, url: "/virtual-patients", key: "virtual_patients" },
+  { label: "SCT", icon: BrainCircuit, url: "/sct", key: "sct" },
+  { label: "KFE", icon: Target, url: "/kfe", key: "kfe" },
+  { label: "Mini-CEX", icon: ClipboardCheck, url: "/clinical-observations", key: "minicex" },
+  { label: "SJT", icon: Scale, url: "/sjt", key: "sjt" },
+  { label: "Progress Test", icon: TrendingUp, url: "/progress-test", key: "progress_test" },
+  { label: "Júri Simulado", icon: Gavel, url: "/mock-trials", key: "mock_trials" },
 ];
 
 const QUICK_ACTIONS = [
-  { label: "Nova Prova", icon: Plus, url: "/composer", description: "Criar prova do zero" },
-  { label: "Banco de Questões", icon: Library, url: "/questions", description: "Gerenciar questões" },
-  { label: "Gerenciar Turmas", icon: GraduationCap, url: "/classes", description: "Turmas e alunos" },
-  { label: "Nova Simulação", icon: HeartPulse, url: "/simulations", description: "Criar simulação clínica" },
-  { label: "Novo OSCE", icon: Stethoscope, url: "/osce", description: "Criar estação OSCE" },
-  { label: "Calendário", icon: CalendarDays, url: "/calendar", description: "Ver agenda" },
+  { label: "Nova prova", icon: Plus, url: "/composer" },
+  { label: "Banco de questões", icon: Library, url: "/questions" },
+  { label: "Gerenciar turmas", icon: GraduationCap, url: "/classes" },
+  { label: "Nova simulação", icon: HeartPulse, url: "/simulations" },
+  { label: "Novo OSCE", icon: Stethoscope, url: "/osce" },
+  { label: "Calendário", icon: CalendarDays, url: "/calendar" },
 ];
+
+const STATUS: Record<string, { label: string; tone: StatusTone }> = {
+  draft: { label: "Rascunho", tone: "neutral" },
+  applied: { label: "Aplicada", tone: "info" },
+  in_progress: { label: "Em aplicação", tone: "ok" },
+  grading: { label: "Em correção", tone: "info" },
+  graded: { label: "Concluída", tone: "neutral" },
+  active: { label: "Ativo", tone: "ok" },
+  published: { label: "Publicado", tone: "ok" },
+  open: { label: "Aberto", tone: "ok" },
+};
 
 export default function DashboardPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { byId: vpById } = useVpCatalog();
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
   const [stats, setStats] = useState({
@@ -92,6 +109,8 @@ export default function DashboardPage() {
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [moduleCounts, setModuleCounts] = useState<Record<string, number>>({});
+  const [endingExams, setEndingExams] = useState<{ id: string; title: string; endAt: string }[]>([]);
+  const [pendingVp, setPendingVp] = useState<{ cvpId: string; patientId: string; classId: string; count: number }[]>([]);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -239,6 +258,59 @@ export default function DashboardPage() {
       activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setRecentActivities(activities.slice(0, 6));
 
+      // "Para fazer agora": provas que encerram em até 48 h e sessões de paciente virtual sem correção.
+      // Consultas tolerantes a erro: se alguma falhar, a lista só fica menor.
+      try {
+        const now = new Date();
+        const limit = new Date(now.getTime() + 48 * 3600 * 1000);
+        const { data: ending } = await supabase
+          .from("exam_publications")
+          .select("id, end_at, exams(title)")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .gte("end_at", now.toISOString())
+          .lte("end_at", limit.toISOString())
+          .order("end_at", { ascending: true })
+          .limit(3);
+        setEndingExams(((ending as any[]) || []).map((p) => ({ id: p.id, title: p.exams?.title || "Prova", endAt: p.end_at })));
+      } catch { /* sem a lista de provas */ }
+
+      try {
+        const { data: cvps } = await supabase
+          .from("class_virtual_patients")
+          .select("id, patient_id, class_id, classes!inner(user_id)")
+          .eq("classes.user_id", user.id);
+        const cvpList = (cvps as any[]) || [];
+        if (cvpList.length > 0) {
+          const cvpIds = cvpList.map((c) => c.id);
+          const { data: sessions } = await supabase
+            .from("virtual_patient_sessions")
+            .select("id, class_virtual_patient_id, group_id, status")
+            .in("class_virtual_patient_id", cvpIds)
+            .eq("status", "completed");
+          const sessionRows = (sessions as any[]) || [];
+          if (sessionRows.length > 0) {
+            const { data: grades } = await supabase
+              .from("virtual_patient_grades")
+              .select("session_id")
+              .in("session_id", sessionRows.map((s) => s.id));
+            const graded = new Set(((grades as any[]) || []).map((g) => g.session_id));
+            const byCvp = new Map<string, Set<string>>();
+            sessionRows.filter((s) => !graded.has(s.id)).forEach((s) => {
+              if (!byCvp.has(s.class_virtual_patient_id)) byCvp.set(s.class_virtual_patient_id, new Set());
+              byCvp.get(s.class_virtual_patient_id)!.add(s.group_id || s.id);
+            });
+            setPendingVp(
+              cvpList
+                .filter((c) => byCvp.has(c.id))
+                .map((c) => ({ cvpId: c.id, patientId: c.patient_id, classId: c.class_id, count: byCvp.get(c.id)!.size }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 3),
+            );
+          }
+        }
+      } catch { /* sem a lista de correções */ }
+
       setLoading(false);
     };
     loadDashboard();
@@ -248,10 +320,6 @@ export default function DashboardPage() {
 
   const totalContent = stats.exams + stats.osce + stats.simulations + stats.virtualPatients +
     stats.sct + stats.kfe + stats.observations + stats.sjt + stats.progressTests + stats.mockTrials;
-
-  const welcomeText = userName
-    ? `Bem-vindo(a) de volta, ${userName}`
-    : t("dash_welcome");
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -265,24 +333,53 @@ export default function DashboardPage() {
     const now = new Date();
     const diff = now.getTime() - d.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
-    if (hours < 1) return "Agora mesmo";
-    if (hours < 24) return `${hours}h atrás`;
+    if (hours < 1) return "agora mesmo";
+    if (hours < 24) return `há ${hours} h`;
     const days = Math.floor(hours / 24);
-    if (days === 1) return "Ontem";
-    if (days < 7) return `${days} dias atrás`;
+    if (days === 1) return "ontem";
+    if (days < 7) return `há ${days} dias`;
     return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
   };
 
-  const statusLabels: Record<string, string> = {
-    draft: "Rascunho",
-    applied: "Aplicada",
-    in_progress: "Em aplicação",
-    grading: "Em correção",
-    graded: "Concluída",
-    active: "Ativo",
-    published: "Publicado",
-    open: "Aberto",
+  const endLabel = (iso: string) => {
+    const d = new Date(iso);
+    const sameDay = d.toDateString() === new Date().toDateString();
+    const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return sameDay ? `hoje às ${time}` : `${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} às ${time}`;
   };
+
+  const todos: Todo[] = [
+    ...pendingVp.map((p) => ({
+      key: `vp-${p.cvpId}`,
+      icon: UserRound,
+      title: `Corrigir “${vpById[p.patientId]?.label || "paciente virtual"}”`,
+      detail: `${p.count} ${p.count === 1 ? "atendimento aguarda" : "atendimentos aguardam"} correção`,
+      action: "Corrigir turma",
+      url: `/classes/${p.classId}?aba=analytics`,
+      primary: true,
+    })),
+    ...endingExams.map((e) => ({
+      key: `exam-${e.id}`,
+      icon: BookOpen,
+      title: `${e.title} encerra ${endLabel(e.endAt)}`,
+      detail: "Acompanhe as entregas em tempo real",
+      action: "Monitorar",
+      url: `/monitoring/${e.id}`,
+    })),
+  ];
+
+  const summary = todos.length > 0
+    ? `Você tem ${todos.length} ${todos.length === 1 ? "pendência" : "pendências"} para hoje.`
+    : "Tudo em dia. Escolha por onde começar.";
+
+  const overview = [
+    { label: "Provas", count: stats.exams },
+    { label: "Simulações", count: stats.simulations },
+    { label: "OSCE", count: stats.osce },
+    { label: "Pacientes Virtuais", count: stats.virtualPatients },
+    { label: "Questões", count: stats.questions },
+  ];
+  const overviewMax = Math.max(1, ...overview.map((o) => o.count));
 
   if (loading) {
     return (
@@ -296,194 +393,170 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+    <div className="mx-auto max-w-7xl space-y-8 p-4 md:p-6">
       {isNewUser && <OnboardingWizard />}
       <RoadmapProactiveDialog />
 
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-6 md:p-8 text-primary-foreground">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE4YzMuMyAwIDYgMi43IDYgNnMtMi43IDYtNiA2LTZ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
-        <div className="relative z-10">
-          <p className="text-primary-foreground/70 text-sm font-medium">{getGreeting()} 👋</p>
-          <h1 className="text-2xl md:text-3xl font-bold mt-1 tracking-tight">
-            {userName ? `${userName}, seu painel está atualizado` : "Seu painel está atualizado"}
-          </h1>
-          <p className="text-primary-foreground/70 text-sm mt-2 max-w-lg">
-            Gerencie todas as suas avaliações, simulações e atividades acadêmicas em um só lugar.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow={new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+        title={userName ? `${getGreeting()}, ${userName}.` : `${getGreeting()}.`}
+        description={summary}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => navigate("/calendar")}><CalendarDays className="h-4 w-4" />Calendário</Button>
+            <Button onClick={() => navigate("/composer")}><Plus className="h-4 w-4" />Nova prova</Button>
+          </>
+        }
+      />
 
-        {/* Floating stats on hero */}
-        <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-          {[
-            { label: "Conteúdos Criados", value: totalContent, icon: Layers },
-            { label: "Questões no Banco", value: stats.questions, icon: Library },
-            { label: "Provas Ativas", value: stats.activeExams, icon: Activity },
-            { label: "Alunos Cadastrados", value: stats.students, icon: Users },
-          ].map(s => (
-            <div key={s.label} className="bg-white/10 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-white/10">
-              <div className="flex items-center gap-2 mb-1">
-                <s.icon className="h-4 w-4 text-primary-foreground/60" />
-                <span className="text-xs text-primary-foreground/60">{s.label}</span>
-              </div>
-              <p className="text-xl md:text-2xl font-bold">{s.value}</p>
-            </div>
-          ))}
-        </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {[
+          { label: "Conteúdos criados", value: totalContent },
+          { label: "Questões no banco", value: stats.questions },
+          { label: "Provas ativas", value: stats.activeExams },
+          { label: "Alunos cadastrados", value: stats.students, detail: stats.classes ? `em ${stats.classes} ${stats.classes === 1 ? "turma" : "turmas"}` : undefined },
+        ].map((k) => (
+          <Card key={k.label} className="p-5">
+            <p className="label-mono">{k.label}</p>
+            <p className="mt-2 font-heading text-4xl font-medium leading-none">{k.value}</p>
+            {k.detail && <p className="mt-2 text-xs text-muted-foreground">{k.detail}</p>}
+          </Card>
+        ))}
       </div>
 
-      {/* Quick Actions Bar */}
-      <div>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Zap className="h-4 w-4" /> Ações Rápidas
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          {QUICK_ACTIONS.map(action => (
-            <Button
-              key={action.url}
-              variant="outline"
-              className="h-auto py-3 px-3 flex flex-col items-center gap-1.5 hover:bg-primary/5 hover:border-primary/30 transition-all group"
-              onClick={() => navigate(action.url)}
-            >
-              <action.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="text-xs font-medium">{action.label}</span>
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Modules Grid */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            <Sparkles className="h-4 w-4" /> Seus Módulos
-          </h2>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          {MODULE_CARDS.map(mod => (
-            <Card
-              key={mod.key}
-              className="cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border border-border/50 group overflow-hidden"
-              onClick={() => navigate(mod.url)}
-            >
-              <CardContent className="p-4 relative">
-                <div className={`absolute inset-0 bg-gradient-to-br ${mod.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className={`h-9 w-9 rounded-lg bg-muted flex items-center justify-center group-hover:bg-white/80 dark:group-hover:bg-white/10 transition-colors`}>
-                      <mod.icon className={`h-4.5 w-4.5 ${mod.iconColor}`} />
-                    </div>
-                    {(moduleCounts[mod.key] || 0) > 0 && (
-                      <span className="text-lg font-bold text-foreground">{moduleCounts[mod.key]}</span>
-                    )}
-                  </div>
-                  <p className="text-sm font-medium text-foreground">{mod.label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {(moduleCounts[mod.key] || 0) === 0 ? "Começar" : `${moduleCounts[mod.key]} criado(s)`}
-                  </p>
+      {todos.length > 0 && (
+        <section>
+          <h2 className="eyebrow mb-3">Para fazer agora</h2>
+          <Card className="divide-y">
+            {todos.map((todo) => (
+              <div key={todo.key} className="flex items-center gap-4 px-5 py-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand-text">
+                  <todo.icon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{todo.title}</p>
+                  <p className="text-xs text-muted-foreground">{todo.detail}</p>
                 </div>
-              </CardContent>
-            </Card>
+                <Button size="sm" variant={todo.primary ? "default" : "outline"} onClick={() => navigate(todo.url)}>{todo.action}</Button>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
+
+      <section>
+        <h2 className="eyebrow mb-3">Ações rápidas</h2>
+        <div className="flex flex-wrap gap-2">
+          {QUICK_ACTIONS.map((action) => (
+            <Button key={action.url} variant="outline" size="sm" onClick={() => navigate(action.url)}>
+              <action.icon className="h-4 w-4" />{action.label}
+            </Button>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Bottom Section: Activity + Progress */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Recent Activity */}
-        <Card className="lg:col-span-3">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              Atividade Recente
-            </CardTitle>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/analytics">
-                Ver análises <ArrowRight className="h-3.5 w-3.5 ml-1" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
+      <section>
+        <h2 className="eyebrow mb-3">Seus módulos</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+          {MODULE_CARDS.map((mod) => {
+            const count = moduleCounts[mod.key] || 0;
+            return (
+              <Card
+                key={mod.key}
+                className="group cursor-pointer p-4 transition-shadow hover:shadow-elev-2"
+                role="link"
+                tabIndex={0}
+                onClick={() => navigate(mod.url)}
+                onKeyDown={(e) => { if (e.key === "Enter") navigate(mod.url); }}
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:bg-brand-soft group-hover:text-brand-text">
+                    <mod.icon className="h-4 w-4" />
+                  </span>
+                  {count > 0 && <span className="font-heading text-2xl font-medium leading-none">{count}</span>}
+                </div>
+                <p className="text-sm font-medium">{mod.label}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{count === 0 ? "Começar" : `${count} criado(s)`}</p>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <section className="lg:col-span-3">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="eyebrow">Atividade recente</h2>
+            <Link to="/analytics" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+              Ver análises <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <Card>
             {recentActivities.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Activity className="h-10 w-10 text-muted-foreground/30 mb-3" />
+              <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+                <Activity className="mb-3 h-10 w-10 text-muted-foreground/30" />
                 <p className="text-sm text-muted-foreground">Nenhuma atividade ainda</p>
-                <p className="text-xs text-muted-foreground mt-1">Crie sua primeira avaliação para começar</p>
+                <p className="mt-1 text-xs text-muted-foreground">Crie sua primeira avaliação para começar</p>
               </div>
             ) : (
-              <div className="space-y-1">
-                {recentActivities.map(activity => (
-                  <Link
-                    key={`${activity.type}-${activity.id}`}
-                    to={activity.url}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
-                        <activity.icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{activity.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{activity.type}</Badge>
-                          <span className="text-xs text-muted-foreground">{formatDate(activity.date)}</span>
+              <div className="divide-y">
+                {recentActivities.map((activity) => {
+                  const st = activity.status ? STATUS[activity.status] : undefined;
+                  return (
+                    <Link
+                      key={`${activity.type}-${activity.id}`}
+                      to={activity.url}
+                      className="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/50"
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:bg-brand-soft group-hover:text-brand-text">
+                        <activity.icon className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{activity.title}</p>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <StatusBadge>{activity.type}</StatusBadge>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{formatDate(activity.date)}</span>
                         </div>
                       </div>
-                    </div>
-                    {activity.status && (
-                      <Badge variant="secondary" className="text-[10px] shrink-0 ml-2">
-                        {statusLabels[activity.status] || activity.status}
-                      </Badge>
-                    )}
-                  </Link>
-                ))}
+                      {activity.status && (
+                        <StatusBadge tone={st?.tone ?? "neutral"} dot={!!st && st.tone === "ok"} className="shrink-0">
+                          {st?.label || activity.status}
+                        </StatusBadge>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </Card>
+        </section>
 
-        {/* Stats Summary */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-secondary" />
-              Visão Geral
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[
-              { label: "Provas", count: stats.exams, total: Math.max(stats.exams, 10), color: "bg-blue-500" },
-              { label: "Simulações", count: stats.simulations, total: Math.max(stats.simulations, 10), color: "bg-rose-500" },
-              { label: "OSCE", count: stats.osce, total: Math.max(stats.osce, 10), color: "bg-emerald-500" },
-              { label: "Pac. Virtuais", count: stats.virtualPatients, total: Math.max(stats.virtualPatients, 10), color: "bg-purple-500" },
-              { label: "Questões", count: stats.questions, total: Math.max(stats.questions, 100), color: "bg-amber-500" },
-            ].map(item => (
+        <section className="lg:col-span-2">
+          <h2 className="eyebrow mb-3">Visão geral</h2>
+          <Card className="space-y-4 p-5">
+            {overview.map((item) => (
               <div key={item.label} className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{item.label}</span>
-                  <span className="font-semibold">{item.count}</span>
+                  <span className="font-mono font-medium">{item.count}</span>
                 </div>
-                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${item.color} rounded-full transition-all duration-500`}
-                    style={{ width: `${Math.min((item.count / item.total) * 100, 100)}%` }}
-                  />
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(item.count / overviewMax) * 100}%` }} />
                 </div>
               </div>
             ))}
-
-            <div className="pt-3 border-t border-border">
+            <div className="space-y-2 border-t pt-4 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Turmas ativas</span>
-                <span className="text-sm font-semibold">{stats.classes}</span>
+                <span className="text-muted-foreground">Turmas ativas</span>
+                <span className="font-mono font-medium">{stats.classes}</span>
               </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-sm text-muted-foreground">Provas concluídas</span>
-                <span className="text-sm font-semibold">{stats.completedExams}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Provas concluídas</span>
+                <span className="font-mono font-medium">{stats.completedExams}</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </Card>
+        </section>
       </div>
     </div>
   );

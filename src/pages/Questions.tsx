@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import {
   Select,
   SelectContent,
@@ -115,6 +116,25 @@ const typeLabels: Record<string, string> = {
   matching: "Associação",
   case_stem: "Caso Clínico",
 };
+
+const TYPE_TONE: Record<string, StatusTone> = {
+  multiple_choice: "info",
+  true_false: "ok",
+  open_ended: "accent",
+  matching: "brand",
+  case_stem: "neutral",
+};
+
+const TYPE_TILE: Record<string, string> = {
+  multiple_choice: "bg-info-soft text-info",
+  true_false: "bg-success-soft text-success",
+  open_ended: "bg-warning-soft text-warning-ink",
+  matching: "bg-brand-soft text-brand-text",
+  case_stem: "bg-muted text-muted-foreground",
+};
+
+const DIFF_TONE: Record<string, StatusTone> = { easy: "ok", medium: "warn", hard: "bad" };
+const DIFF_LABEL: Record<string, string> = { easy: "Fácil", medium: "Média", hard: "Difícil" };
 
 const difficultyColors: Record<string, string> = {
   easy: "text-success",
@@ -742,17 +762,21 @@ export default function QuestionsPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("questions_title")}</h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className="eyebrow mb-2.5">Avaliar</p>
+          <h1 className="font-heading text-[2rem] font-medium leading-[1.1]">{t("questions_title")}</h1>
+          <p className="mt-2 max-w-[62ch] text-sm text-muted-foreground">
             {questions.length} {t("questions_subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <SystemPromptViewer toolKey="questions" />
+          <Button variant="outline" asChild>
+            <Link to="/lms-integration"><Upload className="h-4 w-4 mr-2" />Importar arquivo</Link>
+          </Button>
           <Button variant="outline" onClick={() => setAiOpen(true)}>
-            <Sparkles className="h-4 w-4 mr-2 text-secondary" />
+            <Sparkles className="h-4 w-4 mr-2" />
             {t("questions_generate_ai")}
           </Button>
           <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { setEditingId(null); resetForm(); } }}>
@@ -1104,22 +1128,8 @@ export default function QuestionsPage() {
             className="pl-9"
           />
         </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[160px]">
-            <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-            <SelectValue placeholder="Tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("questions_all_types")}</SelectItem>
-            <SelectItem value="multiple_choice">{t("questions_multiple_choice")}</SelectItem>
-            <SelectItem value="true_false">{t("questions_true_false")}</SelectItem>
-            <SelectItem value="open_ended">{t("questions_open_ended")}</SelectItem>
-            <SelectItem value="matching">{t("questions_matching")}</SelectItem>
-            <SelectItem value="case_stem">Caso Clínico</SelectItem>
-          </SelectContent>
-        </Select>
         <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Dificuldade" />
           </SelectTrigger>
           <SelectContent>
@@ -1129,6 +1139,19 @@ export default function QuestionsPage() {
             <SelectItem value="hard">{t("questions_hard")}</SelectItem>
           </SelectContent>
         </Select>
+        <span className="ml-auto text-xs text-muted-foreground">Ordenado por mais recentes</span>
+      </div>
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Tipo de questão">
+        {[{ value: "all", label: "Todos" }, ...Object.entries(typeLabels).map(([value, label]) => ({ value, label }))].map((c) => {
+          const n = c.value === "all" ? questions.length : questions.filter((q) => q.type === c.value).length;
+          const on = typeFilter === c.value;
+          return (
+            <Button key={c.value} size="sm" variant={on ? "default" : "outline"} aria-pressed={on} onClick={() => setTypeFilter(c.value)}>
+              {c.label}<span className={`ml-1.5 font-mono text-xs ${on ? "opacity-80" : "text-muted-foreground"}`}>{n}</span>
+            </Button>
+          );
+        })}
       </div>
 
       {/* Question List */}
@@ -1136,40 +1159,32 @@ export default function QuestionsPage() {
         {filtered.map((q) => (
           <Card
             key={q.id}
-            className="p-4 hover:shadow-md transition-shadow cursor-pointer group"
+            className={`group cursor-pointer px-5 py-4 transition-shadow hover:shadow-elev-2 ${q.type === "case_stem" ? "bg-brand-soft/60" : ""}`}
             onClick={() => setSelectedQuestion(q)}
           >
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-muted-foreground group-hover:text-primary transition-colors">
-                <GripVertical className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
-              </div>
-              <div className="h-8 w-8 rounded-md bg-accent flex items-center justify-center shrink-0 text-muted-foreground">
+            <div className="flex items-start gap-4">
+              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${TYPE_TILE[q.type] || "bg-muted text-muted-foreground"}`}>
                 {typeIcons[q.type]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm leading-snug">{q.title}</p>
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium leading-relaxed">{q.title}</p>
                 {q.parentId && q.parentTitle && (
-                  <p className="text-[11px] text-primary mt-1 flex items-center gap-1 truncate">
+                  <p className="mt-1 flex items-center gap-1 truncate text-[11px] text-primary">
                     <FileText className="h-3 w-3 shrink-0" />
                     <span className="truncate">Caso: {q.parentTitle}</span>
                   </p>
                 )}
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                  <StatusBadge tone={TYPE_TONE[q.type] || "neutral"}>{typeLabels[q.type]}</StatusBadge>
                   {q.type !== "case_stem" && (
-                    <Badge variant={q.difficulty} className="text-[11px]">
-                      {q.difficulty}
-                    </Badge>
+                    <StatusBadge tone={DIFF_TONE[q.difficulty] || "neutral"}>{DIFF_LABEL[q.difficulty] || q.difficulty}</StatusBadge>
                   )}
-                  <span className="text-xs text-muted-foreground">{typeLabels[q.type]}</span>
-                  {q.type !== "case_stem" && (
-                    <>
-                      <span className="text-xs text-muted-foreground">·</span>
-                      <span className="text-xs text-muted-foreground">{q.bloom_level}</span>
-                    </>
-                  )}
+                  {q.type !== "case_stem" && q.bloom_level && <StatusBadge>{q.bloom_level}</StatusBadge>}
                   {q.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-[11px]">{tag}</Badge>
+                    <StatusBadge key={tag}>{tag}</StatusBadge>
                   ))}
+                  {q.images && q.images.length > 0 && <StatusBadge>{q.images.length} {q.images.length === 1 ? "imagem" : "imagens"}</StatusBadge>}
+                  {q.created_at && <span className="ml-1 text-xs text-muted-foreground">{q.created_at.split("-").reverse().slice(0, 2).join("/")}</span>}
                 </div>
               </div>
               <DropdownMenu>
@@ -1177,7 +1192,8 @@ export default function QuestionsPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="shrink-0 opacity-60 transition-opacity group-hover:opacity-100"
+                    aria-label="Mais ações"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -1209,12 +1225,12 @@ export default function QuestionsPage() {
         {filtered.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             <Library className="h-16 w-16 mx-auto mb-4 opacity-30" />
-            <p className="font-semibold text-foreground text-lg">{t("questions_none_found")}</p>
+            <p className="font-heading text-xl font-medium text-foreground">{t("questions_none_found")}</p>
             <p className="text-sm mt-1 mb-5">{questions.length === 0 ? t("empty_questions_hint") : t("questions_adjust_filters")}</p>
             {questions.length === 0 && (
               <div className="flex items-center justify-center gap-3">
                 <Button variant="outline" onClick={() => setAiOpen(true)}>
-                  <Sparkles className="h-4 w-4 mr-2 text-secondary" />
+                  <Sparkles className="h-4 w-4 mr-2" />
                   {t("questions_generate_ai")}
                 </Button>
                 <Button onClick={() => setCreateOpen(true)}>
@@ -1231,9 +1247,9 @@ export default function QuestionsPage() {
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && setSelectedQuestion(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 font-heading text-xl font-medium">
               <Eye className="h-5 w-5 text-primary" />
-              Detalhes da Questão
+              Detalhes da questão
             </DialogTitle>
           </DialogHeader>
           {selectedQuestion && <QuestionDetailContent question={selectedQuestion} />}

@@ -1,5 +1,5 @@
-import { CheckCircle2, Circle, GraduationCap, Library, FileEdit, Globe } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GraduationCap, Library, FileEdit, Globe } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 
@@ -38,34 +38,36 @@ export function OnboardingWizard() {
   const { t } = useLanguage();
 
   return (
-    <Card className="border-primary/20 bg-primary/5">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          🎉 {t("onboarding_title")}
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">{t("onboarding_subtitle")}</p>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {steps.map((step, i) => (
-            <Link
-              key={step.key}
-              to={step.link}
-              className="flex items-start gap-3 p-3 rounded-lg border bg-background hover:bg-muted/50 transition-colors group"
-            >
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                <step.icon className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium group-hover:text-primary transition-colors">
-                  {i + 1}. {t(step.titleKey)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">{t(step.descKey)}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </CardContent>
+    <Card className="border-dashed p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-heading text-lg font-medium">{t("onboarding_title")}</h2>
+        <span className="text-xs text-muted-foreground">Aparece só para contas novas</span>
+      </div>
+      <p className="mt-1 text-sm text-muted-foreground">{t("onboarding_subtitle")}</p>
+      <div className="my-4 flex gap-1.5" aria-hidden>
+        {steps.map((s, i) => (
+          <span key={s.key} className={`h-1.5 flex-1 rounded-full ${i === 0 ? "bg-highlight" : "bg-muted"}`} />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map((step, i) => (
+          <Link
+            key={step.key}
+            to={step.link}
+            className="group flex items-start gap-3 rounded-card border bg-card p-3 transition-colors hover:bg-muted/50"
+          >
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-soft text-brand-text">
+              <step.icon className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-sm font-medium group-hover:text-primary">
+                {i + 1}. {t(step.titleKey)}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t(step.descKey)}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
     </Card>
   );
 }
