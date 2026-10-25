@@ -273,8 +273,8 @@ export function LessonDialog({ open, onOpenChange, classId, semesterId, lesson, 
                 onChange={(e) => setForm({ ...form, lesson_date: e.target.value || null })}
               />
               {holidayHit && !isHolidayMode && (
-                <div className="flex items-center justify-between gap-2 mt-1 p-2 rounded bg-amber-50 border border-amber-200 text-xs">
-                  <span className="flex items-center gap-1 text-amber-900">
+                <div className="mt-1 flex items-center justify-between gap-2 rounded-card border border-warning/30 bg-warning-soft p-2 text-xs">
+                  <span className="flex items-center gap-1 text-warning-ink">
                     <CalendarOff className="h-3 w-3" />Esta data é feriado: <b>{holidayHit.name}</b>
                   </span>
                   <Button type="button" size="sm" variant="outline" className="h-7" onClick={applyHolidayPreset}>

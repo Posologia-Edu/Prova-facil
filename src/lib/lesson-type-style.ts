@@ -1,5 +1,5 @@
 import {
-  BookOpen, FlaskConical, Stethoscope, Presentation, ClipboardCheck, CircleDot,
+  BookOpen, FlaskConical, Stethoscope, Presentation, ClipboardCheck, CircleDot, MapPin, CalendarOff,
   type LucideIcon,
 } from "lucide-react";
 
@@ -49,6 +49,20 @@ export const LESSON_TYPE_STYLE: Record<string, LessonTypeStyle> = {
     badge: "bg-destructive/10 text-destructive border-destructive/30",
     accent: "border-l-destructive",
     rowBg: "hover:bg-destructive/5",
+  },
+  technical_visit: {
+    label: "Visita técnica",
+    icon: MapPin,
+    badge: "bg-brand-soft text-brand-text border-primary/20",
+    accent: "border-l-primary",
+    rowBg: "hover:bg-brand-soft/50",
+  },
+  holiday: {
+    label: "Feriado",
+    icon: CalendarOff,
+    badge: "bg-muted text-muted-foreground border-border",
+    accent: "border-l-muted-foreground/40",
+    rowBg: "hover:bg-muted/30",
   },
   other: {
     label: "Outro",

@@ -70,7 +70,7 @@ function StarPicker({
             className="p-0.5 transition-transform hover:scale-110"
             aria-label={`${v} estrela${v > 1 ? "s" : ""}`}
           >
-            <Star className={cn("w-5 h-5", filled ? "fill-amber-400 text-amber-500" : "text-muted-foreground/40")} />
+            <Star className={cn("w-5 h-5", filled ? "fill-highlight text-highlight" : "text-muted-foreground/40")} />
           </button>
         );
       })}
@@ -314,7 +314,7 @@ export function SeminarEvaluationDialog({
       <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <PresentationIcon className="w-5 h-5 text-amber-500" />
+            <PresentationIcon className="w-5 h-5 text-warning" />
             Avaliação · {lessonTitle}
           </DialogTitle>
         </DialogHeader>
@@ -358,7 +358,7 @@ export function SeminarEvaluationDialog({
                       const ev = evaluations[s.id];
                       const isSelected = selected.has(s.id);
                       return (
-                        <Card key={s.id} className={cn("transition-colors", isSelected && "border-amber-500/40")}>
+                        <Card key={s.id} className={cn("transition-colors", isSelected && "border-highlight/50")}>
                           <CardContent className="p-3 flex items-center gap-3">
                             <Checkbox checked={isSelected} onCheckedChange={(v) => toggleStudent(s.id, !!v)} />
                             <div className="flex-1 min-w-0">
@@ -367,7 +367,7 @@ export function SeminarEvaluationDialog({
                             </div>
                             {ev && (
                               <div className="text-right">
-                                <div className="text-lg font-bold text-amber-600">
+                                <div className="font-heading text-xl font-medium text-warning-ink">
                                   {ev.total_score.toFixed(1)}<span className="text-xs text-muted-foreground">/{ev.max_score}</span>
                                 </div>
                                 <div className="text-xs text-muted-foreground">
@@ -401,7 +401,7 @@ export function SeminarEvaluationDialog({
             <TabsContent value="rubric" className="flex-1 overflow-hidden">
               <ScrollArea className="h-[58vh] pr-3">
                 <div className="space-y-3">
-                  <Card className="border-amber-500/30 bg-amber-500/5">
+                  <Card className="border-highlight/40 bg-highlight/5">
                     <CardContent className="p-4 flex items-center gap-3">
                       <Label className="text-sm font-medium whitespace-nowrap">Nota máxima da avaliação</Label>
                       <Input
@@ -499,7 +499,7 @@ function SaveIndicator({ status }: { status: "idle" | "saving" | "saved" | "erro
   }
   if (status === "saved") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-green-600">
+      <span className="inline-flex items-center gap-1 text-xs text-success">
         <Check className="w-3 h-3" /> Salvo automaticamente
       </span>
     );
@@ -601,7 +601,7 @@ function StudentEvaluator({
         </div>
         <PresentationTimer seconds={evaluation.time_seconds ?? 0} onChange={onTimeChange} />
         <div className="text-right">
-          <div className="text-2xl font-bold text-amber-600">
+          <div className="font-heading text-3xl font-medium text-warning-ink">
             {liveScore.finalScore.toFixed(2)}<span className="text-sm text-muted-foreground">/{liveScore.scale}</span>
           </div>
           <div className="text-xs text-muted-foreground">{liveScore.totalPercent.toFixed(1)}%</div>
@@ -626,7 +626,7 @@ function StudentEvaluator({
                     <div className="font-semibold flex-1">{d.label}</div>
                     <Badge variant="outline">peso {d.weight}</Badge>
                     {dimScore && (
-                      <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30">
+                      <Badge variant="warning">
                         {dimScore.earned}/{dimScore.max} · {dimScore.percent.toFixed(0)}%
                       </Badge>
                     )}

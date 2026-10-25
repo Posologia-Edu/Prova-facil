@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,6 +15,7 @@ import { exportScheduleToExcel, exportScheduleToPdf, ScheduleExportLesson } from
 import { exportOficiosZip, lookupObjective, OficioGroup } from "@/lib/oficio-export";
 import { exportRequisicaoDocx, RequisicaoVisitRow } from "@/lib/requisicao-export";
 import { toast } from "sonner";
+import type { ReactNode } from "react";
 
 export interface ScheduleVisit {
   id?: string;
@@ -55,9 +56,17 @@ interface Props {
   onOpenSeminarEval?: (l: ScheduleLesson) => void;
   onReschedule?: (lessonId: string, newDate: string) => Promise<void> | void;
   calendarName?: string;
+  /** botões da barra (ex.: Nova aula), à direita de Exportar */
+  toolbarActions?: ReactNode;
 }
 
 type View = "list" | "shifts" | "timeline" | "calendar";
+
+function LessonStatus({ status, className }: { status: string; className?: string }) {
+  if (status === "done") return <StatusBadge tone="ok" className={className}>Realizada</StatusBadge>;
+  if (status === "cancelled") return <StatusBadge tone="bad" className={className}>Cancelada</StatusBadge>;
+  return <StatusBadge className={className}>Planejada</StatusBadge>;
+}
 
 function shiftOf(l: ScheduleLesson): "M" | "T" | "N" | null {
   const s = (l.time_slot || "").toUpperCase();
@@ -71,7 +80,7 @@ function ptMonth(date: Date) {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
-export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLesson, onDeleteLesson, onOpenSeminarEval, onReschedule, calendarName }: Props) {
+export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLesson, onDeleteLesson, onOpenSeminarEval, onReschedule, calendarName, toolbarActions }: Props) {
   const teacherMap = new Map(teachers.map(t => [t.id, t.name]));
   const studentMap = new Map(students.map(s => [s.id, s.student_name]));
   const [view, setView] = useState<View>("list");
@@ -255,9 +264,8 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
 
   return (
     <div className="space-y-3">
-      <Card>
-        <CardContent className="p-3 flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 border rounded-md p-0.5">
+      <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex gap-0.5 rounded-lg border bg-muted/50 p-0.5" role="group" aria-label="Visão do cronograma">
             <Button variant={view === "list" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setView("list")}>
               <LayoutList className="h-4 w-4 mr-1" />Lista
             </Button>
@@ -265,7 +273,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
               <Columns3 className="h-4 w-4 mr-1" />Turnos
             </Button>
             <Button variant={view === "timeline" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setView("timeline")}>
-              <GitBranch className="h-4 w-4 mr-1" />Timeline
+              <GitBranch className="h-4 w-4 mr-1" />Linha do tempo
             </Button>
             <Button variant={view === "calendar" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setView("calendar")}>
               <CalendarDays className="h-4 w-4 mr-1" />Calendário
@@ -291,7 +299,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
               <SelectItem value="cancelled">Cancelada</SelectItem>
             </SelectContent>
           </Select>
-          <div className="ml-auto">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9">
@@ -318,9 +326,9 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {toolbarActions}
           </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {filtered.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhuma aula corresponde aos filtros.</CardContent></Card>
@@ -378,9 +386,9 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                       }
                     }
                     return (
-                      <TableRow key={m.ids.join("+")} className={cn("cursor-pointer border-l-4 align-top", style.accent, style.rowBg, isHoliday && "bg-amber-50/60", sameAsPrev && "border-t-0")} onClick={() => onOpenLesson(l)}>
+                      <TableRow key={m.ids.join("+")} className={cn("cursor-pointer border-l-4 align-top", style.accent, style.rowBg, isHoliday && "bg-muted/40", sameAsPrev && "border-t-0")} onClick={() => onOpenLesson(l)}>
                         {!sameAsPrev && (
-                          <TableCell className="tabular-nums align-top" rowSpan={rowSpan}>
+                          <TableCell className="align-top font-mono text-xs" rowSpan={rowSpan}>
                             <div>{l.lesson_date ?? "—"}</div>
                           </TableCell>
                         )}
@@ -388,14 +396,12 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                           <div className="flex items-center gap-2 flex-wrap">
                             <span>{l.title}</span>
                             {!!l.visits_count && l.visits_count > 0 && (
-                              <Badge variant="secondary" className="text-[10px]">{l.visits_count} visita{l.visits_count > 1 ? "s" : ""}</Badge>
+                              <StatusBadge>{l.visits_count} visita{l.visits_count > 1 ? "s" : ""}</StatusBadge>
                             )}
                             {isVisit && (
                               <>
-                                <Badge variant="outline" className={cn("gap-1 ml-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
-                                <Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"} className="text-[10px]">
-                                  {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
-                                </Badge>
+                                <StatusBadge className={cn("gap-1 ml-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</StatusBadge>
+                                <LessonStatus status={l.status} />
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -434,7 +440,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                               return (
                                 <div
                                   key={v.id ?? i}
-                                  className="group/visit relative bg-card border border-border/60 rounded-2xl pl-5 pr-4 py-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
+                                  className="group/visit relative overflow-hidden rounded-card border bg-card py-3.5 pl-5 pr-4 shadow-elev-1 transition-shadow hover:shadow-elev-2"
                                 >
                                   <span className={cn("absolute left-0 top-3.5 bottom-3.5 w-1 rounded-r-full", accent.bar)} />
                                   <div className="flex items-start justify-between gap-3 mb-2">
@@ -489,15 +495,15 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                                 </div>
                               );
                             };
-                            const morningAccent = { bar: "bg-indigo-500", chipText: "text-indigo-600", chipBg: "bg-indigo-50" };
-                            const nightAccent = { bar: "bg-violet-600", chipText: "text-violet-600", chipBg: "bg-violet-50" };
+                            const morningAccent = { bar: "bg-info", chipText: "text-info", chipBg: "bg-info-soft" };
+                            const nightAccent = { bar: "bg-primary", chipText: "text-brand-text", chipBg: "bg-brand-soft" };
                             const otherAccent = { bar: "bg-muted-foreground/40", chipText: "text-muted-foreground", chipBg: "bg-muted" };
                             const ColumnHeader = ({ label, count, dotClass }: { label: string; count: number; dotClass: string }) => (
                               <div className="flex items-center gap-2 mb-3">
                                 <span className={cn("w-1.5 h-1.5 rounded-full", dotClass)} />
                                 <h5 className={cn("text-[11px] font-bold uppercase tracking-[0.14em]",
-                                  dotClass === "bg-indigo-500" ? "text-indigo-600"
-                                  : dotClass === "bg-violet-600" ? "text-violet-700"
+                                  dotClass === "bg-info" ? "text-info"
+                                  : dotClass === "bg-primary" ? "text-brand-text"
                                   : "text-muted-foreground")}>
                                   {label}
                                 </h5>
@@ -509,7 +515,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                             return (
                               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                 <div>
-                                  <ColumnHeader label="Matutino" count={morning.length} dotClass="bg-indigo-500" />
+                                  <ColumnHeader label="Matutino" count={morning.length} dotClass="bg-info" />
                                   <div className="space-y-2.5">
                                     {morning.length === 0 ? (
                                       <div className="text-xs text-muted-foreground/70 italic px-1">Sem visitas</div>
@@ -517,7 +523,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                                   </div>
                                 </div>
                                 <div>
-                                  <ColumnHeader label="Noturno" count={night.length} dotClass="bg-violet-600" />
+                                  <ColumnHeader label="Noturno" count={night.length} dotClass="bg-primary" />
                                   <div className="space-y-2.5">
                                     {night.length === 0 ? (
                                       <div className="text-xs text-muted-foreground/70 italic px-1">Sem visitas</div>
@@ -544,26 +550,24 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                                   <span className="text-xs text-muted-foreground">—</span>
                                 ) : (
                                   m.time_slots.map((ts) => (
-                                    <Badge key={ts} variant="outline" className="text-[10px] font-mono">{ts}</Badge>
+                                    <StatusBadge key={ts} className="font-mono text-[10px]">{ts}</StatusBadge>
                                   ))
                                 )}
                               </div>
                             </TableCell>
                             <TableCell>
                               {isHoliday ? (
-                                <Badge variant="outline" className="gap-1 bg-amber-100 text-amber-900 border-amber-300">Feriado</Badge>
+                                <StatusBadge>Feriado</StatusBadge>
                               ) : (
-                                <Badge variant="outline" className={cn("gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
+                                <StatusBadge className={cn("gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</StatusBadge>
                               )}
                             </TableCell>
-                            <TableCell><Badge variant={l.status === "done" ? "default" : l.status === "cancelled" ? "destructive" : "secondary"}>
-                              {l.status === "done" ? "Realizada" : l.status === "cancelled" ? "Cancelada" : "Planejada"}
-                            </Badge></TableCell>
+                            <TableCell><LessonStatus status={l.status} /></TableCell>
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <div className="flex justify-end gap-1">
                                 {l.lesson_type === "seminar" && onOpenSeminarEval && (
                                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onOpenSeminarEval(l)} title="Avaliar alunos">
-                                    <ClipboardList className="h-4 w-4 text-amber-600" />
+                                    <ClipboardList className="h-4 w-4 text-warning" />
                                   </Button>
                                 )}
                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDeleteLesson(l)}>
@@ -616,7 +620,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                       className={cn(
                         "group cursor-pointer rounded-md border border-l-4 px-2 py-1.5 hover:bg-muted/40 transition-colors",
                         style.accent,
-                        isHoliday && "bg-amber-50/60"
+                        isHoliday && "bg-muted/40"
                       )}
                       onClick={() => onOpenLesson(l)}
                     >
@@ -631,16 +635,11 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                           )}
                           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                             {l.time_slot && (
-                              <Badge variant="outline" className="text-[9px] font-mono h-4 px-1">
+                              <StatusBadge className="h-4 px-1 font-mono text-[9px]">
                                 {l.time_slot}
-                              </Badge>
+                              </StatusBadge>
                             )}
-                            {l.status === "cancelled" && (
-                              <Badge variant="destructive" className="text-[9px] h-4 px-1">Cancelada</Badge>
-                            )}
-                            {l.status === "done" && (
-                              <Badge className="text-[9px] h-4 px-1">Realizada</Badge>
-                            )}
+                            {l.status !== "planned" && <LessonStatus status={l.status} className="h-4 px-1 text-[9px]" />}
                           </div>
                         </div>
                         <button
@@ -677,7 +676,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                     const dateLabel = iso === "—" ? "—" : new Date(iso + "T00:00:00").toLocaleDateString("pt-BR");
                     return (
                       <TableRow key={iso} className="align-top">
-                        <TableCell className="tabular-nums font-medium">{dateLabel}</TableCell>
+                        <TableCell className="font-mono text-xs font-medium">{dateLabel}</TableCell>
                         {cols.map((s) => (
                           <TableCell key={s} className="p-2">{renderCell(row[s])}</TableCell>
                         ))}
@@ -693,7 +692,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
         <div className="space-y-6">
           {grouped.map(([month, items]) => (
             <div key={month}>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">{month}</h3>
+              <h3 className="eyebrow mb-3 capitalize">{month}</h3>
               <ol className="relative border-l-2 border-border ml-3 space-y-3">
                 {items.map(l => {
                   const style = getLessonTypeStyle(l.lesson_type);
@@ -703,13 +702,12 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
                       <div className={cn("absolute -left-[9px] h-4 w-4 rounded-full border-2 border-background mt-2", style.accent.replace("border-l-", "bg-"))} />
                       <Card className={cn("cursor-pointer border-l-4 transition-shadow hover:shadow-md", style.accent)} onClick={() => onOpenLesson(l)}>
                         <CardContent className="p-3 flex items-center gap-3">
-                          <div className="text-xs tabular-nums text-muted-foreground w-20 shrink-0">{l.lesson_date ?? "—"}</div>
+                          <div className="w-20 shrink-0 font-mono text-xs text-muted-foreground">{l.lesson_date ?? "—"}</div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium truncate">{l.title}</div>
                             <div className="flex items-center gap-1 mt-1">
-                              <Badge variant="outline" className={cn("gap-1 text-[10px]", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
-                              {l.status === "done" && <Badge className="text-[10px]">Realizada</Badge>}
-                              {l.status === "cancelled" && <Badge variant="destructive" className="text-[10px]">Cancelada</Badge>}
+                              <StatusBadge className={cn("gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</StatusBadge>
+                              {l.status !== "planned" && <LessonStatus status={l.status} />}
                             </div>
                           </div>
                         </CardContent>
@@ -726,7 +724,7 @@ export function ScheduleViews({ lessons, teachers = [], students = [], onOpenLes
           <CardContent className="p-3">
             <div className="flex items-center justify-between mb-3">
               <Button variant="outline" size="sm" onClick={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}>←</Button>
-              <div className="font-semibold capitalize">{ptMonth(calMonth)}</div>
+              <div className="font-heading text-lg font-medium capitalize">{ptMonth(calMonth)}</div>
               <Button variant="outline" size="sm" onClick={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}>→</Button>
             </div>
             <div className="grid grid-cols-7 text-[11px] uppercase tracking-wider text-muted-foreground text-center mb-1">

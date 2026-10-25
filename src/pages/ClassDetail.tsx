@@ -428,12 +428,12 @@ export default function ClassDetail() {
               </CardContent></Card>
             ) : (
               <>
-                <div className="flex justify-end">
-                  <Button onClick={() => setLessonDialog({ open: true, editing: null })}>
-                    <Plus className="w-4 h-4 mr-1" />Nova aula
-                  </Button>
-                </div>
                 <ScheduleViews
+                  toolbarActions={
+                    <Button onClick={() => setLessonDialog({ open: true, editing: null })}>
+                      <Plus className="w-4 h-4 mr-1" />Nova aula <kbd className="ml-1.5 rounded border border-primary-foreground/30 px-1 font-mono text-[10px]">N</kbd>
+                    </Button>
+                  }
                   lessons={lessons as ScheduleLesson[]}
                   teachers={teachers}
                   students={allClassStudents.length ? allClassStudents : semesterStudents}
