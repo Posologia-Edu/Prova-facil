@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, BarChart3, Users, AlertTriangle, Calendar } from "lucide-react";
+import { ArrowLeft, BarChart3, Users, AlertTriangle, Calendar, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { exportOsceResultsCsv, exportOsceResultsPdf, type OsceExportInput } from "@/lib/osce-results-export";
 import { OsceRadarChart } from "@/components/osce/OsceRadarChart";
 
 export default function OsceResults() {
@@ -135,6 +137,30 @@ export default function OsceResults() {
     });
   };
 
+  const buildExportInput = (): OsceExportInput => {
+    const circuitIndex = circuits?.findIndex((c: any) => c.id === selectedCircuitId) ?? -1;
+    const applicationLabel = selectedCircuitId === "all"
+      ? `Todas as aplicações`
+      : `Aplicação ${circuits ? circuits.length - circuitIndex : ""}`;
+    return {
+      examTitle: exam?.title || "OSCE",
+      applicationLabel,
+      stations: (stations || []).map((s: any) => ({ id: s.id, title: s.title, position: s.position })),
+      students: students.map((name) => ({
+        name,
+        evaluations: studentMap[name].map((e: any) => ({
+          station_id: e.station_id,
+          total_score: e.total_score,
+          max_score: e.max_score,
+          passed: e.passed,
+          observations: e.observations,
+          finished_at: e.finished_at,
+        })),
+        competencies: getRadarData(studentMap[name]).map((r) => ({ category: r.category, score: r.score, maxScore: r.maxScore })),
+      })),
+    };
+  };
+
   if (!exam) return <div className="p-8 text-muted-foreground">Carregando...</div>;
 
   return (
@@ -147,6 +173,17 @@ export default function OsceResults() {
           <h1 className="text-xl font-bold">Resultados: {exam.title}</h1>
           <p className="text-sm text-muted-foreground">{students.length} alunos • {stations?.length || 0} estações</p>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" disabled={students.length === 0}>
+              <Download className="mr-1 h-4 w-4" />Exportar
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => exportOsceResultsPdf(buildExportInput())}><FileText className="mr-2 h-4 w-4" />PDF</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportOsceResultsCsv(buildExportInput())}><FileSpreadsheet className="mr-2 h-4 w-4" />CSV (Excel)</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Circuit selector */}
