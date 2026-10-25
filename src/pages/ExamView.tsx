@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ExamPDFExporter, { type Section, type ExamQuestion } from "@/components/ExamPDFExporter";
 import PublishExamDialog from "@/components/PublishExamDialog";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { computeExamStatus, examStatusConfig } from "@/lib/exam-status";
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -267,11 +268,11 @@ export default function ExamViewPage() {
           Voltar
         </Button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold">{examTitle}</h1>
-          <div className="flex items-center gap-3 mt-0.5">
-            <Badge className={`text-[10px] px-2 py-0.5 font-bold uppercase ${status.className}`}>
+          <h1 className="font-heading text-xl font-medium leading-tight">{examTitle}</h1>
+          <div className="flex items-center gap-3 mt-1">
+            <StatusBadge tone={status.tone} dot={status.tone === "ok" || status.tone === "info"}>
               {status.label}
-            </Badge>
+            </StatusBadge>
             <span className="text-xs text-muted-foreground">
               {totalQuestions} questões · {totalPoints} pontos
             </span>
@@ -300,7 +301,7 @@ export default function ExamViewPage() {
             Despublicar
           </Button>
         ) : (
-          <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}>
+          <Button size="sm" onClick={() => setPublishOpen(true)}>
             <Share2 className="h-3.5 w-3.5 mr-1.5" />
             Publicar Online
           </Button>
@@ -313,13 +314,13 @@ export default function ExamViewPage() {
       </div>
 
       {/* Exam preview */}
-      <div className="flex-1 overflow-auto p-8 flex justify-center bg-muted/50">
+      <div className="flex-1 overflow-auto p-8 flex justify-center bg-sunken">
         <div className="w-[210mm] exam-paper-bg shadow-xl rounded-sm border p-12 font-exam text-sm leading-relaxed" style={{ minHeight: "297mm" }}>
           {/* Header */}
           <div className="text-center mb-6">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-secondary" />
+                <GraduationCap className="h-5 w-5 text-primary" />
                 <span className="text-sm font-bold text-foreground">ProvaFácil</span>
               </div>
               <div className="w-16 h-16 border border-dashed border-muted-foreground/30 rounded flex items-center justify-center">

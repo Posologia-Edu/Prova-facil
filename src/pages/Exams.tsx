@@ -49,6 +49,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { computeExamStatus, examStatusConfig } from "@/lib/exam-status";
+import { StatusBadge } from "@/components/ui/status-badge";
 import ReopenExamDialog from "@/components/ReopenExamDialog";
 
 
@@ -61,6 +62,7 @@ interface Exam {
   participantCount: number;
   createdAt: string;
   publicationId?: string;
+  accessCode?: string;
   isImported?: boolean;
   marketplaceId?: string;
 }
@@ -112,7 +114,7 @@ export default function ExamsPage() {
     // Fetch publications with dates to compute effective status
     const { data: pubs } = await supabase
       .from("exam_publications")
-      .select("id, exam_id, is_active, start_at, end_at")
+      .select("id, exam_id, is_active, start_at, end_at, access_code")
       .in("exam_id", examIds.length > 0 ? examIds : ["__none__"]);
 
     const pubIds = (pubs || []).map((p) => p.id);
@@ -131,11 +133,11 @@ export default function ExamsPage() {
     });
 
     // Build publication status map per exam
-    const pubStatusMap: Record<string, { id: string; is_active: boolean; end_at: string | null }> = {};
+    const pubStatusMap: Record<string, { id: string; is_active: boolean; end_at: string | null; access_code: string }> = {};
     (pubs || []).forEach((p) => {
       // Keep the most relevant publication (active takes priority)
       if (!pubStatusMap[p.exam_id] || p.is_active) {
-        pubStatusMap[p.exam_id] = { id: p.id, is_active: p.is_active, end_at: p.end_at };
+        pubStatusMap[p.exam_id] = { id: p.id, is_active: p.is_active, end_at: p.end_at, access_code: p.access_code };
       }
     });
 
@@ -165,6 +167,7 @@ export default function ExamsPage() {
         participantCount: participantMap[e.id] || 0,
         createdAt: e.created_at,
         publicationId: pubStatusMap[e.id]?.id,
+        accessCode: pubStatusMap[e.id]?.access_code,
         isImported: e.title.endsWith("(Marketplace)"),
         marketplaceId: marketplaceMap[e.id] || undefined,
       }))
@@ -174,9 +177,17 @@ export default function ExamsPage() {
 
   useEffect(() => { fetchExams(); }, []);
 
-  const filtered = exams.filter(
-    (e) => e.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const [statusFilter, setStatusFilter] = useState("all");
+  const statusOrder: Record<string, number> = { in_progress: 0, grading: 1, draft: 2, completed: 3 };
+  const filtered = exams
+    .filter((e) => e.title.toLowerCase().includes(search.toLowerCase()))
+    .filter((e) => statusFilter === "all" || e.effectiveStatus === statusFilter)
+    .sort((a, b) => {
+      if (sortBy === "title") return a.title.localeCompare(b.title, "pt-BR");
+      if (sortBy === "status") return (statusOrder[a.effectiveStatus] ?? 9) - (statusOrder[b.effectiveStatus] ?? 9);
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+  const countByStatus = (s: string) => exams.filter((e) => e.effectiveStatus === s).length;
 
   const handleCreateExam = async () => {
     const { data: user } = await supabase.auth.getUser();
@@ -321,31 +332,37 @@ export default function ExamsPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Minhas Provas</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {exams.length} provas criadas
+          <p className="eyebrow mb-2.5">Avaliar</p>
+          <h1 className="font-heading text-[2rem] font-medium leading-[1.1]">Minhas Provas</h1>
+          <p className="mt-2 max-w-[62ch] text-sm text-muted-foreground">
+            {exams.length} {exams.length === 1 ? "prova criada" : "provas criadas"}
+            {countByStatus("in_progress") > 0 && ` · ${countByStatus("in_progress")} em aplicação`}
+            {countByStatus("grading") > 0 && ` · ${countByStatus("grading")} em correção`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <SystemPromptViewer toolKey="exams" />
           <Button
             variant="outline"
-            size="sm"
             onClick={() => {
               setSelectMode(!selectMode);
               setSelectedIds(new Set());
             }}
           >
             <CheckSquare className="h-4 w-4 mr-1.5" />
-            SELECIONAR PROVAS
+            {selectMode ? "Cancelar seleção" : "Selecionar provas"}
+          </Button>
+          <Button onClick={() => navigate("/composer")}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nova prova
           </Button>
         </div>
       </div>
 
       {selectMode && (
-        <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-2.5">
+        <div className="flex items-center gap-3 rounded-card border bg-brand-soft px-4 py-2.5">
           <span className="text-sm font-medium">{selectedIds.size} selecionada(s)</span>
           <Button
             variant="ghost"
@@ -368,8 +385,8 @@ export default function ExamsPage() {
       )}
 
       {/* Search and Sort */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar provas..."
@@ -388,6 +405,19 @@ export default function ExamsPage() {
             <SelectItem value="status">Ordenado por status</SelectItem>
           </SelectContent>
         </Select>
+        <div className="ml-auto flex flex-wrap gap-2" role="group" aria-label="Status da prova">
+          {[
+            { value: "all", label: "Todas", n: exams.length },
+            { value: "draft", label: "Em elaboração", n: countByStatus("draft") },
+            { value: "in_progress", label: "Em aplicação", n: countByStatus("in_progress") },
+            { value: "grading", label: "Em correção", n: countByStatus("grading") },
+            { value: "completed", label: "Concluídas", n: countByStatus("completed") },
+          ].map((c) => (
+            <Button key={c.value} size="sm" variant={statusFilter === c.value ? "default" : "outline"} aria-pressed={statusFilter === c.value} onClick={() => setStatusFilter(c.value)}>
+              {c.label}<span className={`ml-1.5 font-mono text-xs ${statusFilter === c.value ? "opacity-80" : "text-muted-foreground"}`}>{c.n}</span>
+            </Button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
@@ -403,7 +433,7 @@ export default function ExamsPage() {
               return (
                 <Card
                   key={exam.id}
-                  className="p-4 hover:shadow-md transition-shadow cursor-pointer group relative"
+                  className="group relative cursor-pointer p-5 transition-shadow hover:shadow-elev-2"
                   onClick={() => {
                     if (selectMode) {
                       toggleSelect(exam.id);
@@ -414,7 +444,7 @@ export default function ExamsPage() {
                 >
                   {selectMode && (
                     <div
-                      className={`absolute top-3 left-3 h-5 w-5 rounded border-2 flex items-center justify-center ${
+                      className={`absolute left-3 top-3 z-10 flex h-5 w-5 items-center justify-center rounded border-2 ${
                         selectedIds.has(exam.id)
                           ? "bg-primary border-primary text-primary-foreground"
                           : "border-muted-foreground/40"
@@ -428,13 +458,13 @@ export default function ExamsPage() {
 
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2 min-w-0 flex-1">
-                      <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-semibold leading-snug line-clamp-1">
+                      <div className={`min-w-0 ${selectMode ? "pl-7" : ""}`}>
+                        <h3 className="line-clamp-1 font-heading text-lg font-medium leading-snug">
                           {exam.title}
                         </h3>
-                        <p className="text-xs text-muted-foreground/70 mt-0.5">
-                          Criada por mim
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {exam.isImported ? "Importada do Marketplace" : "Criada por mim"} · {new Date(exam.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                          {exam.marketplaceId && <span className="text-[hsl(var(--accent-ink))]"> · Publicada no Marketplace</span>}
                         </p>
                       </div>
                     </div>
@@ -478,16 +508,16 @@ export default function ExamsPage() {
                   </div>
 
 
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                    <Badge className={`text-[10px] px-2 py-0.5 font-bold uppercase ${status.className}`}>
+                  <div className="mt-4 flex items-center justify-between border-t pt-4">
+                    <StatusBadge tone={status.tone} dot={status.tone === "ok" || status.tone === "info"}>
                       {status.label}
-                    </Badge>
+                    </StatusBadge>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span>
-                        <span className="font-semibold text-foreground">{exam.questionCount}</span> Questões
+                        <span className="font-mono font-medium text-foreground">{exam.questionCount}</span> questões
                       </span>
                       <span>
-                        <span className="font-semibold text-foreground">{exam.participantCount}</span> Participantes
+                        <span className="font-mono font-medium text-foreground">{exam.participantCount}</span> participantes
                       </span>
                       {exam.publicationId && (
                         <Button
@@ -505,6 +535,11 @@ export default function ExamsPage() {
                       )}
                     </div>
                   </div>
+                  {exam.accessCode && exam.effectiveStatus === "in_progress" && (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Código de acesso <b className="font-mono font-medium text-foreground">{exam.accessCode}</b>
+                    </p>
+                  )}
                 </Card>
               );
             })}
@@ -513,7 +548,7 @@ export default function ExamsPage() {
           {filtered.length === 0 && (
             <div className="text-center py-16">
               <FileText className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-              <p className="font-semibold text-foreground text-lg">Nenhuma prova encontrada</p>
+              <p className="font-heading text-xl font-medium text-foreground">Nenhuma prova encontrada</p>
               <p className="text-sm text-muted-foreground mt-1 mb-5">
                 {exams.length === 0 ? "Use o Compositor para montar sua primeira prova com questões do banco." : "Tente ajustar os filtros de busca."}
               </p>

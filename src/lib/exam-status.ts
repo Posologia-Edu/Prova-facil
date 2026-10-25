@@ -46,11 +46,11 @@ export function computeExamStatus(
   return (dbStatus as ExamEffectiveStatus) || "draft";
 }
 
-export const examStatusConfig: Record<ExamEffectiveStatus, { label: string; className: string }> = {
-  draft: { label: "EM ELABORAÇÃO", className: "bg-muted text-muted-foreground" },
-  in_progress: { label: "EM APLICAÇÃO", className: "bg-warning text-warning-foreground" },
-  grading: { label: "EM CORREÇÃO", className: "bg-primary text-primary-foreground" },
-  completed: { label: "CONCLUÍDA", className: "bg-success text-success-foreground" },
+export const examStatusConfig: Record<ExamEffectiveStatus, { label: string; className: string; tone: "neutral" | "ok" | "info" }> = {
+  draft: { label: "EM ELABORAÇÃO", className: "bg-muted text-muted-foreground", tone: "neutral" },
+  in_progress: { label: "EM APLICAÇÃO", className: "bg-warning text-warning-foreground", tone: "ok" },
+  grading: { label: "EM CORREÇÃO", className: "bg-primary text-primary-foreground", tone: "info" },
+  completed: { label: "CONCLUÍDA", className: "bg-success text-success-foreground", tone: "neutral" },
 };
 
 export const examStatusBadgeVariant: Record<ExamEffectiveStatus, "secondary" | "default" | "destructive" | "outline"> = {

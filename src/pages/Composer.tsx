@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Sheet,
   SheetContent,
@@ -379,7 +380,10 @@ export default function ComposerPage() {
       {/* Sidebar: Banco de Questões */}
       <div className="w-80 border-r bg-card flex flex-col shrink-0">
         <div className="p-4 border-b">
-          <h2 className="font-semibold text-sm">Banco de Questões</h2>
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="font-heading text-lg font-medium">Banco de Questões</h2>
+            <span className="text-xs text-muted-foreground">{filteredBankQuestions.length} livres</span>
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">Clique para adicionar à prova</p>
           {/* Filters */}
           <div className="flex gap-2 mt-3">
@@ -408,13 +412,13 @@ export default function ComposerPage() {
           </div>
           {/* AI generate button */}
           <Button variant="outline" size="sm" className="w-full mt-3 gap-1.5" onClick={() => setAiOpen(true)}>
-            <Sparkles className="h-3.5 w-3.5 text-secondary" />
+            <Sparkles className="h-3.5 w-3.5" />
             Gerar com IA
           </Button>
           {/* Section selector */}
           {sections.length > 1 && (
             <div className="px-4 pb-3 border-b">
-              <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">Adicionar à seção:</Label>
+              <Label className="label-mono">Adicionar à seção</Label>
               <Select value={activeSectionId || sections[0]?.id || ""} onValueChange={setActiveSectionId}>
                 <SelectTrigger className="h-7 text-xs mt-1">
                   <SelectValue />
@@ -441,7 +445,7 @@ export default function ComposerPage() {
             filteredBankQuestions.map((q) => (
               <Card
                 key={q.id}
-                className="p-3 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all group"
+                className="group cursor-pointer p-3 transition-shadow hover:shadow-elev-2"
                 onClick={() => {
                   if (sections.length === 0) { toast.info("Adicione uma seção primeiro."); return; }
                   const targetId = activeSectionId || sections[0].id;
@@ -453,18 +457,18 @@ export default function ComposerPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium leading-snug line-clamp-2">{q.title}</p>
                     <div className="flex flex-wrap items-center gap-1 mt-1.5">
-                      <Badge variant={q.difficulty as any} className="text-[10px] px-1.5 py-0 shrink-0">
+                      <StatusBadge tone={q.difficulty === "easy" ? "ok" : q.difficulty === "hard" ? "bad" : "warn"} className="shrink-0 px-1.5 py-0 text-[10px]">
                         {difficultyLabels[q.difficulty] || q.difficulty}
-                      </Badge>
+                      </StatusBadge>
                       {q.tags.slice(0, 3).map((t) => (
-                        <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]" title={t}>
+                        <StatusBadge key={t} className="max-w-[80px] truncate px-1.5 py-0 text-[10px]" title={t}>
                           {t}
-                        </Badge>
+                        </StatusBadge>
                       ))}
                       {q.tags.length > 3 && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0" title={q.tags.slice(3).join(", ")}>
+                        <StatusBadge className="shrink-0 px-1.5 py-0 text-[10px]" title={q.tags.slice(3).join(", ")}>
                           +{q.tags.length - 3}
-                        </Badge>
+                        </StatusBadge>
                       )}
                     </div>
                   </div>
@@ -477,14 +481,14 @@ export default function ComposerPage() {
       </div>
 
       {/* Canvas da Prova */}
-      <div className="flex-1 flex flex-col bg-muted/50 overflow-auto">
+      <div className="flex-1 flex flex-col bg-sunken overflow-auto">
         {/* Barra de Ferramentas */}
         <div className="px-6 py-3 border-b bg-card flex items-center gap-3 shrink-0">
           <div className="flex-1">
             <Input
               value={examTitle}
               onChange={(e) => setExamTitle(e.target.value)}
-              className="text-lg font-bold border-0 bg-transparent px-0 h-auto focus-visible:ring-0 shadow-none"
+              className="font-heading text-xl font-medium border-0 bg-transparent px-0 h-auto focus-visible:ring-0 shadow-none"
             />
             <p className="text-xs text-muted-foreground mt-0.5">
               {totalQuestions} questões · {totalPoints} pontos no total
@@ -502,7 +506,7 @@ export default function ComposerPage() {
             variant={shuffleActive ? "default" : "outline"}
             size="sm"
             onClick={handleShuffle}
-            className={`transition-all ${shuffleActive ? "shadow-inner ring-2 ring-primary/30 scale-95" : ""}`}
+            className={`transition-all ${shuffleActive ? "shadow-inner ring-2 ring-primary/30" : ""}`}
           >
             <Shuffle className="h-3.5 w-3.5 mr-1.5" />
             Embaralhar
@@ -590,7 +594,7 @@ export default function ComposerPage() {
             <div className="text-center mb-6">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-secondary" />
+                  <GraduationCap className="h-5 w-5 text-primary" />
                   <span className="text-sm font-bold text-foreground">ProvaFácil</span>
                 </div>
                 <div className="w-16 h-16 border border-dashed border-muted-foreground/30 rounded flex items-center justify-center">

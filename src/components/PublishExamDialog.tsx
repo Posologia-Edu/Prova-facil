@@ -93,13 +93,13 @@ export default function PublishExamDialog({ open, onOpenChange, examId, examTitl
 
         {accessCode ? (
           <div className="space-y-4 py-4 text-center">
-            <CheckCircle2 className="h-12 w-12 mx-auto text-green-600" />
+            <CheckCircle2 className="h-12 w-12 mx-auto text-success" />
             <p className="font-medium">Prova publicada!</p>
             <p className="text-sm text-muted-foreground">Compartilhe o código de acesso com seus alunos:</p>
             <div className="flex items-center justify-center gap-3">
               <span className="font-mono text-3xl font-bold tracking-widest uppercase">{accessCode}</span>
               <Button variant="outline" size="icon" onClick={copyCode}>
-                {copied ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                {copied ? <CheckCircle2 className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
