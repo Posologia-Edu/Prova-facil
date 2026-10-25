@@ -360,6 +360,10 @@ export default function SoapEditor() {
                 </Button>
                 <Button onClick={activateRoom}><Play className="h-4 w-4" />Ativar sala</Button>
               </>
+            ) : room.status === "active" ? (
+              <Button onClick={() => navigate(`/simulations/soap/control/${roomId}`)}>
+                <Play className="h-4 w-4" />Painel de controle
+              </Button>
             ) : undefined
           }
         />
