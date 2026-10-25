@@ -71,7 +71,7 @@ export function OsceStationEditor({ station, examId, defaultDuration }: Props) {
               <div className="flex items-center gap-2">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
                 {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                <CardTitle className="text-base">{station.title}</CardTitle>
+                <CardTitle className="font-heading text-lg font-medium">{station.title}</CardTitle>
                 <Badge variant="secondary" className="text-xs">{station.duration_minutes || defaultDuration} min</Badge>
                 {station.virtual_patient_enabled && <Badge variant="default" className="text-xs">Paciente Virtual</Badge>}
               </div>

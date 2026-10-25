@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import { ArrowLeft, Plus, Sparkles, Settings, Coffee, Play, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { OsceStationEditor } from "@/components/osce/OsceStationEditor";
@@ -76,37 +77,45 @@ export default function OsceEditor() {
   if (!exam) return <div className="p-8 text-destructive">Exame não encontrado</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey="osce" />
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/osce")}>
-          <ArrowLeft className="h-5 w-5" />
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/osce")}>
+          <ArrowLeft className="h-4 w-4" />Avaliações OSCE
         </Button>
-        <div className="flex-1">
-          <Input
-            className="text-xl font-bold border-none bg-transparent p-0 h-auto focus-visible:ring-0"
-            value={exam.title}
-            onChange={(e) => updateExam.mutate({ title: e.target.value })}
-          />
-        </div>
-        <Button variant="outline" className="gap-2" onClick={() => setShowAI(true)}>
-          <Sparkles className="h-4 w-4" /> Gerar com IA
-        </Button>
-        <Button variant="outline" className="gap-2" onClick={() => setShowSetup(true)}>
-          <Play className="h-4 w-4" /> Iniciar Circuito
-        </Button>
-        <Button variant="outline" className="gap-2" onClick={() => navigate(`/osce/${id}/results`)}>
-          <BarChart3 className="h-4 w-4" /> Resultados
-        </Button>
+        <PageHeader
+          eyebrow="OSCE · Editar exame"
+          title={
+            <Input
+              aria-label="Título do exame"
+              className="h-auto border-0 bg-transparent p-0 font-heading text-[2rem] font-medium leading-[1.1] shadow-none focus-visible:ring-0 md:text-[2rem]"
+              value={exam.title}
+              onChange={(e) => updateExam.mutate({ title: e.target.value })}
+            />
+          }
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setShowAI(true)}>
+                <Sparkles className="h-4 w-4" />Gerar estação com IA
+              </Button>
+              <Button variant="outline" onClick={() => navigate(`/osce/${id}/results`)}>
+                <BarChart3 className="h-4 w-4" />Resultados
+              </Button>
+              <Button onClick={() => setShowSetup(true)}>
+                <Play className="h-4 w-4" />Iniciar circuito
+              </Button>
+            </>
+          }
+        />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="stations">Estações ({stations?.length || 0})</TabsTrigger>
-          <TabsTrigger value="settings" className="gap-1"><Settings className="h-3 w-3" /> Configurações</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="stations">Estações <span className="font-mono text-xs text-muted-foreground">{stations?.length || 0}</span></TabsTriggerLine>
+          <TabsTriggerLine value="settings"><Settings className="h-4 w-4" />Configurações</TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="stations" className="space-y-4 mt-4">
+        <TabsContent value="stations" className="space-y-4 mt-6">
           {stationsLoading ? (
             <Card className="animate-pulse p-8"><div className="h-6 bg-muted rounded w-1/3" /></Card>
           ) : stations && stations.length > 0 ? (
@@ -144,9 +153,9 @@ export default function OsceEditor() {
           )}
         </TabsContent>
 
-        <TabsContent value="settings" className="mt-4">
+        <TabsContent value="settings" className="mt-6">
           <Card>
-            <CardHeader><CardTitle>Configurações do Exame</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium">Configurações do Exame</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div><Label>Descrição</Label><Textarea value={exam.description || ""} onChange={(e) => updateExam.mutate({ description: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-4">

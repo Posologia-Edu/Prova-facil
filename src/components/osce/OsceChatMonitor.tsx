@@ -17,7 +17,7 @@ export function OsceChatMonitor({ circuitId, stations, circuitStudents }: Props)
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
           <Eye className="h-4 w-4" /> Monitoramento de Alunos
         </CardTitle>
       </CardHeader>

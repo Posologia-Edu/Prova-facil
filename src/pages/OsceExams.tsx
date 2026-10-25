@@ -4,8 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -13,15 +15,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Stethoscope, Clock, RotateCcw, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  draft: { label: "Rascunho", variant: "secondary" },
-  in_progress: { label: "Em andamento", variant: "default" },
-  completed: { label: "Concluído", variant: "outline" },
+const STATUS_MAP: Record<string, { label: string; tone: StatusTone }> = {
+  draft: { label: "Rascunho", tone: "warn" },
+  in_progress: { label: "Em andamento", tone: "info" },
+  completed: { label: "Concluído", tone: "ok" },
 };
 
 export default function OsceExams() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -88,82 +91,75 @@ export default function OsceExams() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Stethoscope className="h-6 w-6" />
-            Avaliações OSCE
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Crie e gerencie exames de Avaliação Clínica Objetiva Estruturada
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <SystemPromptViewer toolKey="osce" />
-          <Button onClick={() => setShowCreate(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Novo Exame OSCE
-          </Button>
-        </div>
-      </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <PageHeader
+        eyebrow="Avaliar"
+        title="Avaliações OSCE"
+        description="Crie e gerencie exames de Avaliação Clínica Objetiva Estruturada."
+        actions={
+          <>
+            <SystemPromptViewer toolKey="osce" />
+            <Button onClick={() => setShowCreate(true)}><Plus className="h-4 w-4" />Novo exame OSCE</Button>
+          </>
+        }
+      />
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader><div className="h-5 bg-muted rounded w-3/4" /></CardHeader>
-              <CardContent><div className="h-4 bg-muted rounded w-1/2" /></CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card className="animate-pulse p-8"><div className="h-5 bg-muted rounded w-1/3" /></Card>
       ) : exams && exams.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="divide-y overflow-hidden">
           {exams.map((exam: any) => {
             const st = STATUS_MAP[exam.status] || STATUS_MAP.draft;
             return (
-              <Card key={exam.id} className="hover:shadow-md transition-shadow cursor-pointer group">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{exam.title}</CardTitle>
-                    <Badge variant={st.variant}>{st.label}</Badge>
+              <div key={exam.id} className="flex flex-wrap items-center gap-4 p-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand-text"><Stethoscope className="h-4 w-4" /></span>
+                <div className="min-w-0 flex-1 basis-64">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" className="font-medium text-left hover:underline" onClick={() => navigate(`/osce/${exam.id}/edit`)}>{exam.title}</button>
+                    <StatusBadge tone={st.tone} dot={st.tone !== "ok"}>{st.label}</StatusBadge>
                   </div>
-                  {exam.description && (
-                    <CardDescription className="line-clamp-2">{exam.description}</CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
-                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{exam.station_duration_minutes} min/estação</span>
-                    <span className="flex items-center gap-1"><RotateCcw className="h-3 w-3" />{exam.transition_seconds}s transição</span>
+                  {exam.description && <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">{exam.description}</p>}
+                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{exam.station_duration_minutes} min por estação</span>
+                    <span className="flex items-center gap-1"><RotateCcw className="h-3 w-3" />{exam.transition_seconds}s de transição</span>
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => navigate(`/osce/${exam.id}/edit`)}>
-                      <Pencil className="h-3 w-3" /> Editar
-                    </Button>
-                    <Button size="sm" variant="ghost" className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(exam.id); }}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={() => navigate(`/osce/${exam.id}/edit`)}><Pencil className="h-3.5 w-3.5" />Editar</Button>
+                  <Button size="sm" variant="ghost" aria-label="Excluir exame" className="text-destructive" onClick={() => setDeleteId(exam.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             );
           })}
-        </div>
+        </Card>
       ) : (
-        <Card className="p-12 text-center">
-          <Stethoscope className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Nenhum exame OSCE</h3>
-          <p className="text-muted-foreground mb-4">Crie seu primeiro exame OSCE para começar</p>
-          <Button onClick={() => setShowCreate(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Criar Exame OSCE
-          </Button>
+        <Card className="flex flex-col items-center justify-center py-14 text-center">
+          <Stethoscope className="h-10 w-10 text-muted-foreground/40 mb-4" />
+          <h3 className="font-heading text-lg font-medium">Nenhum exame OSCE</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Crie seu primeiro exame OSCE para começar.</p>
+          <Button onClick={() => setShowCreate(true)} className="mt-4"><Plus className="h-4 w-4" />Criar exame OSCE</Button>
         </Card>
       )}
+
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mover este exame para a lixeira?</AlertDialogTitle>
+            <AlertDialogDescription>O exame sai da lista e pode ser restaurado pela Lixeira.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (deleteId) deleteMutation.mutate(deleteId); setDeleteId(null); }}>Mover para a lixeira</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo Exame OSCE</DialogTitle>
+            <DialogTitle className="font-heading text-xl font-medium">Novo exame OSCE</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div><Label>Título</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Ex: OSCE Farmácia Clínica 2026.1" /></div>

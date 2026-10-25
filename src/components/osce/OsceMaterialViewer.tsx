@@ -22,9 +22,9 @@ const ICONS: Record<string, any> = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  prescription: "bg-blue-100 text-blue-700 border-blue-200",
-  lab_result: "bg-green-100 text-green-700 border-green-200",
-  imaging: "bg-purple-100 text-purple-700 border-purple-200",
+  prescription: "bg-info/10 text-info border-info/40",
+  lab_result: "bg-success/10 text-success border-success/40",
+  imaging: "bg-primary/10 text-primary border-primary/40",
   other: "bg-muted text-muted-foreground border-border",
 };
 

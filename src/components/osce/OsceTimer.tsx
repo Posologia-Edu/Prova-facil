@@ -54,14 +54,14 @@ export function OsceTimer({ durationMinutes, isRunning, onTimeUp, startedAt }: P
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
 
-  let colorClass = "text-green-600 bg-green-50 border-green-200";
-  let barColor = "bg-green-500";
+  let colorClass = "text-success bg-success/10 border-success/40";
+  let barColor = "bg-success";
   if (pct <= 0.25) {
-    colorClass = "text-red-600 bg-red-50 border-red-200 animate-pulse";
-    barColor = "bg-red-500";
+    colorClass = "text-destructive bg-destructive/10 border-destructive/40 animate-pulse";
+    barColor = "bg-destructive";
   } else if (pct <= 0.5) {
-    colorClass = "text-yellow-600 bg-yellow-50 border-yellow-200";
-    barColor = "bg-yellow-500";
+    colorClass = "text-warning-ink bg-warning/10 border-warning/40";
+    barColor = "bg-warning";
   }
 
   return (

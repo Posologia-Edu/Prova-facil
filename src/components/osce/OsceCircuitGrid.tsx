@@ -75,7 +75,7 @@ export function OsceCircuitGrid({ stations, evaluations, currentRotation, circui
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
           <User className="h-4 w-4" /> Mapa de Estações
         </CardTitle>
       </CardHeader>
@@ -104,13 +104,13 @@ export function OsceCircuitGrid({ stations, evaluations, currentRotation, circui
                   assignedStudent
                     ? "border-primary bg-primary/5"
                     : completedCount > 0
-                    ? "border-green-300 bg-green-50 dark:bg-green-950/20"
+                    ? "border-success/40 bg-success/10"
                     : "border-border"
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <Badge variant="secondary" className="text-xs">Estação {station.position}</Badge>
-                  {!assignedStudent && completedCount > 0 && <CheckCircle className="h-4 w-4 text-green-600" />}
+                  {!assignedStudent && completedCount > 0 && <CheckCircle className="h-4 w-4 text-success" />}
                   {assignedStudent && <Clock className="h-4 w-4 text-primary animate-pulse" />}
                 </div>
                 <h4 className="font-medium text-sm mb-2 truncate">{station.title}</h4>

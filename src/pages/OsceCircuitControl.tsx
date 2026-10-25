@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { ArrowLeft, Play, Pause, Copy, Users, Globe, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -163,7 +164,7 @@ export default function OsceCircuitControl() {
   const completedCount = circuitStudents?.filter(s => s.status === "completed").length || 0;
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* Cycle banner */}
       {showCycleBanner && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground py-4 text-center animate-pulse">
@@ -175,86 +176,81 @@ export default function OsceCircuitControl() {
         </div>
       )}
 
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/osce")}>
-          <ArrowLeft className="h-5 w-5" />
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/osce")}>
+          <ArrowLeft className="h-4 w-4" />Avaliações OSCE
         </Button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold">Painel de Controle</h1>
-          <p className="text-sm text-muted-foreground">{examData?.osce_exams?.title}</p>
-        </div>
-        <Badge variant={circuit.status === "running" ? "default" : circuit.status === "completed" ? "outline" : "secondary"}>
-          {circuit.status === "running" ? "Em andamento" : circuit.status === "completed" ? "Concluído" : circuit.status === "paused" ? "Pausado" : "Pendente"}
-        </Badge>
-        {isOnline && <Badge variant="outline" className="gap-1"><Globe className="h-3 w-3" /> Online</Badge>}
-      </div>
-
-      {/* Students summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> Alunos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 flex-wrap">
-            <div className="text-center">
-              <div className="text-2xl font-bold">{circuitStudents?.length || 0}</div>
-              <p className="text-xs text-muted-foreground">Total</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">{waitingCount}</div>
-              <p className="text-xs text-muted-foreground">Aguardando</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{activeCount}</div>
-              <p className="text-xs text-muted-foreground">Nas estações</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{completedCount}</div>
-              <p className="text-xs text-muted-foreground">Concluídos</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Controls */}
-      <div className="grid grid-cols-1 gap-4">
-        <Card>
-          <CardHeader><CardTitle className="text-base">Controles</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Status:</span>
-              <Badge variant="outline">{circuit.status}</Badge>
-            </div>
-
-            <div className="flex gap-2 flex-wrap">
+        <PageHeader
+          eyebrow="OSCE · Painel do circuito"
+          title={examData?.osce_exams?.title || "Painel de controle"}
+          description={
+            <span className="flex flex-wrap items-center gap-3">
+              <StatusBadge tone={circuit.status === "running" ? "info" : circuit.status === "completed" ? "ok" : "warn"} dot={circuit.status !== "completed"}>
+                {circuit.status === "running" ? "Em andamento" : circuit.status === "completed" ? "Concluído" : circuit.status === "paused" ? "Pausado" : "Pendente"}
+              </StatusBadge>
+              {isOnline && <StatusBadge tone="neutral"><Globe className="h-3 w-3" />Online</StatusBadge>}
+              <span>Código <b className="font-mono font-medium text-foreground">{circuit.access_code}</b></span>
+            </span>
+          }
+          actions={
+            <>
               {circuit.status !== "running" && circuit.status !== "completed" && (
-                <Button onClick={startExam} className="gap-2 flex-1"><Play className="h-4 w-4" /> Iniciar</Button>
+                <Button onClick={startExam}><Play className="h-4 w-4" />Iniciar</Button>
               )}
               {circuit.status === "running" && (
-                <Button variant="outline" onClick={pauseExam} className="gap-2"><Pause className="h-4 w-4" /> Pausar</Button>
+                <Button variant="outline" onClick={pauseExam}><Pause className="h-4 w-4" />Pausar</Button>
               )}
               {circuit.status === "paused" && (
-                <Button onClick={() => updateCircuit.mutate({ status: "running", started_at: new Date().toISOString() })} className="gap-2 flex-1">
-                  <Play className="h-4 w-4" /> Retomar
+                <Button onClick={() => updateCircuit.mutate({ status: "running", started_at: new Date().toISOString() })}>
+                  <Play className="h-4 w-4" />Retomar
                 </Button>
               )}
               {(circuit.status === "running" || circuit.status === "paused") && (
                 <Button variant="destructive" onClick={completeExam}>Encerrar</Button>
               )}
-            </div>
+            </>
+          }
+        />
+      </div>
 
-            <Button variant="outline" onClick={copyAccessLink} className="w-full gap-2">
-              <Copy className="h-4 w-4" /> Copiar Link do Avaliador
-            </Button>
-            {isOnline && (
-              <Button variant="outline" onClick={copyStudentLink} className="w-full gap-2">
-                <Globe className="h-4 w-4" /> Copiar Link do Aluno
-              </Button>
-            )}
-            <p className="text-xs text-muted-foreground text-center">Código: <strong>{circuit.access_code}</strong></p>
-          </CardContent>
+      {/* Indicadores */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Card className="p-5">
+          <div className="label-mono">Total</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{circuitStudents?.length || 0}</div>
+          <div className="mt-1 text-xs text-muted-foreground">alunos</div>
+        </Card>
+        <Card className="p-5">
+          <div className="label-mono">Aguardando</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums text-warning-ink">{waitingCount}</div>
+          <div className="mt-1 text-xs text-muted-foreground">na fila</div>
+        </Card>
+        <Card className="p-5">
+          <div className="label-mono">Nas estações</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{activeCount}</div>
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            {activeCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-success" />}em atendimento
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="label-mono">Concluídos</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums text-success">{completedCount}</div>
+          <div className="mt-1 text-xs text-muted-foreground">terminaram o circuito</div>
         </Card>
       </div>
+
+      {/* Links */}
+      <Card className="flex flex-wrap items-center gap-3 p-4">
+        <span className="label-mono mr-auto">Links de acesso</span>
+        <Button variant="outline" size="sm" onClick={copyAccessLink}>
+          <Copy className="h-4 w-4" />Copiar link do avaliador
+        </Button>
+        {isOnline && (
+          <Button variant="outline" size="sm" onClick={copyStudentLink}>
+            <Globe className="h-4 w-4" />Copiar link do aluno
+          </Button>
+        )}
+      </Card>
 
       {/* Grid */}
       <OsceCircuitGrid
