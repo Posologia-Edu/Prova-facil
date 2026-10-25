@@ -104,7 +104,7 @@ export default function ClinicalObservationEditor() {
     <div className="space-y-6">
       <ModuleHelpGuide moduleKey="clinical_observation" />
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/clinical-observations")}><ArrowLeft className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/forms")}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">
           <Input value={title} onChange={(e) => setTitle(e.target.value)} className="text-xl font-bold border-none shadow-none px-0 h-auto focus-visible:ring-0" />
         </div>

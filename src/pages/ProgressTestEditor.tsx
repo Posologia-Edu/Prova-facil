@@ -277,7 +277,7 @@ export default function ProgressTestEditor() {
     <div className="space-y-6">
       <ModuleHelpGuide moduleKey="progress_test" />
       <div className="flex flex-wrap items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/progress-test")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/forms")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">

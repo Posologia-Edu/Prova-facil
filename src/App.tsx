@@ -35,6 +35,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Marketplace from "./pages/Marketplace";
 import OsceExams from "./pages/OsceExams";
 import SctExams from "./pages/SctExams";
+import Forms from "./pages/Forms";
 import SctEditor from "./pages/SctEditor";
 import SctExpertPortal from "./pages/SctExpertPortal";
 import SctStudentPortal from "./pages/SctStudentPortal";
@@ -529,6 +530,7 @@ const App = () => (
             <Route path="/virtual-patients/peer-eval/:token" element={<VpPeerEvaluation />} />
             <Route path="/guia-de-estilo" element={<StyleGuide />} />
             <Route path="/guia-de-estilo/app" element={<StyleGuideApp />} />
+            <Route path="/forms" element={<ProtectedRoute><AppLayout><Forms /></AppLayout></ProtectedRoute>} />
             {/* SCT Routes */}
             <Route
               path="/sct"

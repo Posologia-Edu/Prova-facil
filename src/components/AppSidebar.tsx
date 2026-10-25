@@ -79,7 +79,7 @@ export function AppSidebar() {
   };
 
   const renderItem = (item: NavItem) => {
-    if (item.children) {
+    if (item.children && !item.flat) {
       const hasActiveChild = item.children.some((c) => pathMatches(pathname, c.url));
       const open = formsOpen || hasActiveChild;
       return (
@@ -113,7 +113,12 @@ export function AppSidebar() {
     }
     return (
       <SidebarMenuItem key={item.url}>
-        <NavLink to={item.url} end={item.url === "/dashboard"} className={LINK_BASE} activeClassName={LINK_ACTIVE}>
+        <NavLink
+          to={item.url}
+          end={item.url === "/dashboard"}
+          className={cn(LINK_BASE, item.children?.some((c) => pathMatches(pathname, c.url)) && LINK_ACTIVE)}
+          activeClassName={LINK_ACTIVE}
+        >
           <item.icon className="h-4 w-4" />
           <span>{item.title}</span>
         </NavLink>

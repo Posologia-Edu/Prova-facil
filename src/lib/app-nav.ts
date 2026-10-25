@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 export interface NavChild { title: string; url: string }
-export interface NavItem { title: string; url: string; icon: LucideIcon; children?: NavChild[] }
+export interface NavItem { title: string; url: string; icon: LucideIcon; children?: NavChild[]; flat?: boolean }
 export interface NavGroup { label: string; items: NavItem[] }
 
 type T = (key: any) => string;
@@ -37,9 +37,12 @@ export function buildNav(t: T): NavGroup[] {
         { title: t("sidebar_my_exams"), url: "/exams", icon: BookOpen },
         {
           title: t("sidebar_forms"),
-          url: "/sct",
+          url: "/forms",
           icon: ClipboardList,
+          // uma entrada só no menu lateral; os filhos servem à paleta, ao caminho do cabeçalho e ao item ativo
+          flat: true,
           children: [
+            { title: "Todos os formulários", url: "/forms" },
             { title: "SCT", url: "/sct" },
             { title: "KFE", url: "/kfe" },
             { title: "Mini-CEX/DOPS", url: "/clinical-observations" },
