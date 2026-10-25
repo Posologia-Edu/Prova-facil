@@ -3,7 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -412,62 +414,58 @@ export default function VPResearch() {
     doc.save(`pesquisa-vp-${cls?.name || "geral"}-${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
+  const exportOptions = [
+    { key: "csv", title: "CSV (SPSS/R)", text: "Uma linha por sessão, para análise estatística.", icon: FileDown, action: exportCsv },
+    { key: "xlsx", title: "Planilha (Excel)", text: "Planilha com as métricas de cada sessão, pronta para tabelas.", icon: FileSpreadsheet, action: exportXlsx },
+    { key: "pdf", title: "Relatório PDF", text: "Relatório resumido para anexar ao projeto.", icon: FileDown, action: exportPdf },
+  ];
+
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/virtual-patients/analytics")}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <FlaskConical className="h-6 w-6 text-primary" />
-              Pesquisa Científica — Pacientes Virtuais
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1 max-w-2xl">
-              Coleta de indicadores para o estudo de estabilidade, realismo e segurança clínica
-              (IDCG, ISC, coerência semântica, robustez operacional).
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Select value={selectedClass} onValueChange={setSelectedClass}>
-            <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as turmas</SelectItem>
-              {classes.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Button
-            variant={onlyConsented ? "default" : "outline"}
-            onClick={() => setOnlyConsented((v) => !v)}
-            title="Somente sessões com consentimento LGPD (art. 7º da Lei 13.709/2018)"
-          >
-            <ShieldCheck className="h-4 w-4 mr-1.5" />
-            {onlyConsented ? "Somente consentidas" : "Todas as sessões"}
-          </Button>
-          <Button variant="outline" onClick={runCoherence} disabled={computingSim || !filteredSessions.length}>
-            {computingSim ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
-            Recalcular coerência
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => runAiIdcg(filteredSessions.map((s) => s.id), "bulk")}
-            disabled={aiGrading !== null || !filteredSessions.length}
-          >
-            {aiGrading === "bulk" ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Bot className="h-4 w-4 mr-1.5" />}
-            Avaliar IDCG com IA (rubrica)
-          </Button>
-          <Button variant="outline" onClick={exportCsv} disabled={!filteredSessions.length}>
-            <FileDown className="h-4 w-4 mr-1.5" /> CSV (SPSS/R)
-          </Button>
-          <Button variant="outline" onClick={exportXlsx} disabled={!filteredSessions.length}>
-            <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Excel
-          </Button>
-          <Button onClick={exportPdf} disabled={!filteredSessions.length}>
-            <FileDown className="h-4 w-4 mr-1.5" /> Relatório PDF
-          </Button>
-        </div>
+    <div className="mx-auto max-w-7xl space-y-6 p-6">
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-3" onClick={() => navigate("/virtual-patients/analytics")}>
+          <ArrowLeft className="h-4 w-4" /> Voltar
+        </Button>
+        <PageHeader
+          eyebrow="Pacientes Virtuais · Pesquisa"
+          title="Pesquisa científica"
+          description="Indicadores para o estudo de estabilidade, realismo e segurança clínica (IDCG, ISC, coerência semântica, robustez operacional)."
+          actions={
+            <>
+              <Button variant="outline" onClick={runCoherence} disabled={computingSim || !filteredSessions.length}>
+                {computingSim ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                Recalcular coerência
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => runAiIdcg(filteredSessions.map((s) => s.id), "bulk")}
+                disabled={aiGrading !== null || !filteredSessions.length}
+              >
+                {aiGrading === "bulk" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+                Avaliar IDCG com IA
+              </Button>
+            </>
+          }
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Select value={selectedClass} onValueChange={setSelectedClass}>
+          <SelectTrigger className="w-[260px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Turma: todas</SelectItem>
+            {classes.map((c) => <SelectItem key={c.id} value={c.id}>Turma: {c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Button
+          variant={onlyConsented ? "default" : "outline"}
+          onClick={() => setOnlyConsented((v) => !v)}
+          title="Somente sessões com consentimento LGPD (art. 7º da Lei 13.709/2018)"
+        >
+          <ShieldCheck className="h-4 w-4" />
+          {onlyConsented ? "Somente consentidas" : "Todas as sessões"}
+        </Button>
+        <span className="ml-auto text-xs text-muted-foreground">Só sessões avaliativas com consentimento têm dados completos.</span>
       </div>
 
       {loading ? (
@@ -483,105 +481,127 @@ export default function VPResearch() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Sessões ({filteredSessions.length}
-              {sessions.length !== filteredSessions.length && ` de ${sessions.length}`})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Grupo / Aluno</TableHead>
-                  <TableHead>Paciente</TableHead>
-                  <TableHead className="text-center">LGPD</TableHead>
-                  <TableHead className="text-center">Interações</TableHead>
-                  <TableHead className="text-center">Latência méd.</TableHead>
-                  <TableHead className="text-center">Coerência</TableHead>
-                  <TableHead className="text-center">IDCG</TableHead>
-                  <TableHead className="text-center">ISC</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSessions.map((s) => {
-                  const m = metrics[s.id];
-                  const cvp = cvpLookup[s.class_virtual_patient_id || ""];
-                  const pat = patientLookup[s.patient_id];
-                  const avgLat = s.total_latency_ms && s.total_interactions
-                    ? (s.total_latency_ms / s.total_interactions / 1000).toFixed(2) + "s"
-                    : "—";
-                  return (
-                    <TableRow key={s.id}>
-                      <TableCell>
-                        <div className="font-medium">{cvp?.group_label || s.student_name || s.student_email || "—"}</div>
-                        <div className="text-xs text-muted-foreground">{s.student_email}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">{pat?.name || s.patient_id}</div>
-                        {pat?.module && <div className="text-xs text-muted-foreground">{pat.module}</div>}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {s.research_consent === true ? (
-                          <Badge variant="secondary" className="gap-1"><ShieldCheck className="h-3 w-3" /> Sim</Badge>
-                        ) : s.research_consent === false ? (
-                          <Badge variant="destructive" className="gap-1"><ShieldX className="h-3 w-3" /> Não</Badge>
-                        ) : (
-                          <Badge variant="outline">Pendente</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">{s.total_interactions ?? "—"}</TableCell>
-                      <TableCell className="text-center">{avgLat}</TableCell>
-                      <TableCell className="text-center">
-                        {m?.semantic_similarity_mean != null
-                          ? m.semantic_similarity_mean.toFixed(3).replace(".", ",")
-                          : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {m?.idcg_score != null
-                          ? <Badge variant="secondary">{m.idcg_score.toFixed(2).replace(".", ",")}</Badge>
-                          : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {m?.isc_score != null ? (
-                          <Badge variant={m.isc_score >= 2.5 ? "destructive" : m.isc_score >= 2.0 ? "default" : "secondary"}>
-                            {m.isc_score.toFixed(2).replace(".", ",")}
-                          </Badge>
-                        ) : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => runAiIdcg([s.id], s.id)}
-                            disabled={aiGrading !== null || s.research_consent === false}
-                            title="Calcular IDCG automaticamente com IA usando a rubrica"
-                          >
-                            {aiGrading === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => openEdit(s)}>
-                            {m ? "Editar" : "Avaliar"}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
+        <Tabs defaultValue="sessoes" className="space-y-4">
+          <TabsListLine>
+            <TabsTriggerLine value="sessoes">
+              Sessões <span className="ml-1.5 font-mono text-xs text-muted-foreground">
+                {filteredSessions.length}{sessions.length !== filteredSessions.length && ` de ${sessions.length}`}
+              </span>
+            </TabsTriggerLine>
+            <TabsTriggerLine value="exportar">Exportar</TabsTriggerLine>
+          </TabsListLine>
 
-            </Table>
-          </CardContent>
-        </Card>
+          <TabsContent value="sessoes">
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Grupo / Aluno</TableHead>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead className="text-center">LGPD</TableHead>
+                    <TableHead className="text-center">Interações</TableHead>
+                    <TableHead className="text-center">Latência méd.</TableHead>
+                    <TableHead className="text-center">Coerência</TableHead>
+                    <TableHead className="text-center">IDCG</TableHead>
+                    <TableHead className="text-center">ISC</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSessions.map((s) => {
+                    const m = metrics[s.id];
+                    const cvp = cvpLookup[s.class_virtual_patient_id || ""];
+                    const pat = patientLookup[s.patient_id];
+                    const avgLat = s.total_latency_ms && s.total_interactions
+                      ? (s.total_latency_ms / s.total_interactions / 1000).toFixed(2).replace(".", ",") + " s"
+                      : "—";
+                    return (
+                      <TableRow key={s.id}>
+                        <TableCell>
+                          <div className="font-medium">{cvp?.group_label || s.student_name || s.student_email || "—"}</div>
+                          <div className="text-xs text-muted-foreground">{s.student_email}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{pat?.name || s.patient_id}</div>
+                          {pat?.module && <div className="text-xs text-muted-foreground">{pat.module}</div>}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {s.research_consent === true ? (
+                            <StatusBadge tone="ok"><ShieldCheck className="h-3 w-3" />Sim</StatusBadge>
+                          ) : s.research_consent === false ? (
+                            <StatusBadge tone="bad"><ShieldX className="h-3 w-3" />Não</StatusBadge>
+                          ) : (
+                            <StatusBadge tone="warn">Pendente</StatusBadge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center font-mono text-sm">{s.total_interactions ?? "—"}</TableCell>
+                        <TableCell className="text-center font-mono text-sm">{avgLat}</TableCell>
+                        <TableCell className="text-center font-mono text-sm">
+                          {m?.semantic_similarity_mean != null
+                            ? m.semantic_similarity_mean.toFixed(3).replace(".", ",")
+                            : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {m?.idcg_score != null
+                            ? <StatusBadge tone="brand" className="font-mono">{m.idcg_score.toFixed(2).replace(".", ",")}</StatusBadge>
+                            : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {m?.isc_score != null ? (
+                            <StatusBadge tone={m.isc_score >= 2.5 ? "bad" : m.isc_score >= 2.0 ? "warn" : "ok"} className="font-mono">
+                              {m.isc_score.toFixed(2).replace(".", ",")}
+                            </StatusBadge>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => runAiIdcg([s.id], s.id)}
+                              disabled={aiGrading !== null || s.research_consent === false}
+                              title="Calcular IDCG automaticamente com IA usando a rubrica"
+                              aria-label="Calcular IDCG com IA"
+                            >
+                              {aiGrading === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => openEdit(s)}>
+                              {m ? "Editar" : "Avaliar"}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="exportar">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {exportOptions.map((o) => (
+                <Card key={o.key} className="flex flex-col gap-3 p-5">
+                  <span className="grid h-9 w-9 place-items-center rounded-md bg-brand-soft text-brand-text"><o.icon className="h-4 w-4" /></span>
+                  <div>
+                    <p className="font-medium">{o.title}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{o.text}</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="mt-auto self-start" onClick={o.action}>
+                    <FileDown className="h-4 w-4" />Baixar
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       )}
 
       {editing && (
         <Dialog open onOpenChange={(o) => { if (!o) setEditing(null); }}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Avaliação científica da sessão</DialogTitle>
+              <DialogTitle className="font-heading text-xl font-medium">Avaliação científica da sessão</DialogTitle>
             </DialogHeader>
             <EvaluationForm
               value={editing.metric}
@@ -590,8 +610,8 @@ export default function VPResearch() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
               <Button onClick={saveMetric} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
-                Salvar
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Salvar avaliação
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -630,7 +650,7 @@ function EvaluationForm({ value, onChange }: {
   return (
     <div className="space-y-6">
       <section className="space-y-3">
-        <h3 className="font-semibold text-sm text-primary">IDCG — Desempenho Clínico Global (Likert 1–5)</h3>
+        <h3 className="label-mono">IDCG — Desempenho Clínico Global (Likert 1–5)</h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {numField("Empatia / Comunicação", "idcg_empathy")}
           {numField("Escuta ativa", "idcg_active_listening")}
@@ -645,7 +665,7 @@ function EvaluationForm({ value, onChange }: {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-primary flex items-center gap-2">
+          <h3 className="label-mono flex items-center gap-2">
             <ShieldAlert className="h-4 w-4" /> ISC — Condutas Inseguras
           </h3>
           <Button size="sm" variant="outline" onClick={addUnsafe}>
@@ -680,7 +700,7 @@ function EvaluationForm({ value, onChange }: {
       </section>
 
       <section className="space-y-3">
-        <h3 className="font-semibold text-sm text-primary">Realismo e Qualidade Conversacional (Likert 1–5)</h3>
+        <h3 className="label-mono">Realismo e Qualidade Conversacional (Likert 1–5)</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {numField("Realismo geral", "realism_score")}
           {numField("Empatia verbal", "empathy_verbal_score")}
@@ -690,7 +710,7 @@ function EvaluationForm({ value, onChange }: {
       </section>
 
       <section className="space-y-3">
-        <h3 className="font-semibold text-sm text-primary">Precisão factual estimada</h3>
+        <h3 className="label-mono">Precisão factual estimada</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label className="text-xs">Precisão factual estimada (0–1)</Label>
@@ -710,7 +730,7 @@ function EvaluationForm({ value, onChange }: {
       </section>
 
       <section>
-        <Label className="text-sm font-semibold text-primary">Análise qualitativa</Label>
+        <Label className="label-mono">Análise qualitativa</Label>
         <Textarea
           rows={4}
           placeholder="Observações qualitativas sobre a interação, aderência do paciente, coerência entre etapas, etc."
