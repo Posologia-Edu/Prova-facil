@@ -9,6 +9,9 @@ import {
   X,
   Loader2,
   Eye,
+  ClipboardList,
+  Stethoscope,
+  Gavel,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,25 +38,54 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+type TrashType = "question" | "exam" | "class" | "sct" | "kfe" | "sjt" | "progress_test" | "observation" | "osce" | "mock_trial";
+
+// Formulários e módulos com exclusão em lixeira (colunas deleted_at e title). Cada um fica na aba do seu grupo.
+const SIMPLE_TYPES: { type: TrashType; table: string; label: string; group: "form" | "osce" | "mock_trial" }[] = [
+  { type: "sct", table: "sct_exams", label: "SCT", group: "form" },
+  { type: "kfe", table: "kfe_exams", label: "KFE", group: "form" },
+  { type: "sjt", table: "sjt_exams", label: "SJT", group: "form" },
+  { type: "progress_test", table: "progress_tests", label: "Progress Test", group: "form" },
+  { type: "observation", table: "clinical_observations", label: "Mini-CEX / DOPS", group: "form" },
+  { type: "osce", table: "osce_exams", label: "OSCE", group: "osce" },
+  { type: "mock_trial", table: "mock_trials", label: "Júri Simulado", group: "mock_trial" },
+];
+const tableOf = (type: TrashType) =>
+  type === "question" ? "question_bank" : type === "exam" ? "exams" : type === "class" ? "classes" : SIMPLE_TYPES.find((t) => t.type === type)!.table;
+
 interface TrashItem {
   id: string;
   name: string;
-  type: "question" | "exam" | "class";
+  type: TrashType;
   deletedAt: string;
   details?: string;
   rawData?: any;
 }
 
-const typeIcons = {
+const typeIcons: Record<TrashType, typeof Library> = {
   question: Library,
   exam: FileEdit,
   class: GraduationCap,
+  sct: ClipboardList,
+  kfe: ClipboardList,
+  sjt: ClipboardList,
+  progress_test: ClipboardList,
+  observation: ClipboardList,
+  osce: Stethoscope,
+  mock_trial: Gavel,
 };
 
-const typeLabels = {
+const typeLabels: Record<TrashType, string> = {
   question: "Questão",
   exam: "Prova",
   class: "Turma",
+  sct: "SCT",
+  kfe: "KFE",
+  sjt: "SJT",
+  progress_test: "Progress Test",
+  observation: "Mini-CEX / DOPS",
+  osce: "OSCE",
+  mock_trial: "Júri Simulado",
 };
 
 const difficultyLabels: Record<string, string> = {
@@ -100,7 +132,7 @@ export default function TrashPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [questionsRes, examsRes, classesRes] = await Promise.all([
+      const [questionsRes, examsRes, classesRes, ...simpleRes] = await Promise.all([
         supabase
           .from("question_bank")
           .select("id, content_json, type, tags, difficulty, bloom_level, deleted_at")
@@ -116,6 +148,13 @@ export default function TrashPage() {
           .select("id, name, description, semester, student_count, deleted_at")
           .eq("user_id", user.id)
           .not("deleted_at", "is", null),
+        ...SIMPLE_TYPES.map((t) =>
+          (supabase as any)
+            .from(t.table)
+            .select("id, title, status, created_at, deleted_at")
+            .eq("user_id", user.id)
+            .not("deleted_at", "is", null)
+        ),
       ]);
 
       const trashItems: TrashItem[] = [];
@@ -170,6 +209,19 @@ export default function TrashPage() {
         });
       });
 
+      SIMPLE_TYPES.forEach((t, idx) => {
+        ((simpleRes[idx] as any)?.data || []).forEach((r: any) => {
+          trashItems.push({
+            id: r.id,
+            name: r.title || `${t.label} sem título`,
+            type: t.type,
+            deletedAt: r.deleted_at,
+            details: r.status === "draft" ? "Rascunho" : r.status || undefined,
+            rawData: r,
+          });
+        });
+      });
+
       trashItems.sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
       setItems(trashItems);
     } catch (err) {
@@ -187,8 +239,8 @@ export default function TrashPage() {
   const handleRestore = async (id: string) => {
     const item = items.find((i) => i.id === id);
     if (!item) return;
-    const table = item.type === "question" ? "question_bank" : item.type === "exam" ? "exams" : "classes";
-    const { error } = await supabase.from(table).update({ deleted_at: null } as any).eq("id", id);
+    const table = tableOf(item.type);
+    const { error } = await (supabase as any).from(table).update({ deleted_at: null } as any).eq("id", id);
     if (error) { toast.error("Erro ao restaurar item."); return; }
     setItems((prev) => prev.filter((i) => i.id !== id));
     setPreviewItem(null);
@@ -198,8 +250,8 @@ export default function TrashPage() {
   const handlePermanentDelete = async (id: string) => {
     const item = items.find((i) => i.id === id);
     if (!item) return;
-    const table = item.type === "question" ? "question_bank" : item.type === "exam" ? "exams" : "classes";
-    const { error } = await supabase.from(table).delete().eq("id", id);
+    const table = tableOf(item.type);
+    const { error } = await (supabase as any).from(table).delete().eq("id", id);
     if (error) { toast.error("Erro ao excluir item permanentemente."); return; }
     setItems((prev) => prev.filter((i) => i.id !== id));
     setPermanentDeleteId(null);
@@ -215,6 +267,7 @@ export default function TrashPage() {
         supabase.from("question_bank").delete().eq("user_id", user.id).not("deleted_at", "is", null),
         supabase.from("exams").delete().eq("user_id", user.id).not("deleted_at", "is", null),
         supabase.from("classes").delete().eq("user_id", user.id).not("deleted_at", "is", null),
+        ...SIMPLE_TYPES.map((t) => (supabase as any).from(t.table).delete().eq("user_id", user.id).not("deleted_at", "is", null)),
       ]);
       setItems([]);
       setEmptyTrashOpen(false);
@@ -224,8 +277,14 @@ export default function TrashPage() {
     }
   };
 
-  const filterByType = (type: string) =>
-    type === "all" ? items : items.filter((i) => i.type === type);
+  const filterByType = (type: string) => {
+    if (type === "all") return items;
+    if (type === "form" || type === "osce" || type === "mock_trial") {
+      const types = SIMPLE_TYPES.filter((t) => t.group === type).map((t) => t.type);
+      return items.filter((i) => types.includes(i.type));
+    }
+    return items.filter((i) => i.type === type);
+  };
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -334,8 +393,8 @@ export default function TrashPage() {
   const renderDetailPreview = (item: TrashItem) => {
     if (!item.rawData) return <p className="text-sm text-muted-foreground">Sem detalhes disponíveis.</p>;
     if (item.type === "question") return renderQuestionPreview(item.rawData);
-    if (item.type === "exam") return renderExamPreview(item.rawData);
-    return renderClassPreview(item.rawData);
+    if (item.type === "class") return renderClassPreview(item.rawData);
+    return renderExamPreview(item.rawData);
   };
 
   const renderItems = (filteredItems: TrashItem[]) => {
@@ -450,11 +509,17 @@ export default function TrashPage() {
           <TabsTrigger value="question">Questões ({items.filter((i) => i.type === "question").length})</TabsTrigger>
           <TabsTrigger value="exam">Provas ({items.filter((i) => i.type === "exam").length})</TabsTrigger>
           <TabsTrigger value="class">Turmas ({items.filter((i) => i.type === "class").length})</TabsTrigger>
+          <TabsTrigger value="form">Formulários ({filterByType("form").length})</TabsTrigger>
+          <TabsTrigger value="osce">OSCE ({filterByType("osce").length})</TabsTrigger>
+          <TabsTrigger value="mock_trial">Júri ({filterByType("mock_trial").length})</TabsTrigger>
         </TabsList>
         <TabsContent value="all" className="mt-4">{renderItems(filterByType("all"))}</TabsContent>
         <TabsContent value="question" className="mt-4">{renderItems(filterByType("question"))}</TabsContent>
         <TabsContent value="exam" className="mt-4">{renderItems(filterByType("exam"))}</TabsContent>
         <TabsContent value="class" className="mt-4">{renderItems(filterByType("class"))}</TabsContent>
+        <TabsContent value="form" className="mt-4">{renderItems(filterByType("form"))}</TabsContent>
+        <TabsContent value="osce" className="mt-4">{renderItems(filterByType("osce"))}</TabsContent>
+        <TabsContent value="mock_trial" className="mt-4">{renderItems(filterByType("mock_trial"))}</TabsContent>
       </Tabs>
 
       {/* Detail preview dialog */}

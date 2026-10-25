@@ -69,6 +69,7 @@ import {
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Separator } from "@/components/ui/separator";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import RichTextRenderer from "@/components/RichTextRenderer";
@@ -326,6 +327,14 @@ export default function QuestionsPage() {
   const [medImagePopoverOpen, setMedImagePopoverOpen] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
+  // Resposta da questão (alternativas, gabarito, pares, resposta esperada, explicação)
+  const [newOptions, setNewOptions] = useState<string[]>(["", "", "", ""]);
+  const [newCorrectIdx, setNewCorrectIdx] = useState(0);
+  const [newTF, setNewTF] = useState<"true" | "false">("true");
+  const [newExpected, setNewExpected] = useState("");
+  const [newPairs, setNewPairs] = useState<{ left: string; right: string }[]>([{ left: "", right: "" }, { left: "", right: "" }]);
+  const [newExplanation, setNewExplanation] = useState("");
+
   const insertAtCursor = (template: string) => {
     const ta = textareaRef.current;
     if (!ta) { setNewText(prev => prev + template); return; }
@@ -415,6 +424,50 @@ export default function QuestionsPage() {
     setNewImages([]);
     setMedImagePreview(null);
     setMedImageDetails("");
+    setNewOptions(["", "", "", ""]);
+    setNewCorrectIdx(0);
+    setNewTF("true");
+    setNewExpected("");
+    setNewPairs([{ left: "", right: "" }, { left: "", right: "" }]);
+    setNewExplanation("");
+  };
+
+  // Monta o conteúdo da resposta no mesmo formato que o gerador de IA e a correção automática usam.
+  const buildAnswerContent = (): { content?: Record<string, any>; error?: string } => {
+    const out: Record<string, any> = {};
+    if (newType === "multiple_choice") {
+      const filled = newOptions.map((t, i) => ({ t: t.trim(), i })).filter((o) => o.t);
+      if (filled.length < 2) return { error: "Preencha pelo menos duas alternativas." };
+      if (!newOptions[newCorrectIdx]?.trim()) return { error: "Marque como correta uma alternativa preenchida." };
+      const options: Record<string, string> = {};
+      let correct = "a";
+      filled.forEach((o, n) => {
+        const key = String.fromCharCode(97 + n);
+        options[key] = o.t;
+        if (o.i === newCorrectIdx) correct = key;
+      });
+      out.options = options;
+      out.correct_answer = correct;
+    } else if (newType === "true_false") {
+      out.options = { a: "Verdadeiro", b: "Falso" };
+      out.correct_answer = newTF;
+    } else if (newType === "open_ended") {
+      out.expected_answer = newExpected.trim() || undefined;
+    } else if (newType === "matching") {
+      const pairs = newPairs.filter((p) => p.left.trim() && p.right.trim());
+      if (pairs.length < 2) return { error: "Informe pelo menos dois pares completos." };
+      // A coluna B é embaralhada para não revelar o gabarito pela ordem; correct_matches liga o índice da A ao da B.
+      const order = pairs.map((_, i) => i);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+      out.column_a = pairs.map((p) => p.left.trim());
+      out.column_b = order.map((i) => pairs[i].right.trim());
+      out.correct_matches = Object.fromEntries(pairs.map((_, i) => [String(i), order.indexOf(i)]));
+    }
+    if (newType !== "case_stem") out.explanation = newExplanation.trim() || undefined;
+    return { content: out };
   };
 
   const handleGenerateMedImage = async () => {
@@ -482,6 +535,25 @@ export default function QuestionsPage() {
     setNewImages(Array.isArray(cj.images) ? cj.images : []);
     setMedImagePreview(null);
     setMedImageDetails("");
+    setNewExplanation(cj.explanation || "");
+    setNewExpected(cj.expected_answer || "");
+    if (data.type === "multiple_choice") {
+      const entries = cj.options && typeof cj.options === "object" ? Object.entries(cj.options as Record<string, string>) : [];
+      const texts = entries.map(([, v]) => String(v));
+      while (texts.length < 4) texts.push("");
+      setNewOptions(texts);
+      const ci = entries.findIndex(([k]) => k === cj.correct_answer);
+      setNewCorrectIdx(ci >= 0 ? ci : 0);
+    }
+    if (data.type === "true_false") {
+      const v = String(cj.correct_answer ?? "true").toLowerCase();
+      // Questões antigas criadas à mão guardavam "a"/"b" (a = Verdadeiro).
+      setNewTF(v === "false" || v === "b" || v === "falso" ? "false" : "true");
+    }
+    if (data.type === "matching" && Array.isArray(cj.column_a) && Array.isArray(cj.column_b)) {
+      const m = cj.correct_matches && typeof cj.correct_matches === "object" ? cj.correct_matches : null;
+      setNewPairs(cj.column_a.map((left: string, i: number) => ({ left, right: String(cj.column_b[m && m[String(i)] != null ? Number(m[String(i)]) : i] ?? "") })));
+    }
     setCreateOpen(true);
   };
 
@@ -496,16 +568,25 @@ export default function QuestionsPage() {
 
     const tags = newTags.split(",").map(t => t.trim()).filter(Boolean);
 
+    const answer = buildAnswerContent();
+    if (answer.error) {
+      toast.error(answer.error);
+      setSaving(false);
+      return;
+    }
+
     if (editingId) {
-      // Preserve existing options/correct_answer/explanation etc; only patch question_text + images
+      // Mantém os demais campos do conteúdo e substitui tudo o que pertence à resposta da questão
       const { data: existing } = await supabase
         .from("question_bank")
         .select("content_json")
         .eq("id", editingId)
         .single();
-      const baseCj: any = (existing?.content_json as any) || {};
+      const baseCj: any = { ...((existing?.content_json as any) || {}) };
+      for (const k of ["alternatives", "options", "correct_answer", "expected_answer", "column_a", "column_b", "correct_matches", "explanation"]) delete baseCj[k];
       const contentJson: any = {
         ...baseCj,
+        ...answer.content,
         question_text: newText.trim(),
         images: newImages.length > 0 ? newImages : undefined,
         answer_key: newAnswerKey.trim() || undefined,
@@ -534,14 +615,7 @@ export default function QuestionsPage() {
       return;
     }
 
-    const contentJson: any = { question_text: newText.trim(), images: newImages.length > 0 ? newImages : undefined, answer_key: newAnswerKey.trim() || undefined };
-    if (newType === "multiple_choice") {
-      contentJson.options = { a: "", b: "", c: "", d: "" };
-      contentJson.correct_answer = "a";
-    } else if (newType === "true_false") {
-      contentJson.options = { a: "Verdadeiro", b: "Falso" };
-      contentJson.correct_answer = "a";
-    }
+    const contentJson: any = { ...answer.content, question_text: newText.trim(), images: newImages.length > 0 ? newImages : undefined, answer_key: newAnswerKey.trim() || undefined };
 
     const { error } = await supabase.from("question_bank").insert({
       user_id: userData.user.id,
@@ -590,7 +664,10 @@ export default function QuestionsPage() {
         const options = cj?.options
           ? Object.entries(cj.options).map(([key, val]) => ({
               text: val as string,
-              isCorrect: cj.correct_answer === key,
+              isCorrect:
+                q.type === "true_false"
+                  ? (String(cj.correct_answer).toLowerCase() === "true" || cj.correct_answer === "a") === (key === "a")
+                  : cj.correct_answer === key,
             }))
           : undefined;
         const matchingPairs = cj?.column_a && cj?.column_b
@@ -692,7 +769,7 @@ export default function QuestionsPage() {
               <Tabs defaultValue="manual" className="mt-2">
                 <TabsList className="w-full">
                   <TabsTrigger value="manual" className="flex-1">Criação Manual</TabsTrigger>
-                  <TabsTrigger value="import" className="flex-1">Importar CSV/JSON</TabsTrigger>
+                  <TabsTrigger value="import" className="flex-1">Importar de arquivo</TabsTrigger>
                 </TabsList>
                 <TabsContent value="manual" className="space-y-4 pt-2">
                   <div className="space-y-2">
@@ -823,6 +900,124 @@ export default function QuestionsPage() {
                       </Popover>
                     </div>
                   </div>
+
+                  {newType === "multiple_choice" && (
+                    <div className="space-y-2">
+                      <Label>Alternativas (marque a correta)</Label>
+                      <div className="space-y-2">
+                        {newOptions.map((opt, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name="correct-option"
+                              checked={newCorrectIdx === i}
+                              onChange={() => setNewCorrectIdx(i)}
+                              className="h-4 w-4 accent-[hsl(var(--primary))]"
+                              aria-label={`Alternativa ${String.fromCharCode(65 + i)} é a correta`}
+                            />
+                            <span className="w-5 text-sm font-semibold text-muted-foreground">{String.fromCharCode(65 + i)})</span>
+                            <Input
+                              value={opt}
+                              onChange={(e) => setNewOptions((prev) => prev.map((o, j) => (j === i ? e.target.value : o)))}
+                              placeholder={`Texto da alternativa ${String.fromCharCode(65 + i)}`}
+                            />
+                            {newOptions.length > 2 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                aria-label="Remover alternativa"
+                                onClick={() => {
+                                  setNewOptions((prev) => prev.filter((_, j) => j !== i));
+                                  setNewCorrectIdx((c) => (c === i ? 0 : c > i ? c - 1 : c));
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {newOptions.length < 6 && (
+                        <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setNewOptions((prev) => [...prev, ""])}>
+                          <Plus className="h-3.5 w-3.5" /> Alternativa
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {newType === "true_false" && (
+                    <div className="space-y-2">
+                      <Label>Resposta correta</Label>
+                      <div className="flex gap-2">
+                        <Button type="button" variant={newTF === "true" ? "default" : "outline"} size="sm" onClick={() => setNewTF("true")}>Verdadeiro</Button>
+                        <Button type="button" variant={newTF === "false" ? "default" : "outline"} size="sm" onClick={() => setNewTF("false")}>Falso</Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {newType === "open_ended" && (
+                    <div className="space-y-2">
+                      <Label>Resposta esperada (opcional)</Label>
+                      <Textarea
+                        value={newExpected}
+                        onChange={(e) => setNewExpected(e.target.value)}
+                        rows={3}
+                        placeholder="Pontos que uma boa resposta deve conter. Serve de referência na correção."
+                      />
+                    </div>
+                  )}
+
+                  {newType === "matching" && (
+                    <div className="space-y-2">
+                      <Label>Pares de associação</Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Escreva cada item da coluna A com o seu par correto. A ordem da coluna B é embaralhada para o aluno.
+                      </p>
+                      <div className="space-y-2">
+                        {newPairs.map((p, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-5 text-sm font-semibold text-muted-foreground">{i + 1}.</span>
+                            <Input
+                              value={p.left}
+                              onChange={(e) => setNewPairs((prev) => prev.map((x, j) => (j === i ? { ...x, left: e.target.value } : x)))}
+                              placeholder="Item da coluna A"
+                            />
+                            <ArrowLeftRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <Input
+                              value={p.right}
+                              onChange={(e) => setNewPairs((prev) => prev.map((x, j) => (j === i ? { ...x, right: e.target.value } : x)))}
+                              placeholder="Par correto"
+                            />
+                            {newPairs.length > 2 && (
+                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Remover par" onClick={() => setNewPairs((prev) => prev.filter((_, j) => j !== i))}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {newPairs.length < 8 && (
+                        <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setNewPairs((prev) => [...prev, { left: "", right: "" }])}>
+                          <Plus className="h-3.5 w-3.5" /> Par
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {newType !== "case_stem" && (
+                    <div className="space-y-2">
+                      <Label>Explicação / justificativa (opcional)</Label>
+                      <Textarea
+                        value={newExplanation}
+                        onChange={(e) => setNewExplanation(e.target.value)}
+                        rows={2}
+                        placeholder="Por que esta é a resposta correta."
+                      />
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Dificuldade</Label>
@@ -879,17 +1074,14 @@ export default function QuestionsPage() {
                 <TabsContent value="import" className="space-y-4 pt-2">
                   <div className="border-2 border-dashed rounded-lg p-8 text-center">
                     <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-sm font-medium">Arraste um arquivo CSV ou JSON</p>
+                    <p className="text-sm font-medium">Importe questões de Moodle XML, QTI ou CSV</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      ou clique para selecionar do computador
+                      A importação em arquivo fica em Integração LMS.
                     </p>
-                    <Button variant="outline" size="sm" className="mt-4">
-                      Selecionar Arquivo
+                    <Button variant="outline" size="sm" className="mt-4" asChild>
+                      <Link to="/lms-integration">Abrir Integração LMS</Link>
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Formato esperado: cada linha/objeto deve ter os campos <code>question_text</code>, <code>type</code>, <code>difficulty</code>, <code>tags</code>.
-                  </p>
                 </TabsContent>
               </Tabs>
               <DialogFooter>

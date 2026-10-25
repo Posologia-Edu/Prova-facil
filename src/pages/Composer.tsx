@@ -5,7 +5,7 @@ import ExamTemplatesDialog, { type ExamTemplate } from "@/components/ExamTemplat
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
 import {
   Plus,
-  GripVertical,
+  FileDown,
   Settings2,
   Shuffle,
   LayoutTemplate,
@@ -328,6 +328,7 @@ export default function ComposerPage() {
 
       // Insert exam questions
       let position = 0;
+      let skipped = 0;
       for (const section of sections) {
         for (const q of section.questions) {
           const isRealId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q.questionId);
@@ -340,12 +341,16 @@ export default function ComposerPage() {
               section_name: section.name,
             });
           }
+          else skipped++;
           position++;
         }
       }
 
       setExamId(exam.id);
       toast.success("Prova salva com sucesso! Ela aparecerá em 'Minhas Provas'.");
+      if (skipped > 0) {
+        toast.warning(`${skipped} questão(ões) de exemplo do template não foram salvas: só questões do seu Banco entram na prova.`);
+      }
       // Reset composer for new exam
       setSaveConfigOpen(false);
       setExamTitle("Nova Prova");
@@ -501,6 +506,10 @@ export default function ComposerPage() {
           >
             <Shuffle className="h-3.5 w-3.5 mr-1.5" />
             Embaralhar
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setExportOpen(true)} disabled={totalQuestions === 0}>
+            <FileDown className="h-3.5 w-3.5 mr-1.5" />
+            Exportar PDF
           </Button>
           <Sheet open={headerOpen} onOpenChange={setHeaderOpen}>
             <SheetTrigger asChild>
@@ -683,7 +692,6 @@ export default function ComposerPage() {
                         }
                         return (
                       <div key={q.id} className="flex items-start gap-2 group">
-                        <GripVertical className="h-4 w-4 text-muted-foreground/40 mt-0.5 opacity-0 group-hover:opacity-100 cursor-grab transition-opacity" />
                         <span className="font-semibold text-xs min-w-[24px]">{displayNum}.</span>
                         <div className="flex-1">
                           <p className="text-sm">{q.title}</p>

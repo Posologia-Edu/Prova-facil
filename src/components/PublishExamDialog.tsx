@@ -39,7 +39,7 @@ export default function PublishExamDialog({ open, onOpenChange, examId, examTitl
     setPublishing(true);
 
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { toast.error("Faça login primeiro."); return; }
+    if (!session) { toast.error("Faça login primeiro."); setPublishing(false); return; }
 
     const { data, error } = await supabase
       .from("exam_publications")

@@ -7,8 +7,6 @@ import {
   Plus,
   FileText,
   MoreVertical,
-  BarChart3,
-  Mail,
   Search,
   Pencil,
   Copy,
@@ -212,6 +210,23 @@ export default function ExamsPage() {
     toast.success("Prova movida para a lixeira.");
   };
 
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("exams")
+      .update({ deleted_at: new Date().toISOString() })
+      .in("id", ids);
+    if (error) { toast.error("Erro ao excluir as provas selecionadas."); return; }
+    setExams((prev) => prev.filter((e) => !selectedIds.has(e.id)));
+    setSelectedIds(new Set());
+    setSelectMode(false);
+    setBulkDeleteOpen(false);
+    toast.success(ids.length === 1 ? "Prova movida para a lixeira." : `${ids.length} provas movidas para a lixeira.`);
+  };
+
   const handleDuplicate = async (exam: Exam) => {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return;
@@ -328,6 +343,29 @@ export default function ExamsPage() {
           </Button>
         </div>
       </div>
+
+      {selectMode && (
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-2.5">
+          <span className="text-sm font-medium">{selectedIds.size} selecionada(s)</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(selectedIds.size === filtered.length ? new Set() : new Set(filtered.map((e) => e.id)))}
+          >
+            {selectedIds.size === filtered.length && filtered.length > 0 ? "Limpar seleção" : "Selecionar todas"}
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="ml-auto"
+            disabled={selectedIds.size === 0}
+            onClick={() => setBulkDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-1.5" />
+            Mover para a lixeira
+          </Button>
+        </div>
+      )}
 
       {/* Search and Sort */}
       <div className="flex items-center gap-3">
@@ -465,12 +503,6 @@ export default function ExamsPage() {
                           Monitoramento
                         </Button>
                       )}
-                      {!exam.publicationId && (
-                        <div className="flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-muted-foreground/50" />
-                          <BarChart3 className="h-3.5 w-3.5 text-muted-foreground/50" />
-                        </div>
-                      )}
                     </div>
                   </div>
                 </Card>
@@ -516,6 +548,21 @@ export default function ExamsPage() {
             <AlertDialogAction onClick={() => deleteId && handleDeleteExam(deleteId)}>
               Excluir
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mover {selectedIds.size} prova(s) para a lixeira?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As provas selecionadas vão para a lixeira e podem ser restauradas depois.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete}>Mover para a lixeira</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
