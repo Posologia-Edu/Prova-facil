@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImportClassStudentsButton } from "@/components/classes/ImportClassStudentsButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -212,7 +213,10 @@ export default function MedicineEditor() {
 
         <TabsContent value="participants" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">Adicionar Aluno</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+              <CardTitle className="text-base">Adicionar Aluno</CardTitle>
+              <ImportClassStudentsButton type="medicine" roomId={roomId!} participantsTable="medicine_participants" existingEmails={participants.map((p: any) => p.student_email)} onDone={refetchParticipants} />
+            </CardHeader>
             <CardContent>
               <div className="flex gap-2">
                 <Input placeholder="Nome" value={newName} onChange={e => setNewName(e.target.value)} />

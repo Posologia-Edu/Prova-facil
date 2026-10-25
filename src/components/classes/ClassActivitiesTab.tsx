@@ -7,6 +7,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useVpCatalog } from "@/lib/vp-catalog";
+import { ClassLinkedActivities } from "@/components/classes/ClassLinkedActivities";
 import { computeExamStatus, examStatusConfig, type ExamEffectiveStatus } from "@/lib/exam-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -119,7 +120,7 @@ function SectionHeader({ icon: Icon, title, count, action }: { icon: typeof File
   );
 }
 
-// Atividades da turma: provas online, pacientes virtuais, integrantes e docente responsável.
+// Atividades da turma: provas online, pacientes virtuais, OSCE, simulações, formulários, integrantes e docente responsável.
 // Reúne tudo o que antes ficava na vista simples da lista de turmas.
 export function ClassActivitiesTab({ classId, onChanged }: { classId: string; onChanged?: () => void }) {
   const navigate = useNavigate();
@@ -702,6 +703,9 @@ export function ClassActivitiesTab({ classId, onChanged }: { classId: string; on
           </Card>
         )}
       </section>
+
+      {/* OSCE, simulações e formulários */}
+      <ClassLinkedActivities classId={classId} onChanged={onChanged} />
 
       {/* Docente responsável */}
       <section>

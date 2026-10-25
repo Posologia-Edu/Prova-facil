@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImportClassStudentsButton } from "@/components/classes/ImportClassStudentsButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -126,7 +127,10 @@ export default function DentistryEditor() {
         <TabsList><TabsTrigger value="participants"><Users className="h-4 w-4 mr-1" />Participantes</TabsTrigger><TabsTrigger value="forms"><FileText className="h-4 w-4 mr-1" />Formulários</TabsTrigger><TabsTrigger value="cases"><BookOpen className="h-4 w-4 mr-1" />Casos Clínicos</TabsTrigger></TabsList>
 
         <TabsContent value="participants" className="space-y-4">
-          <Card><CardHeader><CardTitle className="text-base">Adicionar Aluno</CardTitle></CardHeader><CardContent><div className="flex gap-2"><Input placeholder="Nome" value={newName} onChange={e => setNewName(e.target.value)} /><Input placeholder="E-mail" value={newEmail} onChange={e => setNewEmail(e.target.value)} /><Button onClick={addParticipant} disabled={!newName.trim()}><Plus className="h-4 w-4" /></Button></div></CardContent></Card>
+          <Card><CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+              <CardTitle className="text-base">Adicionar Aluno</CardTitle>
+              <ImportClassStudentsButton type="dentistry" roomId={roomId!} participantsTable="dentistry_participants" existingEmails={participants.map((p: any) => p.student_email)} onDone={refetchParticipants} />
+            </CardHeader><CardContent><div className="flex gap-2"><Input placeholder="Nome" value={newName} onChange={e => setNewName(e.target.value)} /><Input placeholder="E-mail" value={newEmail} onChange={e => setNewEmail(e.target.value)} /><Button onClick={addParticipant} disabled={!newName.trim()}><Plus className="h-4 w-4" /></Button></div></CardContent></Card>
           {(() => {
             const unpaired = students.filter(s => s.pair_index < 0);
             const paired = students.filter(s => s.pair_index >= 0);

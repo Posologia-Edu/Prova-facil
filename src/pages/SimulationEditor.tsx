@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImportClassStudentsButton } from "@/components/classes/ImportClassStudentsButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -622,8 +623,9 @@ export default function SimulationEditor() {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
               <CardTitle className="text-base">{t("sim_students_list")}</CardTitle>
+              <ImportClassStudentsButton type="simulation_anamnese" roomId={roomId!} participantsTable="simulation_participants" existingEmails={participants.map((p: any) => p.student_email)} onDone={refetchParticipants} />
             </CardHeader>
             <CardContent className="space-y-4">
               {students.length > 0 ? (

@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { linkActivityToClass } from "@/lib/class-activities";
 
 interface Props {
   open: boolean;
@@ -70,6 +71,9 @@ export function OsceCircuitSetupDialog({ open, onOpenChange, examId, stations }:
         class_id: selectedClassId,
         is_online: isOnline,
       }).eq("id", examId);
+
+      // Registra o OSCE na aba Atividades da turma (duplicidade é ignorada)
+      await linkActivityToClass(selectedClassId, "osce", examId);
 
       // Create circuit
       const { data: circuit, error: circuitError } = await supabase
