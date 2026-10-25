@@ -103,12 +103,12 @@ export function RowList<T extends Record<string, any>>({
     onChange(list.map((row, j) => (j === i ? { ...row, [key]: v } : row)));
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">{label}</Label>
+      {label && <Label className="text-sm font-medium">{label}</Label>}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       {list.map((row, i) => (
-        <div key={i} className="rounded-md border bg-muted/30 p-3 space-y-2">
+        <div key={i} className="rounded-lg border bg-muted/30 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">{titleOf ? titleOf(row, i) : `Item ${i + 1}`}</span>
+            <span className="font-mono text-xs text-muted-foreground">{titleOf ? titleOf(row, i) : `Item ${i + 1}`}</span>
             {!disabled && (
               <Button type="button" variant="ghost" size="icon" className="h-6 w-6" title="Remover" onClick={() => onChange(list.filter((_, j) => j !== i))}>
                 <X className="h-4 w-4" />

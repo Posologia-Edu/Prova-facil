@@ -1,6 +1,7 @@
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { Encontro, Gabarito, GatilhoAchado, Nucleo, Revelacao, Versao } from "@/lib/vp-case-schema";
 import { RowList, SelectField, StringList, TextField, type Option } from "./fields";
+import { SectionCard, SectionLayout, type SectionDef } from "./SectionLayout";
 
 type Mut = (fn: (v: Versao) => void) => void;
 
@@ -34,29 +35,36 @@ const INTERLOCUTORES: Option[] = [
   { value: "equipe", label: "Equipe" },
 ];
 
-export function VersaoEditor({ versao, nucleo, onChange, disabled }: { versao: Versao; nucleo: Nucleo; onChange: Mut; disabled?: boolean }) {
+export function VersaoEditor({ versaoKey, versao, nucleo, onChange, disabled }: { versaoKey: string; versao: Versao; nucleo: Nucleo; onChange: Mut; disabled?: boolean }) {
   const fatoOptions: Option[] = nucleo.fatos.map((f) => ({ value: f.id, label: `${f.id} · ${(f.conteudo || "").slice(0, 60)}` }));
   const achadoOptions: Option[] = nucleo.achados.map((a) => ({ value: a.id, label: `${a.id} · ${a.titulo}` }));
   const g = versao.gabarito;
   const setG = (fn: (g: Gabarito) => void) => onChange((v) => fn(v.gabarito));
 
+  const sections: SectionDef[] = [
+    { id: "cenario", label: "Cenário" },
+    { id: "revelacao", label: "Quando cada fato é revelado", count: versao.revelacao.length },
+    { id: "achados", label: "Quando cada achado aparece", count: versao.gatilhos_achados.length },
+    { id: "falas", label: "Perguntas, fora do roteiro e dicas" },
+    { id: "gabarito", label: "Gabarito", count: g.problemas_esperados.length + g.informacoes_alvo.length || "" },
+    { id: "encontros", label: "Encontros", count: versao.encontros.length },
+  ];
+
   return (
-    <Accordion type="multiple" defaultValue={["cenario", "revelacao"]} className="space-y-2">
-      <AccordionItem value="cenario" className="border rounded-md px-4">
-        <AccordionTrigger>Cenário de entrada</AccordionTrigger>
-        <AccordionContent className="space-y-3">
+    <SectionLayout prefix={`versao-${versaoKey}`} sections={sections}>
+      <SectionCard id="cenario" title="Cenário de entrada" defaultOpen>
+        <div className="space-y-4">
           <TextField label="Local do atendimento" value={versao.cenario.local} disabled={disabled} hint="Ex.: farmácia comunitária do bairro, consultório da UBS" onChange={(x) => onChange((v) => { v.cenario.local = x; })} />
           <TextField label="Como o paciente trata o profissional" value={versao.cenario.tratamento} disabled={disabled} hint='Ex.: "moço(a)", "doutor(a)", "enfermeiro(a)"' onChange={(x) => onChange((v) => { v.cenario.tratamento = x; })} />
           <TextField label="Por que o paciente veio" multiline rows={4} value={versao.cenario.motivo_da_vinda} disabled={disabled} onChange={(x) => onChange((v) => { v.cenario.motivo_da_vinda = x; })} />
           <TextField label="Fala de abertura" multiline rows={3} value={versao.cenario.abertura} disabled={disabled} hint="A primeira coisa que o paciente diz ao iniciar o 1º encontro." onChange={(x) => onChange((v) => { v.cenario.abertura = x; })} />
-        </AccordionContent>
-      </AccordionItem>
+        </div>
+      </SectionCard>
 
-      <AccordionItem value="revelacao" className="border rounded-md px-4">
-        <AccordionTrigger>Revelação dos fatos ({versao.revelacao.length})</AccordionTrigger>
-        <AccordionContent>
+      <SectionCard id="revelacao" title="Quando cada fato é revelado" count={versao.revelacao.length}>
+        <div className="space-y-4">
           <RowList<Revelacao>
-            label="Quando cada fato é revelado"
+            label=""
             hint="Todo fato do núcleo deve ser revelado em algum nível."
             items={versao.revelacao}
             disabled={disabled}
@@ -70,14 +78,13 @@ export function VersaoEditor({ versao, nucleo, onChange, disabled }: { versao: V
               { key: "fala", label: "Exemplo de fala", kind: "area" },
             ]}
           />
-        </AccordionContent>
-      </AccordionItem>
+        </div>
+      </SectionCard>
 
-      <AccordionItem value="achados" className="border rounded-md px-4">
-        <AccordionTrigger>Gatilhos dos achados ({versao.gatilhos_achados.length})</AccordionTrigger>
-        <AccordionContent>
+      <SectionCard id="achados" title="Quando cada achado é apresentado" count={versao.gatilhos_achados.length}>
+        <div className="space-y-4">
           <RowList<GatilhoAchado>
-            label="Quando cada achado é apresentado"
+            label=""
             items={versao.gatilhos_achados}
             disabled={disabled}
             titleOf={(r) => r.achado || "Gatilho"}
@@ -88,30 +95,27 @@ export function VersaoEditor({ versao, nucleo, onChange, disabled }: { versao: V
               { key: "quando", label: "Quando", kind: "area" },
             ]}
           />
-        </AccordionContent>
-      </AccordionItem>
+        </div>
+      </SectionCard>
 
-      <AccordionItem value="falas" className="border rounded-md px-4">
-        <AccordionTrigger>Perguntas, fora do roteiro e dicas de atuação</AccordionTrigger>
-        <AccordionContent className="space-y-4">
+      <SectionCard id="falas" title="Perguntas, fora do roteiro e dicas de atuação">
+        <div className="space-y-4">
           <StringList label="Perguntas que o paciente pode fazer" items={versao.perguntas_do_paciente} disabled={disabled} onChange={(items) => onChange((v) => { v.perguntas_do_paciente = items; })} />
           <StringList label="Se perguntarem algo fora do roteiro" items={versao.fora_do_roteiro} disabled={disabled} onChange={(items) => onChange((v) => { v.fora_do_roteiro = items; })} />
           <StringList label="Dicas de atuação" items={versao.dicas_de_atuacao} disabled={disabled} onChange={(items) => onChange((v) => { v.dicas_de_atuacao = items; })} />
-        </AccordionContent>
-      </AccordionItem>
+        </div>
+      </SectionCard>
 
-      <AccordionItem value="encontros" className="border rounded-md px-4">
-        <AccordionTrigger>Os três encontros</AccordionTrigger>
-        <AccordionContent className="space-y-4">
+      <SectionCard id="encontros" title="Encontros" count={versao.encontros.length} defaultOpen>
+        <div className="space-y-4">
           {versao.encontros.map((e, i) => (
             <EncontroCard key={e.numero} encontro={e} disabled={disabled} onChange={(fn) => onChange((v) => fn(v.encontros[i]))} />
           ))}
-        </AccordionContent>
-      </AccordionItem>
+        </div>
+      </SectionCard>
 
-      <AccordionItem value="gabarito" className="border rounded-md px-4">
-        <AccordionTrigger>Gabarito da correção</AccordionTrigger>
-        <AccordionContent className="space-y-5">
+      <SectionCard id="gabarito" title="Gabarito da correção">
+        <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
             Referência usada pela IA na correção. Condutas alternativas clinicamente válidas não são penalizadas apenas por diferirem daqui.
           </p>
@@ -173,17 +177,20 @@ export function VersaoEditor({ versao, nucleo, onChange, disabled }: { versao: V
           <StringList label="Encaminhamentos" items={g.encaminhamentos} disabled={disabled} onChange={(items) => setG((x) => { x.encaminhamentos = items; })} />
           <StringList label="Objetivos de aprendizagem" items={g.objetivos_aprendizagem} disabled={disabled} onChange={(items) => setG((x) => { x.objetivos_aprendizagem = items; })} />
           <StringList label="Referências" items={g.referencias} disabled={disabled} onChange={(items) => setG((x) => { x.referencias = items; })} />
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+        </div>
+      </SectionCard>
+    </SectionLayout>
   );
 }
 
 function EncontroCard({ encontro, onChange, disabled }: { encontro: Encontro; onChange: (fn: (e: Encontro) => void) => void; disabled?: boolean }) {
   const persona = encontro.persona_interlocutor;
   return (
-    <div className="rounded-md border p-3 space-y-3 bg-muted/20">
-      <p className="text-sm font-semibold">{encontro.numero}º encontro</p>
+    <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="font-heading text-base font-medium">{encontro.numero}º encontro</h4>
+        <StatusBadge tone="neutral">{TIPOS_ENCONTRO.find((t) => t.value === encontro.tipo)?.label ?? encontro.tipo}</StatusBadge>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <SelectField label="Tipo" value={encontro.tipo} options={TIPOS_ENCONTRO} disabled={disabled} onChange={(x) => onChange((e) => { e.tipo = x as Encontro["tipo"]; })} />
         <SelectField

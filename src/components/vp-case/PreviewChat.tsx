@@ -61,46 +61,56 @@ export function PreviewChat({ caseData, versaoKeys }: { caseData: VpCaseData; ve
     }
   };
 
+  const nome = caseData.nucleo.identidade.nome || "Paciente";
+  const ini = nome.split(/s+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join("") || "P";
+
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Converse com o paciente como o aluno faria. A prévia usa o caso <strong>como está no editor, mesmo sem salvar</strong>, e nada é gravado.
-        Os sinais vitais e o avanço automático entre encontros não funcionam aqui: escolha o encontro manualmente.
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_1fr_auto]">
         <SelectField label="Versão (profissão)" value={versao} options={versaoKeys.map((k) => ({ value: k, label: VERSAO_LABEL[k] }))} onChange={(v) => { setVersao(v as VersaoKey); setMessages([]); }} />
         <SelectField label="Encontro" value={encounter} options={[{ value: "1", label: "1º encontro" }, { value: "2", label: "2º encontro" }, { value: "3", label: "3º encontro" }]} onChange={setEncounter} />
         <Button type="button" variant="outline" onClick={() => setMessages([])} disabled={messages.length === 0}>
-          <RotateCcw className="h-4 w-4 mr-2" />Recomeçar
+          <RotateCcw className="h-4 w-4" />Reiniciar conversa
         </Button>
       </div>
 
-      <div className="border rounded-md h-[420px] overflow-y-auto p-3 space-y-3 bg-background">
-        {messages.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-12">Cumprimente o paciente para começar.</p>
-        )}
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <Card className={`max-w-[80%] p-3 ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-              <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(m.content) }} />
-            </Card>
-          </div>
-        ))}
-        {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-        <div ref={bottomRef} />
-      </div>
+      <Card className="overflow-hidden">
+        <div className="h-[420px] space-y-4 overflow-y-auto p-5">
+          {messages.length === 0 && (
+            <p className="py-12 text-center text-sm text-muted-foreground">Cumprimente o paciente para começar.</p>
+          )}
+          {messages.map((m, i) => {
+            const me = m.role === "user";
+            return (
+              <div key={i} className={`flex items-end gap-2 ${me ? "flex-row-reverse" : ""}`}>
+                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-medium ${me ? "bg-highlight/20 text-foreground" : "bg-brand-soft text-brand-text"}`}>
+                  {me ? "Você" : ini}
+                </span>
+                <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${me ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted"}`}>
+                  <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-0 text-inherit" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(m.content) }} />
+                </div>
+              </div>
+            );
+          })}
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          <div ref={bottomRef} />
+        </div>
+        <div className="flex gap-2 border-t bg-muted/30 p-3">
+          <Textarea
+            value={input}
+            rows={1}
+            className="min-h-[44px] max-h-32 resize-none bg-background"
+            placeholder="Escreva a pergunta ao paciente…"
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+          />
+          <Button type="button" onClick={send} disabled={loading || !input.trim()}><Send className="h-4 w-4" />Enviar</Button>
+        </div>
+      </Card>
 
-      <div className="flex gap-2">
-        <Textarea
-          value={input}
-          rows={1}
-          className="min-h-[44px] max-h-32 resize-none"
-          placeholder="Digite como o aluno..."
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-        />
-        <Button type="button" size="icon" onClick={send} disabled={loading || !input.trim()}><Send className="h-4 w-4" /></Button>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        A prévia usa o caso <strong>como está no editor, mesmo sem salvar</strong>, e nada é gravado. Os sinais vitais e o avanço automático entre encontros não funcionam aqui: escolha o encontro manualmente.
+      </p>
     </div>
   );
 }

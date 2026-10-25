@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, History, Loader2, Plus, Save, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Clock, HeartPulse, History, Loader2, MessageSquare, Plus, Save, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
@@ -17,14 +17,17 @@ import {
   type VersaoKey,
   type VpCaseData,
 } from "@/lib/vp-case-schema";
+import { versaoProgress } from "@/lib/vp-case-progress";
+import { AddVersionDialog } from "@/components/vp-case/AddVersionDialog";
 import { LegacyView } from "@/components/vp-case/LegacyView";
 import { NucleoEditor } from "@/components/vp-case/NucleoEditor";
 import { PreviewChat } from "@/components/vp-case/PreviewChat";
-import { RevisaoPanel } from "@/components/vp-case/RevisaoPanel";
+import { RevisaoPanel, revisaoPendentes } from "@/components/vp-case/RevisaoPanel";
 import { VersaoEditor } from "@/components/vp-case/VersaoEditor";
 import { VERSAO_LABEL, cloneVersao, emptyVersao } from "@/components/vp-case/defaults";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 
 interface VersionRow {
@@ -48,6 +51,7 @@ export default function VirtualPatientCaseEditor() {
   const [versions, setVersions] = useState<VersionRow[]>([]);
   const [rerunning, setRerunning] = useState(false);
   const [generating, setGenerating] = useState<VersaoKey | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -172,7 +176,7 @@ export default function VirtualPatientCaseEditor() {
       toast.success(
         n
           ? `Versão ${VERSAO_LABEL[key]} gerada com ${n} pendência(s) para revisar. Revise e salve o rascunho.`
-          : `Versão ${VERSAO_LABEL[key]} gerada. Revise e salve o rascunho; depois use "Revisar de novo".`,
+          : `Versão ${VERSAO_LABEL[key]} gerada. Revise e salve o rascunho; depois use "Refazer revisão".`,
       );
     } catch (e: any) {
       toast.error(e.message || "Não foi possível gerar a versão.");
@@ -228,80 +232,76 @@ export default function VirtualPatientCaseEditor() {
     );
   }
 
+  const missing = draft ? VERSAO_KEYS.filter((k) => !draft.versoes[k]) : [];
+
   const header = (
-    <div className="flex items-start justify-between gap-3 flex-wrap">
-      <div className="space-y-1">
-        <Button variant="ghost" size="sm" className="-ml-3" onClick={() => navigate("/virtual-patients")}><ArrowLeft className="h-4 w-4 mr-1" />Pacientes Virtuais</Button>
-        <h1 className="text-2xl font-bold">{row.name}, {row.age} anos</h1>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">{row.category}</Badge>
-          {row.is_legacy && <Badge variant="secondary">Legado</Badge>}
-          {draft && <Badge variant={status === "published" ? "default" : "secondary"}>{status === "published" ? "Publicado" : "Rascunho"}</Badge>}
-          {draft && !canEdit && <Badge variant="outline">Somente leitura</Badge>}
-          {dirty && <Badge variant="destructive">Alterações não salvas</Badge>}
+    <div className="space-y-3">
+      <Button variant="ghost" size="sm" className="-ml-3" onClick={() => navigate("/virtual-patients")}><ArrowLeft className="h-4 w-4" />Pacientes Virtuais</Button>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-brand-soft font-heading text-xl font-medium text-brand-text">
+            {initials(row.name)}
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-3">
+              <h1 className="font-heading text-[2rem] font-medium leading-[1.1] text-foreground">{row.name}</h1>
+              <span className="text-sm text-muted-foreground">{row.age} anos</span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <StatusBadge tone="brand">{row.category}</StatusBadge>
+              {row.is_legacy && <StatusBadge>Legado</StatusBadge>}
+              {draft && (status === "published"
+                ? <StatusBadge tone="ok" dot>Publicado</StatusBadge>
+                : <StatusBadge tone="warn" dot>Rascunho</StatusBadge>)}
+              {draft && !canEdit && <StatusBadge>Somente leitura</StatusBadge>}
+              {dirty && <StatusBadge tone="accent" dot>Alterações não salvas</StatusBadge>}
+            </div>
+          </div>
         </div>
+        {canEdit && (
+          <div className="flex flex-wrap items-center gap-2">
+            {missing.length > 0 && (
+              <Button variant="outline" onClick={() => setAddOpen(true)} disabled={!!generating}>
+                {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}Adicionar versão
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => save("draft")} disabled={saving || !dirty && status === "draft"}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Salvar rascunho
+            </Button>
+            <Button onClick={() => save("published")} disabled={saving || errors.length > 0 || (!dirty && status === "published")}>
+              <Send className="h-4 w-4" />Publicar
+            </Button>
+          </div>
+        )}
       </div>
-      {canEdit && (
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => save("draft")} disabled={saving || !dirty && status === "draft"}>
-            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}Salvar rascunho
-          </Button>
-          <Button onClick={() => save("published")} disabled={saving || errors.length > 0 || (!dirty && status === "published")}>
-            <Send className="h-4 w-4 mr-2" />Publicar
-          </Button>
-        </div>
-      )}
     </div>
   );
 
   if (!draft) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         {header}
         <LegacyView row={row} />
       </div>
     );
   }
 
-  const missing = VERSAO_KEYS.filter((k) => !draft.versoes[k]);
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {header}
 
       {errors.length > 0 ? (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <p className="font-medium mb-1">{errors.length} {errors.length === 1 ? "problema" : "problemas"} a corrigir antes de publicar:</p>
-            <ul className="list-disc pl-5 space-y-0.5 text-sm max-h-40 overflow-y-auto">{errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
-          </AlertDescription>
-        </Alert>
+        <div className="flex items-start gap-3 rounded-card border border-warning/30 bg-warning-soft px-4 py-3 text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning-ink" />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">{errors.length} {errors.length === 1 ? "problema impede" : "problemas impedem"} a publicação.</p>
+            <ul className="mt-1.5 max-h-40 list-disc space-y-0.5 overflow-y-auto pl-5 text-muted-foreground">{errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+          </div>
+        </div>
       ) : (
-        <Alert>
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <AlertDescription>O caso está consistente: pode ser publicado.</AlertDescription>
-        </Alert>
-      )}
-
-      {draft.revisao && (
-        <RevisaoPanel
-          revisao={draft.revisao}
-          canEdit={canEdit}
-          dirty={dirty}
-          rerunning={rerunning}
-          onToggle={(i, resolvido) => mutate((d) => { if (d.revisao?.problemas[i]) d.revisao.problemas[i].resolvido = resolvido; })}
-          onRerun={rerunRevisao}
-        />
-      )}
-
-      {!draft.revisao && canEdit && (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Este caso ainda não tem revisão de consistência salva.</span>
-          <Button type="button" size="sm" variant="outline" onClick={rerunRevisao} disabled={rerunning || dirty} title={dirty ? "Salve o rascunho antes: a revisão lê a versão salva do caso." : undefined}>
-            {rerunning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <ClipboardCheck className="h-3.5 w-3.5 mr-1.5" />}
-            Fazer revisão agora
-          </Button>
+        <div className="flex items-center gap-3 rounded-card border border-success/30 bg-success-soft px-4 py-3 text-sm">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+          <span>Caso consistente: pode ser publicado.</span>
         </div>
       )}
 
@@ -311,40 +311,56 @@ export default function VirtualPatientCaseEditor() {
         </Alert>
       )}
 
-      {canEdit && missing.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Adicionar versão:</span>
-          {missing.map((k) => (
-            <div key={k} className="flex items-center rounded-md border">
-              <Button type="button" size="sm" variant="ghost" onClick={() => gerarVersaoIA(k)} disabled={!!generating || dirty}
-                title={dirty ? "Salve o rascunho antes: a IA lê o núcleo salvo do caso." : `Gerar a versão ${VERSAO_LABEL[k]} com IA, a partir do núcleo clínico`}>
-                {generating === k ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
-                {VERSAO_LABEL[k]} com IA
-              </Button>
-              <Button type="button" size="sm" variant="ghost" className="border-l rounded-l-none" onClick={() => addVersao(k)} disabled={!!generating}
-                title="Criar a partir de uma versão existente, para adaptar manualmente">
-                <Plus className="h-3.5 w-3.5 mr-1" />Manual
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="nucleo">Núcleo clínico</TabsTrigger>
-          {versaoKeys.map((k) => <TabsTrigger key={k} value={k}>{VERSAO_LABEL[k]}</TabsTrigger>)}
-          <TabsTrigger value="previa">Prévia</TabsTrigger>
-          {canEdit && <TabsTrigger value="historico"><History className="h-3.5 w-3.5 mr-1" />Histórico</TabsTrigger>}
+        <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="nucleo"><HeartPulse className="mr-1.5 h-3.5 w-3.5" />Núcleo clínico</TabsTrigger>
+          {versaoKeys.map((k) => {
+            const p = versaoProgress(draft, k);
+            return (
+              <TabsTrigger key={k} value={k}>
+                {VERSAO_LABEL[k]}
+                <span className={`ml-2 font-mono text-xs ${p.done === p.total ? "text-success" : "text-muted-foreground"}`}>{p.done}/{p.total}</span>
+              </TabsTrigger>
+            );
+          })}
+          <TabsTrigger value="previa"><MessageSquare className="mr-1.5 h-3.5 w-3.5" />Prévia</TabsTrigger>
+          {canEdit && (
+            <TabsTrigger value="historico">
+              <History className="mr-1.5 h-3.5 w-3.5" />Histórico
+              {versions.length > 0 && <span className="ml-2 font-mono text-xs text-muted-foreground">{versions.length}</span>}
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        <TabsContent value="nucleo" className="mt-4">
-          <NucleoEditor nucleo={draft.nucleo} disabled={!canEdit} onChange={(fn) => mutate((d) => fn(d.nucleo))} />
+        <TabsContent value="nucleo" className="mt-6">
+          <NucleoEditor
+            nucleo={draft.nucleo}
+            disabled={!canEdit}
+            onChange={(fn) => mutate((d) => fn(d.nucleo))}
+            topo={draft.revisao || canEdit ? {
+              section: {
+                id: "revisao",
+                label: "Revisão de consistência",
+                count: draft.revisao ? revisaoPendentes(draft.revisao) || "" : "",
+              },
+              node: (
+                <RevisaoPanel
+                  revisao={draft.revisao}
+                  canEdit={canEdit}
+                  dirty={dirty}
+                  rerunning={rerunning}
+                  onToggle={(i, resolvido) => mutate((d) => { if (d.revisao?.problemas[i]) d.revisao.problemas[i].resolvido = resolvido; })}
+                  onRerun={rerunRevisao}
+                />
+              ),
+            } : undefined}
+          />
         </TabsContent>
 
         {versaoKeys.map((k) => (
-          <TabsContent key={k} value={k} className="mt-4">
+          <TabsContent key={k} value={k} className="mt-6">
             <VersaoEditor
+              versaoKey={k}
               versao={draft.versoes[k]!}
               nucleo={draft.nucleo}
               disabled={!canEdit}
@@ -353,7 +369,7 @@ export default function VirtualPatientCaseEditor() {
           </TabsContent>
         ))}
 
-        <TabsContent value="previa" className="mt-4">
+        <TabsContent value="previa" className="mt-6">
           {versaoKeys.length > 0 ? (
             <PreviewChat caseData={draft} versaoKeys={versaoKeys} />
           ) : (
@@ -362,26 +378,49 @@ export default function VirtualPatientCaseEditor() {
         </TabsContent>
 
         {canEdit && (
-          <TabsContent value="historico" className="mt-4 space-y-2">
-            <p className="text-sm text-muted-foreground">Cada vez que o caso é salvo, a versão anterior é guardada (as últimas 30).</p>
-            {versions.length === 0 ? (
-              <p className="text-sm italic text-muted-foreground">Ainda não há versões anteriores.</p>
-            ) : (
-              versions.map((v) => (
-                <Card key={v.id}>
-                  <CardContent className="py-3 flex items-center justify-between gap-3">
-                    <div className="text-sm">
-                      <p className="font-medium">{new Date(v.saved_at).toLocaleString("pt-BR")}</p>
-                      <p className="text-xs text-muted-foreground">{v.snapshot?.status === "draft" ? "Era rascunho" : "Era publicado"}</p>
+          <TabsContent value="historico" className="mt-6 space-y-4">
+            <Card>
+              <div className="divide-y">
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="grid h-8 w-8 place-items-center rounded-md bg-brand-soft text-brand-text"><Clock className="h-4 w-4" /></span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Versão aberta no editor</p>
+                    <p className="text-xs text-muted-foreground">{dirty ? "Com alterações não salvas" : "Igual à última salva"}</p>
+                  </div>
+                  <StatusBadge tone="accent">Aberta</StatusBadge>
+                </div>
+                {versions.length === 0 ? (
+                  <p className="px-4 py-6 text-sm italic text-muted-foreground">Ainda não há versões anteriores.</p>
+                ) : (
+                  versions.map((v) => (
+                    <div key={v.id} className="flex items-center gap-3 px-4 py-3">
+                      <span className="grid h-8 w-8 place-items-center rounded-md bg-muted text-muted-foreground"><Clock className="h-4 w-4" /></span>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{new Date(v.saved_at).toLocaleString("pt-BR")}</p>
+                        <p className="text-xs text-muted-foreground">{v.snapshot?.status === "draft" ? "Era rascunho" : "Era publicado"}</p>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => restore(v)}>Restaurar no editor</Button>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => restore(v)}>Restaurar no editor</Button>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                  ))
+                )}
+              </div>
+            </Card>
+            <p className="text-sm text-muted-foreground">
+              Cada vez que o caso é salvo, a versão anterior é guardada (as últimas 30). Restaurar carrega a versão no editor; ela só vira a atual quando você salva.
+            </p>
           </TabsContent>
         )}
       </Tabs>
+
+      <AddVersionDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        missing={missing}
+        dirty={dirty}
+        generating={generating}
+        onAI={gerarVersaoIA}
+        onManual={addVersao}
+      />
     </div>
   );
 }
