@@ -1,0 +1,51 @@
+<div class="pg tight" data-tabs>
+  <div class="row sp wrap" style="gap:16px">
+    <div class="row g12p"><button class="btn ghost sm" type="button">← OSCE</button><div><div class="lbl" style="color:var(--accent-ink)">OSCE · Circuito</div><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.015em;line-height:1.15">Circuito A · Turma 8º período</h1></div></div>
+    <div class="row g8 wrap"><span class="pill info"><span class="dot"></span>Em andamento</span><span class="pill brand">OSCE online</span><span class="xs faint">Código <b class="mono" style="color:var(--ink)">OSC-4F7K</b></span></div>
+  </div>
+
+  <div class="tabs scroll"><a class="on" data-tab="ctl">Controle</a><a data-tab="cfg">Configurar circuito</a><a data-tab="res">Resultados</a></div>
+
+  <div data-pane="ctl" class="on col g16">
+    <div class="kpis">
+      <div class="card kpi"><div class="lbl">Total</div><div class="v">24</div><div class="d">alunos</div></div>
+      <div class="card kpi"><div class="lbl">Aguardando</div><div class="v">4</div><div class="d">na fila</div></div>
+      <div class="card kpi"><div class="lbl">Nas estações</div><div class="v">16</div><div class="d"><span class="dot" style="color:var(--ok)"></span>em atendimento</div></div>
+      <div class="card kpi"><div class="lbl">Concluídos</div><div class="v">4</div><div class="d up">de 24</div></div>
+    </div>
+    <div class="row sp wrap"><div class="row g8"><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-clock"/></svg>Pausar</button><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-play"/></svg>Retomar</button><button class="btn danger" type="button">Encerrar circuito</button></div><div class="row g8"><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-link"/></svg>Link do avaliador</button><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-link"/></svg>Link do aluno</button></div></div>
+    <div class="card"><div class="card-h"><h3>Grade de rotação</h3><span class="s">estação × aluno, com cronômetros</span></div>
+      <table class="tbl"><thead><tr><th>Estação</th><th>Avaliador</th><th>Aluno agora</th><th class="n">Tempo</th><th>Próximo</th></tr></thead><tbody>
+        <tr><td class="strong">1 · Anamnese</td><td class="muted">Prof. Helena</td><td><div class="who"><span class="av sm">AB</span><b>Ana B.</b></div></td><td class="n">06:12</td><td class="muted">Carlos M.</td></tr>
+        <tr><td class="strong">2 · Reconciliação</td><td class="muted">Prof. Marcos</td><td><div class="who"><span class="av sm">CM</span><b>Carlos M.</b></div></td><td class="n">03:40</td><td class="muted">Daniela S.</td></tr>
+        <tr><td class="strong">3 · Inalador</td><td class="muted">Prof. Lívia</td><td><span class="pill warn">Transição</span></td><td class="n">00:21</td><td class="muted">Elisa F.</td></tr>
+        <tr><td class="strong">4 · Interações</td><td class="muted">Prof. Paulo</td><td><span class="pill">Livre</span></td><td class="n">—</td><td class="muted">Fábio R.</td></tr>
+      </tbody></table></div>
+    <div class="card"><div class="card-h"><h3>Monitor de chat do paciente virtual</h3><span class="pill info"><span class="dot"></span>ao vivo</span></div><div class="card-b chat"><div class="msg"><span class="av sm">PV</span><div><div class="bub">Doutora, não sei se devo continuar tomando o diurético.</div><small>estação 2 · paciente</small></div></div><div class="msg me"><span class="av sm a">CM</span><div><div class="bub">Vamos conferir a lista de medicamentos.</div><small>Carlos M.</small></div></div></div></div>
+  </div>
+
+  <div data-pane="cfg">
+    <div class="scrim"><div class="modal" style="max-width:640px">
+      <div class="modal-h"><div><h3>Configurar circuito</h3><p class="sm muted" style="margin-top:4px">Escolha a turma, o modo online e os avaliadores de cada estação.</p></div><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b">
+        <div class="field"><label>Turma</label><div class="input val sel">Farmácia Clínica 2026.1 · 24 alunos</div><span class="hint">Os alunos vêm da turma.</span></div>
+        <div class="row sp"><div><b style="font-weight:500">OSCE online</b><div class="xs faint">O aluno acessa a estação e o paciente virtual pelo próprio dispositivo</div></div><span class="toggle on"></span></div>
+        <div class="lbl">Avaliadores por estação</div>
+        <div class="fg2"><div class="input val">1 · Prof. Helena</div><div class="input val">helena@univ.edu</div><div class="input val">2 · Prof. Marcos</div><div class="input val">marcos@univ.edu</div></div>
+      </div>
+      <div class="modal-f"><button class="btn secondary" type="button">Cancelar</button><button class="btn primary" type="button">Criar circuito</button></div>
+    </div></div>
+  </div>
+
+  <div data-pane="res" class="col g16">
+    <div class="toolbar"><div class="input val sel" style="width:260px">Aplicação: todas</div><span class="grow"></span><span class="xs faint">Sem exportação hoje; proposta: PDF e CSV</span><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-upload"/></svg>Exportar</button></div>
+    <div class="g21">
+      <div class="card"><div class="card-h"><h3>Alunos</h3></div><table class="tbl"><thead><tr><th>Aluno</th><th class="n">Nota</th><th>Desempenho por estação</th></tr></thead><tbody>
+        <tr><td><div class="who"><span class="av sm">AB</span><b>Ana B.</b></div></td><td class="n strong">8,4</td><td><div class="row g8"><span class="pill ok">9</span><span class="pill ok">8</span><span class="pill warn">7</span><span class="pill ok">9</span></div></td></tr>
+        <tr><td><div class="who"><span class="av sm">CM</span><b>Carlos M.</b></div></td><td class="n strong">7,1</td><td><div class="row g8"><span class="pill ok">8</span><span class="pill warn">6</span><span class="pill warn">7</span><span class="pill ok">8</span></div></td></tr>
+      </tbody></table></div>
+      <div class="card"><div class="card-h"><h3>Radar de competências</h3></div><div class="card-b" style="display:grid;place-items:center"><svg viewBox="0 0 200 180" width="220" role="img" aria-label="Radar de competências"><g fill="none" stroke="var(--line-strong)"><polygon points="100,20 170,70 145,150 55,150 30,70"/><polygon points="100,55 138,82 125,125 75,125 62,82"/></g><polygon points="100,32 160,72 130,140 62,132 44,78" fill="var(--accent)" fill-opacity=".3" stroke="var(--accent)" stroke-width="2"/></svg></div><div class="card-f"><span class="xs">Comunicação · Anamnese · Raciocínio · Técnica · Segurança</span></div></div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Estações</h3><span class="s">desempenho agregado</span></div><div class="card-b col g8"><div class="row g8"><span class="xs" style="width:130px">1 · Anamnese</span><div class="prog ok" style="flex:1"><i style="width:82%"></i></div><b class="mono xs">8,2</b></div><div class="row g8"><span class="xs" style="width:130px">2 · Reconciliação</span><div class="prog" style="flex:1"><i style="width:61%"></i></div><b class="mono xs">6,1</b></div></div></div>
+  </div>
+</div>

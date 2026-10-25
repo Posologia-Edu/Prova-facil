@@ -1,0 +1,55 @@
+<div class="pg tight" data-tabs>
+  <div class="row sp wrap" style="gap:16px">
+    <div class="row g12p"><button class="btn ghost sm" type="button">← Simulações</button><div><div class="lbl" style="color:var(--accent-ink)">Anamnese · Editar sala</div><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.015em;line-height:1.15">Anamnese · Turma A, 2026.1</h1></div></div>
+    <div class="row g8 wrap"><span class="pill warn"><span class="dot"></span>Rascunho</span><span class="xs faint">PIN <b class="mono" style="color:var(--ink)">482913</b></span><span class="pill ok">Salvo automaticamente</span><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-copy"/></svg>Importar de outra sala</button><button class="btn primary sm" type="button"><svg class="i sm"><use href="#i-play"/></svg>Iniciar simulação</button></div>
+  </div>
+
+  <div class="callout warn"><svg class="i"><use href="#i-alert"/></svg><div><b>Falta ajustar as notas para iniciar.</b> A avaliação do observador soma 6,0 e a do professor 4,5; juntas precisam somar 10,0.</div></div>
+
+  <div class="tabs"><a class="on" data-tab="part"><svg class="i sm"><use href="#i-users"/></svg>Participantes <span class="c">25</span></a><a data-tab="form"><svg class="i sm"><use href="#i-form"/></svg>Formulários <span class="c">4</span></a><a data-tab="cfg"><svg class="i sm"><use href="#i-gear"/></svg>Configurações</a><a data-tab="banco">Banco de casos (diálogo)</a></div>
+
+  <div data-pane="part" class="on g21">
+    <div class="card"><div class="card-h"><h3>Alunos</h3><div class="row g8"><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-upload"/></svg>Importar de outra sala</button><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Adicionar aluno</button></div></div>
+      <table class="tbl"><thead><tr><th>Nome</th><th>E-mail</th><th>Matrícula</th><th></th></tr></thead><tbody>
+        <tr><td><div class="who"><span class="av sm">AB</span><b>Ana Beatriz Lima</b></div></td><td class="muted">ana@aluno.edu</td><td class="mono xs">20261001</td><td><svg class="i sm"><use href="#i-edit"/></svg></td></tr>
+        <tr><td><div class="who"><span class="av sm">CM</span><b>Carlos Mendonça</b></div></td><td class="muted">carlos@aluno.edu</td><td class="mono xs">20261002</td><td><svg class="i sm"><use href="#i-edit"/></svg></td></tr>
+        <tr><td><div class="who"><span class="av sm">DS</span><b>Daniela Souza</b></div></td><td class="muted">daniela@aluno.edu</td><td class="mono xs">20261003</td><td><svg class="i sm"><use href="#i-edit"/></svg></td></tr>
+      </tbody></table><div class="card-f"><span>3 de 24 exibidos</span><span class="xs">Editar abre o diálogo do participante</span></div></div>
+    <div class="col g16"><div class="card"><div class="card-h"><h3>Professor</h3></div><div class="card-b who"><span class="av a">SF</span><div><b>Sérgio Fernandes</b><span>sergio@universidade.edu</span></div></div></div>
+      <div class="note-box">A sala <b>não tem vínculo com Turma</b> hoje: o acesso é por PIN e e-mail. O vínculo depende de um banco de alunos e segue como pendência.</div></div>
+  </div>
+
+  <div data-pane="form" class="col g16">
+    <div class="row sp wrap"><div class="chips"><span class="chip on">Anamnese</span><span class="chip">Roteiro do paciente</span><span class="chip">Avaliação do observador</span><span class="chip">Avaliação do professor</span></div><div class="row g8"><button class="btn secondary sm" type="button">Usar template</button><button class="btn secondary sm" type="button">Salvar como template</button><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-upload"/></svg>Exportar PDF</button><button class="btn ai sm" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Caso do banco</button></div></div>
+    <div class="g21">
+      <div class="card"><div class="card-h"><h3>Construtor · Anamnese</h3><span class="s">8 campos</span></div><div class="list">
+        <div class="row"><span class="mono xs faint">1</span><div style="flex:1"><b class="sm" style="font-weight:500">Identificação do paciente</b><div class="xs faint">Texto curto</div></div><button class="btn ghost sm" type="button" aria-label="Mais"><svg class="i sm"><use href="#i-more"/></svg></button></div>
+        <div class="row"><span class="mono xs faint">2</span><div style="flex:1"><b class="sm" style="font-weight:500">Queixa principal e história da doença atual</b><div class="xs faint">Texto longo</div></div><button class="btn ghost sm" type="button" aria-label="Mais"><svg class="i sm"><use href="#i-more"/></svg></button></div>
+        <div class="row"><span class="mono xs faint">3</span><div style="flex:1"><b class="sm" style="font-weight:500">Medicamentos em uso</b><div class="xs faint">Tabela</div></div><button class="btn ghost sm" type="button" aria-label="Mais"><svg class="i sm"><use href="#i-more"/></svg></button></div>
+        <div class="row"><span class="mono xs faint">4</span><div style="flex:1"><b class="sm" style="font-weight:500">Alergias e reações adversas</b><div class="xs faint">Sim ou não com detalhe</div></div><button class="btn ghost sm" type="button" aria-label="Mais"><svg class="i sm"><use href="#i-more"/></svg></button></div>
+      </div><div class="card-f"><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Adicionar campo</button><span class="xs">Salva sozinho a cada 0,8 s</span></div></div>
+      <div class="card"><div class="card-h"><h3>Notas do formulário</h3></div><div class="card-b col g12p">
+        <div class="row sp sm"><span>Avaliação do observador</span><b class="mono" style="color:var(--warn)">6,0</b></div>
+        <div class="row sp sm"><span>Avaliação do professor</span><b class="mono" style="color:var(--warn)">4,5</b></div>
+        <div class="divider"></div>
+        <div class="row sp"><b>Total</b><b class="mono" style="color:var(--bad)">10,5 / 10,0</b></div>
+        <div class="note-box">Para iniciar, as duas notas precisam somar exatamente 10.</div>
+      </div></div>
+    </div>
+  </div>
+
+  <div data-pane="cfg" class="g2">
+    <div class="card"><div class="card-h"><h3>Geral</h3></div><div class="card-b col g12p"><div class="field"><label>Nome</label><div class="input val">Anamnese · Turma A, 2026.1</div></div><div class="field"><label>Descrição</label><div class="input ta val">Primeira etapa da cadeia de Farmácia Clínica.</div></div><div class="field"><label>Duração por rodada (min)</label><div class="input val" style="width:120px">45</div></div></div></div>
+    <div class="card"><div class="card-h"><h3>Competências vinculadas</h3></div><div class="card-b col g8"><div class="row g8"><span class="check on"><svg class="i sm"><use href="#i-check"/></svg></span>Comunicação com o paciente</div><div class="row g8"><span class="check on"><svg class="i sm"><use href="#i-check"/></svg></span>Coleta da história farmacoterapêutica</div><div class="row g8"><span class="check"></span>Raciocínio clínico</div></div><div class="card-f"><button class="btn danger sm" type="button">Reiniciar simulação</button><span class="xs">apaga rodadas e respostas</span></div></div>
+  </div>
+
+  <div data-pane="banco">
+    <div class="scrim"><div class="modal" style="max-width:760px">
+      <div class="modal-h"><div><h3>Banco de casos clínicos</h3><p class="sm muted" style="margin-top:4px">Escolha um caso pronto ou gere um por temática.</p></div><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b">
+        <div class="toolbar"><div class="input grow"><svg class="i sm"><use href="#i-search"/></svg>Buscar caso</div><button class="btn ai" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Gerar por temática</button></div>
+        <div class="g2"><div class="card flat card-b col g8"><b>Hipertensão com tontura</b><p class="xs muted">Idoso, 5 medicamentos, baixa adesão.</p><button class="btn secondary sm" type="button" style="align-self:flex-start">Usar neste formulário</button></div><div class="card flat card-b col g8"><b>Asma infantil</b><p class="xs muted">Técnica inalatória e cuidador.</p><button class="btn secondary sm" type="button" style="align-self:flex-start">Usar neste formulário</button></div></div>
+      </div>
+    </div></div>
+  </div>
+</div>

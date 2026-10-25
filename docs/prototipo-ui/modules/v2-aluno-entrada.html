@@ -1,0 +1,47 @@
+<div data-tabs style="min-height:680px;background:var(--paper)">
+  <header class="tb" style="height:auto;padding:12px 28px">
+    <div class="sb-logo" style="width:30px;height:30px;font-size:15px">P</div>
+    <div><b class="fr" style="font-weight:500;font-size:16px">Posologia Edu</b><div class="xs faint">Portal do aluno</div></div>
+    <button class="btn secondary sm" type="button" style="margin-left:auto">Aa Acessibilidade</button>
+  </header>
+  <div class="tabs scroll" style="padding:0 28px;background:var(--surface)"><a class="on" data-tab="ind">Entrada individual</a><a data-tab="grp">Entrada em grupo</a><a data-tab="err">Mensagens de erro</a><a data-tab="acc">Acessibilidade</a></div>
+
+  <div data-pane="ind" class="on sim-center" style="padding-top:56px">
+    <div class="card" style="max-width:440px;width:100%"><div class="card-b col g16">
+      <div><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.01em">Entrar na atividade</h1><p class="sm muted" style="margin-top:6px">Digite o PIN que o professor mostrou e o e-mail cadastrado na turma. O sistema reconhece sozinho o tipo de atividade.</p></div>
+      <div class="field"><label>PIN</label><div class="input val mono" style="font-size:22px;letter-spacing:.2em">4F7K29</div></div>
+      <div class="field"><label>Seu e-mail</label><div class="input val">carlos@aluno.edu</div></div>
+      <div class="row g8"><span class="pill ok"><svg class="i sm"><use href="#i-check"/></svg>Reconhecido: Paciente Virtual</span></div>
+      <button class="btn primary lg" type="button">Entrar</button>
+      <div class="xs faint">Tipos reconhecidos: simulações (Anamnese, SOAP, Reconciliação, Documentação), paciente virtual, júri, OSCE e prova online.</div>
+    </div></div>
+  </div>
+
+  <div data-pane="grp" class="sim-center" style="padding-top:56px">
+    <div class="card" style="max-width:520px;width:100%"><div class="card-b col g16">
+      <div><h2 class="fr" style="font-size:24px;font-weight:500">Avaliação em grupo</h2><p class="sm muted" style="margin-top:6px">Todos do grupo entram juntos. Informe o e-mail de cada integrante.</p></div>
+      <div class="field"><label>PIN</label><div class="input val mono">4F7K29</div></div>
+      <div class="col g8"><div class="row g8"><div class="input val grow" style="flex:1">ana@aluno.edu</div><button class="btn ghost sm" type="button" aria-label="Remover">✕</button></div><div class="row g8"><div class="input val grow" style="flex:1">carlos@aluno.edu</div><button class="btn ghost sm" type="button" aria-label="Remover">✕</button></div><div class="row g8"><div class="input grow" style="flex:1">Adicionar integrante…</div><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Adicionar</button></div></div>
+      <button class="btn primary lg" type="button">Entrar em grupo</button>
+    </div></div>
+  </div>
+
+  <div data-pane="err" class="fb-col" style="max-width:640px">
+    <div class="callout bad"><svg class="i"><use href="#i-alert"/></svg><div><b>PIN não encontrado.</b> Confira o código com o professor.</div></div>
+    <div class="callout bad"><svg class="i"><use href="#i-alert"/></svg><div><b>Daniela S. não está na turma.</b> Todos os integrantes precisam estar cadastrados.</div></div>
+    <div class="callout warn"><svg class="i"><use href="#i-alert"/></svg><div><b>Esta sala ainda não está ativa.</b> Volte quando o professor iniciar.</div></div>
+    <div class="callout warn"><svg class="i"><use href="#i-alert"/></svg><div><b>Você já está em outro paciente virtual desta turma.</b> Cada aluno participa de um só.</div></div>
+    <div class="note-box">As mensagens nomeiam quem falhou e dizem o que fazer, em vez de um erro genérico.</div>
+  </div>
+
+  <div data-pane="acc" style="padding:28px">
+    <div class="callout" style="max-width:720px;margin-bottom:16px"><svg class="i"><use href="#i-info"/></svg><div><b>Novo:</b> hoje o painel de acessibilidade só existe na prova online. Aqui ele passa a estar em todas as telas do aluno: OSCE, Paciente Virtual, simulações, Júri e formulários.</div></div>
+    <div class="card" style="max-width:420px"><div class="card-h"><h3>Acessibilidade</h3></div><div class="card-b col g12p">
+      <div class="field"><label>Tamanho da fonte</label><div class="row g8"><span class="chip">A−</span><span class="chip on">A</span><span class="chip">A+</span><span class="chip">A++</span></div></div>
+      <div class="row sp"><span class="sm">Alto contraste</span><span class="toggle"></span></div>
+      <div class="row sp"><span class="sm">Fonte para dislexia</span><span class="toggle on"></span></div>
+      <div class="row sp"><span class="sm">Espaçamento maior</span><span class="toggle"></span></div>
+      <div class="row sp"><span class="sm">Máscara de leitura</span><span class="toggle"></span></div>
+    </div></div>
+  </div>
+</div>

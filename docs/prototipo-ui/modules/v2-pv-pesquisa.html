@@ -1,0 +1,40 @@
+<div class="pg tight" data-tabs>
+  <div class="ph">
+    <div><div class="ey">Pacientes Virtuais · Pesquisa</div><h1>Pesquisa</h1><p class="sub">Métricas científicas das sessões com consentimento. Aberta a partir de Análises da turma.</p></div>
+    <div class="acts"><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Coerência semântica</button><button class="btn ai" type="button"><svg class="i sm"><use href="#i-spark"/></svg>IDCG por IA</button><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-upload"/></svg>Exportar</button></div>
+  </div>
+  <div class="tabs"><a class="on" data-tab="sess">Sessões <span class="c">24</span></a><a data-tab="aval">Avaliação científica (diálogo)</a><a data-tab="exp">Exportar</a></div>
+
+  <div data-pane="sess" class="on col g16">
+    <div class="toolbar"><div class="input val sel" style="width:260px">Turma: Farmácia Clínica 2026.1</div><span class="grow"></span><span class="xs faint">Só sessões avaliativas com consentimento aparecem com dados completos.</span></div>
+    <div class="card"><table class="tbl"><thead><tr><th>Grupo ou aluno</th><th>Paciente</th><th>LGPD</th><th class="n">Interações</th><th class="n">Latência</th><th class="n">Coerência</th><th class="n">IDCG</th><th class="n">ISC</th><th></th></tr></thead><tbody>
+      <tr><td class="strong">Grupo B</td><td>Roberto Mendes</td><td><span class="pill ok">Sim</span></td><td class="n">38</td><td class="n">2,1 s</td><td class="n">0,91</td><td class="n">4,2</td><td class="n">0,78</td><td><button class="btn secondary sm" type="button">Avaliar</button></td></tr>
+      <tr><td class="strong">Grupo C</td><td>Roberto Mendes</td><td><span class="pill bad">Não</span></td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td></td></tr>
+      <tr><td class="strong">Larissa Pires</td><td>Maria Aparecida</td><td><span class="pill warn">Pendente</span></td><td class="n">22</td><td class="n">1,8 s</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td><button class="btn secondary sm" type="button">Avaliar</button></td></tr>
+    </tbody></table></div>
+  </div>
+
+  <div data-pane="aval">
+    <div class="scrim"><div class="modal" style="max-width:720px">
+      <div class="modal-h"><div><h3>Avaliação científica da sessão</h3><div class="xs faint">Grupo B · Roberto Mendes</div></div><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b">
+        <div class="fg3">
+          <div class="field"><label>IDCG (Likert 1–5)</label><div class="input val sel">4</div></div>
+          <div class="field"><label>Severidade</label><div class="input val sel">Moderada</div></div>
+          <div class="field"><label>Realismo (1–5)</label><div class="input val sel">5</div></div>
+          <div class="field"><label>Qualidade conversacional (1–5)</label><div class="input val sel">4</div></div>
+          <div class="field"><label>Precisão factual (0–1)</label><div class="input val">0,92</div></div>
+          <div class="field"><label>Estabilidade comportamental (%)</label><div class="input val">88</div></div>
+        </div>
+        <div class="field"><label>Análise qualitativa</label><div class="input val ta">O paciente manteve o temperamento desconfiado e só revelou a automedicação após vínculo.</div></div>
+      </div>
+      <div class="modal-f"><button class="btn secondary" type="button">Cancelar</button><button class="btn primary" type="button">Salvar avaliação</button></div>
+    </div></div>
+  </div>
+
+  <div data-pane="exp" class="g3">
+    <div class="card card-b col g8"><span class="tile-ic g"><svg class="i sm"><use href="#i-upload"/></svg></span><b>CSV</b><p class="sm muted">Uma linha por sessão, para análise estatística.</p><button class="btn secondary sm" type="button">Baixar CSV</button></div>
+    <div class="card card-b col g8"><span class="tile-ic i"><svg class="i sm"><use href="#i-upload"/></svg></span><b>Planilha (XLSX)</b><p class="sm muted">Abas por métrica, pronta para tabelas.</p><button class="btn secondary sm" type="button">Baixar XLSX</button></div>
+    <div class="card card-b col g8"><span class="tile-ic a"><svg class="i sm"><use href="#i-upload"/></svg></span><b>PDF</b><p class="sm muted">Relatório resumido para anexar ao projeto.</p><button class="btn secondary sm" type="button">Baixar PDF</button></div>
+  </div>
+</div>

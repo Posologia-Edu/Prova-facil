@@ -1,0 +1,125 @@
+<div data-tabs style="display:flex;flex-direction:column;min-height:680px">
+  <header class="tb" style="height:auto;padding:12px 24px;flex-wrap:wrap">
+    <div class="sb-logo" style="width:30px;height:30px;font-size:15px">P</div>
+    <div class="row g8"><span class="av sm">RM</span><div><b class="fr" style="font-weight:500;font-size:16px">Roberto Mendes</b><div class="xs faint">Farmácia Clínica 2026.1 · Grupo B</div></div></div>
+    <div class="row g8 wrap" style="margin-left:12px"><span class="pill accent">Avaliativo</span><span class="pill line">Dificuldade média</span><span class="pill line">Grupo · 3 integrantes</span><span class="pill line mono">PIN 4821 <svg class="i sm"><use href="#i-copy"/></svg></span></div>
+    <div class="row g12p" style="margin-left:auto"><span class="pill info"><span class="dot"></span>Ana está conversando…</span><span class="row g8 mono" style="font-size:16px"><svg class="i sm"><use href="#i-timer"/></svg>12:40</span><button class="btn secondary sm" type="button">Ver cartão</button></div>
+  </header>
+
+  <div class="tabs scroll" style="padding:0 24px;background:var(--surface)">
+    <a class="on" data-tab="sala"><svg class="i sm"><use href="#i-chat"/></svg>Sala</a>
+    <a data-tab="cartao"><svg class="i sm"><use href="#i-flag"/></svg>Cartão do encontro</a>
+    <a data-tab="funcoes"><svg class="i sm"><use href="#i-users"/></svg>Funções do grupo</a>
+    <a data-tab="consent"><svg class="i sm"><use href="#i-shield"/></svg>Consentimento</a>
+    <a data-tab="concluir"><svg class="i sm"><use href="#i-check"/></svg>Concluir atendimento</a>
+    <a data-tab="fim"><svg class="i sm"><use href="#i-send"/></svg>Depois de concluir</a>
+  </div>
+
+  <!-- SALA -->
+  <div data-pane="sala" class="on" style="padding:20px 24px;background:var(--paper)">
+    <div class="steps" style="margin-bottom:6px"><i class="d"></i><i class="c"></i><i></i></div>
+    <div class="row sp" style="margin-bottom:16px"><span class="xs faint"><b style="color:var(--ink)">Encontro 2 de 3</b> · Eficácia e segurança</span><span class="xs faint">Anamnese inicial · <b>Eficácia/Segurança</b> · Ajustes finais</span></div>
+    <div class="sala-grid">
+      <div class="card" style="display:flex;flex-direction:column;min-height:480px">
+        <div class="card-h"><h3>Conversa</h3><span class="s">Quem conduz agora: <b style="color:var(--ink)">Carlos</b></span></div>
+        <div class="card-b chat" style="flex:1">
+          <div class="msg"><span class="av sm">RM</span><div><div class="bub">Doutor, voltei porque a tontura continua. Tomei como o senhor falou, mas ainda sinto.</div><small>paciente</small></div></div>
+          <div class="msg me"><span class="av sm a">CM</span><div><div class="bub">Vamos medir a sua pressão sentado e depois em pé.</div><small>Carlos</small></div></div>
+          <div class="msg"><span class="av sm i">AB</span><div><div class="bub" style="background:var(--info-soft);border-color:transparent">Qual o horário em que o senhor toma a losartana?</div><small>Ana · integrante do grupo</small></div></div>
+        </div>
+        <div class="card-f" style="flex-direction:column;align-items:stretch;gap:10px">
+          <div class="row sp wrap"><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-heart"/></svg>Medir sinais vitais</button><span class="xs faint">aparece quando você diz que vai aferir</span></div>
+          <div class="row g8"><div class="input grow" style="flex:1">Digite a sua pergunta…</div><button class="btn primary" type="button"><svg class="i sm"><use href="#i-send"/></svg>Enviar</button></div>
+        </div>
+      </div>
+
+      <div class="col g16">
+        <div class="card"><div class="card-h"><h3>Ficha eletrônica</h3><span class="pill ok">Salvo agora</span></div>
+          <div class="tabs" style="padding:0 12px"><a>1º</a><a class="on">2º · SBAR</a><a>3º · SOAP</a></div>
+          <div class="card-b col g12p">
+            <div class="field"><label>Situação</label><div class="input val ta">Paciente retorna com tontura persistente após ajuste de horário.</div></div>
+            <div class="field"><label>Background</label><div class="input val ta">Hipertenso, DM2; losartana e metformina.</div></div>
+            <div class="field"><label>Avaliação</label><div class="input ta">Descreva a sua avaliação…</div></div>
+            <div class="field"><label>Recomendação</label><div class="input ta"></div></div>
+            <div class="xs faint">Quem está na ficha não conversa com o paciente neste encontro.</div>
+          </div></div>
+        <div class="card"><div class="card-h"><h3>Materiais de consulta</h3><span class="pill accent">proposta nova</span></div><div class="list">
+          <div class="row sm"><svg class="i sm"><use href="#i-book"/></svg>Diretriz de hipertensão (PDF)<span class="xs faint" style="margin-left:auto">anexado ao caso</span></div>
+          <div class="row sm"><svg class="i sm"><use href="#i-book"/></svg>Bula de losartana<span class="xs faint" style="margin-left:auto">anexado ao caso</span></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="note-box" style="margin-top:14px"><b>Proposta nova, ainda sem especificação fechada:</b> materiais de consulta anexados pelo docente e campo da conversa com colar desativado (o aluno digita a própria pergunta). A decisão continua pendente; o resto da tela já existe hoje.</div>
+    <div class="row sp" style="margin-top:14px"><span class="xs faint">3 encontros: 1º Anamnese inicial · 2º Eficácia/Segurança · 3º Ajustes finais + MAI</span><div class="row g8"><button class="btn secondary" type="button">Avançar para o encontro 3</button></div></div>
+  </div>
+
+  <!-- CARTÃO -->
+  <div data-pane="cartao" style="padding:28px;background:var(--paper)">
+    <div class="scrim"><div class="modal" style="max-width:640px">
+      <div class="modal-h"><div><div class="lbl" style="color:var(--accent-ink)">Encontro 2 · Eficácia e segurança</div><h3 style="margin-top:6px">Cartão do encontro</h3></div><span class="pill info row g8"><svg class="i sm"><use href="#i-timer"/></svg>20 min sugeridos</span></div>
+      <div class="modal-b">
+        <div class="field"><label>Cenário</label><p class="sm">Duas semanas depois. O senhor volta à farmácia e traz um caderno com as medidas de pressão.</p></div>
+        <div class="fg2"><div class="field"><label>Seu papel</label><p class="sm">Farmacêutico responsável pelo acompanhamento.</p></div><div class="field"><label>Com quem conversa</label><p class="sm">O próprio paciente.</p></div></div>
+        <div class="field"><label>Tarefa</label><p class="sm">Avalie a efetividade e a segurança do que foi implementado e registre no SBAR.</p></div>
+        <div class="callout"><svg class="i"><use href="#i-info"/></svg><div><b>Regras de interação.</b> Pergunte uma coisa por vez. O paciente só revela o que for perguntado.</div></div>
+      </div>
+      <div class="modal-f"><span class="xs faint" style="margin-right:auto">Abre sozinho na primeira vez de cada encontro</span><button class="btn primary" type="button">Entendi, começar</button></div>
+    </div></div>
+  </div>
+
+  <!-- FUNÇÕES -->
+  <div data-pane="funcoes" style="padding:28px;background:var(--paper)">
+    <div class="scrim"><div class="modal" style="max-width:640px">
+      <div class="modal-h"><div><h3>Divisão de funções</h3><p class="sm muted" style="margin-top:4px">Em cada encontro, uma pessoa registra a ficha e outra conduz a conversa. Quem registra não envia mensagens ao paciente.</p></div></div>
+      <div class="modal-b">
+        <table class="tbl"><thead><tr><th>Encontro</th><th>Registra a ficha</th><th>Conduz a conversa</th></tr></thead><tbody>
+          <tr><td class="strong">1 · Anamnese</td><td><div class="input val sel">Ana Beatriz</div></td><td><div class="input val sel">Carlos</div></td></tr>
+          <tr><td class="strong">2 · Eficácia</td><td><div class="input val sel">Carlos</div></td><td><div class="input val sel">Daniela</div></td></tr>
+          <tr><td class="strong">3 · Ajustes</td><td><div class="input val sel">Daniela</div></td><td><div class="input val sel">Ana Beatriz</div></td></tr>
+        </tbody></table>
+        <div class="callout warn"><svg class="i"><use href="#i-alert"/></svg><div>O mesmo integrante não pode registrar e conduzir no mesmo encontro.</div></div>
+      </div>
+      <div class="modal-f"><button class="btn primary" type="button">Confirmar funções</button></div>
+    </div></div>
+  </div>
+
+  <!-- CONSENTIMENTO -->
+  <div data-pane="consent" style="padding:28px;background:var(--paper)">
+    <div class="scrim"><div class="modal" style="max-width:600px">
+      <div class="modal-h"><div><h3>Consentimento de pesquisa</h3><p class="sm muted" style="margin-top:4px">Versão 1.0 · aparece no primeiro acesso avaliativo (no Treino não é pedido)</p></div></div>
+      <div class="modal-b">
+        <p class="sm">Suas conversas podem ser usadas, sem identificação, em pesquisa sobre o uso de modelos de linguagem e RAG em simulações clínicas. Participar é voluntário e não muda a sua nota.</p>
+        <div class="q-opt sel"><span class="k"><svg class="i sm"><use href="#i-check"/></svg></span><div><b>Aceito participar</b></div></div>
+        <div class="q-opt"><span class="k"></span><div><b>Prefiro não participar</b></div></div>
+      </div>
+      <div class="modal-f"><button class="btn primary" type="button">Continuar</button></div>
+    </div></div>
+  </div>
+
+  <!-- CONCLUIR -->
+  <div data-pane="concluir" style="padding:28px;background:var(--paper)">
+    <div class="scrim"><div class="modal" style="max-width:680px">
+      <div class="modal-h"><div><h3>Concluir atendimento</h3><p class="sm muted" style="margin-top:4px">Antes de enviar, revise o que falta.</p></div></div>
+      <div class="modal-b">
+        <div class="callout warn"><svg class="i"><use href="#i-alert"/></svg><div><b>O SOAP do 3º encontro está em branco.</b> Você pode concluir assim mesmo, mas a nota de registro será baixa.</div></div>
+        <div class="col g8"><div class="lbl">MAI · Medication Appropriateness Index <span class="xs faint">(só Farmácia, casos sem ficha)</span></div>
+          <table class="tbl"><thead><tr><th>Critério</th><th>Losartana</th></tr></thead><tbody>
+            <tr><td>Indicação</td><td><span class="pill ok">Apropriado</span></td></tr>
+            <tr><td>Efetividade</td><td><span class="pill ok">Apropriado</span></td></tr>
+            <tr><td>Dosagem</td><td><span class="pill warn">Marginal</span></td></tr>
+            <tr><td>Técnica · Comodidade · Interações · Duplicidade · Duração · Custo</td><td><span class="pill">6 critérios restantes</span></td></tr>
+          </tbody></table></div>
+        <div class="note-box">Enfermagem e Medicina concluem sem MAI.</div>
+      </div>
+      <div class="modal-f"><button class="btn secondary" type="button">Voltar</button><button class="btn primary" type="button">Concluir e enviar para correção</button></div>
+    </div></div>
+  </div>
+
+  <!-- DEPOIS -->
+  <div data-pane="fim" style="padding:28px 24px;background:var(--paper)">
+    <div class="g2">
+      <div class="card"><div class="card-b col g12p" style="align-items:flex-start"><span class="tile-ic g"><svg class="i lg"><use href="#i-check"/></svg></span><h3 class="fr" style="font-size:22px;font-weight:500">Atendimento enviado</h3><p class="sm muted">Sua correção está sendo gerada. Em grupo, cada integrante recebe um e-mail para avaliar os colegas.</p><button class="btn primary" type="button">Ver feedback</button></div></div>
+      <div class="card"><div class="card-b col g12p"><b>Aviso para o grupo</b><div class="callout"><svg class="i"><use href="#i-send"/></svg><div>Enviamos a avaliação entre pares para <b>Ana, Carlos e Daniela</b>. Elas ajustam o bônus individual da nota.</div></div><div class="note-box">No <b>Treino</b>, a correção sai na hora e nada é enviado ao docente.</div></div></div>
+    </div>
+  </div>
+</div>

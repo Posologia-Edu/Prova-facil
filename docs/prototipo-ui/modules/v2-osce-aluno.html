@@ -1,0 +1,23 @@
+<div data-tabs style="min-height:680px;background:var(--paper)">
+  <header class="tb" style="height:auto;padding:12px 24px">
+    <div class="sb-logo" style="width:30px;height:30px;font-size:15px">P</div>
+    <div><b class="fr" style="font-weight:500;font-size:16px">OSCE Clínica Farmacêutica</b><div class="xs faint">Circuito A</div></div>
+    <span class="pill brand" style="margin-left:auto">Carlos Mendonça</span>
+  </header>
+  <div class="tabs scroll" style="padding:0 24px;background:var(--surface)"><a class="on" data-tab="est">Estação</a><a data-tab="esp">Aguarde</a><a data-tab="trans">Troca de estação</a><a data-tab="fim">Concluído</a><a data-tab="tempo">Tempo esgotado</a><a data-tab="ent">E-mail não encontrado</a></div>
+
+  <div data-pane="est" class="on sim-split" style="padding:20px 24px">
+    <div class="col g16">
+      <div class="card" style="border-color:var(--accent)"><div class="card-b row sp"><div><div class="lbl" style="color:var(--accent-ink)">Estação 2 de 4</div><h2 class="fr" style="font-size:24px;font-weight:500;margin-top:6px">Reconciliação medicamentosa</h2></div><div style="text-align:right"><div class="lbl">Tempo</div><div class="mono" style="font-size:34px;font-weight:500">06:20</div></div></div><div class="prog" style="margin:0 22px 18px"><i style="width:37%"></i></div></div>
+      <div class="card"><div class="card-h"><h3>Instruções</h3></div><div class="card-b sm">Você tem 10 minutos para reconciliar os medicamentos do paciente, identificar discrepâncias e propor uma conduta.</div></div>
+      <div class="card"><div class="card-h"><h3>Materiais da estação</h3></div><div class="card-b row g12p"><span class="tile-ic"><svg class="i sm"><use href="#i-img"/></svg></span><span class="sm">ECG.png</span><span class="tile-ic"><svg class="i sm"><use href="#i-book"/></svg></span><span class="sm">Resumo de alta.pdf</span></div></div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;min-height:420px"><div class="card-h"><h3>Paciente virtual</h3><span class="pill info"><span class="dot"></span>ao vivo</span></div><div class="card-b chat" style="flex:1"><div class="msg"><span class="av sm">PV</span><div><div class="bub">Doutora, não sei se devo continuar tomando o diurético.</div><small>paciente</small></div></div></div><div class="card-f"><div class="input grow" style="flex:1">Escreva ao paciente…</div><button class="btn primary sm" type="button"><svg class="i sm"><use href="#i-send"/></svg>Enviar</button></div></div>
+  </div>
+
+  <div data-pane="esp" style="padding:80px 24px"><div class="empty"><div class="art"><svg class="i lg"><use href="#i-clock"/></svg></div><b class="fr" style="font-size:22px;font-weight:500">Aguarde</b><p class="sm muted" style="margin-top:6px">O professor ainda não iniciou o circuito. Esta tela muda sozinha.</p></div></div>
+  <div data-pane="trans" style="padding:80px 24px"><div class="empty"><div class="art"><svg class="i lg"><use href="#i-chev"/></svg></div><b class="fr" style="font-size:22px;font-weight:500">Siga para a estação 3</b><p class="sm muted" style="margin-top:6px">Orientação de inalador. Você tem <b class="mono">00:21</b> para chegar.</p></div></div>
+  <div data-pane="fim" style="padding:80px 24px"><div class="empty"><div class="art" style="background:var(--ok-soft);color:var(--ok)"><svg class="i lg"><use href="#i-check"/></svg></div><b class="fr" style="font-size:22px;font-weight:500">Exame concluído</b><p class="sm muted" style="margin-top:6px">Você passou pelas 4 estações. Os resultados serão divulgados pelo professor.</p></div></div>
+  <div data-pane="tempo" style="padding:80px 24px"><div class="empty"><div class="art" style="background:var(--bad-soft);color:var(--bad)"><svg class="i lg"><use href="#i-timer"/></svg></div><b class="fr" style="font-size:22px;font-weight:500">Tempo esgotado</b><p class="sm muted" style="margin-top:6px">A estação terminou. Aguarde a troca.</p></div></div>
+  <div data-pane="ent" class="sim-center"><div class="card" style="max-width:420px;width:100%"><div class="card-b col g12p"><h2 class="fr" style="font-size:22px;font-weight:500">E-mail não encontrado</h2><p class="sm muted">Confira se usou o e-mail cadastrado na turma.</p><div class="input val">carlos@aluno.com</div><button class="btn primary" type="button">Tentar de novo</button></div></div></div>
+</div>

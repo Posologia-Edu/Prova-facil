@@ -1,0 +1,25 @@
+<div class="pg tight" data-tabs>
+  <div class="row sp wrap" style="gap:16px">
+    <div class="row g12p"><button class="btn ghost sm" type="button">← Júris</button><div><div class="lbl" style="color:var(--accent-ink)">Júri Simulado · Editar</div><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.015em;line-height:1.15">Júri · Erro de dispensação</h1></div></div>
+  </div>
+  <div class="steps"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i></div>
+  <div class="row sp xs faint"><span>1 · Preparar ✓</span><span>2 · Distribuir ✓</span><span>3 · Aplicar ✓</span><b style="color:var(--ink)">4 · Resultados</b></div>
+
+  <div class="tabs scroll"><a class="on" data-tab="res">Resultados</a><a data-tab="alu">Notas dos alunos</a></div>
+
+  <div data-pane="res" class="on col g16" data-tabs>
+    <div class="callout"><svg class="i"><use href="#i-info"/></svg><div><b>Nota final do grupo</b> = (Juiz + Professor + IA) ÷ 3</div></div>
+    <div class="tabs wrap"><a class="on" data-tab="cons">Notas consolidadas</a><a data-tab="env">Envios dos grupos</a><a data-tab="ia">Avaliação dos jurados (IA)</a><a data-tab="jt">Avaliar júri técnico</a><a data-tab="pro">Avaliação do professor</a></div>
+    <div data-pane="cons" class="on card"><table class="tbl"><thead><tr><th>Grupo</th><th class="n">Juiz</th><th class="n">Professor</th><th class="n">IA</th><th class="n">Final</th></tr></thead><tbody><tr><td class="strong">Grupo 1</td><td class="n">8,5</td><td class="n">8,0</td><td class="n">7,5</td><td class="n strong">8,0</td></tr><tr><td class="strong">Grupo 2</td><td class="n">7,0</td><td class="n">7,5</td><td class="n">7,0</td><td class="n strong">7,2</td></tr></tbody></table></div>
+    <div data-pane="env" class="card"><div class="list"><div class="row sp sm"><span>Grupo 1 · Acusação</span><span class="pill ok">Enviado</span></div><div class="row sp sm"><span>Grupo 1 · Defesa</span><span class="pill ok">Enviado</span></div><div class="row sp sm"><span>Grupo 2 · Júri técnico</span><span class="pill warn">Pendente</span></div></div></div>
+    <div data-pane="ia" class="card card-b col g12p"><div class="row sp"><b>Avaliação dos jurados por IA</b><button class="btn ai sm" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Avaliar com IA</button></div><div class="xs faint">A IA lê as respostas do júri técnico e atribui nota por critério.</div></div>
+    <div data-pane="jt" class="card card-b col g12p"><b>Painel do júri técnico</b><div class="fg3"><div class="field"><label>Fundamentação</label><div class="input val">4</div></div><div class="field"><label>Clareza</label><div class="input val">5</div></div><div class="field"><label>Imparcialidade</label><div class="input val">4</div></div></div><button class="btn primary sm" type="button" style="align-self:flex-start">Salvar</button></div>
+    <div data-pane="pro" class="card card-b col g12p"><b>Avaliação do professor</b><div class="fg2"><div class="field"><label>Nota</label><div class="input val">8,0</div></div><div class="field"><label>Comentário</label><div class="input val">Boa condução das testemunhas.</div></div></div></div>
+  </div>
+
+  <div data-pane="alu" class="col g16">
+    <div class="row sp"><b>Notas individuais</b><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-upload"/></svg>Exportar CSV</button></div>
+    <div class="card"><table class="tbl"><thead><tr><th>Aluno</th><th>Grupo</th><th>Papel</th><th class="n">Nota individual</th></tr></thead><tbody><tr><td>Ana Beatriz</td><td>1</td><td><span class="pill bad">Acusação</span></td><td class="n strong">8,3</td></tr><tr><td>Carlos M.</td><td>1</td><td><span class="pill info">Defesa</span></td><td class="n strong">7,8</td></tr></tbody></table></div>
+    <div class="card card-b col g8"><b>Relação nominal de apenados</b><div class="xs faint">Lista, por processo, de quem foi condenado no veredito, usada no encerramento da sessão.</div><button class="btn secondary sm" type="button" style="align-self:flex-start">Abrir relação</button></div>
+  </div>
+</div>

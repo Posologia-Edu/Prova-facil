@@ -1,0 +1,28 @@
+<div class="pg tight" data-tabs>
+  <div class="ph">
+    <div><div class="ey">Administração · só admin</div><h1>Administração</h1><p class="sm muted" style="margin-top:8px;max-width:66ch;font-size:14.5px">Usuários, convites, assinantes e tráfego do sistema.</p></div>
+    <div class="acts"><button class="btn primary" type="button"><svg class="i sm"><use href="#i-send"/></svg>Convidar por e-mail</button></div>
+  </div>
+  <div class="kpis">
+    <div class="card kpi"><div class="lbl">Usuários</div><div class="v">86</div><div class="d">aprovados</div></div>
+    <div class="card kpi"><div class="lbl">Pendentes</div><div class="v" style="color:var(--warn)">3</div><div class="d">aguardam aprovação</div></div>
+    <div class="card kpi"><div class="lbl">Assinantes</div><div class="v">14</div><div class="d">Premium</div></div>
+    <div class="card kpi"><div class="lbl">Provas no sistema</div><div class="v">412</div><div class="d">todas as contas</div></div>
+  </div>
+  <div class="tabs scroll"><a class="on" data-tab="pen">Pendentes <span class="c">3</span></a><a data-tab="apr">Aprovados</a><a data-tab="ass">Assinantes</a><a data-tab="ana">Analytics</a><a data-tab="api">Chave de IA</a><a data-tab="prom">Prompts</a></div>
+
+  <div data-pane="pen" class="on card"><div class="list">
+    <div class="row"><span class="av sm">PS</span><div style="flex:1"><b class="sm" style="font-weight:500">Paulo Santos</b><div class="xs faint">paulo@univ.edu · pediu em 24 out</div></div><button class="btn primary sm" type="button">Aprovar</button><button class="btn danger sm" type="button">Rejeitar</button></div>
+    <div class="row"><span class="av sm">LA</span><div style="flex:1"><b class="sm" style="font-weight:500">Laura Alves</b><div class="xs faint">laura@univ.edu · pediu em 23 out</div></div><button class="btn primary sm" type="button">Aprovar</button><button class="btn danger sm" type="button">Rejeitar</button></div>
+  </div></div>
+  <div data-pane="apr" class="card"><table class="tbl"><thead><tr><th>Usuário</th><th>Plano</th><th>Entrou em</th><th></th></tr></thead><tbody><tr><td>Helena Prado</td><td><span class="pill accent">Premium</span></td><td class="muted">12 mar</td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr><tr><td>Marcos Reis</td><td><span class="pill">Gratuito</span></td><td class="muted">02 abr</td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr></tbody></table><div class="card-f"><span class="xs">Excluir usuário pede confirmação</span></div></div>
+  <div data-pane="ass" class="card"><div class="card-h"><h3>Assinantes</h3><button class="btn secondary sm" type="button">Recarregar</button></div><div class="card-b xs faint">Lista vinda do Stripe.</div></div>
+  <div data-pane="ana" class="g2">
+    <div class="card"><div class="card-h"><h3>Visitas por dia</h3></div><div class="card-b"><svg viewBox="0 0 300 100" width="100%" role="img" aria-label="Visitas por dia"><polyline points="5,80 55,60 105,70 155,40 205,50 255,25 295,30" fill="none" stroke="var(--accent)" stroke-width="3"/></svg></div></div>
+    <div class="card"><div class="card-h"><h3>Páginas mais acessadas</h3></div><div class="list"><div class="row sp sm"><span>/dashboard</span><b class="mono">412</b></div><div class="row sp sm"><span>/virtual-patients</span><b class="mono">268</b></div></div></div>
+    <div class="card"><div class="card-h"><h3>Origens de tráfego</h3></div><div class="card-b xs faint">Direto · Busca · Indicação</div></div>
+    <div class="card"><div class="card-h"><h3>Funil de conversão</h3></div><div class="card-b xs faint">Visita → cadastro → aprovação → assinatura</div></div>
+  </div>
+  <div data-pane="api" class="card card-b col g12p" style="max-width:640px"><div class="field"><label>Chave do provedor Google (Gemini)</label><div class="input val">••••••••••••••••</div><span class="hint">É o único provedor de IA do sistema.</span></div><button class="btn primary sm" type="button" style="align-self:flex-start">Salvar chave</button></div>
+  <div data-pane="prom" class="card card-b sm muted">Visualização, por ferramenta, do prompt do sistema usado pela IA (Questões, Provas, Pacientes Virtuais…). Somente leitura.</div>
+</div>

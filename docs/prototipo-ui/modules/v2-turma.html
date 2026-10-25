@@ -1,0 +1,170 @@
+<div class="pg tight" data-tabs>
+  <!-- Cabeçalho -->
+  <div class="card" style="overflow:hidden">
+    <div style="padding:22px 26px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:20px;align-items:center">
+      <span class="tile-ic a" style="width:56px;height:56px;border-radius:16px"><svg class="i lg"><use href="#i-turmas"/></svg></span>
+      <div><div class="row g8 wrap"><button class="btn ghost sm" type="button" style="padding:4px 8px">← Turmas</button><span class="pill ok"><span class="dot"></span>Ativa</span></div><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.015em;line-height:1.15;margin-top:6px">Farmácia Clínica</h1><div class="xs muted" style="margin-top:6px">Disciplina de farmacoterapia aplicada · 38 alunos · 3 professores</div></div>
+      <div class="row g8"><div class="input sel val" style="width:190px"><svg class="i sm"><use href="#i-cal"/></svg>Semestre 2026.1 <span class="pill ok" style="padding:2px 7px;font-size:11px">ativo</span></div><button class="btn secondary" type="button"><svg class="i"><use href="#i-edit"/></svg>Editar turma</button></div>
+    </div>
+    <div class="tabs scroll" style="padding:0 18px;background:var(--sunken)">
+      <a data-tab="vis">Visão geral</a><a class="on" data-tab="atv">Atividades <span class="c">9</span></a><a data-tab="crono">Cronograma</a><a data-tab="alu">Alunos <span class="c">38</span></a><a data-tab="notas">Notas</a><a data-tab="pres">Presença</a><a data-tab="ana">Análises</a><a data-tab="sem">Semestres</a><a data-tab="prof">Professores</a><a data-tab="mat">Materiais</a><a data-tab="fer">Feriados</a>
+    </div>
+  </div>
+
+  <!-- VISÃO GERAL -->
+  <div data-pane="vis" class="col g24">
+    <div class="g21">
+      <div class="col g16">
+        <div class="card"><div class="card-h"><h3><svg class="i sm" style="vertical-align:-2px"><use href="#i-cal"/></svg> Próximas aulas</h3><a class="xs" style="color:var(--info)">Ver cronograma →</a></div><div class="list">
+          <div class="row"><div class="mono xs" style="width:54px">Seg 26/10</div><div style="flex:1"><b style="font-weight:500">Farmacocinética clínica</b><div class="xs faint">Prof. Marina Teixeira · 08:00</div></div><span class="pill info">Teórica</span></div>
+          <div class="row"><div class="mono xs" style="width:54px">Qua 28/10</div><div style="flex:1"><b style="font-weight:500">Prova AV2</b></div><span class="pill warn">Avaliação</span></div>
+          <div class="row"><div class="mono xs" style="width:54px">Sex 30/10</div><div style="flex:1"><b style="font-weight:500">Júri Simulado · Processo 001</b></div><span class="pill accent">Seminário / Caso</span></div>
+        </div></div>
+        <div class="card"><div class="card-h"><h3>Mural de comunicados</h3><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Novo comunicado</button></div><div class="list">
+          <div class="row top"><svg class="i" style="color:var(--accent)"><use href="#i-flag"/></svg><div style="flex:1"><b style="font-weight:500">Prova AV2 em 28/10</b> <span class="pill accent" style="font-size:11px">Fixado</span><div class="sm muted">Chegar 15 minutos antes. Documento com foto obrigatório.</div></div></div>
+          <div class="row top"><svg class="i faint"><use href="#i-chat"/></svg><div style="flex:1"><b style="font-weight:500">Material do Júri disponível</b><div class="sm muted">Leiam o processo antes da sessão.</div></div></div>
+        </div></div>
+      </div>
+      <div class="col g16">
+        <div class="card card-b"><div class="lbl">Progresso do semestre</div><div class="fr tnum" style="font-size:36px;margin:8px 0">62%</div><div class="prog"><i style="width:62%"></i></div><div class="xs faint" style="margin-top:8px">16 de 26 aulas realizadas</div></div>
+        <div class="card"><div class="card-h"><h3>Atalhos</h3></div><div class="list"><div class="row"><span style="flex:1">→ Marcar presença</span></div><div class="row"><span style="flex:1">→ Lançar notas</span></div><div class="row"><span style="flex:1">→ Gerenciar alunos</span></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ATIVIDADES -->
+  <div data-pane="atv" class="on col g16">
+    <div class="row wrap sp">
+      <div class="chips"><span class="chip on">Todas · 9</span><span class="chip"><svg class="i sm"><use href="#i-provas"/></svg>Provas · 3</span><span class="chip"><svg class="i sm"><use href="#i-paciente"/></svg>Paciente virtual · 3</span><span class="chip"><svg class="i sm"><use href="#i-sim"/></svg>Simulação · 1</span><span class="chip"><svg class="i sm"><use href="#i-juri"/></svg>Júri · 1</span><span class="chip"><svg class="i sm"><use href="#i-osce"/></svg>OSCE · 1</span></div>
+      <div class="row g8"><button class="btn secondary" type="button"><svg class="i"><use href="#i-users"/></svg>Gerenciar alunos</button><div class="row" style="position:relative"><button class="btn primary" type="button"><svg class="i"><use href="#i-plus"/></svg>Vincular atividade <svg class="i sm"><use href="#i-chevd"/></svg></button></div></div>
+    </div>
+    <div class="note-box">“Vincular atividade” abre: <b>Prova online · Paciente virtual · Simulação* · Júri* · OSCE*</b>. (*) Hoje Simulação, Júri e OSCE não se ligam à turma; o vínculo é a pendência já mapeada.</div>
+    <div class="card list">
+      <div class="row"><span class="tile-ic i"><svg class="i"><use href="#i-provas"/></svg></span><div style="flex:1;min-width:0"><div class="row g8 wrap"><b style="font-weight:500">Farmacologia II · AV2</b><span class="pill info">Prova online</span></div><div class="xs faint" style="margin-top:3px">24 de 38 entregas · encerra 28/10 · código <b class="mono">K7M2QX</b></div></div><div style="width:130px"><div class="prog"><i style="width:63%"></i></div></div><span class="pill ok"><span class="dot"></span>Aberta</span><button class="btn sm secondary" type="button">Abrir</button></div>
+      <div class="row top"><span class="tile-ic"><svg class="i"><use href="#i-paciente"/></svg></span><div style="flex:1;min-width:0"><div class="row g8 wrap"><b style="font-weight:500">Luciana Mendes</b><span class="pill">Paciente virtual</span><span class="pill brand">Avaliativo</span><span class="pill line">Farmácia</span></div><div class="xs faint" style="margin-top:3px">29 de 38 concluíram · PIN <b class="mono">482 917</b> <svg class="i sm" style="vertical-align:-2px"><use href="#i-copy"/></svg></div>
+        <div class="row g12p wrap" style="margin-top:10px"><div class="row g8"><span class="xs muted">Rótulo do grupo</span><div class="input val" style="padding:5px 10px;width:130px">Grupo A–H</div></div><div class="row g8"><span class="toggle on"></span><span class="xs muted">Dividir funções no grupo</span></div><button class="btn secondary sm" type="button">Atribuir alunos</button><button class="btn ghost sm" type="button">Remover</button></div></div>
+        <span class="pill ok"><span class="dot"></span>Ativo</span><button class="btn sm primary" type="button">Corrigir</button></div>
+      <div class="row top"><span class="tile-ic"><svg class="i"><use href="#i-paciente"/></svg></span><div style="flex:1;min-width:0"><div class="row g8 wrap"><b style="font-weight:500">Geraldo de Oliveira Ribeiro</b><span class="pill">Paciente virtual</span><span class="pill info">Treino · Médio</span></div><div class="xs faint" style="margin-top:3px">11 de 38 praticaram · PIN <b class="mono">105 338</b></div></div><span class="pill ok"><span class="dot"></span>Ativo</span><button class="btn sm secondary" type="button">Abrir</button></div>
+      <div class="row"><span class="tile-ic g"><svg class="i"><use href="#i-juri"/></svg></span><div style="flex:1"><div class="row g8 wrap"><b style="font-weight:500">Júri Simulado · Processo 001</b><span class="pill">Júri</span><span class="pill warn">4 alunos sem grupo</span></div><div class="xs faint" style="margin-top:3px">Sessão em 30/10 às 14:00 · 8 grupos</div></div><span class="pill accent"><span class="dot"></span>Agendada</span><button class="btn sm secondary" type="button">Abrir</button></div>
+      <div class="row"><span class="tile-ic a"><svg class="i"><use href="#i-sim"/></svg></span><div style="flex:1"><div class="row g8 wrap"><b style="font-weight:500">Simulação SOAP · Dor crônica</b><span class="pill">Simulação</span></div><div class="xs faint" style="margin-top:3px">Sala 3 · 12 participantes</div></div><span class="pill ok"><span class="dot"></span>Ao vivo</span><button class="btn sm secondary" type="button">Abrir</button></div>
+      <div class="row"><span class="tile-ic r"><svg class="i"><use href="#i-osce"/></svg></span><div style="flex:1"><div class="row g8 wrap"><b style="font-weight:500">OSCE · Circuito A</b><span class="pill">OSCE</span></div><div class="xs faint" style="margin-top:3px">Rodada 3 de 6 · 18 alunos</div></div><span class="pill ok"><span class="dot"></span>Ao vivo</span><button class="btn sm secondary" type="button">Abrir</button></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="card-h"><h3>Docente</h3></div><div class="card-b row g12p"><span class="av">SF</span><div><b style="font-weight:500">Sérgio Fernandes</b><div class="xs faint">Titular · responsável pelas atividades</div></div></div></div>
+      <div class="card"><div class="card-h"><h3>Vincular paciente virtual</h3></div><div class="card-b col g8"><div class="fg2"><div class="field"><label>Profissão do aluno</label><div class="input sel val">Farmácia</div></div><div class="field"><label>Tipo da atividade</label><div class="input sel val">Avaliativa</div></div></div><span class="hint">Treino permite praticar sem nota; o feedback sai assim que a correção termina.</span></div></div>
+    </div>
+  </div>
+
+  <!-- CRONOGRAMA -->
+  <div data-pane="crono" class="col g16">
+    <div class="row wrap sp">
+      <div class="seg" role="group" aria-label="Visão"><button type="button" aria-pressed="true">Lista</button><button type="button" aria-pressed="false">Turnos</button><button type="button" aria-pressed="false">Linha do tempo</button><button type="button" aria-pressed="false">Calendário</button></div>
+      <div class="row g8 wrap"><div class="input sel val xs" style="width:160px">Todos os tipos</div><div class="input sel val xs" style="width:150px">Todos status</div><button class="btn secondary sm" type="button">Grade semanal</button><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-upload"/></svg>Exportar</button><button class="btn primary" type="button"><svg class="i"><use href="#i-plus"/></svg>Nova aula <span class="kbd" style="margin-left:4px">N</span></button></div>
+    </div>
+    <div class="card list">
+      <div class="row"><div class="mono xs" style="width:70px">Seg 26/10<br><span class="faint">08:00–09:40</span></div><span class="tile-ic i"><svg class="i"><use href="#i-book"/></svg></span><div style="flex:1"><b style="font-weight:500">Farmacocinética clínica</b><div class="xs faint">Prof. Marina Teixeira</div></div><span class="pill info">Teórica</span><span class="pill">Planejada</span><button class="btn ghost sm" type="button" aria-label="Mais ações"><svg class="i"><use href="#i-more"/></svg></button></div>
+      <div class="row"><div class="mono xs" style="width:70px">Qua 28/10<br><span class="faint">08:00</span></div><span class="tile-ic a"><svg class="i"><use href="#i-provas"/></svg></span><div style="flex:1"><b style="font-weight:500">Prova AV2</b></div><span class="pill warn">Avaliação / Prova</span><span class="pill">Planejada</span><button class="btn ghost sm" type="button" aria-label="Mais ações"><svg class="i"><use href="#i-more"/></svg></button></div>
+      <div class="row"><div class="mono xs" style="width:70px">Sex 30/10<br><span class="faint">14:00</span></div><span class="tile-ic g"><svg class="i"><use href="#i-juri"/></svg></span><div style="flex:1"><b style="font-weight:500">Júri Simulado</b><div class="xs faint">Seminário / Caso clínico</div></div><button class="btn secondary sm" type="button">Avaliar seminário</button><span class="pill accent">Seminário</span><span class="pill">Planejada</span></div>
+      <div class="row"><div class="mono xs" style="width:70px">Seg 02/11</div><span class="tile-ic"><svg class="i"><use href="#i-cal"/></svg></span><div style="flex:1"><b style="font-weight:500">Feriado · Finados</b></div><span class="pill line">Feriado</span></div>
+      <div class="row"><div class="mono xs" style="width:70px">Qua 04/11<br><span class="faint">13:00</span></div><span class="tile-ic r"><svg class="i"><use href="#i-pill"/></svg></span><div style="flex:1"><b style="font-weight:500">Visita técnica · UBS Centro</b><div class="xs faint">2 turmas de visita · preceptora Ana Ribeiro</div></div><span class="pill brand">Visita técnica</span><span class="pill">Planejada</span></div>
+    </div>
+    <div class="scrim"><div class="modal" style="max-width:640px"><div class="modal-h"><h3>Nova aula</h3><button class="btn ghost sm" type="button">✕</button></div><div class="modal-b">
+      <div class="fg3"><div class="field"><label>Data</label><div class="input val">04/11/2026</div></div><div class="field"><label>Horário</label><div class="input sel val">Personalizado…</div></div><div class="field"><label>Status</label><div class="input sel val">Planejada</div></div></div>
+      <div class="field"><label>Título da aula</label><div class="input val">Visita técnica · UBS Centro</div></div>
+      <div class="fg2"><div class="field"><label>Tipo de aula</label><div class="input sel val">Visita técnica</div></div><div class="field"><label>Professor responsável</label><div class="input sel val">Marina Teixeira</div></div></div>
+      <div class="field"><label>Template (opcional)</label><div class="input sel">Sem template</div></div>
+      <div class="card flat"><div class="card-h"><h3>Turmas de visita</h3><button class="btn secondary sm" type="button">Catálogo de visitas</button></div><div class="card-b fg2"><div class="field"><label>Local (URL do Google Maps)</label><div class="input val">maps.app.goo.gl/…</div></div><div class="field"><label>Preceptor · telefone</label><div class="input val">Ana Ribeiro · (11) 9…</div></div></div></div>
+    </div><div class="modal-f"><button class="btn ghost" type="button">Cancelar</button><button class="btn primary" type="button">Salvar aula</button></div></div></div>
+    <div class="note-box">Também mantidos: reagendar arrastando no calendário, múltiplas datas de uma vez, grade semanal da disciplina (dia, turno, horários), e o instrumento do seminário (rubrica, pesos, nota máxima, biblioteca de rubricas).</div>
+  </div>
+
+  <!-- ALUNOS -->
+  <div data-pane="alu" class="col g16">
+    <div class="row sp wrap"><div class="input grow" style="max-width:360px"><svg class="i sm"><use href="#i-search"/></svg>Buscar aluno</div><div class="row g8"><button class="btn secondary" type="button"><svg class="i"><use href="#i-upload"/></svg>Exportar CSV</button><button class="btn secondary" type="button"><svg class="i"><use href="#i-send"/></svg>Enviar PINs de check-in</button><button class="btn primary" type="button"><svg class="i"><use href="#i-plus"/></svg>Adicionar alunos</button></div></div>
+    <div class="card"><table class="tbl"><thead><tr><th>Nome</th><th>E-mail</th><th>Matrícula</th><th>Turma de visita</th><th></th></tr></thead><tbody>
+      <tr><td><div class="who"><span class="av sm">AB</span><b>Ana Beatriz Lima</b></div></td><td class="muted">ana.lima@aluno.edu</td><td class="mono">2024001</td><td><span class="pill brand">Visita 1</span></td><td><button class="btn ghost sm" type="button" aria-label="Remover">🗑</button></td></tr>
+      <tr><td><div class="who"><span class="av sm">CM</span><b>Carlos Mendonça</b></div></td><td class="muted">carlos.m@aluno.edu</td><td class="mono">2024014</td><td><span class="pill brand">Visita 2</span></td><td><button class="btn ghost sm" type="button" aria-label="Remover">🗑</button></td></tr>
+      <tr><td><div class="who"><span class="av sm">DS</span><b>Daniela Souza</b></div></td><td class="muted">daniela.s@aluno.edu</td><td class="mono">2024022</td><td><span class="pill">—</span></td><td><button class="btn ghost sm" type="button" aria-label="Remover">🗑</button></td></tr>
+    </tbody></table><div class="card-f"><span>Cada linha do lote: <span class="mono">Nome; E-mail; Matrícula</span></span><span>38 alunos no semestre 2026.1</span></div></div>
+  </div>
+
+  <!-- NOTAS -->
+  <div data-pane="notas" class="col g16">
+    <div class="row sp"><div class="sec-t" style="margin:0">Caderno de notas</div><button class="btn primary" type="button"><svg class="i"><use href="#i-plus"/></svg>Nova avaliação</button></div>
+    <div class="card" style="overflow-x:auto"><table class="tbl"><thead><tr><th>Aluno</th><th class="n">AV1<br><span class="faint">peso 1 · máx 10</span></th><th class="n">AV2<br><span class="faint">peso 2 · máx 10</span></th><th class="n">Seminário<br><span class="faint">peso 1 · máx 10</span></th><th class="n">Média</th></tr></thead><tbody>
+      <tr><td><div class="who"><span class="av sm">AB</span><b>Ana Beatriz Lima</b></div></td><td class="n">8,5</td><td class="n">8,6</td><td class="n">9,0</td><td class="n strong">8,7</td></tr>
+      <tr><td><div class="who"><span class="av sm">CM</span><b>Carlos Mendonça</b></div></td><td class="n">7,0</td><td class="n faint">—</td><td class="n">8,0</td><td class="n strong">7,5</td></tr>
+      <tr><td><div class="who"><span class="av sm">DS</span><b>Daniela Souza</b></div></td><td class="n">6,5</td><td class="n">5,8</td><td class="n">7,5</td><td class="n strong" style="color:var(--bad)">6,4</td></tr>
+    </tbody></table></div>
+  </div>
+
+  <!-- PRESENÇA -->
+  <div data-pane="pres" class="col g16">
+    <div class="g21">
+      <div class="card"><div class="card-h"><div><h3>Aula: Farmacocinética clínica</h3><div class="s">Seg 26/10 · 08:00</div></div><div class="row g8"><button class="btn secondary sm" type="button">Marcar todos presentes</button><button class="btn primary sm" type="button"><svg class="i sm"><use href="#i-eye"/></svg>Check-in por QR</button></div></div>
+        <table class="tbl"><thead><tr><th>Aluno</th><th>Situação</th><th>Justificativa</th></tr></thead><tbody>
+          <tr><td><div class="who"><span class="av sm">AB</span><b>Ana Beatriz Lima</b></div></td><td><div class="seg"><button type="button" aria-pressed="true">Presente</button><button type="button" aria-pressed="false">Falta</button><button type="button" aria-pressed="false">Justif.</button><button type="button" aria-pressed="false">Atraso</button></div></td><td class="faint">—</td></tr>
+          <tr><td><div class="who"><span class="av sm">CM</span><b>Carlos Mendonça</b></div></td><td><div class="seg"><button type="button" aria-pressed="false">Presente</button><button type="button" aria-pressed="false">Falta</button><button type="button" aria-pressed="true">Justif.</button><button type="button" aria-pressed="false">Atraso</button></div></td><td class="muted">Atestado médico</td></tr>
+        </tbody></table></div>
+      <div class="card"><div class="card-h"><h3>Check-in por QR</h3><span class="pill ok"><span class="dot"></span>Aberto</span></div><div class="card-b col g12p" style="align-items:center;text-align:center"><div style="width:150px;height:150px;border-radius:12px;background:repeating-conic-gradient(var(--ink) 0 25%,var(--surface) 0 50%) 0 0/20px 20px;opacity:.85"></div><div class="xs faint">O código muda a cada poucos segundos</div><div class="row sp" style="width:100%"><span class="sm">Exigir geolocalização</span><span class="toggle on"></span></div><div class="divider" style="width:100%"></div><b class="sm">Check-ins ao vivo</b><div class="mono" style="font-size:28px">27 / 38</div></div></div>
+    </div>
+  </div>
+
+  <!-- ANÁLISES (novo: dentro da turma) -->
+  <div data-pane="ana" class="col g16">
+    <div class="row sp wrap"><div><div class="sec-t" style="margin:0">Análises desta turma</div><div class="xs faint">Escopo padrão: Farmácia Clínica 2026.1. Troque para outra turma ou “todas”.</div></div><div class="row g8"><div class="input sel val xs" style="width:230px">Farmácia Clínica 2026.1</div><div class="input sel val xs" style="width:150px">Todas as atividades</div></div></div>
+    <div class="kpis">
+      <div class="card kpi"><div class="lbl">Nota média</div><div class="v">7,8</div><div class="d up"><svg class="i sm"><use href="#i-up"/></svg>+0,4 vs. AV1</div></div>
+      <div class="card kpi"><div class="lbl">Aprovação</div><div class="v">84%</div><div class="d">mínimo 6,0</div></div>
+      <div class="card kpi"><div class="lbl">Participação</div><div class="v">81%</div><div class="d">em 9 atividades</div></div>
+      <div class="card kpi"><div class="lbl">Flags de segurança</div><div class="v">3</div><div class="d down">em 2 pacientes</div></div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Por atividade</h3></div><table class="tbl"><thead><tr><th>Atividade</th><th>Tipo</th><th class="n">Entregas</th><th class="n">Média</th><th></th></tr></thead><tbody>
+      <tr><td class="strong">Farmacologia II · AV2</td><td><span class="pill info">Prova</span></td><td class="n">24 / 38</td><td class="n">7,4</td><td><button class="btn ghost sm" type="button">Detalhes</button></td></tr>
+      <tr><td class="strong">Luciana Mendes</td><td><span class="pill">Paciente virtual</span></td><td class="n">29 / 38</td><td class="n">7,9</td><td><button class="btn ghost sm" type="button">Corrigir turma</button></td></tr>
+      <tr><td class="strong">OSCE · Circuito A</td><td><span class="pill">OSCE</span></td><td class="n">18 / 38</td><td class="n">8,1</td><td><button class="btn ghost sm" type="button">Detalhes</button></td></tr>
+    </tbody></table></div>
+    <div class="callout"><svg class="i"><use href="#i-info"/></svg><div>O detalhe de paciente virtual (correção em lote, ajuste manual, avaliação entre pares, calibração da IA e pesquisa) fica aqui dentro, no escopo da turma. “Análises VP” sai do menu quando esta aba estiver pronta.</div></div>
+  </div>
+
+  <!-- SEMESTRES -->
+  <div data-pane="sem" class="col g16">
+    <div class="row sp"><div class="sec-t" style="margin:0">Semestres</div><button class="btn primary" type="button"><svg class="i"><use href="#i-plus"/></svg>Novo semestre</button></div>
+    <div class="card list">
+      <div class="row"><b style="font-weight:500;flex:1">2026.1</b><span class="xs faint">03/02 – 20/06/2026</span><span class="pill ok">Ativo</span><button class="btn ghost sm" type="button" title="Duplicar cronograma"><svg class="i sm"><use href="#i-copy"/></svg></button><button class="btn ghost sm" type="button"><svg class="i sm"><use href="#i-edit"/></svg></button></div>
+      <div class="row"><b style="font-weight:500;flex:1">2025.2</b><span class="xs faint">04/08 – 12/12/2025</span><span class="pill line">Arquivado</span><button class="btn ghost sm" type="button"><svg class="i sm"><use href="#i-copy"/></svg></button><button class="btn ghost sm" type="button"><svg class="i sm"><use href="#i-edit"/></svg></button></div>
+    </div>
+    <div class="xs faint">Duplicar copia o cronograma. Professores e materiais são da turma e valem para todos os semestres.</div>
+  </div>
+
+  <!-- PROFESSORES -->
+  <div data-pane="prof" class="col g16">
+    <div class="row sp"><div class="sec-t" style="margin:0">Professores</div><button class="btn primary" type="button"><svg class="i"><use href="#i-plus"/></svg>Novo professor</button></div>
+    <div class="card"><table class="tbl"><thead><tr><th>Nome</th><th>E-mail</th><th>Função</th><th></th></tr></thead><tbody>
+      <tr><td class="strong">Sérgio Fernandes</td><td class="muted">srfernandesaraujo@gmail.com</td><td><span class="pill brand">Titular</span></td><td><button class="btn ghost sm" type="button">✎</button></td></tr>
+      <tr><td class="strong">Marina Teixeira</td><td class="muted">marina.t@edu.br</td><td><span class="pill">Auxiliar</span></td><td><button class="btn ghost sm" type="button">✎</button></td></tr>
+      <tr><td class="strong">Ana Ribeiro</td><td class="muted">ana.r@ubs.gov.br</td><td><span class="pill line">Convidado</span></td><td><button class="btn ghost sm" type="button">✎</button></td></tr>
+    </tbody></table></div>
+    <div class="xs faint">Funções: Titular, Auxiliar, Monitor, Convidado.</div>
+  </div>
+
+  <!-- MATERIAIS -->
+  <div data-pane="mat" class="col g16">
+    <div class="row sp"><div class="sec-t" style="margin:0">Materiais de apoio</div><button class="btn primary" type="button"><svg class="i"><use href="#i-plus"/></svg>Novo material</button></div>
+    <div class="g3">
+      <div class="card hov card-b"><div class="row sp"><span class="tile-ic"><svg class="i"><use href="#i-book"/></svg></span><span class="pill line">Leitura</span></div><b style="display:block;margin-top:12px;font-weight:500">Diretrizes de hipertensão 2025</b><div class="xs faint">PDF · 2,1 MB</div></div>
+      <div class="card hov card-b"><div class="row sp"><span class="tile-ic i"><svg class="i"><use href="#i-link"/></svg></span><span class="pill line">Link</span></div><b style="display:block;margin-top:12px;font-weight:500">Bulário eletrônico</b><div class="xs faint">Link externo</div></div>
+      <div class="card hov card-b"><div class="row sp"><span class="tile-ic a"><svg class="i"><use href="#i-compor"/></svg></span><span class="pill line">Roteiro</span></div><b style="display:block;margin-top:12px;font-weight:500">Roteiro de anamnese</b><div class="xs faint">DOCX · 180 KB</div></div>
+    </div>
+  </div>
+
+  <!-- FERIADOS -->
+  <div data-pane="fer" class="col g16">
+    <div class="row sp"><div class="sec-t" style="margin:0">Feriados</div><div class="row g8"><button class="btn secondary" type="button">Importar feriados</button><button class="btn secondary" type="button">Aplicar ao cronograma</button><button class="btn primary" type="button"><svg class="i"><use href="#i-plus"/></svg>Novo feriado</button></div></div>
+    <div class="card list">
+      <div class="row"><span class="mono xs" style="width:54px">02/11</span><b style="font-weight:500;flex:1">Finados</b><span class="pill line">Repete todo ano</span><button class="btn ghost sm" type="button">✎</button></div>
+      <div class="row"><span class="mono xs" style="width:54px">15/11</span><b style="font-weight:500;flex:1">Proclamação da República</b><span class="pill line">Repete todo ano</span><button class="btn ghost sm" type="button">✎</button></div>
+      <div class="row"><span class="mono xs" style="width:54px">20/11</span><b style="font-weight:500;flex:1">Consciência Negra</b><span class="pill line">Repete todo ano</span><button class="btn ghost sm" type="button">✎</button></div>
+    </div>
+  </div>
+</div>

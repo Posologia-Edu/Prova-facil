@@ -1,0 +1,53 @@
+<div class="pg tight" data-tabs>
+  <div class="ph">
+    <div><div class="ey">Farmácia Clínica · etapas 3 e 4</div><h1>Reconciliação e Documentação</h1><p class="sm muted" style="margin-top:8px;max-width:64ch;font-size:14.5px">As duas últimas etapas da cadeia. Cada uma importa os alunos da etapa anterior e tem editor, controle e a tela do aluno.</p></div>
+  </div>
+  <div class="steps"><i class="d"></i><i class="d"></i><i class="c"></i><i class="c"></i></div>
+  <div class="tabs scroll"><a class="on" data-tab="r-ed">Reconciliação · Editor</a><a data-tab="r-ct">Reconciliação · Controle</a><a data-tab="r-al">Reconciliação · Aluno</a><a data-tab="d-ed">Documentação · Editor</a><a data-tab="d-ct">Documentação · Controle</a><a data-tab="d-al">Documentação · Aluno</a></div>
+
+  <div data-pane="r-ed" class="on g21">
+    <div class="col g16">
+      <div class="card"><div class="card-h"><h3>Participantes</h3><button class="btn secondary sm" type="button">Importar do SOAP</button></div><div class="card-b xs faint">24 alunos · professor Sérgio Fernandes</div></div>
+      <div class="card"><div class="card-h"><h3>Formulários</h3></div><div class="list"><div class="row sp sm"><span>Ficha de reconciliação</span><span class="pill ok">6 campos</span></div><div class="row sp sm"><span>Avaliação do professor</span><span class="pill ok">10,0 pts</span></div></div></div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Casos clínicos</h3><button class="btn ai sm" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Gerar por IA</button></div><div class="list"><div class="row sp sm"><span>Hipertensão com tontura</span><span class="pill">Banco</span></div><div class="row sp sm"><span>Insônia e benzodiazepínico</span><span class="pill accent">Gerado</span></div></div></div>
+  </div>
+
+  <div data-pane="r-ct" class="col g16">
+    <div class="tabs" style="border-bottom:0"><span class="pill brand">Participantes</span><span class="pill">Respostas</span><span class="pill">Avaliação</span></div>
+    <div class="g21">
+      <div class="card"><table class="tbl"><thead><tr><th>Dupla</th><th>Caso</th><th>Ficha</th><th class="n">Nota</th></tr></thead><tbody>
+        <tr><td><div class="who"><span class="av sm">AB</span><b>Ana B. + Carlos M.</b></div></td><td>Hipertensão</td><td><span class="pill ok">Enviada</span></td><td class="n strong">8,5</td></tr>
+        <tr><td><div class="who"><span class="av sm">EF</span><b>Elisa F. + Fábio R.</b></div></td><td>Insônia</td><td><span class="pill warn">Pendente</span></td><td class="n faint">—</td></tr>
+      </tbody></table></div>
+      <div class="card card-b col g12p"><b>Avaliação</b><div class="field"><label>Nota final do admin</label><div class="input val">8,5</div></div><div class="field"><label>Feedback</label><div class="input ta val">Boa priorização das discrepâncias.</div></div><button class="btn ai" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Corrigir com IA</button><button class="btn primary" type="button">Salvar</button></div>
+    </div>
+  </div>
+
+  <div data-pane="r-al" class="g2">
+    <div class="card"><div class="card-h"><h3>Caso clínico</h3></div><div class="card-b sm muted">Roberto, 58 anos, chega à farmácia após alta hospitalar com cinco medicamentos novos.</div></div>
+    <div class="card"><div class="card-h"><h3>Ficha de reconciliação</h3></div><div class="card-b col g8"><div class="field"><label>Lista pré-internação</label><div class="input ta"></div></div><div class="field"><label>Lista da alta</label><div class="input ta"></div></div><div class="field"><label>Discrepâncias e conduta</label><div class="input ta"></div></div><button class="btn primary" type="button" style="align-self:flex-end">Enviar ficha</button></div><div class="card-f"><span class="xs">Depois do envio: “Ficha enviada!”</span></div></div>
+  </div>
+
+  <div data-pane="d-ed" class="col g16">
+    <div class="g2">
+      <div class="card"><div class="card-h"><h3>Encaminhamento</h3></div><div class="card-b col g8"><div class="field"><label>Modelo do formulário</label><div class="input ta val">Identificação, motivo, resumo clínico, solicitação.</div></div></div></div>
+      <div class="card"><div class="card-h"><h3>Quadro resumo</h3><span class="s">espelho</span></div><div class="card-b col g8"><div class="lbl">Colunas</div><div class="chips"><span class="chip on">Medicamento</span><span class="chip on">Dose</span><span class="chip on">Indicação</span><span class="chip">+ coluna</span></div></div></div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Linhas esperadas</h3><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Linha</button></div><table class="tbl"><thead><tr><th>Medicamento</th><th>Dose</th><th>Indicação</th><th class="n">Pontos</th></tr></thead><tbody><tr><td>Losartana</td><td>50 mg 1×/dia</td><td>Hipertensão</td><td class="n">1,0</td></tr><tr><td>Metformina</td><td>850 mg 2×/dia</td><td>DM2</td><td class="n">1,0</td></tr></tbody></table></div>
+    <div class="row g8"><span class="pill line">Participantes: importar da Reconciliação</span><span class="pill line">Casos clínicos: banco e IA</span></div>
+  </div>
+
+  <div data-pane="d-ct" class="g21">
+    <div class="card"><table class="tbl"><thead><tr><th>Dupla</th><th>Encaminhamento</th><th>Quadro</th><th class="n">Nota</th></tr></thead><tbody>
+      <tr><td><b>Ana B. + Carlos M.</b></td><td><span class="pill ok">Enviado</span></td><td><span class="pill ok">Enviado</span></td><td class="n strong">9,0</td></tr>
+      <tr><td><b>Elisa F. + Fábio R.</b></td><td><span class="pill ok">Enviado</span></td><td><span class="pill warn">Pendente</span></td><td class="n faint">—</td></tr>
+    </tbody></table></div>
+    <div class="card card-b col g12p"><b>Avaliação</b><div class="row sp sm"><span>Encaminhamento (máx. 5,0)</span><b class="mono">4,5</b></div><div class="row sp sm"><span>Quadro resumo (máx. 5,0)</span><b class="mono">4,5</b></div><div class="divider"></div><div class="row sp"><b>Total</b><b class="mono">9,0</b></div><button class="btn ai" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Corrigir com IA</button><button class="btn secondary" type="button">Reabrir envio da dupla</button></div>
+  </div>
+
+  <div data-pane="d-al" class="g2">
+    <div class="card"><div class="card-h"><h3>Caso clínico</h3></div><div class="card-b sm muted">O mesmo caso usado na etapa de reconciliação.</div></div>
+    <div class="col g16"><div class="card"><div class="card-h"><h3>Encaminhamento</h3></div><div class="card-b"><div class="input ta"></div></div></div><div class="card"><div class="card-h"><h3>Quadro resumo</h3></div><table class="tbl"><thead><tr><th>Medicamento</th><th>Dose</th><th>Indicação</th></tr></thead><tbody><tr><td class="faint">—</td><td class="faint">—</td><td class="faint">—</td></tr></tbody></table><div class="card-f"><span class="xs">Depois do envio: “Documentação enviada!”</span><button class="btn primary sm" type="button">Enviar</button></div></div></div>
+  </div>
+</div>

@@ -1,0 +1,38 @@
+<div class="pg tight" data-tabs>
+  <div class="row sp wrap" style="gap:16px">
+    <div class="row g12p"><button class="btn ghost sm" type="button">← Júris</button><div><div class="lbl" style="color:var(--accent-ink)">Júri Simulado · Editar</div><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.015em;line-height:1.15">Júri · Erro de dispensação</h1></div></div>
+    <div class="row g8 wrap"><span class="pill ok"><span class="dot"></span>Em andamento</span></div>
+  </div>
+  <div class="steps"><i class="d"></i><i class="c"></i><i class="c"></i><i></i></div>
+  <div class="row sp xs faint"><span>1 · Preparar ✓</span><b style="color:var(--ink)">2 · Distribuir</b><b style="color:var(--ink)">3 · Aplicar</b><span>4 · Resultados</span></div>
+
+  <div class="tabs scroll"><a class="on" data-tab="gr">Grupos <span class="c">6</span></a><a data-tab="di">Distribuição</a><a data-tab="fo">Formulários <span class="c">3</span></a><a data-tab="pj">Painel do Juiz</a></div>
+
+  <div data-pane="gr" class="on col g16">
+    <div class="row sp wrap"><div class="row g8"><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Criar grupo</button><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-users"/></svg>Distribuir alunos sem grupo</button></div><div class="row g8"><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Adicionar aluno</button><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-upload"/></svg>Adicionar em lote</button></div></div>
+    <div class="g3">
+      <div class="card"><div class="card-h"><h3>Grupo 1</h3><span class="pill">5 alunos</span></div><div class="list"><div class="row sm"><span class="av sm">AB</span>Ana Beatriz<span class="faint" style="margin-left:auto"><svg class="i sm"><use href="#i-edit"/></svg></span></div><div class="row sm"><span class="av sm">CM</span>Carlos M.<span class="faint" style="margin-left:auto"><svg class="i sm"><use href="#i-edit"/></svg></span></div></div></div>
+      <div class="card"><div class="card-h"><h3>Grupo 2</h3><span class="pill">5 alunos</span></div><div class="list"><div class="row sm"><span class="av sm">DS</span>Daniela S.</div><div class="row sm"><span class="av sm">EF</span>Elisa F.</div></div></div>
+      <div class="card" style="border-style:dashed"><div class="card-h"><h3>Sem grupo</h3><span class="pill warn">3 alunos</span></div><div class="list"><div class="row sm"><span class="av sm">FR</span>Fábio R.</div></div></div>
+    </div>
+    <div class="note-box">Hoje os alunos entram em lote ou digitados. O vínculo com a Turma (importar alunos com um clique) está proposto para depois do evento de 30/10.</div>
+  </div>
+
+  <div data-pane="di" class="col g16">
+    <div class="card"><table class="tbl"><thead><tr><th>Grupo</th><th>Processo</th><th>Aluno</th><th>Papel</th></tr></thead><tbody>
+      <tr><td rowspan="2" class="strong">Grupo 1</td><td rowspan="2"><div class="input val sel">Processo 1 · varfarina</div></td><td>Ana Beatriz</td><td><span class="pill bad">Acusação</span></td></tr>
+      <tr><td>Carlos M.</td><td><span class="pill info">Defesa</span></td></tr>
+      <tr><td rowspan="2" class="strong">Grupo 2</td><td rowspan="2"><div class="input val sel">Processo 2 · insulina</div></td><td>Daniela S.</td><td><span class="pill brand">Júri técnico</span></td></tr>
+      <tr><td>Elisa F.</td><td><span class="pill">Não participa</span></td></tr>
+    </tbody></table></div>
+    <div class="row g16 wrap xs"><span class="row g8"><span class="pill bad">Acusação</span>sustenta a denúncia</span><span class="row g8"><span class="pill info">Defesa</span>responde</span><span class="row g8"><span class="pill brand">Júri técnico</span>faz perguntas e delibera</span></div>
+  </div>
+
+  <div data-pane="fo" class="col g16">
+    <div class="chips"><span class="chip on">Acusação</span><span class="chip">Defesa</span><span class="chip">Júri técnico</span></div>
+    <div class="g21"><div class="card"><div class="card-h"><h3>Formulário · Acusação</h3><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Campo</button></div><div class="list"><div class="row sp sm"><span>Tese principal da acusação</span><span class="pill">Texto longo</span></div><div class="row sp sm"><span>Provas apresentadas</span><span class="pill">Texto longo</span></div><div class="row sp sm"><span>Nível de argumentação</span><span class="pill info">Escala 1–5</span></div></div></div>
+      <div class="card card-b col g8"><b>Pré-visualização do aluno</b><div class="field"><label>Tese principal da acusação</label><div class="input ta"></div></div></div></div>
+  </div>
+
+  <div data-pane="pj" class="card" style="max-width:720px"><div class="card-b col g12p"><div class="fg2"><div class="field"><label>Nome do juiz</label><div class="input val">Dr. Ricardo Lima</div></div><div class="field"><label>Descrição</label><div class="input val">Juiz da sessão de sexta</div></div></div><div class="row sp"><div><div class="lbl">PIN de acesso (alunos e juiz)</div><div class="mono" style="font-size:28px;letter-spacing:.14em;margin-top:6px">JR-5K28</div></div><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-copy"/></svg>Copiar</button></div><div class="field"><label>Link direto do juiz</label><div class="input val mono xs">prova.app/mock-trial/judge/JR-5K28</div></div></div></div>
+</div>

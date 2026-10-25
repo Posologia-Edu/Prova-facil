@@ -1,0 +1,31 @@
+<div data-tabs style="min-height:680px;background:var(--paper)">
+  <header class="tb" style="height:auto;padding:12px 24px;flex-wrap:wrap">
+    <div class="sb-logo" style="width:30px;height:30px;font-size:15px">⚖</div>
+    <div><b class="fr" style="font-weight:500;font-size:16px">Júri · Erro de dispensação</b><div class="xs faint">Painel do juiz · Dr. Ricardo Lima</div></div>
+    <div class="row g12p" style="margin-left:auto"><span class="pill info"><span class="dot"></span>Sessão ao vivo</span><span class="row g8 mono" style="font-size:20px"><svg class="i sm"><use href="#i-timer"/></svg>04:12</span></div>
+  </header>
+  <div class="tabs scroll" style="padding:0 24px;background:var(--surface)"><a class="on" data-tab="sessao">Sessão</a><a data-tab="grupos">Grupos e respostas</a><a data-tab="aval">Minha avaliação</a><a data-tab="fim">Encerramento</a></div>
+
+  <div data-pane="sessao" class="on" style="padding:20px 24px">
+    <div class="timeline h" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:18px">
+      <div style="display:block;padding:0"><span class="nd d" style="margin-bottom:6px"><svg class="i sm"><use href="#i-check"/></svg></span><div class="xs"><b>Anúncio do caso</b><div class="faint">2 min</div></div></div>
+      <div style="display:block;padding:0"><span class="nd c" style="margin-bottom:6px"></span><div class="xs"><b>Fala da defesa</b><div class="faint">em andamento</div></div></div>
+      <div style="display:block;padding:0"><span class="nd" style="margin-bottom:6px"></span><div class="xs faint"><b>Fala da acusação</b></div></div>
+      <div style="display:block;padding:0"><span class="nd" style="margin-bottom:6px"></span><div class="xs faint"><b>Perguntas do júri técnico</b></div></div>
+      <div style="display:block;padding:0"><span class="nd" style="margin-bottom:6px"></span><div class="xs faint"><b>Deliberação</b></div></div>
+      <div style="display:block;padding:0"><span class="nd" style="margin-bottom:6px"></span><div class="xs faint"><b>Veredito</b></div></div>
+    </div>
+    <div class="sim-split">
+      <div class="card" style="border-color:var(--accent)"><div class="card-b col g12p"><div class="row sp"><div><div class="lbl" style="color:var(--accent-ink)">Fase atual</div><h2 class="fr" style="font-size:26px;font-weight:500;margin-top:6px">Fala da defesa</h2></div><div class="mono" style="font-size:44px;font-weight:500">04:12</div></div><div class="prog"><i style="width:58%"></i></div>
+        <div class="callout"><svg class="i"><use href="#i-info"/></svg><div><b>O que dizer.</b> “Concedo a palavra à defesa. O tempo é de cinco minutos.” Intervenha só se houver desrespeito às regras.</div></div>
+        <div class="row g8"><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-clock"/></svg>Pausar fase</button><button class="btn primary" type="button">Iniciar próxima fase →</button></div></div></div>
+      <div class="col g16"><div class="card"><div class="card-h"><h3>Processo em julgamento</h3></div><div class="card-b sm muted">Processo 1 · Grupo 1 (Acusação: Ana B. · Defesa: Carlos M.)</div></div><div class="note-box">O cronômetro usa os horários da sessão, então continua certo se você recarregar a página.</div></div>
+    </div>
+  </div>
+
+  <div data-pane="grupos" style="padding:20px 24px"><div class="card"><div class="list"><div class="row sp sm"><span>Grupo 1 · Acusação</span><span class="pill ok">Respondeu</span></div><div class="row sp sm"><span>Grupo 1 · Defesa</span><span class="pill info">Respondendo</span></div><div class="row sp sm"><span>Grupo 2 · Júri técnico</span><span class="pill">Aguardando</span></div></div><div class="card-f"><span class="xs">Respostas e avaliações chegam em tempo real</span></div></div></div>
+
+  <div data-pane="aval" style="padding:20px 24px"><div class="card" style="max-width:720px"><div class="card-h"><h3>Avaliação do juiz · Grupo 1</h3></div><div class="card-b col g12p"><div class="row sp"><span class="sm">Acusação · domínio do caso</span><div class="chips"><span class="chip">1</span><span class="chip">2</span><span class="chip">3</span><span class="chip on">4</span><span class="chip">5</span></div></div><div class="row sp"><span class="sm">Defesa · fundamentação</span><div class="chips"><span class="chip">1</span><span class="chip">2</span><span class="chip">3</span><span class="chip">4</span><span class="chip on">5</span></div></div><button class="btn primary" type="button" style="align-self:flex-start">Salvar avaliação</button></div></div></div>
+
+  <div data-pane="fim" style="padding:20px 24px"><div class="card" style="max-width:640px"><div class="card-b col g12p"><b>Processo concluído</b><div class="callout"><svg class="i"><use href="#i-send"/></svg><div>Ao concluir, os alunos recebem por e-mail o convite para <b>avaliar os colegas</b> (3 critérios).</div></div><button class="btn primary" type="button" style="align-self:flex-start">Concluir processo e enviar convites</button></div></div></div>
+</div>

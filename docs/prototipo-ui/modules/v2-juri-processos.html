@@ -1,0 +1,47 @@
+<div class="pg tight" data-tabs>
+  <div class="row sp wrap" style="gap:16px">
+    <div class="row g12p"><button class="btn ghost sm" type="button">← Júris</button><div><div class="lbl" style="color:var(--accent-ink)">Júri Simulado · Editar</div><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.015em;line-height:1.15">Júri · Erro de dispensação</h1></div></div>
+    <div class="row g8 wrap"><span class="pill ok"><span class="dot"></span>Em andamento</span><span class="xs faint">PIN <b class="mono" style="color:var(--ink)">JR-5K28</b></span></div>
+  </div>
+  <div class="steps"><i class="c"></i><i></i><i></i><i></i></div>
+  <div class="row sp xs faint"><b style="color:var(--ink)">1 · Preparar (Processos)</b><span>2 · Distribuir (Grupos, Distribuição)</span><span>3 · Aplicar (Formulários, Painel do Juiz)</span><span>4 · Resultados (Resultados, Notas dos alunos)</span></div>
+
+  <div class="tabs scroll"><a class="on" data-tab="proc">Processos <span class="c">2</span></a><a data-tab="ia">Gerar com IA (diálogo)</a><a data-tab="job">Geração em andamento</a><a data-tab="banco">Banco de processos</a></div>
+
+  <div data-pane="proc" class="on col g16">
+    <div class="row sp wrap"><div class="row g8"><button class="btn ai" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Gerar processo com IA</button><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-banco"/></svg>Banco de processos</button></div><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Adicionar processo</button></div>
+
+    <div class="card"><div class="card-h"><div><div class="lbl">Processo 1</div><h3 class="fr" style="font-size:20px;font-weight:500;margin-top:4px">Paciente de 62 anos recebe dose dez vezes maior de varfarina</h3></div><div class="row g8 wrap"><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-edit"/></svg>Editar processo</button><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Regenerar</button><button class="btn secondary sm" type="button">Salvar no banco</button><button class="btn ghost sm" type="button">Reiniciar</button><button class="btn ghost sm" type="button" style="color:var(--bad)">Excluir</button></div></div>
+      <div class="card-b col g16">
+        <div class="g21">
+          <div class="paper" style="padding:28px 34px;font-size:14px;line-height:1.7"><div style="text-align:center;font-variant:small-caps;letter-spacing:.12em;font-size:12px">Poder Judiciário · Júri Simulado</div><div style="text-align:center;margin:8px 0 14px"><b>AUTOS Nº 0001234-56.2026.8.00.0001</b></div><p><b>DOS FATOS.</b> Em 12 de março, o paciente deu entrada na unidade de saúde com sangramento digestivo após ajuste de varfarina…</p><p style="margin-top:8px"><b>DA ACUSAÇÃO.</b> Imputa-se ao farmacêutico responsável a dispensação em desacordo com a prescrição…</p><div class="faint" style="margin-top:12px;font-size:12px">Assinado eletronicamente</div></div>
+          <div class="col g12p">
+            <div class="card flat"><div class="card-h"><h3>Imagens médicas</h3><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Gerar ou anexar</button></div><div class="card-b" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"><div style="aspect-ratio:4/3;border-radius:10px;background:var(--sunken);display:grid;place-items:center;color:var(--ink-3)"><svg class="i lg"><use href="#i-img"/></svg></div><div style="aspect-ratio:4/3;border-radius:10px;background:var(--sunken);display:grid;place-items:center;color:var(--ink-3)"><svg class="i lg"><use href="#i-img"/></svg></div></div></div>
+            <div class="card flat"><div class="card-h"><h3>Guia do professor</h3></div><div class="card-b xs faint">Pontos de atenção, respostas esperadas e perguntas de condução.</div><div class="card-f"><button class="btn secondary sm" type="button">Abrir guia</button></div></div>
+          </div>
+        </div>
+        <details class="card sec-card" open><summary>Seções do processo<span class="c">5</span></summary><div class="sec-b"><div class="row sp sm"><span>1 · Dos fatos</span><span class="pill ok">Gerada</span></div><div class="row sp sm"><span>2 · Da acusação</span><span class="pill ok">Gerada</span></div><div class="row sp sm"><span>3 · Da defesa</span><span class="pill warn">Pendente</span></div></div></details>
+        <details class="card sec-card" open><summary>Testemunhas técnicas<span class="c">2</span></summary><div class="sec-b">
+          <div class="card flat"><div class="card-b col g8"><div class="fg2"><div class="field"><label>Nome</label><div class="input val">Dra. Marta Nogueira</div></div><div class="field"><label>Profissão ou especialidade</label><div class="input val">Farmacêutica clínica</div></div></div><div class="field"><label>Perguntas socráticas</label><div class="input ta val">Que informação o prescritor tinha sobre o INR?</div></div></div></div>
+          <button class="btn secondary sm" type="button" style="align-self:flex-start"><svg class="i sm"><use href="#i-plus"/></svg>Testemunha</button>
+        </div></details>
+      </div></div>
+    <div class="note-box">Regenerar com IA usa os objetivos de aprendizagem salvos. “Reiniciar” volta o processo ao estado não iniciado.</div>
+  </div>
+
+  <div data-pane="ia">
+    <div class="scrim"><div class="modal" style="max-width:640px">
+      <div class="modal-h"><div><h3>Gerar processo com IA</h3><p class="sm muted" style="margin-top:4px">A IA escreve o processo em formato jurídico, com seções, testemunhas e guia do professor.</p></div><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b"><div class="field"><label>Objetivos de aprendizagem</label><div class="input ta val">Identificar falhas de reconciliação e de comunicação entre prescritor e farmacêutico.</div></div><div class="field"><label>PDF de referência <span class="faint">(opcional)</span></label><div class="input" style="border-style:dashed"><svg class="i sm"><use href="#i-upload"/></svg>Diretriz de segurança do paciente.pdf</div></div></div>
+      <div class="modal-f"><button class="btn secondary" type="button">Cancelar</button><button class="btn ai" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Gerar processo</button></div>
+    </div></div>
+  </div>
+
+  <div data-pane="job">
+    <div class="card" style="max-width:640px"><div class="card-b col g12p"><div class="row sp"><b>Gerando o processo…</b><span class="pill info"><span class="dot"></span>em tempo real</span></div><div class="timeline"><div><span class="nd d"><svg class="i sm"><use href="#i-check"/></svg></span><div class="sm">Estrutura do processo</div></div><div><span class="nd d"><svg class="i sm"><use href="#i-check"/></svg></span><div class="sm">Dos fatos e da acusação</div></div><div><span class="nd c"></span><div class="sm"><b style="font-weight:500">Testemunhas e perguntas</b><div class="xs faint">em andamento</div></div></div><div><span class="nd"></span><div class="sm faint">Guia do professor</div></div></div><div class="note-box">Você pode sair desta tela: a geração continua e o processo aparece na lista quando terminar.</div></div></div>
+  </div>
+
+  <div data-pane="banco">
+    <div class="scrim"><div class="modal" style="max-width:640px"><div class="modal-h"><h3>Banco de processos</h3><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div><div class="modal-b"><div class="card flat card-b row sp"><div><b class="sm">Erro de dispensação · varfarina</b><div class="xs faint">salvo em 12 out</div></div><button class="btn secondary sm" type="button">Usar neste Júri</button></div><div class="card flat card-b row sp"><div><b class="sm">Troca de insulina em internação</b><div class="xs faint">salvo em 03 set</div></div><button class="btn secondary sm" type="button">Usar neste Júri</button></div></div></div></div>
+  </div>
+</div>

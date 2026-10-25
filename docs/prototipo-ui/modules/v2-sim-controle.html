@@ -1,0 +1,62 @@
+<div class="pg tight" data-tabs>
+  <div class="row sp wrap" style="gap:16px">
+    <div class="row g12p"><button class="btn ghost sm" type="button">← Simulações</button><div><div class="lbl" style="color:var(--accent-ink)">Anamnese · Controle da sala</div><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.015em;line-height:1.15">Anamnese · Turma A, 2026.1</h1></div></div>
+    <div class="row g8 wrap"><span class="pill info"><span class="dot"></span>Ativa</span><span class="xs faint">PIN <b class="mono" style="color:var(--ink)">482913</b></span><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-clock"/></svg>Pausar para outro dia</button><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-send"/></svg>Relatórios por e-mail</button></div>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi"><div class="lbl">Presentes</div><div class="v">21<span class="faint" style="font-size:20px"> /24</span></div><div class="d"><span class="dot" style="color:var(--ok)"></span>em tempo real</div></div>
+    <div class="card kpi"><div class="lbl">Ciclo</div><div class="v">2<span class="faint" style="font-size:20px"> /3</span></div><div class="d">materiais liberados</div></div>
+    <div class="card kpi"><div class="lbl">Rodada</div><div class="v">4<span class="faint" style="font-size:20px"> /8</span></div><div class="d"><span class="mono">12:40</span> restantes</div></div>
+    <div class="card kpi"><div class="lbl">Respostas</div><div class="v">17</div><div class="d">formulários enviados</div></div>
+  </div>
+
+  <div class="tabs"><a class="on" data-tab="rod">Rodada</a><a data-tab="ana">Análises</a><a data-tab="pausa">Pausa (visão do aluno)</a><a data-tab="troca">Trocar participante</a></div>
+
+  <div data-pane="rod" class="on col g16">
+    <div class="steps"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i><i></i></div>
+    <div class="row sp wrap"><div class="row g8 wrap"><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-users"/></svg>Formar duplas e trios</button><span class="chip">Manual</span><span class="chip on">Sorteio</span></div><div class="row g8 wrap"><button class="btn secondary" type="button">Gerar rodadas do ciclo</button><button class="btn secondary" type="button">Liberar materiais do ciclo</button><button class="btn primary" type="button"><svg class="i sm"><use href="#i-play"/></svg>Iniciar próxima rodada</button></div></div>
+    <div class="g21">
+      <div class="card"><div class="card-h"><h3>Rodada 4 · em andamento</h3><div class="row g8"><button class="btn secondary sm" type="button">Encerrar</button><button class="btn ghost sm" type="button">Cancelar</button></div></div>
+        <table class="tbl"><thead><tr><th>Profissional</th><th>Paciente</th><th>Observador</th><th>Estado</th><th></th></tr></thead><tbody>
+          <tr><td style="white-space:nowrap"><div class="who"><span class="av sm">AB</span><div><b>Ana B.</b><span>Hipertensão</span></div></div></td><td>Carlos M.</td><td>Daniela S.</td><td><span class="pill info"><span class="dot"></span>Atendendo</span></td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+          <tr><td style="white-space:nowrap"><div class="who"><span class="av sm">EF</span><div><b>Elisa F.</b><span>Asma</span></div></div></td><td>Fábio R.</td><td>Gabriel T.</td><td><span class="pill ok">Enviou</span></td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+          <tr><td style="white-space:nowrap"><div class="who"><span class="av sm r">HL</span><div><b>Helena L.</b><span>Definir caso</span></div></div></td><td>Igor P.</td><td>Júlia N.</td><td><span class="pill warn">Ausente</span></td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+        </tbody></table>
+        <div class="card-f"><span class="xs">Menu ⋯: trocar participante ou papel · definir caso do paciente · reabrir rodada encerrada por engano</span></div></div>
+      <div class="col g16">
+        <div class="card"><div class="card-h"><h3>Rodadas</h3></div><div class="list">
+          <div class="row sp sm"><span>1–3</span><span class="pill ok">Encerradas</span></div>
+          <div class="row sp sm"><span>4</span><span class="pill info">Em andamento</span></div>
+          <div class="row sp sm"><span>5–8</span><span class="pill">Aguardando</span></div>
+          <div class="row sp sm"><span class="muted">Fora de ordem</span><button class="btn secondary sm" type="button">Iniciar rodada…</button></div>
+        </div><div class="card-f"><button class="btn danger sm" type="button">Resetar rodadas</button></div></div>
+        <div class="note-box">Estados de presença vêm em tempo real dos participantes da sala.</div>
+      </div>
+    </div>
+  </div>
+
+  <div data-pane="ana" class="col g16">
+    <div class="g3">
+      <div class="card"><div class="card-h"><h3>Média por aluno</h3></div><div class="card-b col g8"><div class="row g8"><span class="xs" style="width:70px">Ana B.</span><div class="prog ok" style="flex:1"><i style="width:88%"></i></div><b class="mono xs">8,8</b></div><div class="row g8"><span class="xs" style="width:70px">Carlos M.</span><div class="prog ok" style="flex:1"><i style="width:76%"></i></div><b class="mono xs">7,6</b></div><div class="row g8"><span class="xs" style="width:70px">Daniela S.</span><div class="prog" style="flex:1"><i style="width:58%"></i></div><b class="mono xs">5,8</b></div></div></div>
+      <div class="card"><div class="card-h"><h3>Média por rodada</h3></div><div class="card-b"><svg viewBox="0 0 300 120" width="100%" role="img" aria-label="Média por rodada"><g fill="var(--brand)"><rect x="12" y="40" width="30" height="70" rx="4"/><rect x="58" y="30" width="30" height="80" rx="4"/><rect x="104" y="46" width="30" height="64" rx="4"/><rect x="150" y="26" width="30" height="84" rx="4" fill="var(--accent)"/></g></svg></div></div>
+      <div class="card"><div class="card-h"><h3>Respostas</h3></div><div class="list"><div class="row sp sm"><span>Ana B. → Carlos M.</span><button class="btn ghost sm" type="button">Ver</button></div><div class="row sp sm"><span>Elisa F. → Fábio R.</span><button class="btn ghost sm" type="button">Ver</button></div></div></div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Relatórios por dupla</h3><div class="row g8"><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-upload"/></svg>PDF por dupla</button><button class="btn primary sm" type="button"><svg class="i sm"><use href="#i-send"/></svg>Enviar por e-mail</button></div></div><div class="card-b xs faint">O e-mail leva a nota, o formulário respondido e o feedback do professor.</div></div>
+  </div>
+
+  <div data-pane="pausa">
+    <div class="scrim"><div class="modal" style="max-width:520px">
+      <div class="modal-b" style="padding:32px;text-align:center;align-items:center"><span class="tile-ic a" style="width:56px;height:56px"><svg class="i lg"><use href="#i-clock"/></svg></span><h3 class="fr" style="font-size:22px;font-weight:500">Simulação pausada</h3><p class="sm muted">O professor pausou a atividade. Vocês continuam em 31 de outubro, a partir do ciclo 3. Suas respostas estão salvas.</p><span class="pill info">Voltar a esta página com o mesmo PIN</span></div>
+    </div></div>
+    <div class="note-box" style="margin-top:12px">O docente escolhe a data ao pausar e retoma depois pelo botão <b>Retomar</b> no topo.</div>
+  </div>
+
+  <div data-pane="troca">
+    <div class="scrim"><div class="modal" style="max-width:560px">
+      <div class="modal-h"><div><h3>Trocar participante ou papel</h3><p class="sm muted" style="margin-top:4px">Rodada 4 · dupla Ana B. / Carlos M. / Daniela S.</p></div><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b"><div class="field"><label>Quem sai</label><div class="input val sel">Daniela S. (observadora)</div></div><div class="field"><label>Quem entra</label><div class="input val sel">Helena L.</div></div><div class="field"><label>Papel</label><div class="input val sel">Observador</div></div></div>
+      <div class="modal-f"><button class="btn secondary" type="button">Cancelar</button><button class="btn primary" type="button">Confirmar troca</button></div>
+    </div></div>
+  </div>
+</div>

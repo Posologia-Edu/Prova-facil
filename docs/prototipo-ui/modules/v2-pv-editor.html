@@ -1,0 +1,111 @@
+<div class="pg tight" data-tabs>
+  <div class="row sp wrap" style="gap:16px">
+    <div class="row g12p"><button class="btn ghost sm" type="button">← Pacientes</button><span class="av lg">RM</span>
+      <div><div class="row g8 wrap"><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.015em;line-height:1.15">Roberto Mendes</h1><span class="xs faint">58 anos</span></div>
+        <div class="row g8 wrap" style="margin-top:6px"><span class="pill brand">Cardiovascular</span><span class="pill warn"><span class="dot"></span>Rascunho</span><span class="pill accent"><span class="dot"></span>Alterações não salvas</span><span class="pill line">Somente leitura <span class="xs faint">(só se não for seu)</span></span></div></div></div>
+    <div class="row g8"><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Adicionar versão</button><button class="btn secondary" type="button">Salvar rascunho</button><button class="btn primary" type="button" disabled style="opacity:.55">Publicar</button></div>
+  </div>
+
+  <div class="callout warn"><svg class="i"><use href="#i-alert"/></svg><div style="flex:1"><b>2 problemas impedem a publicação.</b> Versão Farmacêutico: faltam informações-alvo no gabarito. Núcleo: um medicamento está sem “uso real”. <span class="muted">Quando tudo estiver certo, esta faixa vira “Caso consistente”.</span></div></div>
+
+  <div class="row sp wrap">
+    <div class="tabs scroll" style="flex:1;min-width:0">
+      <a class="on" data-tab="nucleo"><svg class="i sm"><use href="#i-heart"/></svg>Núcleo clínico</a>
+      <a data-tab="farm"><svg class="i sm"><use href="#i-pill"/></svg>Farmacêutico <span class="c">22/28</span></a>
+      <a data-tab="enf"><svg class="i sm"><use href="#i-heart"/></svg>Enfermeiro <span class="c">novo</span></a>
+      <a data-tab="prev"><svg class="i sm"><use href="#i-chat"/></svg>Prévia</a>
+      <a data-tab="hist"><svg class="i sm"><use href="#i-clock"/></svg>Histórico <span class="c">6</span></a>
+    </div>
+  </div>
+
+  <!-- NÚCLEO -->
+  <div data-pane="nucleo" class="on ed2">
+    <nav class="side-idx" aria-label="Seções do núcleo"><a class="on" href="#" onclick="return false">Identidade</a><a href="#" onclick="return false">Personalidade</a><a href="#" onclick="return false">O que o paciente sabe <span class="c">6</span></a><a href="#" onclick="return false">Medicamentos <span class="c">5</span></a><a href="#" onclick="return false">Achados <span class="c">4</span></a><a href="#" onclick="return false">Exames <span class="c">3</span></a><a href="#" onclick="return false">Vitais de base</a></nav>
+    <div class="col g16">
+      <details class="card sec-card" open><summary>Revisão de consistência<span class="pill warn">3 pontos</span></summary><div class="list">
+        <div class="col g8"><div class="row g8"><span class="pill bad">Alta</span><b class="sm" style="font-weight:500">Dose x queixa</b></div><div class="xs muted">A queixa de tontura não bate com a PA de base elevada. Sugestão: ajustar o contexto de vitais.</div><div class="row g8"><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-check"/></svg>Marcar resolvido</button></div></div>
+        <div class="col g8"><div class="row g8"><span class="pill warn">Média</span><b class="sm" style="font-weight:500">Medicamento sem uso real</b></div><div class="xs muted">Hidroclorotiazida não tem comportamento definido.</div></div>
+        <div class="col g8"><div class="row g8"><span class="pill info">Baixa</span><b class="sm" style="font-weight:500">Temperamento</b></div><div class="xs muted">“Desconfiado” aparece só uma vez.</div></div>
+      </div><div class="card-f"><span class="xs">Salve antes de refazer. Sem revisão ainda? Aparece o botão “Fazer revisão agora”.</span><button class="btn ai sm" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Refazer revisão</button></div></details>
+      <details class="card sec-card" open><summary>Identidade<span class="c">12 campos</span></summary><div class="sec-b">
+        <div class="fg3"><div class="field"><label>Nome</label><div class="input val">Roberto Mendes</div></div><div class="field"><label>Idade</label><div class="input val">58</div></div><div class="field"><label>Sexo</label><div class="input val sel">Masculino</div></div></div>
+        <div class="fg3"><div class="field"><label>Ocupação</label><div class="input val">Aposentado (motorista)</div></div><div class="field"><label>Estado civil</label><div class="input val sel">Casado</div></div><div class="field"><label>Moradia</label><div class="input val">Mora com a esposa</div></div></div>
+        <div class="fg4"><div class="field"><label>Escolaridade</label><div class="input val sel">Fund. incompleto</div></div><div class="field"><label>Peso (kg)</label><div class="input val">84</div></div><div class="field"><label>Altura (cm)</label><div class="input val">172</div></div><div class="field"><label>Alergias</label><div class="input val">Nenhuma conhecida</div></div></div>
+        <div class="fg2"><div class="field"><label>Hábitos</label><div class="input val ta">Ex-fumante (parou há 6 anos). Bebe nos fins de semana. Caminha pouco.</div></div><div class="field"><label>Histórico familiar</label><div class="input val ta">Pai faleceu de infarto aos 61 anos. Mãe diabética.</div></div></div>
+      </div></details>
+      <details class="card sec-card"><summary>Personalidade<span class="c">4 campos</span></summary><div class="sec-b"><div class="fg2"><div class="field"><label>Temperamento</label><div class="input val">Cordial, um pouco desconfiado</div></div><div class="field"><label>Modo de falar</label><div class="input val">Frases curtas, coloquial</div></div><div class="field"><label>Letramento em saúde</label><div class="input val sel">Baixo</div></div><div class="field"><label>Como se sente</label><div class="input val">Preocupado com a tontura</div></div></div></div></details>
+      <details class="card sec-card"><summary>O que o paciente sabe<span class="c">6 fatos</span></summary><div class="sec-b"><div class="note-box">Fatos que o paciente conhece e pode contar. Quando cada um é dito é definido em cada versão.</div></div></details>
+      <details class="card sec-card" open><summary>Medicamentos<span class="c">5</span></summary>
+        <table class="tbl"><thead><tr><th>Como chama</th><th>Prescrito</th><th>Uso real</th><th>O que acha</th><th></th></tr></thead><tbody>
+          <tr><td class="strong">“o da pressão”</td><td>Losartana 50 mg 1×/dia</td><td>Toma quando lembra</td><td class="muted">Acha que é opcional</td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+          <tr><td class="strong">“o do açúcar”</td><td>Metformina 850 mg 2×/dia</td><td>Como prescrito</td><td class="muted">Causa enjoo</td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+          <tr><td class="strong">“a água”</td><td>Hidroclorotiazida 25 mg</td><td><span class="pill warn">Sem uso real</span></td><td class="muted">—</td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+        </tbody></table>
+        <div class="card-f"><span>3 de 5 exibidos</span><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Adicionar medicamento</button></div></details>
+      <details class="card sec-card"><summary>Achados<span class="c">4 cartões</span></summary><div class="sec-b"><div class="note-box">Cada achado é um cartão (por ex.: “edema discreto em tornozelos”) que o aluno só vê quando examina o paciente.</div></div></details>
+      <details class="card sec-card"><summary>Exames com resultado fixo<span class="c">3</span></summary><div class="sec-b"></div></details>
+      <details class="card sec-card"><summary>Vitais de base<span class="c">6</span></summary><div class="sec-b"><div class="fg3"><div class="field"><label>PA (mmHg)</label><div class="input val">156/94</div></div><div class="field"><label>FC (bpm)</label><div class="input val">78</div></div><div class="field"><label>FR (irpm)</label><div class="input val">16</div></div><div class="field"><label>Temp (°C)</label><div class="input val">36,4</div></div><div class="field"><label>SatO₂ (%)</label><div class="input val">97</div></div><div class="field"><label>Glicemia (mg/dL)</label><div class="input val">168</div></div></div><div class="field"><label>Contexto para ajustar vitais</label><div class="input val ta">Se o aluno mede após o paciente levantar, a PA cai 20 mmHg.</div></div></div></details>
+    </div>
+  </div>
+
+  <!-- VERSÃO FARMACÊUTICO -->
+  <div data-pane="farm" class="ed2">
+    <nav class="side-idx" aria-label="Seções da versão"><a class="on" href="#" onclick="return false">Cenário</a><a href="#" onclick="return false">Quando cada fato é revelado <span class="c">9</span></a><a href="#" onclick="return false">Quando cada achado aparece <span class="c">4</span></a><a href="#" onclick="return false">Perguntas do paciente <span class="c">3</span></a><a href="#" onclick="return false">Fora do roteiro</a><a href="#" onclick="return false">Dicas de atuação</a><a href="#" onclick="return false">Gabarito <span class="c">8</span></a><a href="#" onclick="return false">Encontros <span class="c">3</span></a></nav>
+    <div class="col g16">
+      <details class="card sec-card" open><summary>Cenário<span class="c">4 campos</span></summary><div class="sec-b"><div class="fg2"><div class="field"><label>Local</label><div class="input val">Farmácia comunitária</div></div><div class="field"><label>Tratamento em curso</label><div class="input val">Anti-hipertensivos e metformina</div></div></div><div class="field"><label>Motivo da vinda</label><div class="input val ta">Quer saber se pode parar o remédio da pressão porque se sente tonto.</div></div><div class="field"><label>Fala de abertura</label><div class="input val ta">Boa tarde. Será que o senhor pode me explicar esses remédios? Estou meio perdido.</div></div></div></details>
+      <details class="card sec-card"><summary>Quando cada fato é revelado<span class="c">9</span></summary><div class="sec-b"><div class="note-box">Para cada fato do núcleo: <b>logo de início</b>, <b>se perguntado</b> ou <b>só com vínculo</b> (o aluno precisa ter construído confiança).</div></div></details>
+      <details class="card sec-card"><summary>Quando cada achado é apresentado<span class="c">4</span></summary><div class="sec-b"></div></details>
+      <details class="card sec-card"><summary>Perguntas do paciente<span class="c">3</span></summary><div class="sec-b"></div></details>
+      <details class="card sec-card"><summary>Fora do roteiro e dicas de atuação</summary><div class="sec-b"></div></details>
+      <details class="card sec-card" open><summary>Gabarito<span class="c">8 listas</span></summary><div class="sec-b">
+        <div class="fg2"><div class="field"><label>Problemas esperados</label><div class="input val ta">Baixa adesão · hipotensão postural · duplicidade diurética</div></div><div class="field"><label>Red flags</label><div class="input val ta">Síncope · dor torácica</div></div></div>
+        <div class="fg2"><div class="field"><label>Informações-alvo <span class="pill warn" style="margin-left:6px">vazio</span></label><div class="input ta">Liste o que o aluno deve levantar…</div></div><div class="field"><label>Penalidades críticas</label><div class="input val ta">Orientar suspensão sem avaliar PA (−2,0)</div></div></div>
+        <div class="fg3"><div class="field"><label>Conduta</label><div class="input val ta">Medir PA em pé e sentado</div></div><div class="field"><label>Orientações</label><div class="input val ta">Horário e adesão</div></div><div class="field"><label>Encaminhamentos</label><div class="input val ta">Médico assistente</div></div></div>
+        <div class="fg2"><div class="field"><label>Objetivos de aprendizagem</label><div class="input val ta">Reconciliar e priorizar problemas</div></div><div class="field"><label>Referências</label><div class="input val ta">Diretriz brasileira de hipertensão</div></div></div>
+      </div></details>
+      <details class="card sec-card" open><summary>Encontros<span class="c">3</span></summary><div class="sec-b">
+        <div class="card flat"><div class="card-h"><h3>Encontro 1 · Anamnese inicial</h3><span class="pill line">Paciente</span></div><div class="card-b col g12p">
+          <div class="fg3"><div class="field"><label>Interlocutor</label><div class="input val">O próprio paciente</div></div><div class="field"><label>Temperamento</label><div class="input val">Cordial</div></div><div class="field"><label>Tempo sugerido</label><div class="input val">15 min</div></div></div>
+          <div class="fg2"><div class="field"><label>Resistências</label><div class="input val ta">Receio de que “remédio demais” faça mal</div></div><div class="field"><label>Critérios para ceder</label><div class="input val ta">Cede se o aluno explicar com exemplo do dia a dia</div></div></div>
+          <div class="fg2"><div class="field"><label>Cartão de passagem · cenário</label><div class="input val ta">O senhor chega à farmácia com uma sacola de remédios.</div></div><div class="field"><label>Cartão de passagem · tarefa</label><div class="input val ta">Faça a anamnese e registre a lista de medicamentos.</div></div></div>
+          <div class="fg2"><div class="field"><label>Evolução conforme o implementado</label><div class="input val ta">Se orientou horário, PA cai no próximo encontro.</div></div><div class="field"><label>Se nada foi implementado</label><div class="input val ta">Mantém a tontura e piora a adesão.</div></div></div>
+        </div></div>
+        <div class="note-box">Encontros 2 e 3 têm os mesmos campos (eficácia/segurança e ajustes finais).</div>
+      </div></details>
+    </div>
+  </div>
+
+  <!-- NOVA VERSÃO (ENFERMEIRO) -->
+  <div data-pane="enf" class="col g16">
+    <div class="scrim"><div class="modal" style="max-width:600px">
+      <div class="modal-h"><div><h3>Adicionar versão · Enfermeiro</h3><p class="sm muted" style="margin-top:4px">A versão usa o mesmo núcleo clínico. Escolha como criar.</p></div><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b">
+        <div class="q-opt sel"><span class="k"><svg class="i sm"><use href="#i-spark"/></svg></span><div><b>Com IA</b><div class="sm muted">Lê o núcleo salvo e escreve cenário, gabarito e encontros para a profissão.</div></div></div>
+        <div class="q-opt"><span class="k"><svg class="i sm"><use href="#i-copy"/></svg></span><div><b>Manual</b><div class="sm muted">Clona uma versão existente para você ajustar à mão.</div></div></div>
+        <div class="callout warn"><svg class="i"><use href="#i-alert"/></svg><div>O núcleo precisa estar salvo. Há alterações pendentes.</div></div>
+      </div>
+      <div class="modal-f"><button class="btn secondary" type="button">Cancelar</button><button class="btn ai" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Gerar versão</button></div>
+    </div></div>
+  </div>
+
+  <!-- PRÉVIA -->
+  <div data-pane="prev" class="col g16">
+    <div class="toolbar"><div class="input val sel" style="width:200px">Versão: Farmacêutico</div><div class="input val sel" style="width:240px">Encontro 1 · Anamnese inicial</div><span class="grow"></span><button class="btn secondary sm" type="button">Reiniciar conversa</button></div>
+    <div class="card"><div class="card-b chat" style="min-height:260px">
+      <div class="msg"><span class="av sm">RM</span><div><div class="bub">Boa tarde. Será que o senhor pode me explicar esses remédios? Estou meio perdido.</div><small>paciente</small></div></div>
+      <div class="msg me"><span class="av sm a">SF</span><div><div class="bub">Claro. Pode me contar o que o senhor toma hoje?</div><small>você</small></div></div>
+    </div><div class="card-f"><div class="input grow" style="flex:1">Escreva a pergunta ao paciente…</div><button class="btn primary sm" type="button"><svg class="i sm"><use href="#i-send"/></svg>Enviar</button></div></div>
+    <div class="note-box">A prévia usa o rascunho aberto, inclusive alterações não salvas.</div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div data-pane="hist" class="col g16">
+    <div class="card"><div class="list">
+      <div class="row"><span class="tile-ic i"><svg class="i sm"><use href="#i-clock"/></svg></span><div style="flex:1"><b class="sm" style="font-weight:500">Versão atual (rascunho)</b><div class="xs faint">hoje, 14:22</div></div><span class="pill accent">Aberta</span></div>
+      <div class="row"><span class="tile-ic"><svg class="i sm"><use href="#i-clock"/></svg></span><div style="flex:1"><b class="sm" style="font-weight:500">Salvamento manual</b><div class="xs faint">hoje, 13:05 · Sérgio Fernandes</div></div><button class="btn secondary sm" type="button">Restaurar</button></div>
+      <div class="row"><span class="tile-ic"><svg class="i sm"><use href="#i-clock"/></svg></span><div style="flex:1"><b class="sm" style="font-weight:500">Antes de publicar</b><div class="xs faint">ontem, 18:40 · Sérgio Fernandes</div></div><button class="btn secondary sm" type="button">Restaurar</button></div>
+      <div class="row"><span class="tile-ic"><svg class="i sm"><use href="#i-clock"/></svg></span><div style="flex:1"><b class="sm" style="font-weight:500">Gerado com IA</b><div class="xs faint">20 out, 09:12</div></div><button class="btn secondary sm" type="button">Restaurar</button></div>
+    </div></div>
+    <div class="note-box">Restaurar carrega a versão no editor; ela só vira a atual quando você salva. Casos legados abrem em visualização somente leitura.</div>
+  </div>
+</div>

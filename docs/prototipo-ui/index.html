@@ -1,0 +1,725 @@
+
+<title>Projeto de Interface Posologia</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: à esquerda o índice de módulos com o estado de aprovação; à direita o módulo dentro de uma moldura de aplicativo, com a barra de decisão logo abaixo. */
+/* Tokens: Marinho + Âmbar, Fraunces (títulos e números), Geist (interface), Geist Mono (rótulos e dados). */
+:root {
+  --paper: #F3F5F9; --surface: #FFFFFF; --sunken: #EAEEF4; --raised: #FFFFFF;
+  --ink: #0F1B2D; --ink-2: #4B586B; --ink-3: #7A8696;
+  --line: #E1E6ED; --line-strong: #CBD3DE;
+  --brand: #14284B; --brand-ink: #FFFFFF; --brand-soft: #E6ECF7; --brand-text: #14284B;
+  --accent: #F2A516; --accent-ink: #8A5A00; --accent-soft: #FFF3D9;
+  --ok: #1B8A5A; --ok-soft: #E2F4EB;
+  --warn: #A66A00; --warn-soft: #FFF1D6;
+  --bad: #C2372D; --bad-soft: #FBE7E5;
+  --info: #2D63C8; --info-soft: #E5EEFC;
+  --sb-bg: #0F2142; --sb-ink: #AEBBD3; --sb-on: #FFFFFF; --sb-hover: rgba(255,255,255,.06); --sb-active: rgba(255,255,255,.10); --sb-line: rgba(255,255,255,.08);
+  --shadow-1: 0 1px 2px rgba(15,27,45,.06), 0 1px 1px rgba(15,27,45,.04);
+  --shadow-2: 0 4px 14px rgba(15,27,45,.08), 0 1px 3px rgba(15,27,45,.06);
+  --shadow-3: 0 24px 56px rgba(15,27,45,.16), 0 4px 12px rgba(15,27,45,.08);
+  --f-display: "Fraunces", Georgia, serif;
+  --f-body: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  --r-ctl: 8px; --r-card: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0A111F; --surface: #111B2E; --sunken: #0D1626; --raised: #162238;
+    --ink: #E9EEF6; --ink-2: #A8B3C4; --ink-3: #75839A;
+    --line: #1E2B43; --line-strong: #2C3C5A;
+    --brand: #F2A516; --brand-ink: #1A1200; --brand-soft: #1B2A47; --brand-text: #CFE0FF;
+    --accent: #F2A516; --accent-ink: #F7C25A; --accent-soft: #2A2110;
+    --ok: #4CC38A; --ok-soft: #12291F; --warn: #F0B34A; --warn-soft: #2A2110; --bad: #F07A70; --bad-soft: #301816; --info: #7FA8F5; --info-soft: #14243F;
+    --sb-bg: #0C1526; --sb-ink: #8E9DB6;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.4); --shadow-2: 0 6px 18px rgba(0,0,0,.4); --shadow-3: 0 24px 56px rgba(0,0,0,.55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0A111F; --surface: #111B2E; --sunken: #0D1626; --raised: #162238;
+  --ink: #E9EEF6; --ink-2: #A8B3C4; --ink-3: #75839A;
+  --line: #1E2B43; --line-strong: #2C3C5A;
+  --brand: #F2A516; --brand-ink: #1A1200; --brand-soft: #1B2A47; --brand-text: #CFE0FF;
+  --accent: #F2A516; --accent-ink: #F7C25A; --accent-soft: #2A2110;
+  --ok: #4CC38A; --ok-soft: #12291F; --warn: #F0B34A; --warn-soft: #2A2110; --bad: #F07A70; --bad-soft: #301816; --info: #7FA8F5; --info-soft: #14243F;
+  --sb-bg: #0C1526; --sb-ink: #8E9DB6;
+  --shadow-1: 0 1px 2px rgba(0,0,0,.4); --shadow-2: 0 6px 18px rgba(0,0,0,.4); --shadow-3: 0 24px 56px rgba(0,0,0,.55);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--paper); color: var(--ink); font: 400 15px/1.55 var(--f-body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4, p { margin: 0; text-wrap: balance; }
+p { text-wrap: pretty; }
+button { font: inherit; color: inherit; }
+.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.i.sm { width: 15px; height: 15px; } .i.lg { width: 22px; height: 22px; }
+
+/* ───────── moldura do projeto ───────── */
+.project { display: grid; grid-template-columns: 272px minmax(0, 1fr); gap: 40px; max-width: 1440px; margin: 0 auto; padding-block: 28px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.rail { position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 40px); overflow-y: auto; padding-right: 6px; }
+.rail .mark { font: 500 11px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.rail h1 { font: 500 22px/1.15 var(--f-display); letter-spacing: -.01em; margin-bottom: 14px; }
+.meter { margin-bottom: 18px; }
+.meter .t { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.meter .bar { height: 6px; border-radius: 99px; background: var(--sunken); overflow: hidden; display: flex; }
+.meter .bar i { display: block; height: 100%; }
+.rail .gt { font: 500 10.5px/1 var(--f-mono); letter-spacing: .13em; text-transform: uppercase; color: var(--ink-3); margin: 18px 0 6px; padding-left: 10px; }
+.rail a.mod { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink-2); font-size: 13.5px; padding: 7px 10px; border-radius: var(--r-ctl); transition: background .15s, color .15s; }
+.rail a.mod:hover { background: var(--sunken); color: var(--ink); }
+.rail a.mod[aria-current="true"] { background: var(--surface); color: var(--ink); font-weight: 500; box-shadow: var(--shadow-1); border: 1px solid var(--line); padding: 6px 9px; }
+.rail a.mod.next { opacity: .5; cursor: default; }
+.tg { font: 500 10px/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; padding: 3px 6px; border-radius: 99px; margin-left: 8px; background: var(--info-soft); color: var(--info); }
+.tg.atualizado { background: var(--accent-soft); color: var(--accent-ink); }
+.rail a.mod .tg + .st { margin-left: auto; }
+.st { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--line-strong); flex: none; margin-left: auto; }
+.st.aprovado { background: var(--ok); border-color: var(--ok); }
+.st.ajustar { background: var(--accent); border-color: var(--accent); }
+.rail .th { margin-top: 22px; }
+.seg { display: inline-flex; background: var(--sunken); padding: 3px; border-radius: 10px; gap: 2px; }
+.seg button { font: 500 12.5px var(--f-body); border: 0; background: transparent; color: var(--ink-2); padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+
+.stage { min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+.stage-h { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end; }
+.stage-h .eyebrow { font: 500 11px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-ink); }
+.stage-h h2 { font: 500 clamp(26px, 3vw, 36px)/1.1 var(--f-display); letter-spacing: -.015em; margin: 8px 0 6px; }
+.stage-h .route { font: 400 12px var(--f-mono); color: var(--ink-3); }
+.changes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.changes div { font-size: 13.5px; color: var(--ink-2); padding-left: 12px; border-left: 2px solid var(--accent); }
+.changes b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 1px; }
+.viewport { overflow-x: auto; border-radius: 18px; box-shadow: var(--shadow-3); border: 1px solid var(--line-strong); background: var(--paper); }
+.canvas { min-width: 1040px; }
+
+.decide { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 18px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow-1); }
+.decide .q b { display: block; font: 500 17px/1.3 var(--f-display); }
+.decide .q span { font-size: 13px; color: var(--ink-2); }
+.decide .acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.decide textarea { grid-column: 1 / -1; width: 100%; font: 400 14px/1.5 var(--f-body); padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--r-ctl); background: var(--paper); color: var(--ink); resize: vertical; min-height: 64px; }
+.decide textarea:focus { outline: none; border-color: var(--info); box-shadow: 0 0 0 3px var(--info-soft); }
+.nav2 { display: flex; justify-content: space-between; gap: 12px; }
+
+/* ───────── sistema de componentes (o que o aplicativo usará) ───────── */
+.frame { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 640px; background: var(--paper); color: var(--ink); font-size: 14px; }
+.frame.solo { grid-template-columns: minmax(0, 1fr); }
+.sb { background: var(--sb-bg); color: var(--sb-ink); display: flex; flex-direction: column; padding: 18px 12px 14px; gap: 2px; }
+.sb-brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; color: var(--sb-on); }
+.sb-logo { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(145deg, #F7B93B, #E39500); display: grid; place-items: center; color: #1A1200; font: 600 17px var(--f-display); }
+.sb-brand b { font: 500 16px/1.1 var(--f-display); display: block; letter-spacing: -.005em; }
+.sb-brand span { font-size: 11px; color: var(--sb-ink); }
+.sb-g { font: 500 10px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: rgba(174,187,211,.55); padding: 16px 10px 6px; }
+.sb a { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 8px; color: var(--sb-ink); text-decoration: none; font-size: 13.5px; position: relative; }
+.sb a:hover { background: var(--sb-hover); color: var(--sb-on); }
+.sb a.on { background: var(--sb-active); color: var(--sb-on); font-weight: 500; }
+.sb a.on::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+.sb a .n { margin-left: auto; font: 500 10.5px var(--f-mono); background: rgba(242,165,22,.18); color: #F7C25A; padding: 2px 6px; border-radius: 99px; }
+.sb .sub a { padding-left: 39px; font-size: 13px; }
+.sb-foot { margin-top: auto; border-top: 1px solid var(--sb-line); padding: 14px 8px 0; display: flex; gap: 10px; align-items: center; color: var(--sb-on); }
+.sb-foot small { display: block; color: var(--sb-ink); font-size: 11px; }
+.main { min-width: 0; display: flex; flex-direction: column; }
+.tb { height: 60px; padding: 0 32px; display: flex; align-items: center; gap: 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.crumbs { font-size: 13px; color: var(--ink-3); display: flex; gap: 8px; align-items: center; }
+.crumbs b { color: var(--ink); font-weight: 500; }
+.search { margin-left: auto; display: flex; align-items: center; gap: 8px; background: var(--sunken); border: 1px solid transparent; border-radius: 10px; padding: 7px 12px; width: 280px; color: var(--ink-3); font-size: 13px; }
+.search kbd { margin-left: auto; font: 500 11px var(--f-mono); border: 1px solid var(--line-strong); border-radius: 5px; padding: 1px 5px; background: var(--surface); }
+.ib { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--ink-2); position: relative; border: 0; background: transparent; }
+.ib:hover { background: var(--sunken); }
+.ib .dot { position: absolute; top: 8px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); }
+.pg { padding: 32px 36px 48px; display: flex; flex-direction: column; gap: 28px; }
+.pg.tight { padding-top: 24px; gap: 20px; }
+.ph { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+.ph .ey { font: 500 11px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 10px; }
+.ph h1 { font: 500 34px/1.08 var(--f-display); letter-spacing: -.02em; font-variation-settings: "opsz" 144; }
+.ph .sub { color: var(--ink-2); margin-top: 8px; max-width: 62ch; font-size: 14.5px; }
+.ph .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn { font: 500 13.5px/1 var(--f-body); padding: 10px 15px; border-radius: var(--r-ctl); border: 1px solid transparent; cursor: pointer; transition: background .15s, box-shadow .15s, filter .15s, transform .1s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; white-space: nowrap; }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--brand); color: var(--brand-ink); box-shadow: var(--shadow-1); }
+.btn.primary:hover { filter: brightness(1.12); box-shadow: var(--shadow-2); }
+.btn.secondary { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
+.btn.secondary:hover { background: var(--sunken); }
+.btn.ghost { background: transparent; color: var(--ink-2); }
+.btn.ghost:hover { background: var(--sunken); color: var(--ink); }
+.btn.ai { background: linear-gradient(135deg, #F7B93B, #E89A06); color: #1A1200; box-shadow: var(--shadow-1); }
+.btn.ai:hover { filter: brightness(1.05); box-shadow: var(--shadow-2); }
+.btn.ok { background: var(--ok); color: #fff; }
+.btn.danger { background: var(--surface); color: var(--bad); border-color: var(--line-strong); }
+.btn.sm { padding: 7px 11px; font-size: 12.5px; }
+.btn.lg { padding: 13px 20px; font-size: 14.5px; }
+.btn:focus-visible, .rail a:focus-visible, .seg button:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; font: 500 12px/1 var(--f-body); padding: 5px 10px; border-radius: 999px; background: var(--sunken); color: var(--ink-2); white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.info { background: var(--info-soft); color: var(--info); }
+.pill.brand { background: var(--brand-soft); color: var(--brand-text); } .pill.accent { background: var(--accent-soft); color: var(--accent-ink); }
+.pill.line { background: transparent; border: 1px solid var(--line-strong); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow-1); min-width: 0; }
+.card.flat { box-shadow: none; }
+.card.hov { transition: box-shadow .2s, transform .2s, border-color .2s; }
+.card.hov:hover { box-shadow: var(--shadow-2); transform: translateY(-2px); border-color: var(--line-strong); }
+.card-h { padding: 18px 22px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.card-h h3 { font: 600 15px/1.3 var(--f-body); }
+.card-h .s { font-size: 12.5px; color: var(--ink-3); }
+.card-b { padding: 22px; }
+.card-f { padding: 14px 22px; border-top: 1px solid var(--line); background: var(--sunken); border-radius: 0 0 var(--r-card) var(--r-card); display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.sec-t { font: 500 20px/1.2 var(--f-display); letter-spacing: -.005em; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.sec-t a { font: 500 13px var(--f-body); color: var(--info); text-decoration: none; }
+.lbl { font: 500 10.5px/1 var(--f-mono); letter-spacing: .13em; text-transform: uppercase; color: var(--ink-3); }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.kpi { padding: 20px 22px; }
+.kpi .v { font: 500 38px/1 var(--f-display); letter-spacing: -.02em; margin: 12px 0 8px; font-variant-numeric: tabular-nums; }
+.kpi .d { font-size: 12.5px; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+.kpi .d.up { color: var(--ok); } .kpi .d.down { color: var(--bad); }
+.spark { width: 100%; height: 34px; margin-top: 10px; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs a { padding: 10px 14px; font-size: 13.5px; color: var(--ink-2); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: 8px; align-items: center; }
+.tabs a.on { color: var(--ink); font-weight: 500; border-color: var(--accent); }
+.tabs a .c { font: 500 11px var(--f-mono); color: var(--ink-3); background: var(--sunken); padding: 2px 6px; border-radius: 99px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { font: 500 12.5px var(--f-body); padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
+.chip.on { background: var(--brand); color: var(--brand-ink); border-color: transparent; }
+.toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.toolbar .grow { flex: 1; }
+.input, .tbl td, .bub, .card p { overflow-wrap: anywhere; }
+.input { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line-strong); border-radius: var(--r-ctl); background: var(--surface); padding: 9px 12px; color: var(--ink-3); font-size: 13.5px; min-width: 0; }
+.input.val { color: var(--ink); }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > label { font-size: 12.5px; font-weight: 500; color: var(--ink); }
+.field .hint { font-size: 12px; color: var(--ink-3); }
+.field .ta { min-height: 88px; align-items: flex-start; line-height: 1.5; }
+
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th { text-align: left; font: 500 10.5px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); padding: 12px 22px; border-bottom: 1px solid var(--line); background: var(--sunken); }
+.tbl td { padding: 14px 22px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl tbody tr:hover td { background: var(--sunken); }
+.tbl .n { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--f-mono); }
+.tbl th.n { text-align: right; }
+.tbl .strong { font-weight: 500; }
+
+.av { width: 34px; height: 34px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-text); display: inline-grid; place-items: center; font: 500 13px var(--f-display); flex: none; }
+.av.lg { width: 48px; height: 48px; font-size: 18px; } .av.xl { width: 64px; height: 64px; font-size: 24px; } .av.sm { width: 26px; height: 26px; font-size: 11px; }
+.av.a { background: var(--accent-soft); color: var(--accent-ink); } .av.g { background: var(--ok-soft); color: var(--ok); } .av.r { background: var(--bad-soft); color: var(--bad); } .av.i { background: var(--info-soft); color: var(--info); }
+.who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.who b { font-weight: 500; display: block; } .who span { font-size: 12.5px; color: var(--ink-3); display: block; }
+.prog { height: 6px; background: var(--sunken); border-radius: 99px; overflow: hidden; } .prog i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.prog.ok i { background: var(--ok); } .prog.brand i { background: var(--brand); }
+.ring { position: relative; display: grid; place-items: center; flex: none; }
+.ring svg { transform: rotate(-90deg); } .ring .t { fill: none; stroke: var(--sunken); } .ring .v { fill: none; stroke: var(--accent); stroke-linecap: round; }
+.ring.ok .v { stroke: var(--ok); }
+.ring b { position: absolute; font: 500 20px var(--f-display); font-variant-numeric: tabular-nums; }
+
+.callout { display: flex; gap: 12px; padding: 14px 16px; border-radius: 12px; font-size: 13.5px; background: var(--info-soft); color: var(--ink); }
+.callout .i { color: var(--info); margin-top: 1px; }
+.callout.warn { background: var(--warn-soft); } .callout.warn .i { color: var(--warn); }
+.callout.ok { background: var(--ok-soft); } .callout.ok .i { color: var(--ok); }
+.callout.bad { background: var(--bad-soft); } .callout.bad .i { color: var(--bad); }
+.callout b { font-weight: 600; }
+
+.g2, .g3, .g4, .g21, .g12 { display: grid; gap: 20px; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.g21 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } .g12 { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+.row { display: flex; align-items: center; gap: 12px; } .row.top { align-items: flex-start; } .row.wrap { flex-wrap: wrap; } .sp { justify-content: space-between; } .end { justify-content: flex-end; }
+.col { display: flex; flex-direction: column; } .g8 { gap: 8px; } .g12p { gap: 12px; } .g16 { gap: 16px; } .g24 { gap: 24px; }
+.muted { color: var(--ink-2); } .faint { color: var(--ink-3); } .mono { font-family: var(--f-mono); } .fr { font-family: var(--f-display); } .sm { font-size: 13px; } .xs { font-size: 12px; }
+.tnum { font-variant-numeric: tabular-nums; }
+.divider { height: 1px; background: var(--line); }
+.list > * { padding: 14px 22px; border-bottom: 1px solid var(--line); } .list > *:last-child { border-bottom: 0; }
+.empty { text-align: center; padding: 40px 24px; color: var(--ink-2); } .empty .art { width: 64px; height: 64px; border-radius: 18px; background: var(--accent-soft); color: var(--accent-ink); display: grid; place-items: center; margin: 0 auto 14px; }
+.tile-ic { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-text); flex: none; }
+.tile-ic.a { background: var(--accent-soft); color: var(--accent-ink); } .tile-ic.g { background: var(--ok-soft); color: var(--ok); } .tile-ic.i { background: var(--info-soft); color: var(--info); } .tile-ic.r { background: var(--bad-soft); color: var(--bad); }
+.kbd { font: 500 11px var(--f-mono); border: 1px solid var(--line-strong); border-radius: 5px; padding: 1px 6px; background: var(--surface); color: var(--ink-2); }
+
+.chat { display: flex; flex-direction: column; gap: 14px; }
+.msg { display: flex; gap: 10px; max-width: 78%; } .msg.me { align-self: flex-end; flex-direction: row-reverse; }
+.bub { padding: 11px 15px; border-radius: 16px 16px 16px 4px; background: var(--surface); border: 1px solid var(--line); font-size: 14px; line-height: 1.5; }
+.msg.me .bub { background: var(--brand); color: var(--brand-ink); border: 0; border-radius: 16px 16px 4px 16px; }
+.msg small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+.msg.me small { text-align: right; }
+
+.q-opt { display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); transition: border-color .15s, background .15s; }
+.q-opt:hover { border-color: var(--ink-3); }
+.q-opt.sel { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 0 0 1px var(--brand); }
+.q-opt .k { width: 28px; height: 28px; border-radius: 8px; background: var(--sunken); display: grid; place-items: center; font: 500 13px var(--f-mono); flex: none; }
+.q-opt.sel .k { background: var(--brand); color: var(--brand-ink); }
+.steps { display: flex; gap: 6px; } .steps i { flex: 1; height: 4px; border-radius: 99px; background: var(--line-strong); } .steps i.d { background: var(--ok); } .steps i.c { background: var(--accent); }
+.toggle { width: 38px; height: 22px; border-radius: 99px; background: var(--line-strong); position: relative; flex: none; } .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-1); } .toggle.on { background: var(--ok); } .toggle.on::after { left: 19px; }
+.check { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--line-strong); flex: none; display: grid; place-items: center; color: #fff; } .check.on { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.timeline { display: flex; flex-direction: column; } .timeline > div { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 14px; padding-bottom: 18px; position: relative; }
+.timeline > div::before { content: ""; position: absolute; left: 10px; top: 22px; bottom: 0; width: 1.5px; background: var(--line-strong); } .timeline > div:last-child::before { display: none; }
+.timeline.h > div::before { display: none; }
+.timeline .nd { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-strong); background: var(--surface); display: grid; place-items: center; } .timeline .nd.d { background: var(--ok); border-color: var(--ok); color: #fff; } .timeline .nd.c { border-color: var(--accent); background: var(--accent-soft); }
+
+
+/* abas funcionais dentro dos módulos */
+[data-tabs] .tabs a[data-tab] { cursor: pointer; }
+[data-tabs] [data-pane]:not(.on) { display: none; }
+.tabs.wrap { flex-wrap: wrap; }
+.tabs.scroll { overflow-x: auto; }
+.tabs.scroll a { white-space: nowrap; }
+/* diálogo ilustrado dentro da página */
+.scrim { background: rgba(15,27,45,.50); border-radius: 14px; padding: 28px; display: flex; justify-content: center; }
+.modal { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-3); width: 100%; border: 1px solid var(--line); }
+.modal-h { padding: 20px 24px 14px; display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.modal-h h3 { font: 500 20px/1.2 var(--f-display); }
+.modal-b { padding: 4px 24px 20px; display: flex; flex-direction: column; gap: 16px; }
+.modal-f { padding: 14px 24px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 8px; background: var(--sunken); border-radius: 0 0 16px 16px; }
+/* índice lateral de seções do editor */
+.side-idx { position: sticky; top: 16px; align-self: start; display: flex; flex-direction: column; gap: 2px; }
+.side-idx a { display: flex; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 8px; font-size: 13px; color: var(--ink-2); text-decoration: none; }
+.side-idx a.on { background: var(--surface); color: var(--ink); font-weight: 500; box-shadow: var(--shadow-1); border: 1px solid var(--line); padding: 6px 9px; }
+.side-idx a .c { font: 500 11px var(--f-mono); color: var(--ink-3); }
+.sec-card summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 22px; font-weight: 600; font-size: 14.5px; }
+.sec-card summary::-webkit-details-marker { display: none; }
+.sec-card[open] summary { border-bottom: 1px solid var(--line); }
+.sec-card summary .c { font: 500 11px var(--f-mono); color: var(--ink-3); background: var(--sunken); padding: 3px 8px; border-radius: 99px; font-weight: 500; }
+.sec-card .sec-b { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.fg2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } .fg3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } .fg4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.field.full { grid-column: 1 / -1; }
+.input.sel::after { content: ""; margin-left: auto; width: 7px; height: 7px; border-right: 1.5px solid var(--ink-3); border-bottom: 1.5px solid var(--ink-3); transform: rotate(45deg) translateY(-2px); }
+.paper { background: #fff; color: #1a1a1a; border: 1px solid var(--line-strong); box-shadow: var(--shadow-2); border-radius: 4px; font-family: "Fraunces", Georgia, serif; }
+[data-theme="dark"] .paper { background: #F7F5EF; }
+.bar-h { height: 8px; border-radius: 99px; background: var(--sunken); overflow: hidden; display: flex; } .bar-h i { display: block; height: 100%; }
+.cov { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cov .lbl { margin-right: 6px; }
+.cov span.c { font-size: 12px; padding: 4px 9px; border-radius: 99px; background: var(--ok-soft); color: var(--ok); }
+.tg.completo { background: var(--ok-soft); color: var(--ok); }
+.tg.v1 { background: var(--sunken); color: var(--ink-3); }
+.note-box { font-size: 12.5px; color: var(--ink-2); border-left: 2px solid var(--info); padding-left: 10px; }
+.ed3 { display: grid; grid-template-columns: 200px minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+.ed2 { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: start; }
+.sala-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; }
+.fb-col { max-width: 980px; margin: 0 auto; padding: 28px; display: flex; flex-direction: column; gap: 20px; }
+.sim-split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; }
+.sim-center { padding: 60px 24px; display: flex; justify-content: center; }
+.auth-wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); min-height: 640px; }
+.auth-side { background: var(--sb-bg); color: #fff; padding: 56px 48px; display: flex; flex-direction: column; justify-content: center; }
+.auth-main { display: grid; place-items: center; padding: 32px; }
+.land-hero { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 48px; align-items: center; padding: 56px 40px; }
+.doc-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; align-items: start; }
+.loading { padding: 80px; text-align: center; color: var(--ink-3); }
+@media (max-width: 1000px) {
+  .project { grid-template-columns: minmax(0, 1fr); gap: 20px; padding-block: 16px 56px; }
+  .rail { position: static; max-height: none; }
+  .rail .list-wrap { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; } .rail .gt { display: none; } .rail .grp { display: contents; } .rail a.mod { white-space: nowrap; background: var(--sunken); }
+  .stage-h, .decide { grid-template-columns: minmax(0, 1fr); } .decide .acts { justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn, .card.hov, .q-opt { transition: none; } .card.hov:hover { transform: none; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-painel" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+    <symbol id="i-banco" viewBox="0 0 24 24"><path d="M4 4v16M9 4v16M14 5l5 15M3 20h18"/></symbol>
+    <symbol id="i-compor" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+    <symbol id="i-provas" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M9 8h6"/></symbol>
+    <symbol id="i-form" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 9 1.5 1.5L12 8M14 9.5h3M8 15l1.5 1.5L12 14M14 15.5h3"/></symbol>
+    <symbol id="i-paciente" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-sim" viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></symbol>
+    <symbol id="i-osce" viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 8 0V3M10 13v3a4 4 0 0 0 8 0v-1"/><circle cx="18" cy="13" r="2"/></symbol>
+    <symbol id="i-juri" viewBox="0 0 24 24"><path d="m14 13-8.5 8.5M16 16l6-6M8 8l6-6M9 7l8 8M3 21h8"/></symbol>
+    <symbol id="i-turmas" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="i-comp" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 9 5.5 4h13L20 9M4 9v11h16V9M4 9h16M9 20v-6h6v6"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2M12 15l-3-3a22 22 0 0 1 2-4 11 11 0 0 1 9-5c0 3-1 6-5 9a22 22 0 0 1-4 2z"/><circle cx="15" cy="9" r="1"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4zM22 2 11 13"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0 1 14 0M16 4.5a3.5 3.5 0 0 1 0 7M22 20a6 6 0 0 0-4-5.6"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M7 7l10 10M17 8v9H8"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+    <symbol id="i-img" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 5.6a5.5 5.5 0 0 0-7.8 0L12 6.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-chevd" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M4 17v3h16v-3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-pill" viewBox="0 0 24 24"><path d="m10.5 20.5-7-7a4.9 4.9 0 0 1 7-7l7 7a4.9 4.9 0 0 1-7 7zM8.5 8.5l7 7"/></symbol>
+  </defs>
+</svg>
+
+<div class="project">
+  <aside class="rail" aria-label="Módulos do projeto">
+    <div class="mark">Projeto de interface</div>
+    <h1>Posologia Edu</h1>
+    <div class="meter" id="meter"></div>
+    <div class="list-wrap" id="modlist"></div>
+    <div class="th">
+      <div class="lbl" style="margin-bottom:8px">Tema da prévia</div>
+      <div class="seg" role="group" aria-label="Tema">
+        <button id="t-light" type="button" aria-pressed="false">Claro</button>
+        <button id="t-dark" type="button" aria-pressed="false">Escuro</button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="stage" aria-live="polite">
+    <div class="stage-h">
+      <div>
+        <div class="eyebrow" id="s-eyebrow"></div>
+        <h2 id="s-title"></h2>
+        <div class="route" id="s-route"></div>
+      </div>
+    </div>
+    <div class="changes" id="s-changes"></div>
+    <div class="cov" id="s-cov"></div>
+    <div class="viewport"><div class="canvas" id="canvas"><div class="loading">Carregando…</div></div></div>
+    <div class="decide" id="decide">
+      <div class="q"><b>Aprovar este módulo?</b><span id="d-status">Sem decisão ainda.</span></div>
+      <div class="acts">
+        <button class="btn secondary" id="b-adj" type="button">Pedir ajuste</button>
+        <button class="btn primary" id="b-ok" type="button">Aprovar</button>
+      </div>
+      <textarea id="d-note" placeholder="Anotação para mim: o que mudar neste módulo (opcional ao aprovar)" aria-label="Anotação"></textarea>
+    </div>
+    <div class="nav2">
+      <button class="btn ghost" id="b-prev" type="button">← Anterior</button>
+      <button class="btn secondary" id="b-next" type="button">Próximo →</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  /* ───────── registro dos módulos ───────── */
+  var GROUPS = [
+    { g: "Lote 1 · refeito a partir do inventário", items: [
+      { id: "v2-painel", t: "Painel", r: "/dashboard", a: "painel", crumbs: ["Painel"],
+        m: [["Próximos passos primeiro", "“Para fazer agora” reúne correções, provas que encerram e pendências do Júri."], ["Atividade recente completa", "Agora inclui pacientes virtuais, as 7 áreas de simulação e o Júri (antes só provas, Medicina e OSCE)."], ["Sem decoração", "Saem o gradiente e as cores soltas por módulo; sobra o essencial em serifa e neutros."]],
+        c: ["Primeiros passos (contas novas)", "Aviso de roadmap (admin)", "4 totais do topo", "6 ações rápidas", "10 módulos com contagem", "Atividade recente", "Turmas ativas e provas concluídas"] },
+      { id: "v2-banco", t: "Banco de Questões", r: "/questions", a: "banco", crumbs: ["Avaliar", "Banco de Questões"],
+        m: [["Criar e editar por tipo", "Alternativas com gabarito, V/F, resposta esperada e pares agora são editáveis na criação e na edição."], ["Importação honesta", "A aba que não fazia nada vira atalho para a Integração LMS, onde a importação existe."], ["Cartões legíveis", "Enunciado em destaque; tipo, dificuldade, Bloom, tags e caso vinculado em selos."]],
+        c: ["5 tipos de questão", "Caso clínico e vínculo", "LaTeX, código e tabela", "Imagem e imagem médica por IA", "Embed, espelho e explicação", "Gerar com IA com limite do plano", "Duplicar, excluir para a lixeira"] },
+      { id: "v2-compositor", t: "Compositor de provas", r: "/composer", a: "compor", crumbs: ["Avaliar", "Compositor"],
+        m: [["Papel A4 como protagonista", "A prévia é a própria prova; o banco fica ao lado."], ["Exportar PDF disponível", "O botão faltava; agora abre o exportador (gabarito, folha de respostas, versões A–D)."], ["Aviso sobre templates", "Questões de exemplo não são salvas e o sistema avisa quantas."]],
+        c: ["Banco lateral com filtros", "Seção ativa", "Templates", "Seções recolhíveis e renomeáveis", "Pontos por questão", "Cabeçalho", "Salvar com turma e instruções"] },
+      { id: "v2-provas", t: "Minhas Provas", r: "/exams · /exams/:id", a: "provas", crumbs: ["Avaliar", "Minhas Provas"],
+        m: [["Seleção com ação", "Selecionar várias e mover para a lixeira de uma vez."], ["Status e código à vista", "Selo de estado, contagens e botão de monitoramento no cartão."], ["Visualização e diálogos", "Barra de ações da prova, Publicar e Reabrir com justificativa."]],
+        c: ["Busca e ordenação", "Duplicar, reabrir, Marketplace", "Status efetivo", "Código de acesso", "Visualização A4", "Publicar e Reabrir"] },
+      { id: "v2-editor-prova", t: "Editor de prova (5 abas)", r: "/exams/:id/edit", a: "provas", crumbs: ["Avaliar", "Minhas Provas", "Editar"],
+        m: [["As 5 abas, nenhuma a menos", "Questões, Configurações, Aplicação, Correção e Estatísticas."], ["Segurança como cartão próprio", "Os 8 controles de proctoring em duas colunas, com o estado no selo."], ["Correção com tutor de IA", "Diálogo de revisão com Tutor de IA e Nota manual."]],
+        c: ["Adicionar do banco (única/combinação)", "Criar por tipo e gerar com IA", "Proctoring completo", "Código de acesso e participantes", "Correção com IA e manual", "Distribuição, desempenho e discriminação"] },
+      { id: "v2-monitoramento", t: "Monitoramento da prova", r: "/monitoring/:id", a: "provas", crumbs: ["Avaliar", "Minhas Provas", "Monitoramento"],
+        m: [["Ao vivo", "Quatro contadores e a lista de alunos em tempo real."], ["Aba Segurança", "Violações, fotos, desbloqueio e linha do tempo."], ["Revisão ali mesmo", "Resposta do aluno e botão de revisar na própria tela."]],
+        c: ["Total, em andamento, finalizadas", "Estados fazendo/enviada/corrigida/bloqueada", "Respostas e revisão", "Timeline de eventos", "Fotos e violações", "Desbloquear aluno"] },
+      { id: "v2-turma", t: "Turma (11 abas)", r: "/classes/:id", a: "turmas", crumbs: ["Gestão", "Turmas", "Farmácia Clínica"],
+        m: [["As 10 abas do sistema + Análises", "Visão geral, Atividades, Cronograma, Alunos, Notas, Presença, Semestres, Professores, Materiais, Feriados e a nova Análises."], ["Atividades unificadas", "Prova, paciente virtual, simulação, júri e OSCE no mesmo lugar, com PIN, rótulo e divisão de funções."], ["Cronograma completo", "4 visões, aula com visita técnica, avaliação de seminário e QR de presença."]],
+        c: ["Mural de comunicados", "Progresso do semestre", "Grade semanal", "Reagendar", "PINs de check-in", "Caderno de notas com pesos", "QR com geolocalização", "Duplicar semestre", "Feriados e aplicar ao cronograma"] }
+    ]},
+    { g: "Provas e questões", items: [
+      { id: "aluno-prova", t: "Prova do aluno", r: "/student/exam/:id", a: null, chrome: "aluno", crumbs: [],
+        m: [["Foco total", "Sem menu: cronômetro, progresso e uma questão por vez."], ["Alternativas grandes", "Área de toque confortável e seleção inequívoca."], ["Navegador de questões", "Mapa lateral com respondidas, marcadas e pendentes."]] },
+      { id: "aluno-resultado", t: "Resultado do aluno", r: "/student/results/:id", a: null, chrome: "aluno", crumbs: [],
+        m: [["Nota como protagonista", "Número em serifa, anel de progresso e leitura por competência."], ["Feedback acionável", "O que acertou, o que revisar e o próximo passo."], ["Comparação com a turma", "Sem expor colegas: só faixas e média."]] }
+    ]},
+    { g: "Lote 2 · Pacientes Virtuais", items: [
+      { id: "v2-pv-lista", t: "Lista e teste do docente", r: "/virtual-patients · /virtual-patients/chat/:id", a: "pacientes", crumbs: ["Praticar", "Pacientes Virtuais"],
+        m: [["Uma ação por cartão", "Iniciar atendimento é o botão principal; editar, copiar, excluir e biblioteca ficam em “Mais ações”."], ["Diálogos incluídos", "Biblioteca de casos, Gerar com IA (com etapas) e Adicionar à biblioteca (admin)."], ["Teste do docente", "Conversa efêmera com os 3 encontros, sem registrar nada na turma."]],
+        c: ["Filtros por módulo com contagem", "Selos Rascunho, Publicado, Legado e Meu paciente", "Copiar da biblioteca como rascunho", "Gerar com IA em etapas", "Excluir só dos casos próprios", "Adicionar à biblioteca (admin)"] },
+      { id: "v2-pv-editor", t: "Editor de caso", r: "/virtual-patients/case/:id", a: "pacientes", crumbs: ["Pacientes Virtuais", "Roberto Mendes"],
+        m: [["Nenhum campo removido", "Núcleo clínico, uma aba por versão (Farmacêutico, Enfermeiro, Médico), Prévia e Histórico."], ["Índice de seções e revisão ao lado", "Seções recolhíveis; a revisão de consistência fica visível enquanto você edita."], ["Validação antes de publicar", "Faixa de problemas e selo “alterações não salvas” sempre à vista."]],
+        c: ["Salvar rascunho e Publicar", "Revisão de consistência e refazer", "Adicionar versão com IA ou manual", "Identidade, personalidade, fatos, medicamentos, achados, exames e vitais", "Cenário, revelação, perguntas e gabarito", "3 encontros com cartão de passagem", "Prévia e Histórico com restauração", "Legado somente leitura"] },
+      { id: "v2-pv-sala", t: "Sala do aluno", r: "/virtual-patients/room/:id", a: null, chrome: "aluno", crumbs: [],
+        m: [["Conversa em primeiro plano", "Ficha de 3 encontros e materiais ficam à direita; o encontro atual aparece em passos no topo."], ["Os 5 momentos do fluxo", "Cartão do encontro, funções do grupo, consentimento, concluir com MAI e depois de concluir."], ["Proposta nova marcada", "Materiais de consulta e colar desativado seguem pendentes de especificação."]],
+        c: ["Individual ou grupo em tempo real", "Avaliativo ou Treino", "PIN copiável", "Cronômetro do encontro", "Medir sinais vitais", "Ficha eletrônica por profissão (SBAR, SOAP)", "MAI só na Farmácia sem ficha", "Aviso de SOAP em branco", "Avaliação entre pares ao concluir"] },
+      { id: "v2-pv-feedback", t: "Feedback do aluno", r: "/virtual-patients/feedback/:id", a: null, chrome: "aluno", crumbs: [],
+        m: [["Nota e leitura primeiro", "Anel de nota com uma frase de resumo antes de qualquer detalhe."], ["Quatro estados", "Disponível, gerando, aguardando liberação e não disponível."], ["Caminho esperado", "Cobertura por grupo, problemas embutidos, alertas e penalidades explicadas."]],
+        c: ["Nota por critério", "Comentário do professor (IA Tutor)", "Orientações", "MAI por medicamento", "Resumo da avaliação entre pares", "DebriefCard completo"] },
+      { id: "v2-pv-analises", t: "Análises da turma", r: "/virtual-patients/analytics", a: "turmas", crumbs: ["Gestão", "Turmas", "Farmácia Clínica 2026.1", "Análises"],
+        m: [["Dentro da turma", "Escopo padrão é a turma aberta; troque para outra turma ou para todas."], ["Detalhe em abas", "O diálogo longo vira Notas, MAI, Pares, Ajuste manual e Conversa."], ["Calibração e flags", "Onde a IA diverge dos seus ajustes e as flags agrupadas por tipo."]],
+        c: ["Filtros Avaliativos, Treino e Todos", "Filtro por paciente", "Corrigir turma em lote", "Atalho para Pesquisa", "4 contadores", "Liberar ou ocultar feedback", "Ajuste manual que propaga ao grupo", "Conversa completa por integrante"] },
+      { id: "v2-pv-pesquisa", t: "Pesquisa", r: "/virtual-patients/research", a: "pacientes", crumbs: ["Pacientes Virtuais", "Pesquisa"],
+        m: [["Tabela de métricas", "LGPD, interações, latência, coerência, IDCG e ISC por sessão."], ["Avaliação científica", "Diálogo com os seis campos Likert, factuais e qualitativos."], ["Exportar em três formatos", "CSV, XLSX e PDF."]],
+        c: ["Coerência semântica", "IDCG por IA", "Filtro por turma", "Avaliação científica da sessão", "Exportação CSV, XLSX e PDF"] },
+      { id: "v2-pv-pares", t: "Avaliação entre pares", r: "/virtual-patients/peer-eval/:token", a: null, chrome: "aluno", crumbs: [],
+        m: [["Um colega por cartão", "Três critérios com a mesma escala de 1 a 5 e comentário opcional."], ["Link pessoal", "Estados de confirmação e de link já usado."], ["Sem login", "Entrada só pelo link recebido por e-mail."]],
+        c: ["Participação, contribuição e colaboração", "Comentário opcional", "Envio único por link"] }
+    ]},
+    { g: "Lote 3 · Simulação", items: [
+      { id: "v2-sim-hub", t: "Hub de simulações", r: "/simulations", a: "simulacao", crumbs: ["Praticar","Simulação","Hub de simulações"],
+        m: [["Áreas e etapas","7 áreas; na Farmácia, as 4 etapas encadeadas com contagem de salas."],["Ativas e Inativas","Arquivar tira da lista principal sem perder nada."],["Ações no menu","Dividir, duplicar, enviar para professor e excluir, com os diálogos."]],
+        c: ["7 áreas","Anamnese, SOAP, Reconciliação, Documentação","Título editável","PIN e participantes","Dividir sala","Enviar para professor","Arquivar e desarquivar","Agregador"] },
+      { id: "v2-sim-editor", t: "Anamnese · Editor", r: "/simulations/:id/edit", a: "simulacao", crumbs: ["Praticar","Simulação","Anamnese · Editor"],
+        m: [["3 abas + banco de casos","Participantes, Formulários e Configurações."],["Soma das notas à vista","Aviso claro quando observador + professor não somam 10."],["Salva sozinho","Autosave visível no topo."]],
+        c: ["Participantes e importação","4 tipos de formulário","Templates e PDF","Banco de casos e gerador","Competências","Reiniciar","Iniciar e retomar"] },
+      { id: "v2-sim-controle", t: "Anamnese · Controle", r: "/simulations/:id/control", a: "simulacao", crumbs: ["Praticar","Simulação","Anamnese · Controle"],
+        m: [["Rodada ao vivo","Contadores, linha de rodadas, duplas e estados em tempo real."],["Pausa e reposição","Pausar para outro dia com a tela que o aluno vê."],["Relatórios por e-mail","PDF por dupla e envio, nas Análises."]],
+        c: ["Duplas e trios (manual ou sorteio)","Gerar rodadas por ciclo","Liberar materiais","Rodada fora de ordem","Reabrir, cancelar, resetar","Trocar participante ou papel","Definir caso do paciente","Análises"] },
+      { id: "v2-sim-aluno", t: "Anamnese · Aluno", r: "/simulation/join", a: null, chrome: "aluno", crumbs: [],
+        m: [["Fluxo por papel","Profissional, paciente e observador veem só o que lhes cabe."],["Estados claros","Entrar, espera, rascunho recuperado, reposição e envio."],["Cronômetro sempre visível","Rodada e papel no topo."]],
+        c: ["PIN e e-mail","Espera entre rodadas","Formulário do profissional","Roteiro do paciente","Avaliação do observador","Rascunho recuperado","Reposição em 2 passos","Integração com Paciente Virtual"] },
+      { id: "v2-sim-soap", t: "SOAP · Etapa 2", r: "/simulations/soap/*", a: "simulacao", crumbs: ["Praticar","Simulação","SOAP · Etapa 2"],
+        m: [["6 abas de controle","Duplas, Respostas, Pares, Ausentes, Notas do admin e Notas finais."],["Cadeia à vista","Barra mostrando em qual etapa está."],["Aluno revê a anamnese","Depois escreve o SOAP e avalia o par."]],
+        c: ["Editor com importação da Anamnese","SOAP e avaliação entre pares","Respostas SOAP","Ausentes","Nota final do módulo"] },
+      { id: "v2-sim-recdoc", t: "Reconciliação e Documentação", r: "/simulations/reconciliation · /documentation", a: "simulacao", crumbs: ["Praticar","Simulação","Reconciliação e Documentação"],
+        m: [["Editor, controle e aluno","Das duas etapas, em abas."],["Quadro resumo configurável","Colunas, linhas esperadas e pontos."],["Correção por IA","Reconciliação e Documentação (5,0 + 5,0)."]],
+        c: ["Casos clínicos do banco e IA","Ficha de reconciliação","Encaminhamento","Quadro resumo","Reabrir envio da dupla"] },
+      { id: "v2-sim-areas", t: "As 6 áreas", r: "/nursing · /nutrition · /dentistry · /medicine · /physiotherapy · /biomedicine", a: "simulacao", crumbs: ["Praticar","Simulação","As 6 áreas"],
+        m: [["Uma tela para as 6","Muda só o nome, os 4 módulos e o destaque."],["Recursos da Farmácia em todas","Arquivar, título editável, pausa, rodadas e relatório."],["Nada a menos","Editor, controle e aluno de cada área mantidos."]],
+        c: ["4 módulos por área","Criar, ativar, dividir, duplicar, enviar, excluir","Correção por IA","Agregador"] },
+      { id: "v2-sim-agregador", t: "Agregador de notas", r: "/simulations/aggregator", a: "simulacao", crumbs: ["Praticar","Simulação","Agregador de notas"],
+        m: [["Consolidado e por sala","Duas visões das notas da turma."],["Escolha as salas","Marque quais entram na média."],["PDF consolidado","Exportação em um clique."]],
+        c: ["Filtros por semestre e turma","Seleção de salas","Média geral","Exportar PDF"] }
+    ]},
+    { g: "Lote 4 · OSCE e Formulários", items: [
+      { id: "v2-osce-editor", t: "OSCE · Lista e editor", r: "/osce · /osce/:id/edit", a: "osce", crumbs: ["Praticar","OSCE · Lista e editor"],
+        m: [["Estação como cartão expansível","Instruções, caso, roteiro do ator, paciente virtual, materiais e checklist num lugar."],["Checklist com 3 tipos","Feito/não, Likert e Pontuação, com competência e peso."],["Gerar estação com IA","Diálogo com área, nível e contexto."]],
+        c: ["Novo exame (duração e transição)","Estações e Configurações","Paciente virtual por estação","Materiais clínicos","Checklist tipado","Gerar estação com IA","Excluir"] },
+      { id: "v2-osce-circuito", t: "OSCE · Circuito", r: "/osce/:id/control · /osce/:id/results", a: "osce", crumbs: ["Praticar","OSCE · Circuito"],
+        m: [["Controle ao vivo","Contadores, grade de rotação, cronômetros e monitor do chat."],["Configurar circuito","Turma, OSCE online e avaliadores por estação."],["Resultados com radar","Por aluno e por estação; exportação proposta."]],
+        c: ["Iniciar, pausar, retomar, encerrar","Link do avaliador e do aluno","Código de acesso","Monitor de chat","Filtro por aplicação","Radar de competências"] },
+      { id: "v2-osce-avaliador", t: "OSCE · Avaliador", r: "/osce/evaluate/:code", a: null, chrome: "aluno", crumbs: [],
+        m: [["Feito para o celular","Coluna única, botões grandes e cronômetro fixo."],["4 abas + entrada","Checklist, Aluno, Caso e Geral."],["Itens críticos marcados","Os três tipos de item com o controle certo."]],
+        c: ["Nome e e-mail","Cronômetro","Checklist tipado","Materiais e roteiro","Pontuação global e observações"] },
+      { id: "v2-osce-aluno", t: "OSCE · Aluno", r: "/osce/student/:code", a: null, chrome: "aluno", crumbs: [],
+        m: [["Uma estação por vez","Instruções, materiais e o paciente virtual lado a lado."],["Estados claros","Aguarde, troca, concluído, tempo esgotado e e-mail não encontrado."],["Cronômetro grande","Com barra de progresso."]],
+        c: ["Entrada por e-mail da turma","Chat com paciente virtual","Materiais","Tempo esgotado","Exame concluído"] },
+      { id: "v2-form-lista", t: "Formulários · Lista", r: "/sct · /kfe · /clinical-observations · /sjt · /progress-test", a: "form", crumbs: ["Praticar","Formulários · Lista"],
+        m: [["Uma lista para os 5 tipos","Filtro por tipo, estado, itens e respostas."],["Criar escolhendo o tipo","Diálogo único."],["Lixeira e link","Excluir vai para a Lixeira; copiar link à mão."]],
+        c: ["5 listas hoje","Contagens","Status","Excluir"] },
+      { id: "v2-form-sct", t: "SCT", r: "/sct/:id/edit", a: "form", crumbs: ["Praticar","SCT"],
+        m: [["Cenários, Painel e Resultados","Com os dois links (painel e alunos)."],["Portais públicos","Especialista e aluno, em escala −2 a +2."],["Nota por concordância","Explicada na tela do aluno."]],
+        c: ["Vinheta, hipótese, nova informação","Tamanho do painel","Especialistas que responderam","Sessões dos alunos"] },
+      { id: "v2-form-kfe", t: "KFE", r: "/kfe/:id/edit", a: "form", crumbs: ["Praticar","KFE"],
+        m: [["Casos com pontos-chave","Múltipla escolha e resposta curta."],["Explicação pós-resposta","Configurável por ponto-chave."],["Portal do aluno","Navegação por caso e contador."]],
+        c: ["Cenário e pontos-chave","Pontuação máxima","Link dos alunos","Resultados"] },
+      { id: "v2-form-miniex", t: "Mini-CEX e DOPS", r: "/clinical-observations", a: "form", crumbs: ["Praticar","Mini-CEX e DOPS"],
+        m: [["Domínios com competência","O vínculo alimenta a análise de competências."],["Avaliações com cor por nota","Verde, âmbar e vermelho."],["Formulário do avaliador","Escala 1–9 com rótulos."]],
+        c: ["Abas Todos, Mini-CEX, DOPS","7 domínios padrão","Link do avaliador","Médias por domínio"] },
+      { id: "v2-form-sjt", t: "SJT", r: "/sjt/:id/edit", a: "form", crumbs: ["Praticar","SJT"],
+        m: [["Ranking reordenável","Setas para subir e descer cada ação."],["Portal do aluno","Ordenação da mais à menos adequada."],["Pontuação explicada","Pela distância à posição correta."]],
+        c: ["Cenários e ações","Ranking correto","Link dos alunos","Resultados"] },
+      { id: "v2-form-progress", t: "Progress Test", r: "/progress-test/:id/edit", a: "form", crumbs: ["Praticar","Progress Test"],
+        m: [["4 abas + portal","Configuração, Questões, Compartilhar e Resultados."],["Gerar com IA por ano","Curso, áreas, dificuldade e questões por ano."],["Publicar bloqueado com aviso","Quando há questões incompletas."]],
+        c: ["Anos-alvo e data","Questões do banco","Gerar com IA","Resultados por ano e área"] }
+    ]},
+    { g: "Lote 5 · Gestão", items: [
+      { id: "v2-g-calendario", t: "Calendário", r: "/calendar", a: "cal", crumbs: ["Gestão","Calendário"],
+        m: [["Tudo na mesma agenda","Provas, aulas das turmas, OSCE, simulações e formulários vinculados."],["Filtros por turma e por tipo","Chips com contagem e três visões."],["Exportar .ics","Proposta nova para levar à agenda pessoal."]],
+        c: ["Provas publicadas com status","Abrir prova e monitoramento","Mês e lista do dia"] },
+      { id: "v2-g-analises", t: "Análises", r: "/analytics", a: "analises", crumbs: ["Gestão","Análises"],
+        m: [["Uma tela só","Provas, pacientes virtuais, OSCE, simulações e formulários."],["Escopo na turma","Os mesmos números da aba Análises da Turma."],["Atenção primeiro","Quem precisa de ajuda e competências em queda."]],
+        c: ["Filtro por turma e prova","Média, aprovação e envios","Distribuição de notas","Acerto por assunto","Questões mais erradas"] },
+      { id: "v2-g-competencias", t: "Competências", r: "/competency-analysis", a: "comp", crumbs: ["Gestão","Competências"],
+        m: [["Visão geral com radar","Contadores e média por competência."],["Evolução e por aluno","Linha no tempo e matriz aluno × competência."],["Gestão das definições","Nome, área e descrição."]],
+        c: ["Filtro por fonte e turma","Gestão, Visão geral, Evolução, Por aluno","Vínculo com Mini-CEX e Simulação"] },
+      { id: "v2-g-marketplace", t: "Marketplace", r: "/marketplace", a: "store", crumbs: ["Gestão","Marketplace"],
+        m: [["Cartões com avaliação","Autor, disciplina, estrelas, questões e importações."],["Detalhe completo","Prévia das questões, avaliação, comentários e importar."],["Regra clara","Prova importada não pode ser compartilhada de novo."]],
+        c: ["Busca, disciplina e ordenação","Uma avaliação por usuário","Comentários","Importar como rascunho","Compartilhar e revogar"] },
+      { id: "v2-g-lms", t: "Integração LMS", r: "/lms-integration", a: "lms", crumbs: ["Gestão","Integração LMS"],
+        m: [["Exportar e importar em abas","Notas para 3 plataformas e questões de 3 formatos."],["Formato como escolha","Cartões com o formato selecionado."],["Importação do Banco","Aqui passa a ficar a importação prometida no Banco de Questões."]],
+        c: ["Moodle, Canvas e Classroom (CSV)","Moodle XML, QTI e CSV genérico","Escolha de prova e turma"] },
+      { id: "v2-g-conta", t: "Configurações, plano e contato", r: "/settings · /pricing · /contact", a: null, crumbs: ["Gestão","Configurações, plano e contato"],
+        m: [["Três telas, uma página","Perfil e acesso, Plano e Contato em abas."],["Plano sem ruído","Gratuito e Premium lado a lado, com cancelamento confirmado."],["Idioma e tema no rodapé","Continuam no menu do usuário."]],
+        c: ["Nome, e-mail e senha","Assinar e cancelar assinatura","Formulário de contato"] },
+      { id: "v2-g-atualizacoes", t: "Atualizações", r: "/updates", a: null, crumbs: ["Gestão","Atualizações"],
+        m: [["Changelog e Roadmap","Linha do tempo com tipo e prioridade."],["Ações só para admin","Criar, gerar com IA, concluir e excluir."],["Leitura para todos","Docentes só leem."]],
+        c: ["Changelog e Roadmap","Prioridade alta, média e baixa","Gerar roadmap com IA"] },
+      { id: "v2-g-lixeira", t: "Lixeira", r: "/trash", a: null, crumbs: ["Gestão","Lixeira"],
+        m: [["Cobre todos os tipos","Questões, provas, turmas, OSCE, formulários, simulações e Júri."],["Prazo visível","Cada linha mostra quando será apagada."],["Confirmação em tudo","Excluir e esvaziar pedem confirmação."]],
+        c: ["Prévia, restaurar e excluir","Esvaziar lixeira","Aviso de 30 dias"] },
+      { id: "v2-g-admin", t: "Administração", r: "/admin", a: null, crumbs: ["Gestão","Administração"],
+        m: [["Contadores e convites","Usuários, pendentes, assinantes e provas."],["Seis abas","Pendentes, Aprovados, Assinantes, Analytics, Chave de IA e Prompts."],["Só admin","Tela invisível para docentes."]],
+        c: ["Convidar por e-mail","Aprovar e rejeitar cadastros","Excluir usuário","Analytics de tráfego","Chave Gemini","Prompts do sistema"] }
+    ]},
+    { g: "Lote 4b · Júri Simulado", items: [
+      { id: "v2-juri-lista", t: "Júri · Lista", r: "/mock-trials", a: "juri", crumbs: ["Praticar","Júri Simulado","Júri · Lista"],
+        m: [["Cartões com estado","Rascunho e em andamento, com processos, grupos e alunos."],["Renomear e excluir","No menu de cada cartão."],["Vínculo com a Turma proposto","Para depois do evento de 30/10, sem mudar o funcionamento."]],
+        c: ["Criar Júri","Renomear","Excluir","Estado vazio"] },
+      { id: "v2-juri-processos", t: "Júri · Processos", r: "/mock-trials/:id/edit (aba Processos)", a: "juri", crumbs: ["Praticar","Júri Simulado","Júri · Processos"],
+        m: [["Editor em 4 etapas","Preparar, Distribuir, Aplicar e Resultados, com as 7 abas distribuídas nelas."],["Processo como documento","Autos em serifa, imagens, seções, testemunhas e guia do professor."],["Geração com acompanhamento","Diálogo com PDF de referência e linha do tempo do job."]],
+        c: ["Gerar processo com IA e PDF de referência","Banco de processos","Editar, regenerar, salvar no banco, reiniciar, excluir","Seções por IA","Imagens médicas","Testemunhas e perguntas socráticas","Guia do professor"] },
+      { id: "v2-juri-aplicacao", t: "Júri · Grupos, distribuição e aplicação", r: "/mock-trials/:id/edit (abas Grupos a Painel do Juiz)", a: "juri", crumbs: ["Praticar","Júri Simulado","Júri · Grupos, distribuição e aplicação"],
+        m: [["Grupos em cartões","Alunos por grupo e quem está sem grupo."],["Distribuição numa tabela","Processo por grupo e papel por aluno."],["Formulários com pré-visualização","Acusação, Defesa e Júri técnico."]],
+        c: ["Criar grupos","Aluno individual e em lote","Distribuir sem grupo","Papéis: Acusação, Defesa, Júri técnico, Não participa","Construtor de formulários","Painel do Juiz: nome, PIN e link"] },
+      { id: "v2-juri-resultados", t: "Júri · Resultados e notas", r: "/mock-trials/:id/edit (abas Resultados e Notas dos alunos)", a: "juri", crumbs: ["Praticar","Júri Simulado","Júri · Resultados e notas"],
+        m: [["5 sub-abas preservadas","Consolidadas, Envios, Jurados IA, Júri técnico e Professor."],["Fórmula explicada","(Juiz + Professor + IA) ÷ 3 sempre visível."],["Notas individuais","Com exportar CSV e a relação nominal de apenados."]],
+        c: ["Notas consolidadas","Envios dos grupos","Avaliação dos jurados por IA","Avaliar júri técnico","Avaliação do professor","Notas dos alunos","Exportar CSV","Relação nominal de apenados"] },
+      { id: "v2-juri-juiz", t: "Júri · Painel do juiz", r: "/mock-trial/judge/:code", a: null, chrome: "aluno", crumbs: [],
+        m: [["6 fases em linha do tempo","Anúncio, defesa, acusação, perguntas, deliberação e veredito."],["Instruções em destaque","O que dizer e fazer agora, com o cronômetro grande."],["Convites ao concluir","Avaliação entre pares disparada no encerramento."]],
+        c: ["Nome do juiz","Cronômetro sincronizado","Iniciar e pausar fase","Grupos e respostas em tempo real","Avaliação do juiz"] },
+      { id: "v2-juri-aluno", t: "Júri · Aluno", r: "/mock-trial/portal/:code", a: null, chrome: "aluno", crumbs: [],
+        m: [["Processo como documento","Texto jurídico em serifa, com imagens nas âncoras."],["Abas por intenção","Processo, Personagens e Formulário."],["Papel e fase no topo","Sempre visíveis."]],
+        c: ["Entrada por e-mail","Processo","Personagens e perguntas socráticas","Formulário com rascunho","Envio"] },
+      { id: "v2-juri-pares", t: "Júri · Avaliação entre pares", r: "/mock-trial/peer-eval/:token", a: null, chrome: "aluno", crumbs: [],
+        m: [["3 critérios, escala única","Preparação, atuação e colaboração."],["Um colega por cartão","Com comentário opcional."],["Resumo antes de enviar","Confirmação e estado de link já usado."]],
+        c: ["Link por e-mail","3 critérios por colega","Comentário opcional","Envio único"] }
+    ]},
+    { g: "Lote 6 · Aluno, acesso e páginas públicas", items: [
+      { id: "v2-aluno-entrada", t: "Portal do aluno · Entrada", r: "/student/auth", a: null, chrome: "aluno", crumbs: [],
+        m: [["Um campo, tipo reconhecido","O sistema mostra qual atividade o PIN abriu."],["Entrada em grupo","Lista de e-mails com adicionar e remover."],["Erros que explicam","Dizem quem falhou e o que fazer."]],
+        c: ["PIN e e-mail","8 tipos de atividade reconhecidos","Modo grupo","Regras do paciente virtual","Acessibilidade em todas as telas (novo)"] },
+      { id: "v2-aluno-area", t: "Minha área do aluno", r: "/student/dashboard (proposta)", a: null, chrome: "aluno", crumbs: [],
+        m: [["Decisão de produto","Hoje é só um campo de PIN; a proposta é uma área com atividades, resultados, conquistas e portfólio."],["Gamificação e Portfólio com entrada","Deixam de depender de um botão depois da prova."],["PIN continua valendo","Como atalho na própria tela."]],
+        c: ["Pontos, conquistas e ranking","Portfólio, evolução e feedbacks da IA","Resultados liberados pelo professor"] },
+      { id: "v2-auth", t: "Acesso do professor", r: "/auth · /reset-password", a: null, chrome: "aluno", crumbs: [],
+        m: [["Entrar, cadastrar e recuperar","Com Google e e-mail/senha."],["Estados explicados","Cadastro em análise e acesso restrito têm tela própria."],["Mesma identidade","Painel lateral de marca e formulário limpo."]],
+        c: ["Entrar e cadastrar","Google","Esqueci a senha e nova senha","Aprovação do administrador","Acesso negado com volta ao portal do aluno"] },
+      { id: "v2-landing", t: "Landing", r: "/", a: null, chrome: "aluno", crumbs: [],
+        m: [["Identidade única","Troca as fontes próprias pelas do sistema."],["Mesmas seções","Hero com entrada, funcionalidades, como funciona, planos e rodapé."],["Chat de vendas mantido","Botão flutuante."]],
+        c: ["Hero com cartão de entrada","Funcionalidades","Como funciona","Planos e CTA","Rodapé","Agente de vendas"] },
+      { id: "v2-publicas", t: "Páginas públicas", r: "/funcionalidades · /planos · /contato-publico · /documentacao · /termos · /privacidade · /cookies", a: null, chrome: "aluno", crumbs: [],
+        m: [["Mesmo cabeçalho e rodapé","Em todas as páginas públicas."],["Textos legais em coluna estreita","Leitura confortável."],["Aviso de cookies sóbrio","Botões iguais em claro e escuro."]],
+        c: ["Funcionalidades","Planos","Contato","Documentação","Termos, privacidade e cookies","Página não encontrada"] },
+      { id: "v2-globais", t: "Componentes globais", r: "AppLayout", a: null, crumbs: ["Sistema","Componentes globais"],
+        m: [["Assistente flutuante","Mesmo desenho e posição que não cobre botões."],["Guia de ajuda dispensável","Em 14 editores."],["Paleta e tutor","Ctrl K e o tutor de IA da correção."]],
+        c: ["OracleAgent","ModuleHelpGuide","Paleta Ctrl K","AITutorChat"] }
+    ]}
+  ];
+  var NEXT = [];
+  var FLAT = []; GROUPS.forEach(function (g) { g.items.forEach(function (m) { m.g = g.g; FLAT.push(m); }); });
+  var cache = {}, status = {}, current = null, coll = null;
+  var V2 = ["v2-painel", "v2-banco", "v2-compositor", "v2-provas", "v2-editor-prova", "v2-monitoramento", "v2-turma", "v2-pv-lista", "v2-pv-editor", "v2-pv-sala", "v2-pv-feedback", "v2-pv-analises", "v2-pv-pesquisa", "v2-pv-pares", "v2-sim-hub", "v2-sim-editor", "v2-sim-controle", "v2-sim-aluno", "v2-sim-soap", "v2-sim-recdoc", "v2-sim-areas", "v2-sim-agregador", "v2-osce-editor", "v2-osce-circuito", "v2-osce-avaliador", "v2-osce-aluno", "v2-form-lista", "v2-form-sct", "v2-form-kfe", "v2-form-miniex", "v2-form-sjt", "v2-form-progress", "v2-g-calendario", "v2-g-analises", "v2-g-competencias", "v2-g-marketplace", "v2-g-lms", "v2-g-conta", "v2-g-atualizacoes", "v2-g-lixeira", "v2-g-admin", "v2-juri-lista", "v2-juri-processos", "v2-juri-aplicacao", "v2-juri-resultados", "v2-juri-juiz", "v2-juri-aluno", "v2-juri-pares", "v2-aluno-entrada", "v2-aluno-area", "v2-auth", "v2-landing", "v2-publicas", "v2-globais"];
+  var TAG = { "turmas": "atualizado", "osce-avaliador": "novo", "osce-aluno": "novo", "sim-aluno": "novo", "sim-formularios": "novo", "juri-juiz": "novo", "juri-aluno": "novo", "juri-pares": "novo", "v2-pv-pesquisa": "novo", "v2-pv-pares": "novo", "v2-pv-sala": "atualizado", "v2-pv-analises": "atualizado", "v2-sim-aluno": "atualizado", "v2-sim-areas": "atualizado", "v2-g-calendario": "atualizado", "v2-g-analises": "atualizado", "v2-g-lixeira": "atualizado", "v2-aluno-area": "novo", "v2-landing": "atualizado" };
+
+  FLAT.forEach(function (m) { TAG[m.id] = V2.indexOf(m.id) >= 0 ? "completo" : "v1"; });
+  function $(id) { return document.getElementById(id); }
+  function ic(n, c) { return '<svg class="i ' + (c || "") + '"><use href="#i-' + n + '"/></svg>'; }
+
+  /* ───────── molduras do aplicativo ───────── */
+  var NAV = [
+    ["Principal", [["painel", "Painel", "painel"]]],
+    ["Avaliar", [["banco", "Banco de Questões", "banco"], ["compor", "Compositor", "compor"], ["provas", "Minhas Provas", "provas"], ["form", "Formulários", "form", [["SCT"], ["KFE"], ["SJT"], ["Mini-CEX"], ["Progress Test"]]]]],
+    ["Praticar", [["pacientes", "Pacientes Virtuais", "paciente"], ["simulacao", "Simulação Realística", "sim"], ["osce", "OSCE", "osce"], ["juri", "Júri Simulado", "juri"]]],
+    ["Gestão", [["turmas", "Turmas", "turmas"], ["cal", "Calendário", "cal"], ["analises", "Análises", "chart"], ["comp", "Competências", "comp"], ["store", "Marketplace", "store"], ["lms", "Integração LMS", "link"]]]
+  ];
+  function sidebar(active) {
+    var h = '<aside class="sb"><div class="sb-brand"><div class="sb-logo">P</div><div><b>Posologia Edu</b><span>Plataforma de avaliação</span></div></div>';
+    NAV.forEach(function (g) {
+      h += '<div class="sb-g">' + g[0] + "</div>";
+      g[1].forEach(function (it) {
+        h += '<a href="#" class="' + (it[0] === active ? "on" : "") + '" onclick="return false">' + ic(it[2]) + it[1] + "</a>";
+        if (it[3] && it[0] === active) { h += '<div class="sub">'; it[3].forEach(function (s) { h += '<a href="#" onclick="return false">' + s[0] + "</a>"; }); h += "</div>"; }
+      });
+    });
+    h += '<div class="sb-foot"><span class="av a">SF</span><div><b style="font-weight:500">Sérgio Fernandes</b><small>Docente · Plano Pro</small></div></div></aside>';
+    return h;
+  }
+  function topbar(crumbs) {
+    var c = crumbs.map(function (x, i) { return i === crumbs.length - 1 ? "<b>" + x + "</b>" : "<span>" + x + "</span>" + ic("chev", "sm"); }).join("");
+    return '<header class="tb"><div class="crumbs">' + c + '</div><div class="search">' + ic("search", "sm") + 'Buscar casos, provas, alunos<kbd>Ctrl K</kbd></div><button class="ib" type="button" aria-label="Notificações">' + ic("bell") + '<span class="dot"></span></button><span class="av sm a">SF</span></header>';
+  }
+  function frameFor(m, body) {
+    if (m.chrome === "aluno" || m.chrome === "bare") return '<div class="frame solo">' + body + "</div>";
+    return '<div class="frame">' + sidebar(m.a) + '<div class="main">' + topbar(m.crumbs) + body + "</div></div>";
+  }
+
+  /* ───────── interface do projeto ───────── */
+  function renderRail() {
+    var h = "";
+    GROUPS.forEach(function (g) {
+      h += '<div class="grp"><div class="gt">' + g.g + "</div>";
+      g.items.forEach(function (m) {
+        h += '<a class="mod" href="#' + m.id + '" data-id="' + m.id + '" aria-current="' + (current && current.id === m.id) + '">' + m.t + (TAG[m.id] ? '<span class="tg ' + TAG[m.id] + '">' + TAG[m.id] + "</span>" : "") + '<span class="st ' + (status[m.id] ? status[m.id].s : "") + '"></span></a>';
+      });
+      h += "</div>";
+    });
+    if (NEXT.length) { h += '<div class="grp"><div class="gt">Próximos lotes</div>'; NEXT.forEach(function (n) { h += '<a class="mod next">' + n + "</a>"; }); h += "</div>"; }
+    $("modlist").innerHTML = h;
+    var ok = 0, aj = 0; FLAT.forEach(function (m) { var s = status[m.id]; if (s && s.s === "aprovado") ok++; else if (s && s.s === "ajustar") aj++; });
+    var tot = FLAT.length;
+    $("meter").innerHTML = '<div class="t"><span>' + ok + " de " + tot + ' aprovados</span><span>' + aj + ' com ajustes</span></div><div class="bar"><i style="width:' + (ok / tot * 100) + '%;background:var(--ok)"></i><i style="width:' + (aj / tot * 100) + '%;background:var(--accent)"></i></div>';
+  }
+  function renderDecision() {
+    var s = status[current.id];
+    $("d-status").textContent = !s ? "Sem decisão ainda." : s.s === "aprovado" ? "Aprovado" + (s.n ? " · " + s.n : "") : "Ajuste pedido" + (s.n ? " · " + s.n : "");
+    $("d-note").value = s && s.n ? s.n : "";
+  }
+  function show(id) {
+    var idx = FLAT.findIndex(function (m) { return m.id === id; });
+    if (idx < 0) { idx = 0; }
+    var m = FLAT[idx]; current = m;
+    $("s-eyebrow").textContent = m.g + (TAG[m.id] ? " · " + ({ novo: "tela nova neste lote", atualizado: "reescrita a partir das suas observações", completo: "refeito a partir do inventário do código", v1: "versão simplificada (ainda será refeita)" }[TAG[m.id]]) : "");
+    $("s-title").textContent = m.t;
+    $("s-route").textContent = "Tela atual: " + m.r;
+    $("s-changes").innerHTML = m.m.map(function (c) { return "<div><b>" + c[0] + "</b>" + c[1] + "</div>"; }).join("");
+    $("s-cov").innerHTML = m.c ? '<span class="lbl">Mantido do sistema atual</span>' + m.c.map(function (x) { return '<span class="c">' + x + "</span>"; }).join("") : "";
+    $("b-prev").disabled = idx === 0; $("b-next").disabled = idx === FLAT.length - 1;
+    renderRail(); renderDecision();
+    var put = function (html) { if (current === m) $("canvas").innerHTML = frameFor(m, html); };
+    if (cache[m.id]) { put(cache[m.id]); return; }
+    $("canvas").innerHTML = '<div class="loading">Carregando…</div>';
+    fetch("modules/" + m.id + ".html").then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (t) { cache[m.id] = t; put(t); })
+      .catch(function () { if (current === m) $("canvas").innerHTML = '<div class="loading">Não consegui carregar este módulo.</div>'; });
+  }
+  function go(i) { if (i >= 0 && i < FLAT.length) { location.hash = FLAT[i].id; } }
+  function save(s) {
+    var rec = { s: s, n: $("d-note").value.trim(), em: new Date().toISOString() };
+    status[current.id] = rec; renderRail(); renderDecision();
+    try { localStorage.setItem("pj-" + current.id, JSON.stringify(rec)); } catch (e) {}
+    if (coll) coll.doc(current.id).set({ modulo: current.id, titulo: current.t, status: s, nota: rec.n, em: rec.em }).catch(function () {});
+  }
+  $("canvas").addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[data-tab]");
+    if (!a) return;
+    e.preventDefault();
+    var root = a.closest("[data-tabs]"); if (!root) return;
+    var key = a.getAttribute("data-tab");
+    var own = function (sel) { return Array.prototype.filter.call(root.querySelectorAll(sel), function (n) { return n.closest("[data-tabs]") === root; }); };
+    own("a[data-tab]").forEach(function (x) { x.classList.toggle("on", x === a); });
+    own("[data-pane]").forEach(function (p) { p.classList.toggle("on", p.getAttribute("data-pane") === key); });
+  });
+  $("b-ok").addEventListener("click", function () { save("aprovado"); });
+  $("b-adj").addEventListener("click", function () { save("ajustar"); });
+  $("b-prev").addEventListener("click", function () { go(FLAT.indexOf(current) - 1); });
+  $("b-next").addEventListener("click", function () { go(FLAT.indexOf(current) + 1); });
+  window.addEventListener("hashchange", function () { show(location.hash.slice(1)); });
+
+  /* tema da prévia */
+  var root = document.documentElement, bl = $("t-light"), bd = $("t-dark");
+  function cur() { var t = root.getAttribute("data-theme"); return t || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); }
+  function sync() { bl.setAttribute("aria-pressed", cur() === "light"); bd.setAttribute("aria-pressed", cur() === "dark"); }
+  function setT(t) { root.setAttribute("data-theme", t); try { localStorage.setItem("pj-tema", t); } catch (e) {} sync(); }
+  try { var th = localStorage.getItem("pj-tema"); if (th === "light" || th === "dark") root.setAttribute("data-theme", th); } catch (e) {}
+  bl.addEventListener("click", function () { setT("light"); }); bd.addEventListener("click", function () { setT("dark"); }); sync();
+
+  /* decisões guardadas (db quando disponível; navegador como reserva) */
+  FLAT.forEach(function (m) { try { var v = localStorage.getItem("pj-" + m.id); if (v) status[m.id] = JSON.parse(v); } catch (e) {} });
+  show(location.hash.slice(1) || FLAT[0].id);
+  if (window.claude && claude.use) {
+    claude.use("db").then(function (db) {
+      if (!db) return;
+      coll = db.collection("aprovacoes");
+      coll.onSnapshot(function (snap) {
+        var have = {};
+        snap.docs.forEach(function (d) { var x = d.data(); if (x && x.status) { have[d.id] = 1; status[d.id] = { s: x.status, n: x.nota || "", em: x.em }; } });
+        FLAT.forEach(function (m) { if (!have[m.id] && status[m.id]) { delete status[m.id]; try { localStorage.removeItem("pj-" + m.id); } catch (e) {} } });
+        renderRail(); if (current) renderDecision();
+      }, function () {});
+    }).catch(function () {});
+  }
+})();
+</script>
+

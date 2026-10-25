@@ -1,0 +1,64 @@
+<div class="pg tight" data-tabs>
+  <div class="row sp wrap" style="gap:16px">
+    <div class="row g12p"><button class="btn ghost sm" type="button">← Turmas</button><div><div class="lbl" style="color:var(--accent-ink)">Turma · Análises</div><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.015em;line-height:1.15">Farmácia Clínica 2026.1</h1></div></div>
+    <div class="row g8"><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-chart"/></svg>Pesquisa</button><button class="btn primary" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Corrigir turma</button></div>
+  </div>
+  <div class="tabs scroll"><a>Visão geral</a><a>Atividades</a><a>Cronograma</a><a>Alunos</a><a>Notas</a><a>Presença</a><a class="on">Análises</a></div>
+
+  <div class="toolbar">
+    <div class="input val sel" style="width:240px">Escopo: esta turma</div>
+    <div class="chips"><span class="chip on">Avaliativos</span><span class="chip">Treino</span><span class="chip">Todos</span></div>
+    <div class="input val sel" style="width:220px">Paciente: todos</div>
+    <span class="grow"></span><span class="xs faint">Troque o escopo para outra turma ou para todas.</span>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi"><div class="lbl">Sessões elegíveis</div><div class="v">24</div><div class="d">8 grupos · 4 individuais</div></div>
+    <div class="card kpi"><div class="lbl">Corrigidas</div><div class="v">19</div><div class="d up">79% do total</div></div>
+    <div class="card kpi"><div class="lbl">Pendentes</div><div class="v">5</div><div class="d">aguardando correção</div></div>
+    <div class="card kpi"><div class="lbl">Flags</div><div class="v" style="color:var(--bad)">7</div><div class="d down">3 tipos</div></div>
+  </div>
+
+  <div class="callout"><svg class="i"><use href="#i-spark"/></svg><div><b>Leitura rápida:</b> a turma identifica bem a baixa adesão (89%), mas só 31% percebe a duplicidade de diuréticos. A IA e você divergiram em 2 correções.</div></div>
+
+  <div class="tabs"><a class="on" data-tab="res">Resultados <span class="c">24</span></a><a data-tab="det">Detalhes da sessão</a><a data-tab="cal">Calibração da IA</a><a data-tab="flags">Flags <span class="c">7</span></a></div>
+
+  <div data-pane="res" class="on card">
+    <table class="tbl"><thead><tr><th>Aluno ou grupo · paciente</th><th>Estado</th><th class="n">Nota · eficiência</th><th>Flags</th><th>Feedback</th><th></th></tr></thead><tbody>
+      <tr><td style="white-space:nowrap"><div class="who"><span class="av sm">B</span><div><b>Grupo B</b><span>Roberto Mendes · Ana, Carlos, Daniela</span></div></div></td><td><span class="pill ok">Corrigido</span></td><td class="n" style="white-space:nowrap">8,1 · 3,9/5</td><td><span class="pill warn">1</span></td><td><span class="pill ok">Liberado</span></td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+      <tr><td style="white-space:nowrap"><div class="who"><span class="av sm a">C</span><div><b>Grupo C</b><span>Roberto Mendes · Elisa, Fábio</span></div></div></td><td><span class="pill accent">Ajustada</span></td><td class="n" style="white-space:nowrap">7,4 · 3,2/5</td><td><span class="pill">0</span></td><td><span class="pill">Oculto</span></td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+      <tr><td style="white-space:nowrap"><div class="who"><span class="av sm">L</span><div><b>Larissa Pires</b><span>Maria Aparecida · individual</span></div></div></td><td><span class="pill warn">Pendente</span></td><td class="n" style="white-space:nowrap">—</td><td><span class="pill">—</span></td><td><span class="pill">Oculto</span></td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+    </tbody></table>
+    <div class="card-f"><span>Treino não aparece como pendente: é corrigido automaticamente.</span><span class="mono xs">1–3 de 24</span></div>
+  </div>
+
+  <div data-pane="det" class="col g16">
+    <div class="scrim"><div class="modal" style="max-width:920px" data-tabs>
+      <div class="modal-h"><div><h3>Grupo B · Roberto Mendes</h3><div class="xs faint">Avaliativo · concluído em 22 out · 38 mensagens</div></div><div class="row g8"><span class="pill ok">Nota 8,1</span><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div></div>
+      <div class="tabs scroll" style="padding:0 24px"><a class="on" data-tab="d1">Notas</a><a data-tab="d2">MAI</a><a data-tab="d3">Pares</a><a data-tab="d4">Ajuste manual</a><a data-tab="d5">Conversa</a></div>
+      <div class="modal-b" style="padding-top:16px">
+        <div data-pane="d1" class="on col g12p">
+          <div class="fg3"><div class="card flat card-b"><div class="lbl">Final</div><div class="fr" style="font-size:30px">8,1</div></div><div class="card flat card-b"><div class="lbl">Eficiência clínica</div><div class="fr" style="font-size:30px">3,9<span class="xs faint"> /5</span></div></div><div class="card flat card-b"><div class="lbl">Bônus / penalidades</div><div class="fr" style="font-size:30px"><span style="color:var(--ok)">+0,3</span> <span style="color:var(--bad)">−0,5</span></div></div></div>
+          <table class="tbl"><thead><tr><th>Dimensão</th><th class="n">Nota</th></tr></thead><tbody><tr><td>Anamnese e comunicação</td><td class="n" style="white-space:nowrap">8,5</td></tr><tr><td>Identificação de problemas</td><td class="n" style="white-space:nowrap">7,5</td></tr><tr><td>Conduta e orientações</td><td class="n" style="white-space:nowrap">6,5</td></tr><tr><td>Ficha (cada seção)</td><td class="n" style="white-space:nowrap">9,0</td></tr></tbody></table>
+          <p class="sm muted">Feedback resumido e orientações da IA aparecem abaixo da tabela.</p>
+        </div>
+        <div data-pane="d2" class="col g8"><div class="lbl">MAI 0 a 4</div><div class="row sp sm"><span>Losartana</span><b class="mono">3</b></div><div class="row sp sm"><span>Hidroclorotiazida</span><b class="mono">1</b></div></div>
+        <div data-pane="d3" class="col g8"><div class="callout warn"><svg class="i"><use href="#i-alert"/></svg><div>Todos os colegas deram a mesma nota. O bônus pode não refletir diferença real.</div></div><div class="row sp sm"><span>Ana Beatriz</span><b class="mono">+0,3</b></div><div class="row sp sm"><span>Carlos</span><b class="mono">+0,3</b></div></div>
+        <div data-pane="d4" class="col g12p"><div class="fg3"><div class="field"><label>Nota final</label><div class="input val">8,1</div></div><div class="field"><label>Eficiência (0–5)</label><div class="input val">3,9</div></div><div class="field"><label>MAI (0–4)</label><div class="input val">2</div></div></div><div class="field"><label>Flags (uma por linha)</label><div class="input val ta">Orientou sem medir PA em pé</div></div><div class="fg2"><div class="field"><label>Motivo</label><div class="input val">Divergência da IA</div></div><div class="field"><label>Observação</label><div class="input"></div></div></div><div class="note-box">Vale para todos os integrantes do grupo. O ajuste alimenta a calibração da IA.</div></div>
+        <div data-pane="d5" class="chat"><div class="msg"><span class="av sm">RM</span><div><div class="bub">Doutor, voltei porque a tontura continua.</div><small>paciente · encontro 2</small></div></div><div class="msg me"><span class="av sm a">CM</span><div><div class="bub">Vamos medir a pressão.</div><small>Carlos · encontro 2</small></div></div></div>
+      </div>
+      <div class="modal-f"><button class="btn secondary" type="button">Ocultar feedback</button><button class="btn primary" type="button">Salvar ajuste</button></div>
+    </div></div>
+  </div>
+
+  <div data-pane="cal" class="g2">
+    <div class="card"><div class="card-h"><h3>IA x docente</h3><span class="s">nesta turma</span></div><div class="card-b col g12p"><div class="row sp sm"><span>Correções ajustadas por você</span><b class="mono">2 de 19</b></div><div class="prog"><i style="width:11%"></i></div><div class="row sp sm"><span>Diferença média</span><b class="mono">0,6 pt</b></div><div class="row sp sm"><span>A IA tende a</span><b>subestimar a conduta</b></div></div></div>
+    <div class="card"><div class="card-h"><h3>Onde diverge</h3></div><div class="list"><div class="row sp sm"><span>Conduta e orientações</span><span class="pill warn">−0,8</span></div><div class="row sp sm"><span>Registro na ficha</span><span class="pill ok">+0,1</span></div></div></div>
+  </div>
+
+  <div data-pane="flags" class="card"><div class="list">
+    <div class="row"><span class="tile-ic r"><svg class="i sm"><use href="#i-flag"/></svg></span><div style="flex:1"><b class="sm" style="font-weight:500">Orientou sem medir PA em pé</b><div class="xs faint">Grupo B, Grupo E</div></div><span class="pill bad">3 sessões</span></div>
+    <div class="row"><span class="tile-ic a"><svg class="i sm"><use href="#i-flag"/></svg></span><div style="flex:1"><b class="sm" style="font-weight:500">Dose não confirmada</b><div class="xs faint">Larissa</div></div><span class="pill warn">2 sessões</span></div>
+    <div class="row"><span class="tile-ic a"><svg class="i sm"><use href="#i-flag"/></svg></span><div style="flex:1"><b class="sm" style="font-weight:500">Encaminhamento ausente</b></div><span class="pill warn">2 sessões</span></div>
+  </div></div>
+</div>

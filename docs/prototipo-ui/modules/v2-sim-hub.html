@@ -1,0 +1,83 @@
+<div class="pg tight" data-tabs>
+  <div class="ph">
+    <div><div class="ey">Praticar</div><h1>Simulação Realística</h1><p class="sm muted" style="margin-top:8px;max-width:64ch;font-size:14.5px">Salas de simulação por área da saúde. Na Farmácia Clínica, as etapas se encadeiam: Anamnese, SOAP, Reconciliação e Documentação.</p></div>
+    <div class="acts"><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-chart"/></svg>Agregador de notas</button><button class="btn primary" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Nova sala</button></div>
+  </div>
+
+  <div class="tabs scroll">
+    <a class="on" data-tab="areas">Áreas</a>
+    <a data-tab="farm">Farmácia Clínica · salas</a>
+    <a data-tab="criar">Criar sala</a>
+    <a data-tab="dividir">Dividir sala</a>
+    <a data-tab="enviar">Enviar para professor</a>
+  </div>
+
+  <!-- ÁREAS -->
+  <div data-pane="areas" class="on col g16">
+    <div class="g4">
+      <div class="card hov card-b col g8"><span class="tile-ic a"><svg class="i sm"><use href="#i-pill"/></svg></span><b class="fr" style="font-size:18px;font-weight:500">Farmácia Clínica</b><p class="xs muted">4 etapas encadeadas e agregador</p><div class="row g8"><span class="pill ok">5 ativas</span><span class="pill">3 inativas</span></div></div>
+      <div class="card hov card-b col g8"><span class="tile-ic"><svg class="i sm"><use href="#i-heart"/></svg></span><b class="fr" style="font-size:18px;font-weight:500">Enfermagem</b><p class="xs muted">Acolhimento, SAE, Evolução, Passagem de plantão</p><div class="row g8"><span class="pill ok">2 ativas</span><span class="pill">0 inativas</span></div></div>
+      <div class="card hov card-b col g8"><span class="tile-ic g"><svg class="i sm"><use href="#i-book"/></svg></span><b class="fr" style="font-size:18px;font-weight:500">Nutrição</b><p class="xs muted">Anamnese, antropometria, plano, orientação</p><div class="row g8"><span class="pill ok">1 ativa</span></div></div>
+      <div class="card hov card-b col g8"><span class="tile-ic i"><svg class="i sm"><use href="#i-shield"/></svg></span><b class="fr" style="font-size:18px;font-weight:500">Odontologia</b><p class="xs muted">Anamnese, exame clínico, plano, higiene</p><div class="row g8"><span class="pill">nenhuma sala</span></div></div>
+      <div class="card hov card-b col g8"><span class="tile-ic r"><svg class="i sm"><use href="#i-heart"/></svg></span><b class="fr" style="font-size:18px;font-weight:500">Medicina</b><p class="xs muted">Anamnese, exame físico, raciocínio, plano</p><div class="row g8"><span class="pill ok">3 ativas</span></div></div>
+      <div class="card hov card-b col g8"><span class="tile-ic g"><svg class="i sm"><use href="#i-sim"/></svg></span><b class="fr" style="font-size:18px;font-weight:500">Fisioterapia</b><p class="xs muted">Avaliação funcional, diagnóstico, plano, evolução</p><div class="row g8"><span class="pill">nenhuma sala</span></div></div>
+      <div class="card hov card-b col g8"><span class="tile-ic i"><svg class="i sm"><use href="#i-chart"/></svg></span><b class="fr" style="font-size:18px;font-weight:500">Biomedicina</b><p class="xs muted">Análise, controle de qualidade, interpretação, laudo</p><div class="row g8"><span class="pill">nenhuma sala</span></div></div>
+    </div>
+    <div class="note-box">Hoje cada área é uma cópia do mesmo código e tem menos recursos que a Farmácia. No novo desenho elas compartilham <b>a mesma tela</b>: arquivar, título editável, rodadas, pausa e relatório por e-mail passam a existir em todas (veja o módulo “6 áreas”).</div>
+  </div>
+
+  <!-- FARMÁCIA -->
+  <div data-pane="farm" class="col g16">
+    <div class="g4">
+      <div class="card card-b col g8" style="border-color:var(--accent)"><div class="row sp"><span class="lbl">Etapa 1</span><span class="pill ok">3 ativas</span></div><b class="fr" style="font-size:18px;font-weight:500">Anamnese</b></div>
+      <div class="card card-b col g8"><div class="row sp"><span class="lbl">Etapa 2</span><span class="pill ok">1 ativa</span></div><b class="fr" style="font-size:18px;font-weight:500">SOAP</b></div>
+      <div class="card card-b col g8"><div class="row sp"><span class="lbl">Etapa 3</span><span class="pill ok">1 ativa</span></div><b class="fr" style="font-size:18px;font-weight:500">Reconciliação</b></div>
+      <div class="card card-b col g8"><div class="row sp"><span class="lbl">Etapa 4</span><span class="pill">0 ativa</span></div><b class="fr" style="font-size:18px;font-weight:500">Documentação</b></div>
+    </div>
+    <div class="tabs" data-sub="x"><a class="on">Ativas <span class="c">3</span></a><a>Inativas <span class="c">2</span></a></div>
+    <div class="card"><div class="list">
+      <div class="row top"><span class="tile-ic a"><svg class="i sm"><use href="#i-chat"/></svg></span><div style="flex:1;min-width:0"><div class="row g8 wrap"><b>Anamnese · Turma A, 2026.1</b><span class="xs faint"><svg class="i sm"><use href="#i-edit"/></svg> título editável</span><span class="pill info"><span class="dot"></span>Ativa</span></div><div class="xs faint">24 participantes · 45 min · PIN <b class="mono" style="color:var(--ink)">482913</b></div></div><div class="row g8 wrap end"><button class="btn primary sm" type="button">Controle</button><button class="btn secondary sm" type="button">Editar</button><button class="btn ghost sm" type="button" aria-label="Mais ações"><svg class="i sm"><use href="#i-more"/></svg></button></div></div>
+      <div class="row top"><span class="tile-ic"><svg class="i sm"><use href="#i-chat"/></svg></span><div style="flex:1;min-width:0"><div class="row g8 wrap"><b>Anamnese · Turma B, 2026.1</b><span class="pill warn"><span class="dot"></span>Rascunho</span></div><div class="xs faint">22 participantes · 45 min · PIN <b class="mono" style="color:var(--ink)">771204</b></div></div><div class="row g8 wrap end"><button class="btn primary sm" type="button">Ativar</button><button class="btn secondary sm" type="button">Editar</button><button class="btn ghost sm" type="button" aria-label="Mais ações"><svg class="i sm"><use href="#i-more"/></svg></button></div></div>
+      <div class="row top"><span class="tile-ic g"><svg class="i sm"><use href="#i-check"/></svg></span><div style="flex:1;min-width:0"><div class="row g8 wrap"><b>Anamnese · Turma C, 2025.2</b><span class="pill ok">Concluída</span></div><div class="xs faint">20 participantes · média 8,1</div></div><div class="row g8 wrap end"><button class="btn secondary sm" type="button">Rever</button><button class="btn ghost sm" type="button" aria-label="Mais ações"><svg class="i sm"><use href="#i-more"/></svg></button></div></div>
+      <div class="row top"><span class="tile-ic a"><svg class="i sm"><use href="#i-clock"/></svg></span><div style="flex:1;min-width:0"><div class="row g8 wrap"><b>Anamnese · Turma D, 2026.1</b><span class="pill warn"><span class="dot"></span>Pausada</span></div><div class="xs faint">Continua em 31 out · ciclo 2 de 3</div></div><div class="row g8 wrap end"><button class="btn primary sm" type="button">Controle</button><button class="btn ghost sm" type="button" aria-label="Mais ações"><svg class="i sm"><use href="#i-more"/></svg></button></div></div>
+    </div><div class="card-f"><span class="xs">Menu “Mais ações”: <b>Dividir</b> · <b>Duplicar</b> · <b>Enviar para professor</b> · <b>Arquivar</b> · <b>Excluir</b></span></div></div>
+    <div class="note-box">As etapas SOAP, Reconciliação e Documentação abrem listas próprias, com o mesmo cartão de sala. “Arquivar” leva a sala para a aba <b>Inativas</b>; desarquivar a traz de volta.</div>
+  </div>
+
+  <!-- CRIAR -->
+  <div data-pane="criar">
+    <div class="scrim"><div class="modal" style="max-width:600px">
+      <div class="modal-h"><div><h3>Nova sala de Anamnese</h3><p class="sm muted" style="margin-top:4px">Você define participantes e formulários depois, no editor.</p></div><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b">
+        <div class="field"><label>Nome da sala</label><div class="input val">Anamnese · Turma E, 2026.1</div></div>
+        <div class="field"><label>Descrição</label><div class="input ta"></div></div>
+        <div class="field"><label>Duração por rodada (minutos)</label><div class="input val" style="width:120px">45</div></div>
+        <div class="field"><label>Sala de origem <span class="faint">(só SOAP, Reconciliação e Documentação)</span></label><div class="input sel val">Anamnese · Turma A, 2026.1</div><span class="hint">Importa os alunos da etapa anterior.</span></div>
+      </div>
+      <div class="modal-f"><button class="btn secondary" type="button">Cancelar</button><button class="btn primary" type="button">Criar sala</button></div>
+    </div></div>
+  </div>
+
+  <!-- DIVIDIR -->
+  <div data-pane="dividir">
+    <div class="scrim"><div class="modal" style="max-width:680px">
+      <div class="modal-h"><div><h3>Dividir sala</h3><p class="sm muted" style="margin-top:4px">Cria várias salas finais, cada uma com o seu professor e os seus alunos.</p></div><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b">
+        <div class="card flat"><div class="card-h"><h3>Sala 1</h3><span class="pill">12 alunos</span></div><div class="card-b fg2"><div class="field"><label>Professor</label><div class="input val sel">Sérgio Fernandes</div></div><div class="field"><label>Alunos</label><div class="input val">Ana B., Carlos M., Daniela S. e mais 9</div></div></div></div>
+        <div class="card flat"><div class="card-h"><h3>Sala 2</h3><span class="pill">12 alunos</span></div><div class="card-b fg2"><div class="field"><label>Professor</label><div class="input val sel">Maria Helena</div></div><div class="field"><label>Alunos</label><div class="input val">Elisa F., Fábio R. e mais 10</div></div></div></div>
+        <button class="btn secondary sm" type="button" style="align-self:flex-start"><svg class="i sm"><use href="#i-plus"/></svg>Adicionar sala</button>
+        <div class="callout warn"><svg class="i"><use href="#i-alert"/></svg><div>A sala original será arquivada depois da divisão.</div></div>
+      </div>
+      <div class="modal-f"><button class="btn secondary" type="button">Cancelar</button><button class="btn primary" type="button">Dividir em 2 salas</button></div>
+    </div></div>
+  </div>
+
+  <!-- ENVIAR -->
+  <div data-pane="enviar">
+    <div class="scrim"><div class="modal" style="max-width:520px">
+      <div class="modal-h"><div><h3>Enviar para professor</h3><p class="sm muted" style="margin-top:4px">O outro docente recebe uma <b>cópia</b> da sala, sem as respostas.</p></div><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b"><div class="field"><label>E-mail do docente</label><div class="input val">maria.helena@universidade.edu</div></div></div>
+      <div class="modal-f"><button class="btn secondary" type="button">Cancelar</button><button class="btn primary" type="button"><svg class="i sm"><use href="#i-send"/></svg>Enviar cópia</button></div>
+    </div></div>
+  </div>
+</div>

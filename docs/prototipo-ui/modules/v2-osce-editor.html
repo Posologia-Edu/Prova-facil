@@ -1,0 +1,59 @@
+<div class="pg tight" data-tabs>
+  <div class="ph">
+    <div><div class="ey">Praticar</div><h1>OSCE</h1><p class="sm muted" style="margin-top:8px;max-width:64ch;font-size:14.5px">Exames clínicos objetivos e estruturados: estações com checklist, avaliadores e um circuito de rotação dos alunos.</p></div>
+    <div class="acts"><button class="btn primary" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Novo exame OSCE</button></div>
+  </div>
+
+  <div class="tabs scroll"><a class="on" data-tab="lista">Lista</a><a data-tab="novo">Novo exame</a><a data-tab="est">Editor · Estações <span class="c">4</span></a><a data-tab="cfg">Editor · Configurações</a><a data-tab="ia">Gerar estação com IA</a></div>
+
+  <div data-pane="lista" class="on col g16">
+    <div class="g3">
+      <div class="card hov"><div class="card-b col g12p"><div class="row sp"><span class="tile-ic"><svg class="i sm"><use href="#i-osce"/></svg></span><span class="pill ok"><span class="dot"></span>Pronto</span></div><b class="fr" style="font-size:18px;font-weight:500">OSCE Clínica Farmacêutica</b><p class="sm muted">4 estações · 10 min cada · transição de 30 s</p><div class="row g8"><button class="btn primary sm" type="button" style="flex:1;justify-content:center">Editar</button><button class="btn secondary sm" type="button">Resultados</button><button class="btn ghost sm" type="button" aria-label="Excluir"><svg class="i sm"><use href="#i-more"/></svg></button></div></div></div>
+      <div class="card hov"><div class="card-b col g12p"><div class="row sp"><span class="tile-ic"><svg class="i sm"><use href="#i-osce"/></svg></span><span class="pill warn"><span class="dot"></span>Rascunho</span></div><b class="fr" style="font-size:18px;font-weight:500">OSCE Atenção Primária</b><p class="sm muted">2 estações · 8 min cada</p><div class="row g8"><button class="btn primary sm" type="button" style="flex:1;justify-content:center">Editar</button><button class="btn ghost sm" type="button" aria-label="Excluir"><svg class="i sm"><use href="#i-more"/></svg></button></div></div></div>
+      <div class="card"><div class="card-b empty" style="padding:28px 16px"><div class="art"><svg class="i lg"><use href="#i-plus"/></svg></div><b>Novo exame</b><p class="sm muted" style="margin-top:4px">Título, duração por estação e transição.</p></div></div>
+    </div>
+    <div class="note-box">A Turma ainda não lista OSCE: o vínculo exame ↔ turma é pendência. Hoje a turma é escolhida ao configurar o circuito.</div>
+  </div>
+
+  <div data-pane="novo">
+    <div class="scrim"><div class="modal" style="max-width:520px">
+      <div class="modal-h"><h3>Novo exame OSCE</h3><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b"><div class="field"><label>Título</label><div class="input val">OSCE Clínica Farmacêutica</div></div><div class="field"><label>Descrição</label><div class="input ta"></div></div><div class="fg2"><div class="field"><label>Duração por estação (min)</label><div class="input val">10</div></div><div class="field"><label>Transição (segundos)</label><div class="input val">30</div></div></div></div>
+      <div class="modal-f"><button class="btn secondary" type="button">Cancelar</button><button class="btn primary" type="button">Criar exame</button></div>
+    </div></div>
+  </div>
+
+  <div data-pane="est" class="col g16">
+    <div class="row sp wrap"><div class="row g12p"><button class="btn ghost sm" type="button">← OSCE</button><h2 class="fr" style="font-size:24px;font-weight:500">OSCE Clínica Farmacêutica</h2></div><div class="row g8"><button class="btn ai" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Gerar estação com IA</button><button class="btn secondary" type="button"><svg class="i sm"><use href="#i-chart"/></svg>Resultados</button><button class="btn primary" type="button"><svg class="i sm"><use href="#i-play"/></svg>Iniciar circuito</button></div></div>
+    <div class="card"><div class="list">
+      <div class="row"><span class="mono xs faint">1</span><div style="flex:1"><b>Estação 1 · Anamnese farmacêutica</b><div class="xs faint">10 min · 12 itens no checklist</div></div><span class="pill brand">Paciente virtual</span><svg class="i sm"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="mono xs faint">3</span><div style="flex:1"><b>Estação 3 · Orientação de inalador</b><div class="xs faint">10 min · 9 itens</div></div><svg class="i sm"><use href="#i-chev"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Estação 2 · Reconciliação medicamentosa</h3><div class="row g8"><span class="pill">10 min</span><button class="btn ghost sm" type="button">Remover</button></div></div>
+      <div class="card-b col g16">
+        <div class="fg2"><div class="field"><label>Título</label><div class="input val">Reconciliação medicamentosa</div></div><div class="field"><label>Duração (min)</label><div class="input val">10</div></div></div>
+        <div class="fg2"><div class="field"><label>Instruções ao estudante (porta)</label><div class="input ta val">Você tem 10 minutos para reconciliar os medicamentos do paciente.</div></div><div class="field"><label>Resumo do caso clínico</label><div class="input ta val">Homem, 72 anos, alta hospitalar após ICC.</div></div></div>
+        <div class="fg2"><div class="field"><label>Roteiro do paciente simulado (ator)</label><div class="input ta val">Você acha que o diurético é “opcional”.</div></div><div class="field"><label>Objetivos de aprendizagem</label><div class="input ta val">Identificar discrepâncias e priorizar.</div></div></div>
+        <div class="card flat"><div class="card-h"><h3>Paciente virtual (chatbot IA)</h3><span class="toggle on"></span></div><div class="card-b fg2"><div class="field"><label>Chave de API própria</label><div class="input val">••••••••••••</div></div><div class="field"><label>Prompt da estação</label><div class="input ta val">Você é o Sr. João…</div></div></div></div>
+        <div class="card flat"><div class="card-h"><h3>Materiais clínicos</h3><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-upload"/></svg>Anexar</button></div><div class="card-b row g12p"><span class="tile-ic"><svg class="i sm"><use href="#i-img"/></svg></span><span class="sm">ECG.png</span><span class="tile-ic"><svg class="i sm"><use href="#i-book"/></svg></span><span class="sm">Resumo de alta.pdf</span></div></div>
+        <div class="card flat"><div class="card-h"><h3>Checklist</h3><button class="btn secondary sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Item</button></div>
+          <table class="tbl"><thead><tr><th>Item</th><th>Tipo</th><th>Competência</th><th class="n">Peso</th><th></th></tr></thead><tbody>
+            <tr><td>Apresenta-se e confirma a identidade</td><td><span class="pill info">Feito / não</span></td><td class="muted">Comunicação</td><td class="n">1</td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+            <tr><td>Explora adesão ao tratamento</td><td><span class="pill brand">Likert</span></td><td class="muted">Anamnese</td><td class="n">2</td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+            <tr><td>Prioriza as discrepâncias</td><td><span class="pill accent">Pontuação</span></td><td class="muted">Raciocínio</td><td class="n">3</td><td><svg class="i sm"><use href="#i-more"/></svg></td></tr>
+          </tbody></table><div class="card-f"><span class="xs">Reordene arrastando as linhas</span><span class="xs">3 tipos: Feito/Não · Likert · Pontuação</span></div></div>
+      </div></div>
+  </div>
+
+  <div data-pane="cfg" class="g2">
+    <div class="card"><div class="card-h"><h3>Geral</h3></div><div class="card-b col g12p"><div class="field"><label>Descrição</label><div class="input ta val">Exame de competências clínicas do 8º período.</div></div><div class="fg2"><div class="field"><label>Duração padrão (min)</label><div class="input val">10</div></div><div class="field"><label>Transição (s)</label><div class="input val">30</div></div></div></div><div class="card-f"><span class="xs">As estações novas herdam estes valores.</span><button class="btn primary sm" type="button">Salvar</button></div></div>
+  </div>
+
+  <div data-pane="ia">
+    <div class="scrim"><div class="modal" style="max-width:560px">
+      <div class="modal-h"><div><h3>Gerar estação com IA</h3><p class="sm muted" style="margin-top:4px">Cria estação com instruções, roteiro do ator e checklist.</p></div><button class="btn ghost sm" type="button" aria-label="Fechar">✕</button></div>
+      <div class="modal-b"><div class="fg2"><div class="field"><label>Área clínica</label><div class="input val sel">Cardiovascular</div></div><div class="field"><label>Nível</label><div class="input val sel">Graduação</div></div></div><div class="field"><label>Contexto ou tema</label><div class="input ta val">Orientação a paciente com insuficiência cardíaca sobre diuréticos.</div></div></div>
+      <div class="modal-f"><button class="btn secondary" type="button">Cancelar</button><button class="btn ai" type="button"><svg class="i sm"><use href="#i-spark"/></svg>Gerar estação</button></div>
+    </div></div>
+  </div>
+</div>

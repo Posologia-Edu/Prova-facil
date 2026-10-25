@@ -1,0 +1,47 @@
+<div data-tabs style="min-height:680px;background:var(--paper)">
+  <header class="tb" style="height:auto;padding:12px 24px;flex-wrap:wrap">
+    <div class="sb-logo" style="width:30px;height:30px;font-size:15px">P</div>
+    <div><b class="fr" style="font-weight:500;font-size:16px">Anamnese · Turma A, 2026.1</b><div class="xs faint">Rodada 4 de 8 · ciclo 2</div></div>
+    <div class="row g12p" style="margin-left:auto"><span class="pill accent">Você é o profissional</span><span class="row g8 mono" style="font-size:16px"><svg class="i sm"><use href="#i-timer"/></svg>12:40</span></div>
+  </header>
+  <div class="tabs scroll" style="padding:0 24px;background:var(--surface)">
+    <a class="on" data-tab="entrar">Entrar</a><a data-tab="espera">Espera</a><a data-tab="prof">Profissional</a><a data-tab="pac">Paciente</a><a data-tab="obs">Observador</a><a data-tab="rascunho">Rascunho recuperado</a><a data-tab="repo">Reposição</a><a data-tab="fim">Envio</a>
+  </div>
+
+  <div data-pane="entrar" class="on sim-center">
+    <div class="card" style="max-width:420px;width:100%"><div class="card-b col g16"><div><h2 class="fr" style="font-size:24px;font-weight:500">Entrar na simulação</h2><p class="sm muted" style="margin-top:6px">Use o PIN que o professor mostrou na tela.</p></div><div class="field"><label>PIN da sala</label><div class="input val mono" style="font-size:20px;letter-spacing:.2em">482913</div></div><div class="field"><label>Seu e-mail</label><div class="input val">carlos@aluno.edu</div></div><button class="btn primary lg" type="button">Entrar</button></div></div>
+  </div>
+
+  <div data-pane="espera" style="padding:80px 24px"><div class="empty"><div class="art"><svg class="i lg"><use href="#i-clock"/></svg></div><b class="fr" style="font-size:22px;font-weight:500">Aguardando a próxima rodada</b><p class="sm muted" style="margin-top:6px">O professor forma as duplas. Você será avisado do seu papel assim que a rodada começar.</p><div class="pill ok" style="margin-top:14px"><span class="dot"></span>Presente · 21 conectados</div></div></div>
+
+  <div data-pane="prof" style="padding:20px 24px" class="sim-split">
+    <div class="card"><div class="card-h"><h3>Anamnese</h3><span class="pill ok">Salvo agora</span></div><div class="card-b col g12p">
+      <div class="field"><label>Identificação do paciente</label><div class="input val">Roberto Mendes, 58 anos</div></div>
+      <div class="field"><label>Queixa principal e HDA</label><div class="input ta val">Tontura ao levantar há três semanas…</div></div>
+      <div class="field"><label>Medicamentos em uso</label><div class="input ta"></div></div>
+      <div class="field"><label>Alergias e reações adversas</label><div class="input"></div></div>
+      <button class="btn primary" type="button" style="align-self:flex-end">Enviar formulário</button></div></div>
+    <div class="col g16"><div class="card"><div class="card-h"><h3>Sua dupla</h3></div><div class="list"><div class="row sm"><span class="av sm">CM</span>Paciente: Carlos M.</div><div class="row sm"><span class="av sm i">DS</span>Observadora: Daniela S.</div></div></div><div class="note-box">Em casos com Paciente Virtual, o PIN da sala também abre o paciente virtual.</div></div>
+  </div>
+
+  <div data-pane="pac" style="padding:20px 24px" class="sim-split">
+    <div class="card"><div class="card-h"><h3>Roteiro do paciente</h3><span class="pill brand">Só você vê</span></div><div class="card-b col g8 sm"><p>Você é Roberto, 58 anos, aposentado. Sente tontura ao levantar da cama há três semanas.</p><p class="muted">Só conte a troca do remédio se o profissional perguntar sobre mudanças recentes.</p></div></div>
+    <div class="card"><div class="card-h"><h3>Caso clínico</h3></div><div class="card-b xs faint">Definido pelo professor para esta rodada.</div></div>
+  </div>
+
+  <div data-pane="obs" style="padding:20px 24px" class="sim-split">
+    <div class="card"><div class="card-h"><h3>Avaliação do observador</h3><span class="s">6,0 pontos</span></div><div class="list">
+      <div class="row sp"><span class="sm">Apresentou-se e explicou o objetivo</span><div class="chips"><span class="chip">0</span><span class="chip on">1</span><span class="chip">2</span></div></div>
+      <div class="row sp"><span class="sm">Perguntou sobre todos os medicamentos</span><div class="chips"><span class="chip">0</span><span class="chip">1</span><span class="chip on">2</span></div></div>
+    </div><div class="card-f"><span class="xs">Nota parcial <b class="mono">3,0 / 6,0</b></span><button class="btn primary sm" type="button">Enviar avaliação</button></div></div>
+    <div class="card"><div class="card-h"><h3>Atendimento ao vivo</h3></div><div class="card-b xs faint">Acompanhe a conversa e preencha. Sem interferir.</div></div>
+  </div>
+
+  <div data-pane="rascunho" class="sim-center"><div class="card" style="max-width:480px"><div class="card-b col g12p"><div class="callout"><svg class="i"><use href="#i-info"/></svg><div><b>Recuperamos o seu rascunho.</b> Você parou na pergunta 3, às 09:41.</div></div><div class="row g8"><button class="btn primary" type="button">Continuar de onde parei</button><button class="btn secondary" type="button">Começar do zero</button></div></div></div></div>
+
+  <div data-pane="repo" style="padding:28px 24px">
+    <div class="scrim"><div class="modal" style="max-width:560px"><div class="modal-h"><div><h3>Reposição de anamnese</h3><p class="sm muted" style="margin-top:4px">Você faltou a uma rodada. Escolha com quem repor. <b>Leva 1.</b></p></div></div><div class="modal-b"><div class="steps"><i class="c"></i><i></i></div><div class="field"><label>1. Quem faz</label><div class="input val sel">Carlos M. · profissional</div></div><div class="field"><label>2. Com quem</label><div class="input val sel">Helena L. · paciente</div></div></div><div class="modal-f"><button class="btn primary" type="button">Confirmar reposição</button></div></div></div>
+  </div>
+
+  <div data-pane="fim" style="padding:80px 24px"><div class="empty"><div class="art" style="background:var(--ok-soft);color:var(--ok)"><svg class="i lg"><use href="#i-check"/></svg></div><b class="fr" style="font-size:22px;font-weight:500">Formulário enviado</b><p class="sm muted" style="margin-top:6px">Aguarde a próxima rodada. Suas respostas já estão com o professor.</p></div></div>
+</div>

@@ -1,0 +1,22 @@
+<div class="pg tight" data-tabs>
+  <div class="row sp wrap" style="gap:16px">
+    <div class="row g12p"><button class="btn ghost sm" type="button">← Formulários</button><div><div class="lbl" style="color:var(--accent-ink)">SCT · Script Concordance Test</div><h1 class="fr" style="font-size:28px;font-weight:500;letter-spacing:-.015em;line-height:1.15">Raciocínio em hipertensão</h1></div></div>
+    <div class="row g8 wrap"><span class="pill ok"><span class="dot"></span>Ativo</span><button class="btn primary sm" type="button">Salvar</button></div>
+  </div>
+  <div class="tabs scroll"><a class="on" data-tab="cen">Cenários <span class="c">12</span></a><a data-tab="pai">Painel de especialistas <span class="c">5</span></a><a data-tab="res">Resultados <span class="c">38</span></a><a data-tab="esp">Portal do especialista</a><a data-tab="alu">Portal do aluno</a></div>
+
+  <div data-pane="cen" class="on col g16">
+    <div class="card"><div class="card-h"><h3>Cenário 1</h3><button class="btn ghost sm" type="button">Remover</button></div><div class="card-b col g12p">
+      <div class="field"><label>Vinheta clínica</label><div class="input ta val">Paciente de 62 anos, diabético, PA 168/100 em três consultas.</div></div>
+      <div class="fg2"><div class="field"><label>Se você estava pensando em…</label><div class="input ta val">Iniciar tiazídico</div></div><div class="field"><label>…e então você descobre que</label><div class="input ta val">Potássio sérico de 3,1 mEq/L</div></div></div>
+    </div></div>
+    <button class="btn secondary" type="button" style="align-self:flex-start"><svg class="i sm"><use href="#i-plus"/></svg>Adicionar cenário</button>
+  </div>
+  <div data-pane="pai" class="g2">
+    <div class="card"><div class="card-h"><h3>Painel</h3></div><div class="card-b col g12p"><div class="field"><label>Tamanho esperado do painel</label><div class="input val" style="width:120px">5</div></div><div class="field"><label>Link do painel</label><div class="input val mono xs">prova.app/sct/expert/8f2a</div></div><div class="field"><label>Link dos alunos</label><div class="input val mono xs">prova.app/sct/student/8f2a</div></div></div></div>
+    <div class="card"><div class="card-h"><h3>Especialistas que responderam</h3></div><div class="list"><div class="row sp sm"><span>Dra. Helena Prado</span><span class="pill ok">Respondeu</span></div><div class="row sp sm"><span>Dr. Marcos Reis</span><span class="pill ok">Respondeu</span></div><div class="row sp sm"><span>Dra. Lívia Cunha</span><span class="pill warn">Pendente</span></div></div></div>
+  </div>
+  <div data-pane="res" class="card"><table class="tbl"><thead><tr><th>Aluno</th><th>Entrada</th><th class="n">Nota</th><th class="n">Máximo</th></tr></thead><tbody><tr><td>Ana B.</td><td class="muted">24 out</td><td class="n strong">9,2</td><td class="n">12,0</td></tr><tr><td>Carlos M.</td><td class="muted">24 out</td><td class="n strong">7,8</td><td class="n">12,0</td></tr></tbody></table></div>
+  <div data-pane="esp" class="card" style="max-width:720px"><div class="card-b col g16"><h2 class="fr" style="font-size:22px;font-weight:500">Painel de especialistas</h2><div class="fg2"><div class="input val">Dra. Helena Prado</div><div class="input val">helena@univ.edu</div></div><div class="callout"><svg class="i"><use href="#i-info"/></svg><div>Se você estava pensando em <b>iniciar tiazídico</b> e descobre <b>potássio de 3,1</b>, essa hipótese fica…</div></div><div class="row g8"><span class="chip">−2</span><span class="chip">−1</span><span class="chip">0</span><span class="chip on">+1</span><span class="chip">+2</span></div><div class="row sp"><span class="xs faint">2 cenários pendentes</span><button class="btn primary" type="button">Enviar respostas</button></div></div></div>
+  <div data-pane="alu" class="card" style="max-width:720px"><div class="card-b col g16"><div class="row sp"><h2 class="fr" style="font-size:22px;font-weight:500">Cenário 1 de 12</h2><span class="pill info">8 respondidos</span></div><div class="callout"><svg class="i"><use href="#i-info"/></svg><div>Mesma estrutura do especialista, em escala de −2 a +2.</div></div><div class="row g8"><span class="chip">−2</span><span class="chip">−1</span><span class="chip">0</span><span class="chip">+1</span><span class="chip">+2</span></div><div class="note-box">Ao enviar: “Respostas enviadas” com nota e máximo. O crédito é parcial: a frequência da resposta do aluno dividida pela frequência da moda dos especialistas.</div></div></div>
+</div>
