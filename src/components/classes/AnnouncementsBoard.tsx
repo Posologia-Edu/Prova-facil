@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -82,9 +82,7 @@ export function AnnouncementsBoard({ classId, semesterId, compact }: Props) {
       <Card>
         <CardContent className={cn("p-5", compact && "p-4")}>
           <div className="flex items-center justify-between mb-3">
-            <div className="font-semibold flex items-center gap-2">
-              <Megaphone className="h-4 w-4 text-primary" />Mural de comunicados
-            </div>
+            <h3 className="font-heading text-base font-medium">Mural de comunicados</h3>
             <Button size="sm" variant="outline" onClick={() => setDialog({ open: true })}>
               <Plus className="w-3.5 h-3.5 mr-1" />Novo
             </Button>
@@ -103,13 +101,13 @@ export function AnnouncementsBoard({ classId, semesterId, compact }: Props) {
                   key={a.id}
                   className={cn(
                     "rounded-lg border p-3 transition-shadow hover:shadow-sm",
-                    a.pinned && "border-amber-400/60 bg-amber-50/50 dark:bg-amber-500/5"
+                    a.pinned && "border-highlight/50 bg-highlight/5"
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {a.pinned && <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 gap-1 text-[10px]"><Pin className="h-2.5 w-2.5" />Fixado</Badge>}
+                        {a.pinned && <StatusBadge tone="accent"><Pin className="h-2.5 w-2.5" />Fixado</StatusBadge>}
                         <span className="font-medium">{a.title}</span>
                         <span className="text-[11px] text-muted-foreground">
                           {new Date(a.created_at).toLocaleDateString("pt-BR")}

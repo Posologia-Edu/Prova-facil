@@ -77,88 +77,84 @@ export function OverviewTab({ classId, semesterId, onNavigateTab }: Props) {
   }
 
   const kpis = [
-    { label: "Alunos", value: stats.students, icon: Users, cls: "from-blue-500/20 to-blue-500/5 text-blue-700 dark:text-blue-300" },
-    { label: "Aulas planejadas", value: stats.lessonsTotal, icon: Calendar, cls: "from-purple-500/20 to-purple-500/5 text-purple-700 dark:text-purple-300" },
-    { label: "Aulas realizadas", value: `${stats.lessonsDone}/${stats.lessonsTotal}`, icon: CheckCircle2, cls: "from-emerald-500/20 to-emerald-500/5 text-emerald-700 dark:text-emerald-300" },
-    { label: "Presença média", value: stats.attendanceAvg !== null ? `${stats.attendanceAvg.toFixed(0)}%` : "—", icon: GraduationCap, cls: "from-amber-500/20 to-amber-500/5 text-amber-700 dark:text-amber-300" },
+    { label: "Alunos", value: stats.students },
+    { label: "Aulas planejadas", value: stats.lessonsTotal },
+    { label: "Aulas realizadas", value: `${stats.lessonsDone}/${stats.lessonsTotal}` },
+    { label: "Presença média", value: stats.attendanceAvg !== null ? `${stats.attendanceAvg.toFixed(0)}%` : "—" },
   ];
 
   const progressPct = stats.lessonsTotal ? (stats.lessonsDone / stats.lessonsTotal) * 100 : 0;
+  const dayLabel = (iso: string | null) =>
+    iso ? new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".,", "") : "—";
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((k) => (
-          <Card key={k.label} className={cn("bg-gradient-to-br border-0 shadow-sm", k.cls)}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-background/60 backdrop-blur flex items-center justify-center">
-                <k.icon className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-2xl font-bold leading-none">{k.value}</div>
-                <div className="text-xs opacity-80 mt-1">{k.label}</div>
-              </div>
-            </CardContent>
+          <Card key={k.label} className="p-5">
+            <p className="label-mono">{k.label}</p>
+            <p className="mt-2 font-heading text-4xl font-medium leading-none">{k.value}</p>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="md:col-span-2">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="font-semibold flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" />Próximas aulas</div>
-              {onNavigateTab && <button onClick={() => onNavigateTab("schedule")} className="text-xs text-primary hover:underline">Ver cronograma →</button>}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="space-y-6">
+          <Card>
+            <div className="flex items-center justify-between border-b px-5 py-4">
+              <h3 className="font-heading text-base font-medium">Próximas aulas</h3>
+              {onNavigateTab && <button onClick={() => onNavigateTab("schedule")} className="text-xs font-medium text-primary hover:underline">Ver cronograma →</button>}
             </div>
             {stats.upcoming.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">Sem aulas futuras planejadas.</p>
+              <p className="px-5 py-8 text-center text-sm text-muted-foreground">Sem aulas futuras planejadas.</p>
             ) : (
-              <ol className="relative border-l-2 border-border ml-3 space-y-4">
-                {stats.upcoming.map(l => {
+              <div className="divide-y">
+                {stats.upcoming.map((l) => {
                   const style = getLessonTypeStyle(l.lesson_type);
                   const Icon = style.icon;
                   return (
-                    <li key={l.id} className="ml-4">
-                      <div className={cn("absolute -left-[9px] mt-1 h-4 w-4 rounded-full border-2 border-background", style.accent.replace("border-l-", "bg-"))} />
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className={cn("gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
-                        <span className="text-xs text-muted-foreground">{l.lesson_date}</span>
-                      </div>
-                      <p className="font-medium mt-1">{l.title}</p>
-                    </li>
+                    <div key={l.id} className="flex items-center gap-4 px-5 py-3">
+                      <span className="w-20 shrink-0 font-mono text-xs capitalize text-muted-foreground">{dayLabel(l.lesson_date)}</span>
+                      <p className="min-w-0 flex-1 truncate text-sm font-medium">{l.title}</p>
+                      <Badge variant="outline" className={cn("shrink-0 gap-1", style.badge)}><Icon className="h-3 w-3" />{style.label}</Badge>
+                    </div>
                   );
                 })}
-              </ol>
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </Card>
 
-        <Card>
-          <CardContent className="p-5 space-y-4">
-            <div>
-              <div className="font-semibold flex items-center gap-2 mb-2"><Clock className="h-4 w-4 text-primary" />Progresso do semestre</div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-primary to-secondary transition-all" style={{ width: `${progressPct}%` }} />
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">{progressPct.toFixed(0)}% concluído</div>
+          <AnnouncementsBoard classId={classId} semesterId={semesterId} />
+        </div>
+
+        <div className="space-y-6">
+          <Card className="p-5">
+            <p className="label-mono">Progresso do semestre</p>
+            <p className="my-2 font-heading text-4xl font-medium leading-none">{progressPct.toFixed(0)}%</p>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-highlight transition-all" style={{ width: `${progressPct}%` }} />
             </div>
-            <div className="pt-3 border-t">
-              <div className="font-semibold flex items-center gap-2 mb-3"><FileText className="h-4 w-4 text-primary" />Atalhos</div>
-              <div className="flex flex-col gap-1.5 text-sm">
-                {onNavigateTab && (
-                  <>
-                    <button onClick={() => onNavigateTab("attendance")} className="text-left hover:text-primary">→ Marcar presença</button>
-                    <button onClick={() => onNavigateTab("grades")} className="text-left hover:text-primary">→ Lançar notas</button>
-                    <button onClick={() => onNavigateTab("students")} className="text-left hover:text-primary">→ Gerenciar alunos</button>
-                  </>
-                )}
+            <p className="mt-2 text-xs text-muted-foreground">{stats.lessonsDone} de {stats.lessonsTotal} aulas realizadas</p>
+          </Card>
+
+          {onNavigateTab && (
+            <Card>
+              <div className="border-b px-5 py-4"><h3 className="font-heading text-base font-medium">Atalhos</h3></div>
+              <div className="divide-y text-sm">
+                {[
+                  { tab: "attendance", label: "Marcar presença" },
+                  { tab: "grades", label: "Lançar notas" },
+                  { tab: "students", label: "Gerenciar alunos" },
+                ].map((a) => (
+                  <button key={a.tab} onClick={() => onNavigateTab(a.tab)} className="flex w-full items-center justify-between px-5 py-3 text-left transition-colors hover:bg-muted/50">
+                    {a.label}<span className="text-muted-foreground">→</span>
+                  </button>
+                ))}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </Card>
+          )}
+        </div>
       </div>
-
-      <AnnouncementsBoard classId={classId} semesterId={semesterId} />
     </div>
   );
 }

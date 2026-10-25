@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Trash2, Pencil, CalendarOff, CalendarCheck } from "lucide-react";
@@ -213,10 +213,10 @@ export function HolidaysTab({ classId, semesterId, onScheduleChanged }: Props) {
             <TableBody>
               {items.map((h) => (
                 <TableRow key={h.id}>
-                  <TableCell className="tabular-nums">{h.holiday_date}</TableCell>
+                  <TableCell className="font-mono text-sm">{h.holiday_date}</TableCell>
                   <TableCell className="font-medium">{h.name}</TableCell>
                   <TableCell>
-                    {h.recurring_yearly ? <Badge>Anual</Badge> : <Badge variant="outline">Único</Badge>}
+                    {h.recurring_yearly ? <StatusBadge tone="brand">Anual</StatusBadge> : <StatusBadge>Único</StatusBadge>}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => setDlg({ open: true, editing: h })}>

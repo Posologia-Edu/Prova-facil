@@ -496,36 +496,34 @@ export default function ClassDetail() {
                 Nenhum semestre cadastrado. Crie o primeiro para começar.
               </CardContent></Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <>
+              <Card className="divide-y">
                 {semesters.map((s) => (
-                  <Card key={s.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 flex justify-between items-start">
-                      <div>
-                        <div className="font-semibold text-lg flex items-center gap-2">
-                          {s.label}
-                          {s.is_active && <Badge className="text-[10px]">Ativo</Badge>}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {s.student_count || 0} alunos
-                          {s.start_date && ` · ${s.start_date} a ${s.end_date || "?"}`}
-                        </div>
-                        {!s.is_active && <Badge variant="outline" className="mt-2">Arquivado</Badge>}
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" title="Duplicar (cronograma)" onClick={() => duplicateSemester(s)}>
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Editar" onClick={() => setSemDialog({ open: true, editing: s })}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Excluir" onClick={() => setConfirmDelete({ kind: "semester", id: s.id, label: s.label })}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div key={s.id} className="flex items-center gap-3 px-5 py-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-heading text-lg font-medium leading-tight">{s.label}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {s.student_count || 0} alunos
+                        {s.start_date && ` · ${s.start_date} a ${s.end_date || "?"}`}
+                      </p>
+                    </div>
+                    {s.is_active ? <StatusBadge tone="ok" dot>Ativo</StatusBadge> : <StatusBadge>Arquivado</StatusBadge>}
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" title="Duplicar (cronograma)" aria-label="Duplicar semestre" onClick={() => duplicateSemester(s)}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" title="Editar" aria-label="Editar semestre" onClick={() => setSemDialog({ open: true, editing: s })}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" title="Excluir" aria-label="Excluir semestre" onClick={() => setConfirmDelete({ kind: "semester", id: s.id, label: s.label })}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </div>
+              </Card>
+              <p className="text-xs text-muted-foreground">Duplicar copia o cronograma. Professores e materiais são da turma e valem para todos os semestres.</p>
+              </>
             )}
           </TabsContent>
 
@@ -554,9 +552,9 @@ export default function ClassDetail() {
                   <TableBody>
                     {teachers.map((t) => (
                       <TableRow key={t.id}>
-                        <TableCell className="font-medium">{t.name}</TableCell>
+                        <TableCell><div className="flex items-center gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-medium text-brand-text" aria-hidden>{t.name.split(/\s+/).filter(Boolean).slice(0, 2).map((p: string) => p[0]?.toUpperCase()).join("")}</span><span className="font-medium">{t.name}</span></div></TableCell>
                         <TableCell className="text-muted-foreground">{t.email ?? "—"}</TableCell>
-                        <TableCell><Badge variant="outline">{TEACHER_ROLES.find((r) => r.value === t.role)?.label ?? t.role}</Badge></TableCell>
+                        <TableCell><StatusBadge tone={t.role === "titular" ? "brand" : "neutral"}>{TEACHER_ROLES.find((r) => r.value === t.role)?.label ?? t.role}</StatusBadge></TableCell>
                         <TableCell>
                           <Button variant="ghost" size="icon" onClick={() => setTeacherDialog({ open: true, editing: t })}>
                             <Pencil className="w-4 h-4" />
