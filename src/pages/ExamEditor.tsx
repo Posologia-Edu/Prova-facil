@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Shield,
   MessageSquareQuote,
+  ArrowLeft,
 } from "lucide-react";
 import ModuleHelpGuide from "@/components/ModuleHelpGuide";
 import { Button } from "@/components/ui/button";
@@ -37,8 +38,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
   Select,
@@ -67,7 +67,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import RichTextRenderer from "@/components/RichTextRenderer";
 import { AIQuestionGenerator, type GeneratedQuestion } from "@/components/AIQuestionGenerator";
-import AITutorChat from "@/components/AITutorChat";
+import ExamAnswerReviewDialog, { getAnswerStatement } from "@/components/ExamAnswerReviewDialog";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useLanguage } from "@/i18n/LanguageContext";
 import type { Json } from "@/integrations/supabase/types";
 import { computeExamStatus, examStatusConfig } from "@/lib/exam-status";
@@ -88,6 +90,7 @@ interface ExamQuestion {
   title: string;
   type: string;
   points: number;
+  section?: string | null;
   content_json?: any;
 }
 
@@ -147,6 +150,31 @@ const createQuestionTypes = [
   { value: "matching", label: "Associação de Colunas" },
 ];
 
+const initials = (name: string) =>
+  name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
+
+const sessionStatus = (status: string): { label: string; tone: "ok" | "warn" | "bad" | "info" | "brand" | "neutral" } => {
+  switch (status) {
+    case "in_progress": return { label: "Fazendo", tone: "info" };
+    case "submitted": return { label: "Enviada", tone: "brand" };
+    case "finished": return { label: "Finalizada", tone: "ok" };
+    case "blocked": return { label: "Bloqueada", tone: "bad" };
+    default: return { label: "Corrigida", tone: "ok" };
+  }
+};
+
+function SettingRow({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <div className="text-sm font-medium">{title}</div>
+        {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function ExamEditorPage() {
   const { examId } = useParams();
   const navigate = useNavigate();
@@ -156,9 +184,9 @@ export default function ExamEditorPage() {
   const [examTitle, setExamTitle] = useState("Nova Prova");
   const [examStatus, setExamStatus] = useState<string>("draft");
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
-  const [pointsMode, setPointsMode] = useState("by_grade");
   const [activeTab, setActiveTab] = useState("questions");
   const [feedbackMode, setFeedbackMode] = useState(false);
+  const [shownKeys, setShownKeys] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   // Config state
@@ -234,6 +262,27 @@ export default function ExamEditorPage() {
 
   const usedIds = useMemo(() => new Set(questions.map((q) => q.questionId)), [questions]);
   const totalPoints = questions.reduce((s, q) => s + q.points, 0);
+  const formatPoints = (n: number) => n.toFixed(2).replace(".", ",");
+  const hasSections = questions.some((q) => q.section);
+
+  // Agrupa por seção, na ordem em que aparecem; questões sem seção ficam num grupo sem nome
+  const questionGroups = useMemo(() => {
+    const map = new Map<string, ExamQuestion[]>();
+    questions.forEach((q) => {
+      const key = q.section || "";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(q);
+    });
+    return Array.from(map, ([name, items]) => ({ name, items }));
+  }, [questions]);
+
+  const toggleShownKey = (id: string) =>
+    setShownKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const getAnswerKey = (q: ExamQuestion) => {
     const cj: any = q.content_json || {};
@@ -336,6 +385,7 @@ export default function ExamEditorPage() {
               title: cj?.question_text || cj?.title || "Questão",
               type: bq?.type || "multiple_choice",
               points: Number(eq.points) || 0.6,
+              section: eq.section_name || null,
               content_json: cj,
             };
           })
@@ -595,11 +645,11 @@ export default function ExamEditorPage() {
     .sort((a, b) => b.errorRate - a.errorRate);
 
   const scoreRanges = [
-    { range: "0-20%", count: 0, color: "hsl(0, 70%, 50%)" },
-    { range: "21-40%", count: 0, color: "hsl(30, 80%, 50%)" },
-    { range: "41-60%", count: 0, color: "hsl(45, 90%, 50%)" },
-    { range: "61-80%", count: 0, color: "hsl(142, 50%, 50%)" },
-    { range: "81-100%", count: 0, color: "hsl(142, 60%, 35%)" },
+    { range: "0-20%", count: 0, color: "hsl(var(--destructive))" },
+    { range: "21-40%", count: 0, color: "hsl(var(--warning-ink))" },
+    { range: "41-60%", count: 0, color: "hsl(var(--warning))" },
+    { range: "61-80%", count: 0, color: "hsl(var(--info))" },
+    { range: "81-100%", count: 0, color: "hsl(var(--success))" },
   ];
   finishedSessions.forEach(s => {
     const pct = ((Number(s.total_score) || 0) / (Number(s.max_score) || 1)) * 100;
@@ -733,7 +783,7 @@ export default function ExamEditorPage() {
     const { data } = await supabase.from("exams").insert({ user_id: user.user.id, title: `${examTitle} (cópia)`, status: "draft" }).select("id").single();
     if (!data) { toast.error("Erro ao duplicar."); return; }
     if (questions.length > 0) {
-      await supabase.from("exam_questions").insert(questions.map((q, i) => ({ exam_id: data.id, question_id: q.questionId, position: i, points: q.points })));
+      await supabase.from("exam_questions").insert(questions.map((q, i) => ({ exam_id: data.id, question_id: q.questionId, position: i, points: q.points, section_name: q.section || null })));
     }
     toast.success("Prova duplicada com sucesso!");
   };
@@ -752,6 +802,20 @@ export default function ExamEditorPage() {
     toast.success(`Status alterado para "${examStatusConfig[newStatus as keyof typeof examStatusConfig]?.label || newStatus}".`);
   };
 
+  const securityActive = proctoringFullscreen || proctoringBlockCopy || proctoringPhoto || proctoringPeriodicPhotos || proctoringWatermark || proctoringShuffleQ || proctoringShuffleAlt;
+  const securityChips = (
+    <>
+      {proctoringFullscreen && <Badge variant="outline" className="text-[10px]">Tela cheia</Badge>}
+      {proctoringBlockCopy && <Badge variant="outline" className="text-[10px]">Sem copiar/colar</Badge>}
+      {proctoringShuffleQ && <Badge variant="outline" className="text-[10px]">Embaralhar questões</Badge>}
+      {proctoringShuffleAlt && <Badge variant="outline" className="text-[10px]">Embaralhar alternativas</Badge>}
+      {proctoringPhoto && <Badge variant="outline" className="text-[10px]">Foto de identificação</Badge>}
+      {proctoringPeriodicPhotos && <Badge variant="outline" className="text-[10px]">Selfies a cada {proctoringPhotoInterval} min</Badge>}
+      {proctoringWatermark && <Badge variant="outline" className="text-[10px]">Marca d'água</Badge>}
+      <Badge variant="outline" className="text-[10px]">Máx. {proctoringMaxViolations} violações</Badge>
+    </>
+  );
+
   // Grading: filter sessions
   const filteredSessions = sessions.filter(s => {
     if (!gradingSearch.trim()) return true;
@@ -768,431 +832,383 @@ export default function ExamEditorPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-4">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey="exams" />
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <Input
-            value={examTitle}
-            onChange={(e) => setExamTitle(e.target.value)}
-            className="text-xl font-bold border-0 bg-transparent px-0 h-auto focus-visible:ring-0 shadow-none"
-          />
-          {questions.length > 0 && (
-            <p className="text-sm text-muted-foreground">Valor da prova: <span className="font-bold">{totalPoints.toFixed(2).replace(".", ",")}</span></p>
-          )}
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Badge className={`text-xs px-3 py-1 font-bold uppercase cursor-pointer hover:opacity-80 ${currentStatus.className}`}>
-              {currentStatus.label} ▾
-            </Badge>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {Object.entries(examStatusConfig).map(([key, val]) => (
-              <DropdownMenuItem
-                key={key}
-                onClick={() => handleStatusChange(key)}
-                className={effectiveStatus === key ? "font-bold" : ""}
-              >
-                <span className={`inline-block h-2 w-2 rounded-full mr-2 ${val.className}`} />
-                {val.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+
+      <div>
+        <Button variant="ghost" size="sm" className="-ml-2 mb-3" onClick={() => navigate("/exams")}>
+          <ArrowLeft className="h-4 w-4" /> Provas
+        </Button>
+        <PageHeader
+          eyebrow="Editar prova"
+          title={
+            <Input
+              value={examTitle}
+              onChange={(e) => setExamTitle(e.target.value)}
+              aria-label="Título da prova"
+              className="h-auto border-0 bg-transparent p-0 font-heading text-[2rem] font-medium leading-[1.1] shadow-none focus-visible:ring-0 md:text-[2rem]"
+            />
+          }
+          actions={
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Alterar status da prova">
+                    <StatusBadge tone={currentStatus.tone} dot={currentStatus.tone !== "neutral"} className="cursor-pointer">
+                      {currentStatus.label} <ChevronDown className="h-3 w-3" />
+                    </StatusBadge>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {Object.entries(examStatusConfig).map(([key, val]) => (
+                    <DropdownMenuItem key={key} onClick={() => handleStatusChange(key)} className={effectiveStatus === key ? "font-semibold" : ""}>
+                      <StatusBadge tone={val.tone} dot className="mr-2">{val.label}</StatusBadge>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="outline" size="sm" onClick={handleDuplicate}><Copy className="h-4 w-4" />Duplicar prova</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate(`/exams/${examId}`)}><Eye className="h-4 w-4" />Rascunho em PDF</Button>
+              <Button size="sm" onClick={handleSave}><Save className="h-4 w-4" />Salvar</Button>
+            </>
+          }
+        />
       </div>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-transparent border-b rounded-none w-full justify-start p-0 h-auto">
-          <TabsTrigger value="questions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2 font-medium text-muted-foreground data-[state=active]:text-primary">
-            Questões
-          </TabsTrigger>
-          <TabsTrigger value="config" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2 font-medium text-muted-foreground data-[state=active]:text-primary">
-            Configurações
-          </TabsTrigger>
-          <TabsTrigger value="application" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2 font-medium text-muted-foreground data-[state=active]:text-primary">
-            Aplicação
-          </TabsTrigger>
-          <TabsTrigger value="grading" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2 font-medium text-muted-foreground data-[state=active]:text-primary">
-            Correção
-          </TabsTrigger>
-          <TabsTrigger value="stats" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2 font-medium text-muted-foreground data-[state=active]:text-primary">
-            Estatísticas
-          </TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="questions">Questões <span className="font-mono text-xs text-muted-foreground">{questions.length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="config">Configurações</TabsTriggerLine>
+          <TabsTriggerLine value="application">Aplicação</TabsTriggerLine>
+          <TabsTriggerLine value="grading">Correção {sessions.length > 0 && <span className="font-mono text-xs text-muted-foreground">{sessions.length}</span>}</TabsTriggerLine>
+          <TabsTriggerLine value="stats">Estatísticas</TabsTriggerLine>
+        </TabsListLine>
 
         {/* ===== QUESTÕES TAB ===== */}
         <TabsContent value="questions" className="mt-6 space-y-6">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <Button
-              variant={feedbackMode ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFeedbackMode((v) => !v)}
-              className="gap-1.5"
-            >
-              <MessageSquareQuote className="h-4 w-4" />
-              {feedbackMode ? "Modo Feedback: ON" : "Modo Feedback"}
-            </Button>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">Valor das questões</span>
-              <Select value={pointsMode} onValueChange={setPointsMode}>
-                <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="by_grade">Por nota</SelectItem>
-                  <SelectItem value="equal">Igual</SelectItem>
-                </SelectContent>
-              </Select>
-              <span className="text-sm text-muted-foreground">Valor da prova:</span>
-              <span className="text-lg font-bold">{totalPoints.toFixed(2).replace(".", ",")}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-baseline gap-3">
+              <span className="font-heading text-2xl font-medium tabular-nums">{formatPoints(totalPoints)} pontos</span>
+              <span className="text-xs text-muted-foreground">
+                {questions.length} {questions.length === 1 ? "questão" : "questões"}
+                {hasSections && ` em ${questionGroups.length} ${questionGroups.length === 1 ? "seção" : "seções"}`}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant={feedbackMode ? "default" : "outline"} size="sm" onClick={() => setFeedbackMode((v) => !v)}>
+                <MessageSquareQuote className="h-4 w-4" />
+                {feedbackMode ? "Ocultar gabarito" : "Mostrar gabarito"}
+              </Button>
+              <DropdownMenu open={addMenuOpen} onOpenChange={setAddMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm"><ListPlus className="h-4 w-4" />Adicionar do banco<ChevronDown className="h-3.5 w-3.5" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => { setAddMenuOpen(false); setPickerMode("single"); setSelectedBankIds(new Set()); setPickerOpen(true); }}>Questão simples</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setAddMenuOpen(false); setPickerMode("combo"); setSelectedBankIds(new Set()); setPickerOpen(true); }}>Combinação de questões</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu open={createMenuOpen} onOpenChange={setCreateMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm"><Plus className="h-4 w-4" />Criar questão<ChevronDown className="h-3.5 w-3.5" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {createQuestionTypes.map((qt) => (
+                    <DropdownMenuItem key={qt.value} onClick={() => { setCreateMenuOpen(false); setCreateType(qt.value); setCreateTitle(""); setCreateTags(""); setCreateDifficulty("medium"); setCreateBloom("understanding"); setCreateOpen(true); }}>{qt.label}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button size="sm" onClick={() => setAiOpen(true)}><Sparkles className="h-4 w-4" />Gerar com IA</Button>
             </div>
           </div>
 
           {questions.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-muted-foreground mb-8">Nenhuma questão foi associada a esta prova</p>
-            </div>
+            <Card className="py-16 text-center">
+              <p className="text-muted-foreground">Nenhuma questão foi associada a esta prova.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Use “Adicionar do banco”, “Criar questão” ou “Gerar com IA”.</p>
+            </Card>
           ) : (
-            <div className="space-y-3">
-              {questions.map((q, idx) => (
-                <Card key={q.id} className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
-                      <span className="text-primary font-bold text-sm mt-0.5">QUESTÃO {idx + 1}</span>
-                      <div className="flex items-center gap-2">
-                        {typeIcons[q.type]}
-                        <Badge variant="outline" className="text-[10px]">{typeLabels[q.type] || q.type}</Badge>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7"><MoreVertical className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => removeQuestion(q.id)}>
-                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Remover
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+            <div className="space-y-4">
+              {questionGroups.map((group) => (
+                <Card key={group.name || "_"} className="overflow-hidden">
+                  <div className="flex items-center justify-between gap-3 border-b bg-sunken px-5 py-3">
+                    <h3 className="font-heading text-lg font-medium">{group.name || "Questões"}</h3>
+                    <span className="text-xs text-muted-foreground">
+                      {group.items.length} {group.items.length === 1 ? "questão" : "questões"} · {formatPoints(group.items.reduce((s, q) => s + q.points, 0))} pts
+                    </span>
                   </div>
-                  <div className="text-sm mt-2 leading-relaxed"><RichTextRenderer text={q.title} /></div>
-
-                  {feedbackMode && (() => {
-                    const parts = getAnswerKey(q);
-                    return (
-                      <div className="mt-3 rounded-md border-l-4 border-success/70 bg-success/5 px-3 py-2 space-y-2 print:break-inside-avoid">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-success flex items-center gap-1.5">
-                          <MessageSquareQuote className="h-3 w-3" />
-                          Feedback — resposta esperada
-                        </p>
-                        {parts.length > 0 ? (
-                          parts.map((p, i) => (
-                            <div key={i}>
-                              <p className="text-[10px] font-semibold uppercase text-muted-foreground">{p.label}</p>
-                              <p className="text-xs whitespace-pre-wrap">{p.value}</p>
+                  <div className="divide-y">
+                    {group.items.map((q) => {
+                      const number = questions.findIndex((x) => x.id === q.id) + 1;
+                      const showKey = feedbackMode || shownKeys.has(q.id);
+                      return (
+                        <div key={q.id} className="px-5 py-4">
+                          <div className="flex items-start gap-4">
+                            <span className="mt-0.5 w-7 shrink-0 font-mono text-sm text-muted-foreground">{number}</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm leading-relaxed"><RichTextRenderer text={q.title} /></div>
+                              <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                {typeIcons[q.type]}
+                                <span>{typeLabels[q.type] || q.type}</span>
+                              </div>
                             </div>
-                          ))
-                        ) : (
-                          <p className="text-xs italic text-muted-foreground">
-                            Nenhum espelho cadastrado para esta questão.
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })()}
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              <Input
+                                type="number"
+                                step="0.1"
+                                value={q.points}
+                                onChange={(e) => updatePoints(q.id, parseFloat(e.target.value) || 0)}
+                                aria-label={`Pontos da questão ${number}`}
+                                className="h-8 w-20 text-right font-mono text-xs"
+                              />
+                              <span className="text-xs text-muted-foreground">pts</span>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Mais ações"><MoreVertical className="h-4 w-4" /></Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => toggleShownKey(q.id)}>
+                                    <MessageSquareQuote className="h-3.5 w-3.5 mr-2" /> {shownKeys.has(q.id) ? "Ocultar resposta correta" : "Ver resposta correta"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => removeQuestion(q.id)} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="h-3.5 w-3.5 mr-2" /> Remover da prova
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
 
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                    <span className="text-xs text-muted-foreground">Elaborada por mim</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Valor:</span>
-                      <Input type="number" step="0.1" value={q.points} onChange={(e) => updatePoints(q.id, parseFloat(e.target.value) || 0)} className="w-16 h-7 text-xs text-right" />
-                    </div>
+                          {showKey && (() => {
+                            const parts = getAnswerKey(q);
+                            return (
+                              <div className="ml-11 mt-3 space-y-2 rounded-md border-l-4 border-success/70 bg-success/5 px-3 py-2">
+                                <p className="label-mono flex items-center gap-1.5 text-success">
+                                  <MessageSquareQuote className="h-3 w-3" />
+                                  Resposta esperada
+                                </p>
+                                {parts.length > 0 ? (
+                                  parts.map((p, i) => (
+                                    <div key={i}>
+                                      <p className="label-mono">{p.label}</p>
+                                      <p className="mt-1 whitespace-pre-wrap text-xs">{p.value}</p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-xs italic text-muted-foreground">Nenhum espelho cadastrado para esta questão.</p>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      );
+                    })}
                   </div>
                 </Card>
               ))}
             </div>
           )}
 
-          <div className="flex flex-col items-center gap-3">
-            <DropdownMenu open={addMenuOpen} onOpenChange={setAddMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="lg" className="gap-2"><ListPlus className="h-4 w-4" />ADICIONAR<ChevronDown className="h-4 w-4" /></Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => { setAddMenuOpen(false); setPickerMode("single"); setSelectedBankIds(new Set()); setPickerOpen(true); }}>Questão Simples</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setAddMenuOpen(false); setPickerMode("combo"); setSelectedBankIds(new Set()); setPickerOpen(true); }}>Combinação de Questões</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu open={createMenuOpen} onOpenChange={setCreateMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="lg" className="gap-2"><Plus className="h-4 w-4" />CRIAR<ChevronDown className="h-4 w-4" /></Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {createQuestionTypes.map((qt) => (
-                  <DropdownMenuItem key={qt.value} onClick={() => { setCreateMenuOpen(false); setCreateType(qt.value); setCreateTitle(""); setCreateTags(""); setCreateDifficulty("medium"); setCreateBloom("understanding"); setCreateOpen(true); }}>{qt.label}</DropdownMenuItem>
-                ))}
-                <DropdownMenuItem onClick={() => { setCreateMenuOpen(false); setAiOpen(true); }}>
-                  <Sparkles className="h-3.5 w-3.5 mr-2 text-secondary" />Gerar com IA
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <Separator />
-          <div className="flex items-center justify-end gap-3 flex-wrap">
-            <Button variant="outline" size="sm" className="gap-1.5"><Eye className="h-4 w-4" /> RASCUNHO EM PDF</Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDuplicate}><Copy className="h-4 w-4" /> DUPLICAR PROVA</Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/exams")}>VOLTAR</Button>
-            <Button size="sm" onClick={handleSave} className="gap-1.5"><Save className="h-4 w-4" /> SALVAR</Button>
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => navigate("/exams")}>Voltar</Button>
           </div>
         </TabsContent>
 
         {/* ===== CONFIGURAÇÕES TAB ===== */}
-        <TabsContent value="config" className="mt-6 space-y-6 max-w-2xl">
-          <div className="space-y-2">
-            <Label>Título da Prova:</Label>
-            <Input value={examTitle} onChange={(e) => setExamTitle(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Instituição:</Label>
-            <Input value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="Nome da instituição" />
-          </div>
-          <div className="space-y-2">
-            <Label>Professor(a):</Label>
-            <Input value={professor} onChange={(e) => setProfessor(e.target.value)} placeholder="Nome do professor" />
-          </div>
-          <div className="flex items-center gap-3">
-            <Switch checked={showPreInstructions} onCheckedChange={setShowPreInstructions} />
-            <Label>Exibir instruções preparatórias para a prova</Label>
-          </div>
-          {showPreInstructions && (
-            <Textarea value={preInstructions} onChange={(e) => setPreInstructions(e.target.value)} placeholder="Instruções preparatórias..." rows={3} />
-          )}
-          <div className="flex items-center gap-3">
-            <Switch checked={showDuringInstructions} onCheckedChange={setShowDuringInstructions} />
-            <Label>Exibir instruções para a prova (durante a prova)</Label>
-          </div>
-          {showDuringInstructions && (
-            <Textarea value={duringInstructions} onChange={(e) => setDuringInstructions(e.target.value)} placeholder="Instruções durante a prova..." rows={3} />
-          )}
-          <Separator />
-          <div className="space-y-2">
-            <Label>Vincular a uma turma:</Label>
-            <Select value={classId || "none"} onValueChange={(v) => setClassId(v === "none" ? null : v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione uma turma" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhuma turma</SelectItem>
-                {classes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Separator />
-          <h3 className="font-semibold text-sm">Configurações adicionais</h3>
-          {/* Proctoring / Security section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-base flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  Segurança & Proctoring
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Configure medidas de segurança para aplicação em concursos e avaliações de alto impacto.
-                </p>
+        <TabsContent value="config" className="mt-6 space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="space-y-4 p-6">
+              <h3 className="font-heading text-lg font-medium">Identificação</h3>
+              <div className="space-y-2">
+                <Label>Título da prova</Label>
+                <Input value={examTitle} onChange={(e) => setExamTitle(e.target.value)} />
               </div>
-              {(proctoringFullscreen || proctoringBlockCopy || proctoringPhoto || proctoringWatermark || proctoringShuffleQ || proctoringShuffleAlt || proctoringPeriodicPhotos) ? (
-                <Badge className="bg-success text-success-foreground text-[10px] font-bold px-2 py-1">
-                  SEGURANÇA ATIVA
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-[10px] font-bold px-2 py-1 text-muted-foreground">
-                  DESATIVADO
-                </Badge>
-              )}
-            </div>
+              <div className="space-y-2">
+                <Label>Instituição</Label>
+                <Input value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="Nome da instituição" />
+              </div>
+              <div className="space-y-2">
+                <Label>Professor(a)</Label>
+                <Input value={professor} onChange={(e) => setProfessor(e.target.value)} placeholder="Nome do professor" />
+              </div>
+              <div className="space-y-2">
+                <Label>Vincular a uma turma</Label>
+                <Select value={classId || "none"} onValueChange={(v) => setClassId(v === "none" ? null : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione uma turma" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma turma</SelectItem>
+                    {classes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </Card>
 
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-medium">Modo Tela Cheia Obrigatório</Label>
-                    <p className="text-xs text-muted-foreground">Sair da tela cheia registra violação</p>
-                  </div>
-                  <Switch checked={proctoringFullscreen} onCheckedChange={setProctoringFullscreen} />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-medium">Bloquear Copiar/Colar</Label>
-                    <p className="text-xs text-muted-foreground">Desativa copy, paste, atalhos e menu de contexto</p>
-                  </div>
-                  <Switch checked={proctoringBlockCopy} onCheckedChange={setProctoringBlockCopy} />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-medium">Embaralhar Questões</Label>
-                    <p className="text-xs text-muted-foreground">Ordem aleatória por aluno (determinística)</p>
-                  </div>
-                  <Switch checked={proctoringShuffleQ} onCheckedChange={setProctoringShuffleQ} />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-medium">Embaralhar Alternativas</Label>
-                    <p className="text-xs text-muted-foreground">Alternativas de múltipla escolha em ordem aleatória</p>
-                  </div>
-                  <Switch checked={proctoringShuffleAlt} onCheckedChange={setProctoringShuffleAlt} />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-medium">Foto de Identificação</Label>
-                    <p className="text-xs text-muted-foreground">Captura webcam ao iniciar a prova</p>
-                  </div>
-                  <Switch checked={proctoringPhoto} onCheckedChange={setProctoringPhoto} />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-medium">Selfies Periódicas</Label>
-                    <p className="text-xs text-muted-foreground">Fotos automáticas durante a prova</p>
-                  </div>
-                  <Switch checked={proctoringPeriodicPhotos} onCheckedChange={setProctoringPeriodicPhotos} />
-                </div>
-                {proctoringPeriodicPhotos && (
-                  <div className="pl-6 space-y-1">
-                    <Label className="text-xs">Intervalo (minutos):</Label>
-                    <Input type="number" min={1} max={30} value={proctoringPhotoInterval} onChange={(e) => setProctoringPhotoInterval(e.target.value)} className="w-24 h-8 text-xs" />
-                  </div>
-                )}
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-medium">Marca d'Água</Label>
-                    <p className="text-xs text-muted-foreground">Nome e email sobrepostos na tela</p>
-                  </div>
-                  <Switch checked={proctoringWatermark} onCheckedChange={setProctoringWatermark} />
-                </div>
-                <Separator />
-                <div className="space-y-1">
-                  <Label className="font-medium">Limite de Violações</Label>
-                  <p className="text-xs text-muted-foreground">Prova bloqueada ao atingir o limite (0 = sem limite)</p>
-                  <Input type="number" min={0} max={50} value={proctoringMaxViolations} onChange={(e) => setProctoringMaxViolations(e.target.value)} className="w-24 h-8 text-xs" />
-                </div>
-              </CardContent>
+            <Card className="space-y-4 p-6">
+              <h3 className="font-heading text-lg font-medium">Instruções ao aluno</h3>
+              <div className="flex items-center justify-between gap-4">
+                <Label>Exibir instruções preparatórias <span className="text-xs font-normal text-muted-foreground">(antes de iniciar)</span></Label>
+                <Switch checked={showPreInstructions} onCheckedChange={setShowPreInstructions} />
+              </div>
+              {showPreInstructions && (
+                <Textarea value={preInstructions} onChange={(e) => setPreInstructions(e.target.value)} placeholder="Instruções preparatórias..." rows={3} />
+              )}
+              <Separator />
+              <div className="flex items-center justify-between gap-4">
+                <Label>Exibir instruções durante a prova</Label>
+                <Switch checked={showDuringInstructions} onCheckedChange={setShowDuringInstructions} />
+              </div>
+              {showDuringInstructions && (
+                <Textarea value={duringInstructions} onChange={(e) => setDuringInstructions(e.target.value)} placeholder="Instruções durante a prova..." rows={3} />
+              )}
             </Card>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <Button variant="ghost" onClick={() => navigate("/exams")}>VOLTAR</Button>
-            <Button onClick={handleSave}>SALVAR</Button>
+          <Card className="p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="font-heading text-lg font-medium">Segurança e proctoring</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Para concursos e avaliações de alto impacto.</p>
+              </div>
+              {securityActive ? (
+                <StatusBadge tone="ok"><Shield className="h-3 w-3" />Segurança ativa</StatusBadge>
+              ) : (
+                <StatusBadge tone="neutral">Desativado</StatusBadge>
+              )}
+            </div>
+            <div className="mt-6 grid gap-x-10 gap-y-5 md:grid-cols-2">
+              <SettingRow title="Modo tela cheia obrigatório" hint="Sair da tela cheia registra violação">
+                <Switch checked={proctoringFullscreen} onCheckedChange={setProctoringFullscreen} />
+              </SettingRow>
+              <SettingRow title="Bloquear copiar e colar" hint="Desativa copiar, colar, atalhos e menu de contexto">
+                <Switch checked={proctoringBlockCopy} onCheckedChange={setProctoringBlockCopy} />
+              </SettingRow>
+              <SettingRow title="Embaralhar questões" hint="Ordem aleatória por aluno (determinística)">
+                <Switch checked={proctoringShuffleQ} onCheckedChange={setProctoringShuffleQ} />
+              </SettingRow>
+              <SettingRow title="Embaralhar alternativas" hint="Alternativas de múltipla escolha em ordem aleatória">
+                <Switch checked={proctoringShuffleAlt} onCheckedChange={setProctoringShuffleAlt} />
+              </SettingRow>
+              <SettingRow title="Foto de identificação" hint="Captura a webcam ao iniciar a prova">
+                <Switch checked={proctoringPhoto} onCheckedChange={setProctoringPhoto} />
+              </SettingRow>
+              <SettingRow title="Selfies periódicas" hint="Fotos automáticas durante a prova">
+                <Switch checked={proctoringPeriodicPhotos} onCheckedChange={setProctoringPeriodicPhotos} />
+              </SettingRow>
+              {proctoringPeriodicPhotos && (
+                <SettingRow title="Intervalo das selfies" hint="Em minutos (1 a 30)">
+                  <Input type="number" min={1} max={30} value={proctoringPhotoInterval} onChange={(e) => setProctoringPhotoInterval(e.target.value)} className="h-8 w-20 text-right font-mono text-xs" />
+                </SettingRow>
+              )}
+              <SettingRow title="Marca d'água" hint="Nome e e-mail sobrepostos na tela">
+                <Switch checked={proctoringWatermark} onCheckedChange={setProctoringWatermark} />
+              </SettingRow>
+              <SettingRow title="Limite de violações" hint="A prova é bloqueada ao atingir o limite. 0 = sem limite">
+                <Input type="number" min={0} max={50} value={proctoringMaxViolations} onChange={(e) => setProctoringMaxViolations(e.target.value)} className="h-8 w-20 text-right font-mono text-xs" />
+              </SettingRow>
+            </div>
+          </Card>
+
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="ghost" onClick={() => navigate("/exams")}>Voltar</Button>
+            <Button onClick={handleSave}>Salvar</Button>
           </div>
         </TabsContent>
 
         {/* ===== APLICAÇÃO TAB ===== */}
         <TabsContent value="application" className="mt-6 space-y-6">
           {publication ? (
-            <Card className="border-green-200 bg-green-50/50">
-              <CardContent className="py-6 text-center space-y-3">
-                <CheckCircle2 className="h-10 w-10 mx-auto text-green-600" />
-                <p className="font-semibold text-lg">Prova publicada!</p>
-                <p className="text-sm text-muted-foreground">Código de acesso:</p>
-                <p className="font-mono text-3xl font-bold tracking-widest uppercase">{publication.access_code}</p>
-                <p className="text-xs text-muted-foreground">Compartilhe este código com os alunos selecionados. Eles devem acessar o Portal do Aluno com seu email cadastrado e este código.</p>
-                <Badge variant={publication.is_active ? "default" : "secondary"}>
-                  {publication.is_active ? "Ativa" : "Inativa"}
-                </Badge>
-                <div className="flex justify-center pt-2">
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => navigate(`/monitoring/${publication.id}`)}
-                  >
-                    <Eye className="h-4 w-4" />
-                    Abrir monitoramento
-                  </Button>
+            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+              <Card className="border-success/40 bg-success/5 p-6">
+                <div className="flex flex-wrap items-center gap-6">
+                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-success/15 text-success">
+                    <CheckCircle2 className="h-7 w-7" />
+                  </span>
+                  <div className="min-w-[200px] flex-1">
+                    <div className="font-heading text-2xl font-medium">Prova publicada</div>
+                    <p className="mt-1 text-sm text-muted-foreground">Compartilhe o código. Os alunos entram no Portal do Aluno com o e-mail cadastrado e este código.</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="label-mono">Código de acesso</div>
+                    <div className="mt-2 font-mono text-3xl font-medium uppercase tracking-[0.14em]">{publication.access_code}</div>
+                  </div>
+                  <div className="flex flex-col items-start gap-2">
+                    <StatusBadge tone={publication.is_active ? "ok" : "neutral"} dot>{publication.is_active ? "Ativa" : "Inativa"}</StatusBadge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { navigator.clipboard.writeText(publication.access_code); toast.success("Código copiado."); }}
+                    >
+                      <Copy className="h-4 w-4" />Copiar
+                    </Button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </Card>
+              <Card className="space-y-3 p-6">
+                {securityActive ? (
+                  <>
+                    <h3 className="text-sm font-medium">Segurança ativa nesta prova</h3>
+                    <div className="flex flex-wrap gap-1.5">{securityChips}</div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nenhuma medida de segurança ativa nesta prova.</p>
+                )}
+                <Button onClick={() => navigate(`/monitoring/${publication.id}`)}>
+                  <Shield className="h-4 w-4" />Abrir monitoramento
+                </Button>
+              </Card>
+            </div>
           ) : (
             <>
               {!classId && (
-                <Card className="border-amber-200 bg-amber-50/50">
-                  <CardContent className="py-4">
-                    <p className="text-sm text-amber-800">
-                      <AlertTriangle className="h-4 w-4 inline mr-1" />
-                      Vincule esta prova a uma turma na aba <strong>Configurações</strong> para liberar o acesso aos alunos dela.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div>
-                <h3 className="font-semibold text-base mb-3">Janela de Aplicação</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Início da aplicação:</Label>
-                    <Input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Fim da aplicação:</Label>
-                    <Input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} />
-                  </div>
+                <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning-ink">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>Vincule esta prova a uma turma na aba <strong>Configurações</strong> para liberar o acesso aos alunos dela.</span>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Duração da prova (minutos):</Label>
-                <Input type="number" min={5} max={300} value={duration} onChange={(e) => setDuration(e.target.value)} className="w-40" />
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="font-semibold text-base mb-3">Quem pode fazer a prova</h3>
-                {classId && classStudents.length > 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    <strong className="text-foreground">{classStudents.length} {classStudents.length === 1 ? "aluno" : "alunos"}</strong> da turma terão acesso: cada um entra com o código de acesso e o e-mail cadastrado na turma.
-                  </p>
-                ) : classId ? (
-                  <p className="text-sm text-muted-foreground">Nenhum aluno cadastrado nesta turma.</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Selecione uma turma nas configurações para ver os alunos.</p>
-                )}
-              </div>
-
-              {/* Proctoring summary */}
-              {(proctoringFullscreen || proctoringBlockCopy || proctoringPhoto || proctoringPeriodicPhotos || proctoringWatermark || proctoringShuffleQ || proctoringShuffleAlt) && (
-                <Card className="border-primary/30 bg-primary/5">
-                  <CardContent className="pt-4 pb-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Shield className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold">Segurança ativa nesta prova:</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {proctoringFullscreen && <Badge variant="outline" className="text-[10px]">Tela Cheia</Badge>}
-                      {proctoringBlockCopy && <Badge variant="outline" className="text-[10px]">Bloq. Copiar/Colar</Badge>}
-                      {proctoringShuffleQ && <Badge variant="outline" className="text-[10px]">Embaralhar Questões</Badge>}
-                      {proctoringShuffleAlt && <Badge variant="outline" className="text-[10px]">Embaralhar Alternativas</Badge>}
-                      {proctoringPhoto && <Badge variant="outline" className="text-[10px]">Foto Identificação</Badge>}
-                      {proctoringPeriodicPhotos && <Badge variant="outline" className="text-[10px]">Selfies a cada {proctoringPhotoInterval}min</Badge>}
-                      {proctoringWatermark && <Badge variant="outline" className="text-[10px]">Marca d'Água</Badge>}
-                      <Badge variant="outline" className="text-[10px]">Máx. {proctoringMaxViolations} violações</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
               )}
 
-              <Separator />
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="space-y-4 p-6">
+                  <h3 className="font-heading text-lg font-medium">Janela de aplicação</h3>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Início da aplicação</Label>
+                      <Input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fim da aplicação</Label>
+                      <Input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Duração da prova (minutos)</Label>
+                    <Input type="number" min={5} max={300} value={duration} onChange={(e) => setDuration(e.target.value)} className="w-40" />
+                  </div>
+                </Card>
+
+                <Card className="space-y-3 p-6">
+                  <h3 className="font-heading text-lg font-medium">Quem pode fazer a prova</h3>
+                  {classId && classStudents.length > 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      <strong className="text-foreground">{classStudents.length} {classStudents.length === 1 ? "aluno" : "alunos"}</strong> da turma terão acesso: cada um entra com o código de acesso e o e-mail cadastrado na turma.
+                    </p>
+                  ) : classId ? (
+                    <p className="text-sm text-muted-foreground">Nenhum aluno cadastrado nesta turma.</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Selecione uma turma nas configurações para ver os alunos.</p>
+                  )}
+                </Card>
+              </div>
+
+              {securityActive && (
+                <Card className="space-y-3 p-6">
+                  <h3 className="flex items-center gap-2 text-sm font-medium"><Shield className="h-4 w-4 text-primary" />Segurança ativa nesta prova</h3>
+                  <div className="flex flex-wrap gap-1.5">{securityChips}</div>
+                </Card>
+              )}
 
               <div className="flex justify-end">
-                <Button onClick={handlePublish} disabled={publishing || !classId || classStudents.length === 0} className="gap-2">
+                <Button onClick={handlePublish} disabled={publishing || !classId || classStudents.length === 0}>
                   {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
-                  Publicar Prova Online
+                  Publicar prova online
                 </Button>
               </div>
             </>
@@ -1202,105 +1218,108 @@ export default function ExamEditorPage() {
         {/* ===== CORREÇÃO TAB ===== */}
         <TabsContent value="grading" className="mt-6 space-y-6">
           {!publication ? (
-            <div className="text-center py-16">
-              <Bot className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+            <Card className="py-16 text-center">
+              <Bot className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
               <p className="text-muted-foreground">Publique a prova na aba <strong>Aplicação</strong> para começar a receber respostas.</p>
-            </div>
+            </Card>
           ) : sessions.length === 0 ? (
-            <div className="text-center py-16">
-              <Clock className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+            <Card className="py-16 text-center">
+              <Clock className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
               <p className="text-muted-foreground">Nenhuma prova submetida ainda.</p>
-              <p className="text-xs text-muted-foreground mt-1">Código de acesso: <span className="font-mono font-bold">{publication.access_code}</span></p>
-            </div>
+              <p className="mt-1 text-xs text-muted-foreground">Código de acesso: <span className="font-mono font-semibold text-foreground">{publication.access_code}</span></p>
+            </Card>
           ) : (
             <>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-3">
+                <div className="relative max-w-sm flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input placeholder="Buscar aluno..." value={gradingSearch} onChange={(e) => setGradingSearch(e.target.value)} className="pl-9" />
                 </div>
-                <Badge variant="outline">{sessions.length} aluno(s)</Badge>
+                <span className="text-xs text-muted-foreground">{sessions.length} {sessions.length === 1 ? "aluno" : "alunos"}</span>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Student cards */}
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm">Avaliações submetidas</h3>
-                  {filteredSessions.map(s => {
-                    const pct = s.max_score ? Math.round((Number(s.total_score || 0) / Number(s.max_score)) * 100) : 0;
-                    return (
-                      <Card
-                        key={s.id}
-                        className={`cursor-pointer transition-all hover:shadow-md ${selectedSession === s.id ? "ring-2 ring-primary" : ""}`}
-                        onClick={() => loadStudentAnswers(s.id)}
-                      >
-                        <CardContent className="py-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <p className="text-sm font-medium">{s.student_name || s.student_email || "Aluno"}</p>
-                              {s.student_email && <p className="text-xs text-muted-foreground">{s.student_email}</p>}
+                  <h3 className="label-mono">Avaliações submetidas</h3>
+                  <Card className="divide-y overflow-hidden">
+                    {filteredSessions.length === 0 && (
+                      <p className="p-6 text-center text-sm text-muted-foreground">Nenhum aluno encontrado.</p>
+                    )}
+                    {filteredSessions.map((s) => {
+                      const pct = s.max_score ? Math.round((Number(s.total_score || 0) / Number(s.max_score)) * 100) : 0;
+                      const st = sessionStatus(s.status);
+                      const name = s.student_name || s.student_email || "Aluno";
+                      return (
+                        <button
+                          type="button"
+                          key={s.id}
+                          onClick={() => loadStudentAnswers(s.id)}
+                          className={`flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-sunken ${selectedSession === s.id ? "bg-sunken" : ""}`}
+                        >
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-medium text-brand-text">{initials(name)}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="truncate text-sm font-medium">{name}</p>
+                              <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
                             </div>
-                            <Badge variant={s.status === "in_progress" ? "default" : s.status === "graded" ? "secondary" : "outline"} className="text-xs">
-                              {s.status === "in_progress" ? "Fazendo" : s.status === "submitted" ? "Enviada" : s.status === "finished" ? "Finalizada" : "Corrigida"}
-                            </Badge>
-                          </div>
-                          {s.total_score != null && s.max_score != null && (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-xs">
-                                <span>Nota: {Number(s.total_score).toFixed(1)}/{Number(s.max_score).toFixed(1)}</span>
-                                <span>{pct}%</span>
+                            {s.student_email && s.student_name && <p className="truncate text-xs text-muted-foreground">{s.student_email}</p>}
+                            {s.total_score != null && s.max_score != null && (
+                              <div className="mt-2 space-y-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-mono">Nota {Number(s.total_score).toFixed(1)}/{Number(s.max_score).toFixed(1)}</span>
+                                  <span className="font-mono text-muted-foreground">{pct}%</span>
+                                </div>
+                                <Progress value={pct} className="h-1.5" />
                               </div>
-                              <Progress value={pct} className="h-2" />
-                            </div>
-                          )}
-                          <p className="text-[10px] text-muted-foreground mt-2">
-                            Início: {new Date(s.started_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                            {s.finished_at && ` · Fim: ${new Date(s.finished_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                            )}
+                            <p className="mt-2 text-[11px] text-muted-foreground">
+                              Início: {new Date(s.started_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                              {s.finished_at && ` · Fim: ${new Date(s.finished_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </Card>
                 </div>
 
-                {/* Selected student answers */}
-                <div>
-                  <h3 className="font-semibold text-sm mb-3">Respostas</h3>
+                <div className="space-y-3">
+                  <h3 className="label-mono">Respostas</h3>
                   {!selectedSession ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">Selecione um aluno para ver as respostas.</p>
+                    <Card className="p-8 text-center text-sm text-muted-foreground">Selecione um aluno para ver as respostas.</Card>
                   ) : loadingAnswers ? (
                     <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin" /></div>
                   ) : selectedAnswers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">Nenhuma resposta ainda.</p>
+                    <Card className="p-8 text-center text-sm text-muted-foreground">Nenhuma resposta ainda.</Card>
                   ) : (
-                    <div className="space-y-3">
+                    <Card className="divide-y overflow-hidden">
                       {selectedAnswers.map((a, i) => {
-                        const content = (a.question_bank?.content_json || {}) as Record<string, unknown>;
-                        const statement = (content.question_text as string) || (content.statement as string) || (content.title as string) || "Questão";
+                        const statement = getAnswerStatement(a);
                         const score = Number(a.teacher_score ?? a.ai_score ?? a.points_earned) || 0;
+                        const reviewable = a.question_bank?.type === "open_ended" || a.question_bank?.type === "matching";
                         return (
-                          <div key={a.id} className="p-3 border rounded-lg space-y-2">
-                            <div className="flex justify-between items-start">
-                              <p className="text-xs font-medium">Q{i + 1}: {statement.substring(0, 80)}...</p>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="text-xs font-semibold">{score}/{Number(a.max_points)}</span>
+                          <div key={a.id} className="space-y-2 p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-sm font-medium"><span className="mr-2 font-mono text-xs text-muted-foreground">Q{i + 1}</span>{statement.substring(0, 80)}{statement.length > 80 && "…"}</p>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <span className="font-mono text-xs font-medium">{score}/{Number(a.max_points)}</span>
                                 {a.grading_status === "pending" && a.question_bank?.type === "open_ended" && (
-                                  <Badge variant="outline" className="text-xs"><Bot className="h-3 w-3 mr-1" />Aguardando</Badge>
+                                  <StatusBadge tone="warn">Aguardando</StatusBadge>
                                 )}
                               </div>
                             </div>
                             <p className="text-xs text-muted-foreground">
                               R: {a.answer_text || (a.answer_json as Record<string, string>)?.selected || "—"}
                             </p>
-                            {(a.question_bank?.type === "open_ended" || a.question_bank?.type === "matching") && (
-                              <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => openReview(a)}>
-                                <Eye className="h-3 w-3 mr-1" />Revisar nota
+                            {reviewable && (
+                              <Button size="sm" variant="outline" onClick={() => openReview(a)}>
+                                <Eye className="h-3.5 w-3.5" />Revisar nota
                               </Button>
                             )}
                           </div>
                         );
                       })}
-                    </div>
+                    </Card>
                   )}
                 </div>
               </div>
@@ -1309,102 +1328,82 @@ export default function ExamEditorPage() {
         </TabsContent>
 
         {/* ===== ESTATÍSTICAS TAB ===== */}
-        <TabsContent value="stats" className="mt-6 space-y-8">
+        <TabsContent value="stats" className="mt-6 space-y-6">
           {finishedSessions.length === 0 ? (
-            <div className="text-center py-16">
-              <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+            <Card className="py-16 text-center">
+              <BarChart3 className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
               <p className="text-muted-foreground">Nenhuma estatística disponível ainda.</p>
-              <p className="text-xs text-muted-foreground mt-1">As estatísticas aparecerão após os alunos submeterem suas provas.</p>
-            </div>
+              <p className="mt-1 text-xs text-muted-foreground">As estatísticas aparecerão após os alunos submeterem suas provas.</p>
+            </Card>
           ) : (
             <>
-              {/* Summary */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <Card><CardContent className="pt-6 text-center">
-                  <Users className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-                  <p className="text-2xl font-bold">{finishedSessions.length}</p>
-                  <p className="text-xs text-muted-foreground">Provas finalizadas</p>
-                </CardContent></Card>
-                <Card><CardContent className="pt-6 text-center">
-                  <TrendingUp className="h-5 w-5 mx-auto text-primary mb-1" />
-                  <p className="text-2xl font-bold">{avgScore.toFixed(1)}%</p>
-                  <p className="text-xs text-muted-foreground">Nota média</p>
-                </CardContent></Card>
-                <Card><CardContent className="pt-6 text-center">
-                  <CheckCircle2 className="h-5 w-5 mx-auto text-green-600 mb-1" />
-                  <p className="text-2xl font-bold">{passRate.toFixed(1)}%</p>
-                  <p className="text-xs text-muted-foreground">Taxa de aprovação (≥60%)</p>
-                </CardContent></Card>
-                <Card><CardContent className="pt-6 text-center">
-                  <AlertTriangle className="h-5 w-5 mx-auto text-amber-500 mb-1" />
-                  <p className="text-2xl font-bold">{mostMissed.length > 0 ? `${mostMissed[0].errorRate.toFixed(0)}%` : "—"}</p>
-                  <p className="text-xs text-muted-foreground">Maior taxa de erro</p>
-                </CardContent></Card>
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <Card className="p-5">
+                  <div className="label-mono">Provas finalizadas</div>
+                  <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{finishedSessions.length}</div>
+                </Card>
+                <Card className="p-5">
+                  <div className="label-mono">Nota média</div>
+                  <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{avgScore.toFixed(1)}%</div>
+                </Card>
+                <Card className="p-5">
+                  <div className="label-mono">Taxa de aprovação (≥60%)</div>
+                  <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{passRate.toFixed(1)}%</div>
+                </Card>
+                <Card className="p-5">
+                  <div className="label-mono">Maior taxa de erro</div>
+                  <div className="mt-3 font-heading text-4xl font-medium tabular-nums text-destructive">{mostMissed.length > 0 ? `${mostMissed[0].errorRate.toFixed(0)}%` : "—"}</div>
+                </Card>
               </div>
 
-              {/* Score Distribution */}
-              <Card>
-                <CardHeader><CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4" />Distribuição de Notas</CardTitle></CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={scoreRanges}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="range" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="count" name="Alunos" radius={[4, 4, 0, 0]}>
-                        {scoreRanges.map((entry, i) => (<Cell key={i} fill={entry.color} />))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
+              <Card className="p-6">
+                <h3 className="mb-4 font-heading text-lg font-medium">Distribuição de notas</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={scoreRanges}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="range" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="count" name="Alunos" radius={[4, 4, 0, 0]}>
+                      {scoreRanges.map((entry, i) => (<Cell key={i} fill={entry.color} />))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </Card>
 
-              {/* Per-question stats */}
-              <Card>
-                <CardHeader><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Desempenho por Questão</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {mostMissed.map((q, i) => (
-                      <div key={q.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                        <span className="text-sm font-bold text-muted-foreground w-6">{i + 1}.</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm truncate">{q.text}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {q.wrong}/{q.total} erros · Nota média: {q.avgPts.toFixed(1)}/{q.maxPts}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Progress value={100 - q.errorRate} className="w-20 h-2" />
-                          <Badge variant={q.errorRate > 70 ? "destructive" : q.errorRate > 40 ? "secondary" : "default"}>
-                            {q.errorRate.toFixed(0)}% erro
-                          </Badge>
-                        </div>
+              <Card className="p-6">
+                <h3 className="mb-4 font-heading text-lg font-medium">Desempenho por questão</h3>
+                <div className="divide-y">
+                  {mostMissed.map((q, i) => (
+                    <div key={q.id} className="flex items-center gap-3 py-3">
+                      <span className="w-6 font-mono text-xs text-muted-foreground">{i + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm">{q.text}</p>
+                        <p className="text-xs text-muted-foreground">{q.wrong}/{q.total} erros · Nota média: {q.avgPts.toFixed(1)}/{q.maxPts}</p>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
+                      <Progress value={100 - q.errorRate} className="h-1.5 w-24" />
+                      <StatusBadge tone={q.errorRate > 70 ? "bad" : q.errorRate > 40 ? "warn" : "ok"} className="w-20 justify-center">
+                        {q.errorRate.toFixed(0)}% erro
+                      </StatusBadge>
+                    </div>
+                  ))}
+                </div>
               </Card>
 
-              {/* Discrimination index */}
-              <Card>
-                <CardHeader><CardTitle className="text-base">Índice de Discriminação</CardTitle></CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground mb-3">Questões com alta taxa de erro entre alunos de alto desempenho podem indicar problemas no enunciado.</p>
-                  <div className="space-y-2">
-                    {mostMissed.map((q, i) => {
-                      const disc = q.total > 0 ? (1 - q.errorRate / 100).toFixed(2) : "—";
-                      return (
-                        <div key={q.id} className="flex items-center justify-between p-2 rounded border">
-                          <p className="text-xs truncate flex-1">Q{i + 1}: {q.text}</p>
-                          <Badge variant={Number(disc) > 0.4 ? "default" : Number(disc) > 0.2 ? "secondary" : "destructive"} className="text-xs ml-2">
-                            D = {disc}
-                          </Badge>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
+              <Card className="p-6">
+                <h3 className="font-heading text-lg font-medium">Índice de discriminação</h3>
+                <p className="mb-4 mt-1 text-xs text-muted-foreground">Questões com alta taxa de erro entre alunos de alto desempenho podem indicar problemas no enunciado.</p>
+                <div className="divide-y">
+                  {mostMissed.map((q, i) => {
+                    const disc = q.total > 0 ? (1 - q.errorRate / 100).toFixed(2) : "—";
+                    return (
+                      <div key={q.id} className="flex items-center justify-between gap-3 py-2.5">
+                        <p className="flex-1 truncate text-sm"><span className="mr-2 font-mono text-xs text-muted-foreground">Q{i + 1}</span>{q.text}</p>
+                        <StatusBadge tone={Number(disc) > 0.4 ? "ok" : Number(disc) > 0.2 ? "warn" : "bad"}>D = {disc}</StatusBadge>
+                      </div>
+                    );
+                  })}
+                </div>
               </Card>
             </>
           )}
@@ -1415,7 +1414,7 @@ export default function ExamEditorPage() {
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>{pickerMode === "single" ? "Selecionar Questão" : "Selecionar Questões (Combinação)"}</DialogTitle>
+            <DialogTitle className="font-heading text-xl font-medium">{pickerMode === "single" ? "Selecionar questão" : "Selecionar questões (combinação)"}</DialogTitle>
           </DialogHeader>
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
@@ -1454,7 +1453,7 @@ export default function ExamEditorPage() {
                       <div className="flex items-center gap-2 mb-2">
                         {typeIcons[q.type]}
                         <Badge variant="outline" className="text-[10px]">{typeLabels[q.type] || q.type}</Badge>
-                        {isSelected && <CheckCircle2 className="h-4 w-4 text-green-600 ml-auto" />}
+                        {isSelected && <CheckCircle2 className="h-4 w-4 text-success ml-auto" />}
                       </div>
                       <p className="text-xs leading-relaxed line-clamp-5">{q.title}</p>
                       <div className="flex flex-wrap gap-1 mt-2">
@@ -1468,9 +1467,9 @@ export default function ExamEditorPage() {
             )}
           </div>
           <DialogFooter className="mt-4">
-            <Button variant="ghost" onClick={() => setPickerOpen(false)}>VOLTAR</Button>
+            <Button variant="ghost" onClick={() => setPickerOpen(false)}>Voltar</Button>
             <Button disabled={selectedBankIds.size === 0} onClick={addSelectedQuestions}>
-              ADICIONAR {selectedBankIds.size > 0 ? `${selectedBankIds.size} QUESTÃO(ÕES)` : ""}
+              Adicionar {selectedBankIds.size > 0 ? `${selectedBankIds.size} ${selectedBankIds.size === 1 ? "questão" : "questões"}` : ""}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1480,11 +1479,11 @@ export default function ExamEditorPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Criar Questão — {createQuestionTypes.find((t) => t.value === createType)?.label}</DialogTitle>
+            <DialogTitle className="font-heading text-xl font-medium">Criar questão — {createQuestionTypes.find((t) => t.value === createType)?.label}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Enunciado da Questão</Label>
+              <Label>Enunciado da questão</Label>
               <Textarea value={createTitle} onChange={(e) => setCreateTitle(e.target.value)} placeholder="Digite o enunciado..." rows={4} />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -1521,7 +1520,7 @@ export default function ExamEditorPage() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreateQuestion}>Criar e Adicionar</Button>
+            <Button onClick={handleCreateQuestion}>Criar e adicionar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1530,79 +1529,19 @@ export default function ExamEditorPage() {
       <AIQuestionGenerator open={aiOpen} onOpenChange={setAiOpen} onSaveQuestions={handleAISave} />
 
       {/* ===== REVIEW DIALOG ===== */}
-      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-primary" />
-              Correção com Tutor de IA
-            </DialogTitle>
-          </DialogHeader>
-          {reviewAnswer && (
-            <Tabs value={reviewTab} onValueChange={setReviewTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="tutor" className="gap-1"><MessageSquare className="h-3.5 w-3.5" />Tutor de IA</TabsTrigger>
-                <TabsTrigger value="review" className="gap-1"><Eye className="h-3.5 w-3.5" />Nota Manual</TabsTrigger>
-              </TabsList>
-              <TabsContent value="tutor" className="mt-4">
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Enunciado</Label>
-                    <p className="text-sm bg-muted/50 rounded p-2 mt-1">
-                      {((reviewAnswer.question_bank?.content_json as Record<string, unknown>)?.question_text as string) ||
-                        ((reviewAnswer.question_bank?.content_json as Record<string, unknown>)?.statement as string) || "Questão"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Resposta do aluno</Label>
-                    <p className="text-sm bg-muted/50 rounded p-2 mt-1">{reviewAnswer.answer_text || "Sem resposta"}</p>
-                  </div>
-                  <Separator />
-                  <AITutorChat
-                    answerId={reviewAnswer.id}
-                    studentAnswer={reviewAnswer.answer_text || ""}
-                    questionStatement={((reviewAnswer.question_bank?.content_json as Record<string, unknown>)?.question_text as string) || ((reviewAnswer.question_bank?.content_json as Record<string, unknown>)?.statement as string) || ""}
-                    aiScore={reviewAnswer.ai_score}
-                    aiFeedback={reviewAnswer.ai_feedback}
-                    teacherScore={reviewAnswer.teacher_score}
-                    maxPoints={Number(reviewAnswer.max_points) || 1}
-                    onSuggestScore={handleAISuggestScore}
-                  />
-                </div>
-              </TabsContent>
-              <TabsContent value="review" className="mt-4">
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Resposta do aluno</Label>
-                    <p className="text-sm bg-muted/50 rounded p-3 mt-1">{reviewAnswer.answer_text || "Sem resposta"}</p>
-                  </div>
-                  {reviewAnswer.ai_feedback && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Bot className="h-3 w-3" /> Avaliação da IA ({reviewAnswer.ai_score}/{Number(reviewAnswer.max_points)})
-                      </Label>
-                      <p className="text-sm bg-primary/5 rounded p-3 mt-1">{reviewAnswer.ai_feedback}</p>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label>Nota do Professor (máx: {Number(reviewAnswer.max_points)})</Label>
-                    <Input type="number" min={0} max={Number(reviewAnswer.max_points)} step={0.5} value={teacherScore} onChange={(e) => setTeacherScore(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Feedback (opcional)</Label>
-                    <Textarea value={teacherFeedback} onChange={(e) => setTeacherFeedback(e.target.value)} rows={3} placeholder="Comentário para o aluno..." />
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReviewOpen(false)}>Cancelar</Button>
-            <Button onClick={saveReview}>Salvar Nota</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ExamAnswerReviewDialog
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        answer={reviewAnswer}
+        tab={reviewTab}
+        onTabChange={setReviewTab}
+        teacherScore={teacherScore}
+        onTeacherScoreChange={setTeacherScore}
+        teacherFeedback={teacherFeedback}
+        onTeacherFeedbackChange={setTeacherFeedback}
+        onSave={saveReview}
+        onSuggestScore={handleAISuggestScore}
+      />
     </div>
   );
 }
