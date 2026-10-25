@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -193,86 +192,97 @@ export default function VirtualPatientChat() {
     );
   }
 
+  const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
+
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      {/* Header */}
-      <div className="border-b p-4 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/virtual-patients")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="font-semibold">{patient.name}, {patient.age} anos</h2>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="outline" className="text-xs">{patient.module}</Badge>
-              <Badge variant="secondary" className="text-xs">{ENCOUNTER_LABELS[encounter - 1]}</Badge>
-              {isEphemeral && (
-                <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-700 dark:text-amber-300">
-                  Modo exploração — não salvo
-                </Badge>
-              )}
+    <div className="flex h-[calc(100vh-4rem)] flex-col">
+      {/* Cabeçalho */}
+      <header className="flex flex-shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b bg-card px-4 py-3 lg:px-6">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/virtual-patients")} aria-label="Voltar">
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-soft font-heading text-base font-medium text-brand-text" aria-hidden>
+            {initials(patient.name)}
+          </span>
+          <div className="min-w-0">
+            <h2 className="truncate font-heading text-lg font-medium leading-tight">{patient.name}, {patient.age} anos</h2>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+              <StatusBadge tone="neutral">{patient.module}</StatusBadge>
+              <StatusBadge tone="brand">{ENCOUNTER_LABELS[encounter - 1]}</StatusBadge>
+              {isEphemeral && <StatusBadge tone="warn" dot>Modo exploração — não salvo</StatusBadge>}
+              {sessionCompleted && <StatusBadge tone="ok" dot>Concluído</StatusBadge>}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {encounter < 3 && !sessionCompleted && (
             <Button variant="outline" size="sm" onClick={advanceEncounter}>
-              Avançar Encontro <ChevronRight className="h-4 w-4 ml-1" />
+              Avançar encontro <ChevronRight className="h-4 w-4" />
             </Button>
           )}
           {encounter === 3 && !sessionCompleted && !isEphemeral && (
             <Button size="sm" onClick={() => setShowMAI(true)}>
-              <ClipboardCheck className="h-4 w-4 mr-1" /> Preencher MAI
+              <ClipboardCheck className="h-4 w-4" /> Preencher MAI
             </Button>
           )}
-          {sessionCompleted && (
-            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Concluído</Badge>
-          )}
         </div>
+      </header>
+
+      {/* Etapas dos encontros */}
+      <div className="flex flex-shrink-0 gap-1.5 border-b bg-card/60 px-4 py-2 lg:px-6" aria-hidden>
+        {[1, 2, 3].map((n) => (
+          <span key={n} className={`h-1.5 flex-1 rounded-full ${n < encounter || sessionCompleted ? "bg-primary" : n === encounter ? "bg-highlight" : "bg-muted"}`} />
+        ))}
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Mensagens */}
+      <div className="flex-1 space-y-4 overflow-y-auto p-4 lg:px-6">
         {messages.length === 0 && (
-          <div className="text-center text-muted-foreground py-12">
-            <p className="text-lg font-medium mb-2">Inicie o atendimento</p>
+          <div className="py-12 text-center text-muted-foreground">
+            <p className="mb-2 font-heading text-xl font-medium text-foreground">Inicie o atendimento</p>
             <p className="text-sm">Cumprimente o paciente e comece a anamnese.</p>
           </div>
         )}
 
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            <Card className={`max-w-[80%] p-3 ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-              <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
-            </Card>
-          </div>
-        ))}
+        {messages.map((msg, i) => {
+          const me = msg.role === "user";
+          return (
+            <div key={i} className={`flex items-end gap-2 ${me ? "flex-row-reverse" : ""}`}>
+              <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-medium ${me ? "bg-highlight/20 text-foreground" : "bg-brand-soft text-brand-text"}`} aria-hidden>
+                {me ? "Você" : initials(patient.name)}
+              </span>
+              <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-sm ${me ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted"}`}>
+                <div className="prose prose-sm max-w-none text-inherit dark:prose-invert prose-p:my-1 first:prose-p:mt-0 last:prose-p:mb-0" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
+              </div>
+            </div>
+          );
+        })}
 
         {loading && (
-          <div className="flex justify-start">
-            <Card className="p-3 bg-muted">
-              <Loader2 className="h-4 w-4 animate-spin" />
-            </Card>
+          <div className="flex items-end gap-2">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-soft text-[11px] font-medium text-brand-text" aria-hidden>{initials(patient.name)}</span>
+            <div className="rounded-2xl rounded-bl-sm bg-muted px-4 py-2.5"><Loader2 className="h-4 w-4 animate-spin" /></div>
           </div>
         )}
 
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      {/* Campo de mensagem */}
       {!sessionCompleted && (
-        <div className="border-t p-4 flex gap-2 flex-shrink-0">
+        <div className="flex flex-shrink-0 gap-2 border-t bg-card px-4 py-3 lg:px-6">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Digite sua mensagem..."
-            className="min-h-[44px] max-h-32 resize-none"
+            placeholder="Digite a sua pergunta…"
+            className="max-h-32 min-h-[44px] resize-none"
             rows={1}
           />
-          <Button onClick={sendMessage} disabled={loading || !input.trim()} size="icon">
-            <Send className="h-4 w-4" />
+          <Button onClick={sendMessage} disabled={loading || !input.trim()}>
+            <Send className="h-4 w-4" />Enviar
           </Button>
         </div>
       )}

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Users, CheckCircle2, Clock, ShieldAlert } from "lucide-react";
+import { Loader2, CheckCircle2, Clock, ShieldAlert, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PEER_EVAL_CRITERIA, PeerEvaluationScores } from "@/lib/vp-peer-eval";
@@ -17,6 +17,8 @@ interface Teammate {
 type Status = "loading" | "pending" | "used" | "expired" | "not_found" | "submitted" | "error";
 
 type FormState = Record<string, Partial<PeerEvaluationScores> & { comentario?: string }>;
+
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
 
 export default function VpPeerEvaluation() {
   const { token } = useParams<{ token: string }>();
@@ -62,10 +64,12 @@ export default function VpPeerEvaluation() {
     setForm((prev) => ({ ...prev, [email]: { ...prev[email], comentario } }));
   };
 
-  const isComplete = teammates.every((t) => {
-    const f = form[t.email];
-    return f && PEER_EVAL_CRITERIA.every((c) => typeof f[c.key] === "number");
-  });
+  const isDone = (email: string) => {
+    const f = form[email];
+    return !!f && PEER_EVAL_CRITERIA.every((c) => typeof f[c.key] === "number");
+  };
+  const isComplete = teammates.every((t) => isDone(t.email));
+  const doneCount = teammates.filter((t) => isDone(t.email)).length;
 
   const handleSubmit = async () => {
     if (!isComplete || !token) return;
@@ -92,69 +96,99 @@ export default function VpPeerEvaluation() {
     }
   };
 
+  const shell = (children: React.ReactNode) => (
+    <div className="min-h-screen bg-sunken">
+      <header className="border-b bg-card px-4 py-3 md:px-8">
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary font-heading text-base font-medium text-primary-foreground" aria-hidden>P</span>
+          <div>
+            <p className="font-heading text-base font-medium leading-tight">Avaliação entre pares</p>
+            {patientLabel && <p className="text-xs text-muted-foreground">{patientLabel}</p>}
+          </div>
+        </div>
+      </header>
+      {children}
+    </div>
+  );
+
+  const statusScreen = (icon: React.ReactNode, title: string, description: string) =>
+    shell(
+      <div className="flex items-center justify-center p-6 pt-24">
+        <div className="max-w-md space-y-3 text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-muted">{icon}</div>
+          <h2 className="font-heading text-2xl font-medium">{title}</h2>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>,
+    );
+
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-sunken">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (status === "not_found" || status === "error") {
-    return (
-      <StatusCard
-        icon={<ShieldAlert className="h-10 w-10 mx-auto text-destructive" />}
-        title="Link inválido"
-        description="Este link de avaliação não existe ou já foi removido."
-      />
-    );
+    return statusScreen(<ShieldAlert className="h-6 w-6 text-destructive" />, "Link inválido", "Este link de avaliação não existe ou já foi removido.");
   }
 
   if (status === "used" || status === "submitted") {
-    return (
-      <StatusCard
-        icon={<CheckCircle2 className="h-10 w-10 mx-auto text-primary" />}
-        title="Avaliação já enviada"
-        description="Obrigado! Sua avaliação entre pares para esta atividade já foi registrada."
-      />
+    return statusScreen(
+      <CheckCircle2 className="h-6 w-6 text-success" />,
+      status === "submitted" ? "Obrigado, avaliação enviada" : "Este link já foi utilizado",
+      status === "submitted"
+        ? `Você avaliou ${teammates.length} ${teammates.length === 1 ? "colega" : "colegas"}. Pode fechar esta página.`
+        : "Sua avaliação entre pares para esta atividade já foi registrada. Se precisar corrigir, fale com o seu professor.",
     );
   }
 
   if (status === "expired") {
-    return (
-      <StatusCard
-        icon={<Clock className="h-10 w-10 mx-auto text-muted-foreground" />}
-        title="Link expirado"
-        description="O prazo para avaliar seus colegas nesta atividade encerrou. Fale com seu professor se precisar de mais tempo."
-      />
+    return statusScreen(
+      <Clock className="h-6 w-6 text-muted-foreground" />,
+      "Link expirado",
+      "O prazo para avaliar seus colegas nesta atividade encerrou. Fale com seu professor se precisar de mais tempo.",
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
+  return shell(
+    <div className="px-4 py-6 md:px-8">
+      <div className="mx-auto max-w-2xl space-y-5">
         <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" /> Avaliação entre pares
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Olá, {evaluatorName || "colega"}! Avalie a participação de cada colega do seu grupo
-            {patientLabel ? ` no atendimento a ${patientLabel}` : ""}. Suas respostas não são mostradas aos colegas avaliados.
+          <h1 className="font-heading text-2xl font-medium">Olá, {evaluatorName || "colega"}!</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Avalie a participação de cada colega do seu grupo{patientLabel ? ` no atendimento a ${patientLabel}` : ""}.
           </p>
         </div>
 
-        {teammates.map((t) => (
+        <div className="flex items-start gap-3 rounded-card border border-info/30 bg-info-soft px-4 py-3 text-sm">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-info" />
+          <p>Seu link é pessoal. Suas respostas não são mostradas aos colegas avaliados e ajustam o bônus individual de cada um na nota do grupo.</p>
+        </div>
+
+        {teammates.map((t, idx) => (
           <Card key={t.email}>
-            <CardHeader>
-              <CardTitle className="text-base">{t.name || t.email}</CardTitle>
-              <CardDescription>{t.email}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-highlight/20 text-sm font-medium" aria-hidden>
+                  {initials(t.name || t.email)}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="truncate font-heading text-lg font-medium leading-tight">{t.name || t.email}</h3>
+                  <p className="truncate text-xs text-muted-foreground">{t.email}</p>
+                </div>
+              </div>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {isDone(t.email) ? <span className="inline-flex items-center gap-1 text-success"><CheckCircle2 className="h-3.5 w-3.5" />completo</span> : `colega ${idx + 1} de ${teammates.length}`}
+              </span>
+            </div>
+            <div className="space-y-5 p-5">
               {PEER_EVAL_CRITERIA.map((c) => (
                 <div key={c.key} className="space-y-1.5">
                   <Label className="text-sm font-medium">{c.label}</Label>
                   <p className="text-xs text-muted-foreground">{c.description}</p>
-                  <div className="flex gap-1.5 mt-1">
+                  <div className="mt-1 flex gap-1.5" role="radiogroup" aria-label={`${c.label} de ${t.name || t.email}`}>
                     {[0, 1, 2, 3, 4, 5].map((n) => {
                       const selected = form[t.email]?.[c.key] === n;
                       return (
@@ -162,8 +196,10 @@ export default function VpPeerEvaluation() {
                           key={n}
                           type="button"
                           size="sm"
+                          role="radio"
+                          aria-checked={selected}
                           variant={selected ? "default" : "outline"}
-                          className="w-9 h-9 p-0"
+                          className="h-10 w-10 p-0 font-mono"
                           onClick={() => updateScore(t.email, c.key, n)}
                         >
                           {n}
@@ -174,7 +210,7 @@ export default function VpPeerEvaluation() {
                 </div>
               ))}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Comentário (opcional)</Label>
+                <Label className="text-sm font-medium">Comentário <span className="font-normal text-muted-foreground">(opcional)</span></Label>
                 <Textarea
                   placeholder="Algo que queira destacar sobre a participação deste colega..."
                   value={form[t.email]?.comentario || ""}
@@ -182,28 +218,18 @@ export default function VpPeerEvaluation() {
                   className="text-sm"
                 />
               </div>
-            </CardContent>
+            </div>
           </Card>
         ))}
 
-        <Button onClick={handleSubmit} disabled={!isComplete || submitting} className="w-full" size="lg">
-          {submitting ? "Enviando..." : "Enviar avaliação"}
-        </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs text-muted-foreground">{doneCount} de {teammates.length} {teammates.length === 1 ? "colega avaliado" : "colegas avaliados"}</span>
+          <Button onClick={handleSubmit} disabled={!isComplete || submitting} size="lg">
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {submitting ? "Enviando..." : "Enviar avaliação"}
+          </Button>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function StatusCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <Card className="max-w-md">
-        <CardContent className="p-8 text-center space-y-4">
-          {icon}
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </CardContent>
-      </Card>
-    </div>
+    </div>,
   );
 }
