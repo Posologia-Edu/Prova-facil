@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2, Save, Copy, ClipboardCheck, BarChart3, Settings } from "lucide-react";
@@ -101,15 +102,26 @@ export default function ClinicalObservationEditor() {
   const averages = avgScores();
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey="clinical_observation" />
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/forms")}><ArrowLeft className="h-4 w-4" /></Button>
-        <div className="flex-1">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="text-xl font-bold border-none shadow-none px-0 h-auto focus-visible:ring-0" />
-        </div>
-        <Badge variant="outline">{type === "mini_cex" ? "Mini-CEX" : "DOPS"}</Badge>
-        <Select value={status} onValueChange={setStatus}>
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/forms")}>
+          <ArrowLeft className="h-4 w-4" />Formulários
+        </Button>
+        <PageHeader
+          eyebrow="Mini-CEX / DOPS · Editar"
+          title={
+            <Input
+              aria-label="Título"
+              className="h-auto border-0 bg-transparent p-0 font-heading text-[2rem] font-medium leading-[1.1] shadow-none focus-visible:ring-0 md:text-[2rem]"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          }
+          actions={
+            <>
+              <Badge variant="outline">{type === "mini_cex" ? "Mini-CEX" : "DOPS"}</Badge>
+              <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="draft">Rascunho</SelectItem>
@@ -117,17 +129,20 @@ export default function ClinicalObservationEditor() {
             <SelectItem value="finished">Finalizado</SelectItem>
           </SelectContent>
         </Select>
-        <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" /> Salvar</Button>
+              <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" /> Salvar</Button>
+            </>
+          }
+        />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="domains"><Settings className="h-4 w-4 mr-1" /> Domínios ({domains.length})</TabsTrigger>
-          <TabsTrigger value="sessions"><ClipboardCheck className="h-4 w-4 mr-1" /> Avaliações ({sessions.length})</TabsTrigger>
-          <TabsTrigger value="results"><BarChart3 className="h-4 w-4 mr-1" /> Resultados</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="domains"><Settings className="h-4 w-4" /> Domínios <span className="font-mono text-xs text-muted-foreground">{domains.length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="sessions"><ClipboardCheck className="h-4 w-4" /> Avaliações <span className="font-mono text-xs text-muted-foreground">{sessions.length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="results"><BarChart3 className="h-4 w-4" /> Resultados</TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="domains" className="space-y-4">
+        <TabsContent value="domains" className="space-y-4 mt-6">
           <Card>
             <CardContent className="pt-6 space-y-4">
               <div>
@@ -171,7 +186,7 @@ export default function ClinicalObservationEditor() {
           <p className="text-xs text-muted-foreground">Escala de avaliação: 1 (muito abaixo) a 9 (excepcional). Cada domínio será avaliado individualmente.</p>
         </TabsContent>
 
-        <TabsContent value="sessions" className="space-y-4">
+        <TabsContent value="sessions" className="space-y-4 mt-6">
           {sessions.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhuma avaliação realizada ainda.</CardContent></Card>
           ) : (
@@ -203,12 +218,12 @@ export default function ClinicalObservationEditor() {
           )}
         </TabsContent>
 
-        <TabsContent value="results" className="space-y-4">
+        <TabsContent value="results" className="space-y-4 mt-6">
           {sessions.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Sem dados suficientes.</CardContent></Card>
           ) : (
             <Card>
-              <CardHeader><CardTitle className="text-sm">Médias por domínio ({sessions.length} avaliações)</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Médias por domínio ({sessions.length} avaliações)</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {domains.map(d => {

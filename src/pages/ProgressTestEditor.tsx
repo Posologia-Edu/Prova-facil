@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -274,35 +275,40 @@ export default function ProgressTestEditor() {
   }, [selectedSessionAnswers, testQuestions, questionBank, selectedSessionId, sessions]);
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey="progress_test" />
-      <div className="flex flex-wrap items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/forms")}>
-          <ArrowLeft className="h-4 w-4" />
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/forms")}>
+          <ArrowLeft className="h-4 w-4" />Formulários
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-foreground">Editor de Progress Test</h1>
-        </div>
-        <Button variant="outline" onClick={() => setAiDialogOpen(true)} className="gap-1.5">
+        <PageHeader
+          eyebrow="Progress Test · Editar"
+          title={title || "Progress Test"}
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setAiDialogOpen(true)} className="gap-1.5">
           <Sparkles className="h-4 w-4 text-secondary" />
           Gerar com IA
         </Button>
-        <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSave} disabled={saving}>
           <Save className="h-4 w-4 mr-2" /> Salvar
         </Button>
+            </>
+          }
+        />
       </div>
 
       <Tabs defaultValue="config">
-        <TabsList>
-          <TabsTrigger value="config">Configuração</TabsTrigger>
-          <TabsTrigger value="questions">Questões ({testQuestions?.length || 0})</TabsTrigger>
-          <TabsTrigger value="share">Compartilhar</TabsTrigger>
-          <TabsTrigger value="results">Resultados ({sessions?.length || 0})</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="config">Configuração</TabsTriggerLine>
+          <TabsTriggerLine value="questions">Questões <span className="font-mono text-xs text-muted-foreground">{testQuestions?.length || 0}</span></TabsTriggerLine>
+          <TabsTriggerLine value="share">Compartilhar</TabsTriggerLine>
+          <TabsTriggerLine value="results">Resultados <span className="font-mono text-xs text-muted-foreground">{sessions?.length || 0}</span></TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="config" className="space-y-4 mt-4">
+        <TabsContent value="config" className="space-y-4 mt-6">
           <Card>
-            <CardHeader><CardTitle>Configurações Gerais</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium">Configurações Gerais</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Título</Label>
@@ -335,10 +341,10 @@ export default function ProgressTestEditor() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="questions" className="space-y-4 mt-4">
+        <TabsContent value="questions" className="space-y-4 mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Questões do Teste</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Questões do Teste</CardTitle>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAiDialogOpen(true)}>
                 <Sparkles className="h-4 w-4 text-secondary" />
                 Gerar com IA
@@ -394,10 +400,10 @@ export default function ProgressTestEditor() {
                               {options.map((opt) => {
                                 const isCorrect = opt.key === correctKey;
                                 return (
-                                  <div key={opt.key} className={`flex items-start gap-2 p-2 rounded text-sm ${isCorrect ? "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800" : "bg-background border"}`}>
-                                    <span className={`font-bold shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-xs ${isCorrect ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"}`}>{opt.label}</span>
+                                  <div key={opt.key} className={`flex items-start gap-2 p-2 rounded text-sm ${isCorrect ? "bg-success/10 border border-success/30" : "bg-background border"}`}>
+                                    <span className={`font-bold shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-xs ${isCorrect ? "bg-success text-white" : "bg-muted text-muted-foreground"}`}>{opt.label}</span>
                                     <span className="flex-1">{opt.text}</span>
-                                    {isCorrect && <CheckCircle className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />}
+                                    {isCorrect && <CheckCircle className="h-4 w-4 text-success shrink-0 mt-0.5" />}
                                   </div>
                                 );
                               })}
@@ -419,7 +425,7 @@ export default function ProgressTestEditor() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Banco de Questões</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium">Banco de Questões</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {questionBank?.map((q) => {
@@ -445,9 +451,9 @@ export default function ProgressTestEditor() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="share" className="space-y-4 mt-4">
+        <TabsContent value="share" className="space-y-4 mt-6">
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Share2 className="h-5 w-5" /> Compartilhar</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Share2 className="h-5 w-5" /> Compartilhar</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               {status !== "published" ? (
                 <div className="text-center py-6 space-y-3">
@@ -471,7 +477,7 @@ export default function ProgressTestEditor() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="results" className="space-y-4 mt-4">
+        <TabsContent value="results" className="space-y-4 mt-6">
           {selectedSessionId && sessionAnalytics ? (
             // Detailed analytics view
             <div className="space-y-4">
@@ -483,17 +489,17 @@ export default function ProgressTestEditor() {
                 {/* Summary card */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">{sessionAnalytics.session.student_name}</CardTitle>
+                    <CardTitle className="font-heading text-lg font-medium">{sessionAnalytics.session.student_name}</CardTitle>
                     <CardDescription>{sessionAnalytics.session.student_email} — {sessionAnalytics.session.student_year}º ano</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="grid grid-cols-4 gap-2 text-center text-sm">
-                      <div className="p-2 rounded-lg bg-green-50 dark:bg-green-950">
-                        <p className="text-lg font-bold text-green-700 dark:text-green-400">{sessionAnalytics.correct}</p>
+                      <div className="p-2 rounded-lg bg-success/10">
+                        <p className="text-lg font-bold text-success">{sessionAnalytics.correct}</p>
                         <p className="text-xs text-muted-foreground">Acertos</p>
                       </div>
-                      <div className="p-2 rounded-lg bg-red-50 dark:bg-red-950">
-                        <p className="text-lg font-bold text-red-700 dark:text-red-400">{sessionAnalytics.incorrect}</p>
+                      <div className="p-2 rounded-lg bg-destructive/10">
+                        <p className="text-lg font-bold text-destructive">{sessionAnalytics.incorrect}</p>
                         <p className="text-xs text-muted-foreground">Erros</p>
                       </div>
                       <div className="p-2 rounded-lg bg-muted">
@@ -515,7 +521,7 @@ export default function ProgressTestEditor() {
 
                 {/* Performance by year */}
                 <Card>
-                  <CardHeader><CardTitle className="text-base">Desempenho por Ano</CardTitle></CardHeader>
+                  <CardHeader><CardTitle className="font-heading text-lg font-medium">Desempenho por Ano</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     {Object.entries(sessionAnalytics.byYear).sort(([a], [b]) => Number(a) - Number(b)).map(([year, data]) => {
                       const pct = data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0;
@@ -535,12 +541,12 @@ export default function ProgressTestEditor() {
 
               {/* Performance by area */}
               <Card>
-                <CardHeader><CardTitle className="text-base">Desempenho por Área Temática</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="font-heading text-lg font-medium">Desempenho por Área Temática</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                     {Object.entries(sessionAnalytics.byArea).sort(([, a], [, b]) => (a.correct / a.total) - (b.correct / b.total)).map(([area, data]) => {
                       const pct = data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0;
-                      const color = pct >= 60 ? "text-green-700 dark:text-green-400" : pct >= 40 ? "text-yellow-700 dark:text-yellow-400" : "text-red-700 dark:text-red-400";
+                      const color = pct >= 60 ? "text-success" : pct >= 40 ? "text-warning-ink" : "text-destructive";
                       return (
                         <div key={area} className="p-3 border rounded-lg">
                           <p className="text-sm font-medium truncate">{area}</p>
@@ -558,16 +564,16 @@ export default function ProgressTestEditor() {
 
               {/* Question-by-question breakdown */}
               <Card>
-                <CardHeader><CardTitle className="text-base">Detalhamento por Questão</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="font-heading text-lg font-medium">Detalhamento por Questão</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-1.5">
                     {sessionAnalytics.questionDetails.map((qd) => (
-                      <div key={qd.idx} className={`flex items-center gap-3 p-2 rounded text-sm ${qd.isCorrect ? "bg-green-50 dark:bg-green-950" : qd.responseType === "annulled" || qd.responseType === "blank" ? "bg-muted/50" : "bg-red-50 dark:bg-red-950"}`}>
+                      <div key={qd.idx} className={`flex items-center gap-3 p-2 rounded text-sm ${qd.isCorrect ? "bg-success/10" : qd.responseType === "annulled" || qd.responseType === "blank" ? "bg-muted/50" : "bg-destructive/10"}`}>
                         <span className="w-8 text-muted-foreground font-medium">{qd.idx}.</span>
-                        {qd.isCorrect ? <CheckCircle className="h-4 w-4 text-green-600 shrink-0" /> :
+                        {qd.isCorrect ? <CheckCircle className="h-4 w-4 text-success shrink-0" /> :
                           qd.responseType === "annulled" ? <Ban className="h-4 w-4 text-muted-foreground shrink-0" /> :
                           qd.responseType === "blank" ? <span className="w-4 h-4 shrink-0" /> :
-                          <XCircle className="h-4 w-4 text-red-600 shrink-0" />}
+                          <XCircle className="h-4 w-4 text-destructive shrink-0" />}
                         <span className="flex-1 truncate">{qd.stem}...</span>
                         <Badge variant="outline" className="text-[10px] shrink-0">{qd.area}</Badge>
                         {qd.responseType === "answered" && !qd.isCorrect && (
@@ -584,7 +590,7 @@ export default function ProgressTestEditor() {
             </div>
           ) : (
             <Card>
-              <CardHeader><CardTitle>Resultados</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Resultados</CardTitle></CardHeader>
               <CardContent>
                 {(!sessions || sessions.length === 0) ? (
                   <p className="text-muted-foreground text-sm text-center py-6">Nenhum aluno respondeu ainda.</p>

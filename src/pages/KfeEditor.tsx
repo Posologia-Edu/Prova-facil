@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -144,14 +145,27 @@ export default function KfeEditor() {
   const studentLink = `${window.location.origin}/kfe/student/${id}`;
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey="kfe" />
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/forms")}><ArrowLeft className="h-4 w-4" /></Button>
-        <div className="flex-1">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="text-xl font-bold border-none shadow-none px-0 h-auto focus-visible:ring-0" placeholder="Título do KFE" />
-        </div>
-        <Select value={status} onValueChange={setStatus}>
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/forms")}>
+          <ArrowLeft className="h-4 w-4" />Formulários
+        </Button>
+        <PageHeader
+          eyebrow="KFE · Editar"
+          title={
+            <Input
+              aria-label="Título"
+              className="h-auto border-0 bg-transparent p-0 font-heading text-[2rem] font-medium leading-[1.1] shadow-none focus-visible:ring-0 md:text-[2rem]"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Título do KFE"
+            />
+          }
+          actions={
+            <>
+              
+              <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="draft">Rascunho</SelectItem>
@@ -159,19 +173,22 @@ export default function KfeEditor() {
             <SelectItem value="finished">Finalizado</SelectItem>
           </SelectContent>
         </Select>
-        <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" /> {saving ? "Salvando..." : "Salvar"}</Button>
+              <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" /> {saving ? "Salvando..." : "Salvar"}</Button>
+            </>
+          }
+        />
       </div>
 
       <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição (opcional)" className="resize-none" rows={2} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="cases"><Target className="h-4 w-4 mr-1" /> Casos ({cases.length})</TabsTrigger>
-          <TabsTrigger value="settings">Configurações</TabsTrigger>
-          <TabsTrigger value="results"><BarChart3 className="h-4 w-4 mr-1" /> Resultados</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="cases"><Target className="h-4 w-4" /> Casos <span className="font-mono text-xs text-muted-foreground">{cases.length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="settings">Configurações</TabsTriggerLine>
+          <TabsTriggerLine value="results"><BarChart3 className="h-4 w-4" /> Resultados</TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="cases" className="space-y-4">
+        <TabsContent value="cases" className="space-y-4 mt-6">
           <Accordion type="multiple" className="space-y-3">
             {cases.map((c, ci) => (
               <AccordionItem key={c.id} value={c.id} className="border rounded-lg">
@@ -265,7 +282,7 @@ export default function KfeEditor() {
           <Button variant="outline" onClick={addCase}><Plus className="h-4 w-4 mr-2" /> Adicionar Caso</Button>
         </TabsContent>
 
-        <TabsContent value="settings" className="space-y-4">
+        <TabsContent value="settings" className="space-y-4 mt-6">
           <Card>
             <CardContent className="pt-6 space-y-4">
               <div>
@@ -279,12 +296,12 @@ export default function KfeEditor() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="results" className="space-y-4">
+        <TabsContent value="results" className="space-y-4 mt-6">
           {sessions.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum aluno respondeu ainda.</CardContent></Card>
           ) : (
             <Card>
-              <CardHeader><CardTitle className="text-sm">Sessões ({sessions.length})</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Sessões ({sessions.length})</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {sessions.map(s => (

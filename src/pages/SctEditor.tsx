@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2, Save, Copy, Link, Users, ClipboardList, BarChart3 } from "lucide-react";
@@ -127,16 +128,27 @@ export default function SctEditor() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey="sct" />
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/forms")}>
-          <ArrowLeft className="h-4 w-4" />
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/forms")}>
+          <ArrowLeft className="h-4 w-4" />Formulários
         </Button>
-        <div className="flex-1">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="text-xl font-bold border-none shadow-none px-0 h-auto focus-visible:ring-0" placeholder="Título do SCT" />
-        </div>
-        <Select value={status} onValueChange={setStatus}>
+        <PageHeader
+          eyebrow="SCT · Editar"
+          title={
+            <Input
+              aria-label="Título"
+              className="h-auto border-0 bg-transparent p-0 font-heading text-[2rem] font-medium leading-[1.1] shadow-none focus-visible:ring-0 md:text-[2rem]"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Título do SCT"
+            />
+          }
+          actions={
+            <>
+              
+              <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-44">
             <SelectValue />
           </SelectTrigger>
@@ -147,27 +159,30 @@ export default function SctEditor() {
             <SelectItem value="finished">Finalizado</SelectItem>
           </SelectContent>
         </Select>
-        <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSave} disabled={saving}>
           <Save className="h-4 w-4 mr-2" /> {saving ? "Salvando..." : "Salvar"}
         </Button>
+            </>
+          }
+        />
       </div>
 
       <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição do exame (opcional)" className="resize-none" rows={2} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="scenarios"><ClipboardList className="h-4 w-4 mr-1" /> Cenários ({scenarios.length})</TabsTrigger>
-          <TabsTrigger value="experts"><Users className="h-4 w-4 mr-1" /> Painel de Especialistas</TabsTrigger>
-          <TabsTrigger value="results"><BarChart3 className="h-4 w-4 mr-1" /> Resultados</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="scenarios"><ClipboardList className="h-4 w-4" /> Cenários <span className="font-mono text-xs text-muted-foreground">{scenarios.length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="experts"><Users className="h-4 w-4" /> Painel de Especialistas</TabsTriggerLine>
+          <TabsTriggerLine value="results"><BarChart3 className="h-4 w-4" /> Resultados</TabsTriggerLine>
+        </TabsListLine>
 
         {/* ---- Scenarios Tab ---- */}
-        <TabsContent value="scenarios" className="space-y-4">
+        <TabsContent value="scenarios" className="space-y-4 mt-6">
           {scenarios.map((s, i) => (
             <Card key={s.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium">Cenário {i + 1}</CardTitle>
+                  <CardTitle className="font-heading text-lg font-medium">Cenário {i + 1}</CardTitle>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteScenario(s.id)}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -215,7 +230,7 @@ export default function SctEditor() {
         </TabsContent>
 
         {/* ---- Experts Tab ---- */}
-        <TabsContent value="experts" className="space-y-4">
+        <TabsContent value="experts" className="space-y-4 mt-6">
           <Card>
             <CardContent className="pt-6 space-y-4">
               <div>
@@ -261,7 +276,7 @@ export default function SctEditor() {
             return (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Especialistas que responderam ({uniqueExperts.length})</CardTitle>
+                  <CardTitle className="font-heading text-lg font-medium">Especialistas que responderam ({uniqueExperts.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -282,7 +297,7 @@ export default function SctEditor() {
         </TabsContent>
 
         {/* ---- Results Tab ---- */}
-        <TabsContent value="results" className="space-y-4">
+        <TabsContent value="results" className="space-y-4 mt-6">
           {sessions.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
@@ -292,7 +307,7 @@ export default function SctEditor() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Sessões dos alunos ({sessions.length})</CardTitle>
+                <CardTitle className="font-heading text-lg font-medium">Sessões dos alunos ({sessions.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
