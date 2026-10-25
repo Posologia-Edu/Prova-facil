@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+const STEPS = ["Anamnese", "SOAP", "Reconciliação", "Documentação"];
+
 type Accent = "anamnese" | "soap" | "reconciliacao" | "documentacao";
 
 interface Props {
@@ -41,14 +43,26 @@ export function ModuleControlHeader({ moduleLabel, title, pin, backTo, meta, rig
     }
   };
 
+  const stepIdx = STEPS.indexOf(moduleLabel);
+
   return (
     <div className="space-y-3">
       <Button variant="ghost" size="sm" className="-ml-2" onClick={handleBack}>
         <ArrowLeft className="h-4 w-4" />
         Simulações
       </Button>
+      {stepIdx >= 0 && (
+        <div className="grid max-w-xl grid-cols-4 gap-2" aria-label="Etapas da Farmácia Clínica">
+          {STEPS.map((step, i) => (
+            <div key={step}>
+              <div className={`h-1 rounded-full ${i < stepIdx ? "bg-success" : i === stepIdx ? "bg-primary" : "bg-muted"}`} />
+              <span className={`mt-1.5 block text-[11px] ${i === stepIdx ? "font-medium text-foreground" : "text-muted-foreground"}`}>{i < stepIdx ? "✓ " : ""}{step}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <PageHeader
-        eyebrow={`${moduleLabel} · Controle da sala`}
+        eyebrow={`${stepIdx >= 0 ? `Etapa ${stepIdx + 1} · ` : ""}${moduleLabel} · Controle da sala`}
         title={title}
         description={meta}
         actions={

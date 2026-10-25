@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Users, FileText, BarChart3, CheckCircle, Send, Shuffle, Trophy, Bot, Loader2, UserX } from "lucide-react";
@@ -365,7 +367,7 @@ export default function SoapControl() {
   if (!room) return <p className="p-6 text-muted-foreground">Carregando...</p>;
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleControlHeader
         accent="soap"
         moduleLabel="SOAP"
@@ -520,21 +522,21 @@ export default function SoapControl() {
       })()}
 
       <Tabs defaultValue="pairs">
-        <TabsList>
-          <TabsTrigger value="pairs"><Shuffle className="h-4 w-4 mr-1" />Duplas</TabsTrigger>
-          <TabsTrigger value="responses">Respostas SOAP</TabsTrigger>
-          <TabsTrigger value="evaluations">Avaliações entre Pares</TabsTrigger>
-          <TabsTrigger value="absent">
+        <TabsListLine>
+          <TabsTriggerLine value="pairs"><Shuffle className="h-4 w-4" />Duplas</TabsTriggerLine>
+          <TabsTriggerLine value="responses">Respostas SOAP</TabsTriggerLine>
+          <TabsTriggerLine value="evaluations">Avaliações entre Pares</TabsTriggerLine>
+          <TabsTriggerLine value="absent">
             <UserX className="h-4 w-4 mr-1" />Pares Ausentes
             {pendingTeacherPeerEvals.length > 0 && (
               <Badge variant="destructive" className="ml-1.5 h-5 px-1.5">{pendingTeacherPeerEvals.length}</Badge>
             )}
-          </TabsTrigger>
-          <TabsTrigger value="admin">Notas do Admin</TabsTrigger>
-          <TabsTrigger value="final"><Trophy className="h-4 w-4 mr-1" />Notas Finais</TabsTrigger>
-        </TabsList>
+          </TabsTriggerLine>
+          <TabsTriggerLine value="admin">Notas do Admin</TabsTriggerLine>
+          <TabsTriggerLine value="final"><Trophy className="h-4 w-4" />Notas Finais</TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="absent" className="space-y-3">
+        <TabsContent value="absent" className="mt-6 space-y-3">
           {pendingTeacherPeerEvals.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
@@ -557,7 +559,7 @@ export default function SoapControl() {
         </TabsContent>
 
 
-        <TabsContent value="pairs" className="space-y-4">
+        <TabsContent value="pairs" className="mt-6 space-y-4">
           <div className="flex gap-2 flex-wrap">
             <Button onClick={formPairsAuto} disabled={unpaired.length < 2}>
               <Users className="h-4 w-4 mr-2" />Formar Duplas Automaticamente
@@ -571,7 +573,7 @@ export default function SoapControl() {
 
           {unpaired.length > 0 && (
             <Card>
-              <CardHeader><CardTitle className="text-base">Sem Dupla ({unpaired.length})</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Sem Dupla ({unpaired.length})</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {unpaired.map((p) => (
@@ -585,7 +587,7 @@ export default function SoapControl() {
           {Object.entries(pairGroups).map(([idx, members]) => (
             <Card key={idx}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">{members.some(m => m.pair_position === "S") ? "Individual" : `Dupla ${idx}`}</CardTitle>
+                <CardTitle className="font-heading text-lg font-medium">{members.some(m => m.pair_position === "S") ? "Individual" : `Dupla ${idx}`}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-4">
@@ -601,7 +603,7 @@ export default function SoapControl() {
           ))}
         </TabsContent>
 
-        <TabsContent value="responses" className="space-y-3">
+        <TabsContent value="responses" className="mt-6 space-y-3">
           {soapResponses.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum SOAP enviado ainda.</CardContent></Card>
           ) : soapResponses.map((response: any) => (
@@ -609,7 +611,7 @@ export default function SoapControl() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">{getParticipantName(response.participant_id)}</CardTitle>
+                    <CardTitle className="font-heading text-lg font-medium">{getParticipantName(response.participant_id)}</CardTitle>
                     {(patientNames as Record<string, string>)[response.participant_id] && (
                       <p className="text-xs text-muted-foreground mt-0.5">Paciente simulado: <strong>{(patientNames as Record<string, string>)[response.participant_id]}</strong></p>
                     )}
@@ -627,13 +629,13 @@ export default function SoapControl() {
           ))}
         </TabsContent>
 
-        <TabsContent value="evaluations" className="space-y-3">
+        <TabsContent value="evaluations" className="mt-6 space-y-3">
           {peerResponses.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhuma avaliação enviada ainda.</CardContent></Card>
           ) : peerResponses.map((response: any) => (
             <Card key={response.id}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">
+                <CardTitle className="font-heading text-lg font-medium">
                   {getParticipantName(response.participant_id)} avaliou {getParticipantName(response.target_participant_id)}
                 </CardTitle>
               </CardHeader>
@@ -642,7 +644,7 @@ export default function SoapControl() {
           ))}
         </TabsContent>
 
-        <TabsContent value="admin" className="space-y-4">
+        <TabsContent value="admin" className="mt-6 space-y-4">
           {soapResponses.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
@@ -653,7 +655,7 @@ export default function SoapControl() {
             <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Respostas disponíveis</CardTitle>
+                  <CardTitle className="font-heading text-lg font-medium">Respostas disponíveis</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {soapResponses.map((response: any) => {
@@ -687,7 +689,7 @@ export default function SoapControl() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">
+                  <CardTitle className="font-heading text-lg font-medium">
                     Avaliar: {selectedResponse ? getParticipantName(selectedResponse.participant_id) : "Selecione uma resposta"}
                   </CardTitle>
                   {selectedResponse && (patientNames as Record<string, string>)[selectedResponse.participant_id] && (
@@ -726,7 +728,7 @@ export default function SoapControl() {
 
           {responses.filter((r: any) => r.admin_score != null).length > 0 && (
             <Card>
-              <CardHeader><CardTitle className="text-base">Notas Atribuídas</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Notas Atribuídas</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {responses.filter((r: any) => r.admin_score != null).map((response: any) => (
@@ -743,7 +745,7 @@ export default function SoapControl() {
             </Card>
           )}
         </TabsContent>
-        <TabsContent value="final" className="space-y-4">
+        <TabsContent value="final" className="mt-6 space-y-4">
           {(() => {
             // Build per-student final grades
             const evalForm = forms.find((f: any) => f.form_type === "peer_evaluation" || f.title?.toLowerCase().includes("avaliação"));
@@ -796,7 +798,7 @@ export default function SoapControl() {
             return (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Nota Final do Módulo SOAP por Aluno</CardTitle>
+                  <CardTitle className="font-heading text-lg font-medium">Nota Final do Módulo SOAP por Aluno</CardTitle>
                   <p className="text-sm text-muted-foreground">Média entre a nota do professor e a avaliação entre pares (escala 0-10)</p>
                 </CardHeader>
                 <CardContent>
@@ -922,7 +924,7 @@ function TeacherPeerEvalCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
           <UserX className="h-4 w-4 text-destructive" />
           {getParticipantName(response.participant_id)}
           <span className="text-sm font-normal text-muted-foreground">

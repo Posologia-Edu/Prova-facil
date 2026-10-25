@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
@@ -243,7 +245,7 @@ export default function ReconciliationControl() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleControlHeader
         accent="reconciliacao"
         moduleLabel="Reconciliação"
@@ -312,14 +314,14 @@ export default function ReconciliationControl() {
       )}
 
       <Tabs defaultValue="participants">
-        <TabsList>
-          <TabsTrigger value="participants"><Users className="h-4 w-4 mr-1" />Participantes</TabsTrigger>
-          <TabsTrigger value="responses"><FileText className="h-4 w-4 mr-1" />Respostas</TabsTrigger>
-          <TabsTrigger value="grading"><BarChart3 className="h-4 w-4 mr-1" />Avaliação</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="participants"><Users className="h-4 w-4" />Participantes</TabsTriggerLine>
+          <TabsTriggerLine value="responses"><FileText className="h-4 w-4" />Respostas</TabsTriggerLine>
+          <TabsTriggerLine value="grading"><BarChart3 className="h-4 w-4" />Avaliação</TabsTriggerLine>
+        </TabsListLine>
 
         {/* Participants */}
-        <TabsContent value="participants" className="space-y-4">
+        <TabsContent value="participants" className="mt-6 space-y-4">
           {room?.status === "active" && Object.keys(pairs).length > 0 && responses.length > 0 && (
             <div className="flex justify-end">
               <Button
@@ -371,7 +373,7 @@ export default function ReconciliationControl() {
         </TabsContent>
 
         {/* Responses - side by side */}
-        <TabsContent value="responses" className="space-y-4">
+        <TabsContent value="responses" className="mt-6 space-y-4">
           {!responses.length ? (
             <p className="text-sm text-muted-foreground">Nenhuma resposta recebida ainda.</p>
           ) : (
@@ -391,7 +393,7 @@ export default function ReconciliationControl() {
               return (
                 <Card key={resp.id}>
                   <CardHeader>
-                    <CardTitle className="text-base">{pairNames(resp.pair_index)}</CardTitle>
+                    <CardTitle className="font-heading text-lg font-medium">{pairNames(resp.pair_index)}</CardTitle>
                     {caseData && <p className="text-sm text-muted-foreground">Caso: {caseData.title}</p>}
                   </CardHeader>
                   <CardContent>
@@ -416,13 +418,13 @@ export default function ReconciliationControl() {
                             {respAnswerKeyFields.map(field => (
                               <Collapsible key={field.id}>
                                 <CollapsibleTrigger className="w-full text-left">
-                                  <div className="flex items-center justify-between p-2 rounded border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950 hover:bg-green-100 dark:hover:bg-green-900 transition-colors">
+                                  <div className="flex items-center justify-between p-2 rounded border border-success/30 bg-success/10 hover:bg-success/20 transition-colors">
                                     <p className="text-xs font-medium text-muted-foreground">{field.label} ({field.max_score || 0} pts)</p>
                                     <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform [[data-state=open]>&]:rotate-180" />
                                   </div>
                                 </CollapsibleTrigger>
                                 <CollapsibleContent>
-                                  <div className="p-3 bg-green-50/50 dark:bg-green-950/50 border border-t-0 border-green-200 dark:border-green-800 rounded-b text-sm whitespace-pre-wrap">
+                                  <div className="p-3 bg-success/5 border border-t-0 border-success/30 rounded-b text-sm whitespace-pre-wrap">
                                     {(field as any).correct_answer || field.options?.join(", ") || "—"}
                                   </div>
                                 </CollapsibleContent>
@@ -437,7 +439,7 @@ export default function ReconciliationControl() {
 
                     {/* AI Feedback if available */}
                     {resp.ai_feedback_json && (
-                      <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800">
+                      <div className="mt-4 p-3 bg-brand-soft rounded border border-primary/20">
                         <h4 className="text-sm font-medium mb-2 flex items-center gap-1"><Bot className="h-4 w-4" />Feedback da IA</h4>
                         {typeof resp.ai_feedback_json === "object" && !Array.isArray(resp.ai_feedback_json) ? (
                           Object.entries(resp.ai_feedback_json as Record<string, any>).map(([key, val]) => (
@@ -460,7 +462,7 @@ export default function ReconciliationControl() {
         </TabsContent>
 
         {/* Grading */}
-        <TabsContent value="grading" className="space-y-4">
+        <TabsContent value="grading" className="mt-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Pair selector */}
             <div className="space-y-2">
@@ -498,7 +500,7 @@ export default function ReconciliationControl() {
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{pairNames(selectedPairIndex!)}</CardTitle>
+                      <CardTitle className="font-heading text-lg font-medium">{pairNames(selectedPairIndex!)}</CardTitle>
                       <Button onClick={gradeWithAI} disabled={gradingAI} variant="outline">
                         {gradingAI ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Bot className="h-4 w-4 mr-1" />}
                         Corrigir com IA
@@ -508,13 +510,13 @@ export default function ReconciliationControl() {
                   <CardContent className="space-y-4">
                     {/* Show AI feedback per item if available */}
                     {selectedResponse.ai_feedback_json && (
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800 space-y-2">
+                      <div className="p-3 bg-brand-soft rounded border border-primary/20 space-y-2">
                         <h4 className="text-sm font-medium flex items-center gap-1"><Bot className="h-4 w-4" />Correção da IA</h4>
                         {typeof selectedResponse.ai_feedback_json === "object" && !Array.isArray(selectedResponse.ai_feedback_json) ? (
                           Object.entries(selectedResponse.ai_feedback_json as Record<string, any>).map(([key, val]) => {
                             const field = formFields.find(f => f.id === key);
                             return (
-                              <div key={key} className="text-sm border-b border-blue-100 dark:border-blue-900 pb-1">
+                              <div key={key} className="text-sm border-b border-primary/10 pb-1">
                                 <span className="font-medium">{field?.label || key}:</span>{" "}
                                 {typeof val === "object" ? `Nota: ${(val as any).score || 0} — ${(val as any).feedback || ""}` : String(val)}
                               </div>

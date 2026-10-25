@@ -8,7 +8,9 @@ import { ImportClassStudentsButton } from "@/components/classes/ImportClassStude
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -427,43 +429,48 @@ export default function ReconciliationEditor() {
   const totalMaxScore = formFields.filter(f => f.type !== "section_header").reduce((sum, f) => sum + (f.max_score || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey="reconciliacao" />
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/simulations/reconciliation")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />Voltar
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/simulations/reconciliation")}>
+          <ArrowLeft className="h-4 w-4" />Voltar
         </Button>
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs bg-chart-3/10 text-chart-3 border-chart-3/30">Reconciliação</Badge>
-            <h1 className="text-xl font-bold">{room.title}</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">PIN: {room.access_code} · Status: {room.status}</p>
-        </div>
-        {room.status === "draft" && (
-          <Button className="ml-auto" onClick={activateRoom}>
-            <Play className="h-4 w-4 mr-1" />Ativar Sala
-          </Button>
-        )}
-        {room.status === "active" && (
-          <Button className="ml-auto" onClick={() => navigate(`/simulations/reconciliation/control/${roomId}`)}>
-            <Play className="h-4 w-4 mr-1" />Painel de Controle
-          </Button>
-        )}
+        <PageHeader
+          eyebrow="Etapa 3 · Reconciliação · Editar sala"
+          title={room.title}
+          description={
+            <span className="flex flex-wrap items-center gap-3">
+              <StatusBadge tone={room.status === "active" ? "info" : room.status === "completed" ? "ok" : "warn"} dot={room.status !== "completed"}>{room.status === "active" ? "Ativa" : room.status === "completed" ? "Concluída" : "Rascunho"}</StatusBadge>
+              <span>PIN <b className="font-mono font-medium text-foreground">{room.access_code}</b></span>
+            </span>
+          }
+          actions={
+            <>
+              {room.status === "draft" && (
+                <Button onClick={activateRoom}><Play className="h-4 w-4" />Ativar sala</Button>
+              )}
+              {room.status === "active" && (
+                <Button onClick={() => navigate(`/simulations/reconciliation/control/${roomId}`)}>
+                  <Play className="h-4 w-4" />Painel de controle
+                </Button>
+              )}
+            </>
+          }
+        />
       </div>
 
       <Tabs defaultValue="participants">
-        <TabsList>
-          <TabsTrigger value="participants"><Users className="h-4 w-4 mr-1" />Participantes</TabsTrigger>
-          <TabsTrigger value="forms"><FileText className="h-4 w-4 mr-1" />Formulários</TabsTrigger>
-          <TabsTrigger value="cases"><BookOpen className="h-4 w-4 mr-1" />Casos Clínicos</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="participants"><Users className="h-4 w-4" />Participantes</TabsTriggerLine>
+          <TabsTriggerLine value="forms"><FileText className="h-4 w-4" />Formulários</TabsTriggerLine>
+          <TabsTriggerLine value="cases"><BookOpen className="h-4 w-4" />Casos Clínicos</TabsTriggerLine>
+        </TabsListLine>
 
         {/* Participants Tab */}
-        <TabsContent value="participants" className="space-y-4">
+        <TabsContent value="participants" className="mt-6 space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-              <CardTitle className="text-base">Adicionar Aluno</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Adicionar Aluno</CardTitle>
               <ImportClassStudentsButton type="simulation_reconciliation" roomId={roomId!} participantsTable="reconciliation_participants" existingEmails={participants.map((p: any) => p.student_email)} onDone={refetchParticipants} />
             </CardHeader>
             <CardContent>
@@ -536,7 +543,7 @@ export default function ReconciliationEditor() {
                 {Object.keys(pairGroups).length > 0 && (
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
+                      <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                         Duplas Formadas
                         <Badge variant="secondary">{Object.keys(pairGroups).length}</Badge>
                       </CardTitle>
@@ -548,7 +555,7 @@ export default function ReconciliationEditor() {
                           return (
                           <div key={idx} className="flex items-center justify-between py-2 px-3 rounded-lg bg-primary/5 border border-primary/10">
                             <div className="flex items-center gap-3">
-                              <Badge variant="outline" className={isSolo ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900 dark:text-amber-200" : ""}>{isSolo ? "Individual" : `Dupla ${Number(idx) + 1}`}</Badge>
+                              <Badge variant="outline" className={isSolo ? "bg-warning/10 text-warning-ink border-warning/40" : ""}>{isSolo ? "Individual" : `Dupla ${Number(idx) + 1}`}</Badge>
                               {members.map(m => (
                                 <span key={m.id} className="text-sm flex items-center gap-1">
                                   <span className="font-medium">{m.student_name}</span>
@@ -579,7 +586,7 @@ export default function ReconciliationEditor() {
                 {unpaired.length > 0 && (
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
+                      <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                         Alunos sem dupla
                         <Badge variant="secondary">{unpaired.length}</Badge>
                       </CardTitle>
@@ -645,7 +652,7 @@ export default function ReconciliationEditor() {
         </TabsContent>
 
         {/* Forms Tab */}
-        <TabsContent value="forms" className="space-y-4">
+        <TabsContent value="forms" className="mt-6 space-y-4">
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
           </div>
@@ -679,7 +686,7 @@ export default function ReconciliationEditor() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">{form.title}</CardTitle>
+                    <CardTitle className="font-heading text-lg font-medium">{form.title}</CardTitle>
                     <Badge variant="outline" className="mt-1">
                       {isAnswerKey ? "Espelho de Respostas" : "Ficha de Reconciliação"}
                     </Badge>
@@ -709,7 +716,7 @@ export default function ReconciliationEditor() {
           {/* Form editor */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{editingFormId ? "Editar Formulário" : "Novo Formulário"}</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">{editingFormId ? "Editar Formulário" : "Novo Formulário"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -803,7 +810,7 @@ export default function ReconciliationEditor() {
         </TabsContent>
 
         {/* Clinical Cases Tab */}
-        <TabsContent value="cases" className="space-y-4">
+        <TabsContent value="cases" className="mt-6 space-y-4">
           {clinicalCases.map((cc: any, i: number) => (
             <div key={cc.id} className="border rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">

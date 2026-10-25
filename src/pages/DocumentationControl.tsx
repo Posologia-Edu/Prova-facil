@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
@@ -38,13 +40,13 @@ export function CollapsibleAnswerField({ field }: { field: any }) {
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">
       <div className="text-xs font-medium text-muted-foreground uppercase">{field.label} ({field.max_score || 0} pts)</div>
       <CollapsibleTrigger asChild>
-        <button className="w-full text-left text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800 flex items-center justify-between hover:bg-green-100 dark:hover:bg-green-900 transition-colors">
+        <button className="w-full text-left text-sm bg-success/10 p-2 rounded border border-success/30 flex items-center justify-between hover:bg-success/20 transition-colors">
           <span>{isOpen ? "Ocultar espelho" : "Ver espelho"}</span>
           {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="text-sm bg-green-50 dark:bg-green-950 p-3 rounded-b border border-t-0 border-green-200 dark:border-green-800">
+        <div className="text-sm bg-success/10 p-3 rounded-b border border-t-0 border-success/30">
           {answerText}
         </div>
       </CollapsibleContent>
@@ -426,7 +428,7 @@ export default function DocumentationControl() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleControlHeader
         accent="documentacao"
         moduleLabel="Documentação"
@@ -507,13 +509,13 @@ export default function DocumentationControl() {
       )}
 
       <Tabs defaultValue="participants">
-        <TabsList>
-          <TabsTrigger value="participants"><Users className="h-4 w-4 mr-1" />Participantes</TabsTrigger>
-          <TabsTrigger value="responses"><FileText className="h-4 w-4 mr-1" />Respostas</TabsTrigger>
-          <TabsTrigger value="grading"><BarChart3 className="h-4 w-4 mr-1" />Avaliação</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="participants"><Users className="h-4 w-4" />Participantes</TabsTriggerLine>
+          <TabsTriggerLine value="responses"><FileText className="h-4 w-4" />Respostas</TabsTriggerLine>
+          <TabsTriggerLine value="grading"><BarChart3 className="h-4 w-4" />Avaliação</TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="participants" className="space-y-4">
+        <TabsContent value="participants" className="mt-6 space-y-4">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {Object.entries(pairs).map(([idx, pair]) => {
               const pairIdx = Number(idx);
@@ -584,7 +586,7 @@ export default function DocumentationControl() {
           )}
         </TabsContent>
 
-        <TabsContent value="responses" className="space-y-4">
+        <TabsContent value="responses" className="mt-6 space-y-4">
           {!pairIndicesWithResponses.length ? (
             <p className="text-sm text-muted-foreground">Nenhuma resposta recebida ainda.</p>
           ) : (
@@ -599,7 +601,7 @@ export default function DocumentationControl() {
               return (
                 <Card key={pairIdx}>
                   <CardHeader>
-                    <CardTitle className="text-base">{pairNames(pairIdx)}</CardTitle>
+                    <CardTitle className="font-heading text-lg font-medium">{pairNames(pairIdx)}</CardTitle>
                     {caseData && <p className="text-sm text-muted-foreground">Caso: {caseData.title}</p>}
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -650,10 +652,10 @@ export default function DocumentationControl() {
                             {caseMedKey?.answer_rows?.length ? (
                               <div className="overflow-x-auto">
                                 <table className="w-full text-sm border">
-                                  <thead><tr>{(caseMedKey.columns || medContent.columns).map(c => <th key={c.id} className="border p-2 text-left bg-green-50 dark:bg-green-950">{c.label}</th>)}</tr></thead>
+                                  <thead><tr>{(caseMedKey.columns || medContent.columns).map(c => <th key={c.id} className="border p-2 text-left bg-success/10">{c.label}</th>)}</tr></thead>
                                   <tbody>
                                     {caseMedKey.answer_rows.map((row, rIdx) => (
-                                      <tr key={rIdx}>{(caseMedKey.columns || medContent.columns).map(c => <td key={c.id} className="border p-2 bg-green-50 dark:bg-green-950">{row[c.id] || "—"}</td>)}</tr>
+                                      <tr key={rIdx}>{(caseMedKey.columns || medContent.columns).map(c => <td key={c.id} className="border p-2 bg-success/10">{row[c.id] || "—"}</td>)}</tr>
                                     ))}
                                   </tbody>
                                 </table>
@@ -666,7 +668,7 @@ export default function DocumentationControl() {
 
                     {/* AI Feedback */}
                     {(refResp?.ai_feedback_json || mResp?.ai_feedback_json) && (
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800">
+                      <div className="p-3 bg-brand-soft rounded border border-primary/20">
                         <h4 className="text-sm font-medium mb-2 flex items-center gap-1"><Bot className="h-4 w-4" />Feedback da IA</h4>
                         {refResp?.ai_feedback_json && typeof refResp.ai_feedback_json === "object" && (
                           <div className="mb-2">
@@ -709,7 +711,7 @@ export default function DocumentationControl() {
           )}
         </TabsContent>
 
-        <TabsContent value="grading" className="space-y-4">
+        <TabsContent value="grading" className="mt-6 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2 p-3 bg-muted/50 rounded-lg border">
             <div>
               <p className="text-sm font-medium">Correção automática em lote</p>
@@ -750,7 +752,7 @@ export default function DocumentationControl() {
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{pairNames(selectedPairIndex)}</CardTitle>
+                      <CardTitle className="font-heading text-lg font-medium">{pairNames(selectedPairIndex)}</CardTitle>
                       <Button onClick={gradeWithAI} disabled={gradingAI} variant="outline">
                         {gradingAI ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Bot className="h-4 w-4 mr-1" />}
                         Corrigir com IA
@@ -759,13 +761,13 @@ export default function DocumentationControl() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {selectedReferralResp?.ai_feedback_json && (
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800 space-y-2">
+                      <div className="p-3 bg-brand-soft rounded border border-primary/20 space-y-2">
                         <h4 className="text-sm font-medium flex items-center gap-1"><Bot className="h-4 w-4" />Correção da IA — Encaminhamento</h4>
                         {typeof selectedReferralResp.ai_feedback_json === "object" && !Array.isArray(selectedReferralResp.ai_feedback_json) && (
                           Object.entries(selectedReferralResp.ai_feedback_json as Record<string, any>).map(([key, val]) => {
                             const field = referralFields.find(f => f.id === key);
                             return (
-                              <div key={key} className="text-sm border-b border-blue-100 dark:border-blue-900 pb-1">
+                              <div key={key} className="text-sm border-b border-primary/10 pb-1">
                                 <span className="font-medium">{field?.label || key}:</span>{" "}
                                 {typeof val === "object" ? `Nota: ${(val as any).score || 0} — ${(val as any).feedback || ""}` : String(val)}
                               </div>
@@ -777,7 +779,7 @@ export default function DocumentationControl() {
                     )}
 
                     {selectedMedResp?.ai_feedback_json && (
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800 space-y-2">
+                      <div className="p-3 bg-brand-soft rounded border border-primary/20 space-y-2">
                         <h4 className="text-sm font-medium flex items-center gap-1"><Bot className="h-4 w-4" />Correção da IA — Quadro Resumo</h4>
                         <p className="text-sm">{typeof selectedMedResp.ai_feedback_json === "string" ? selectedMedResp.ai_feedback_json : (selectedMedResp.ai_feedback_json as any)?.feedback || JSON.stringify(selectedMedResp.ai_feedback_json)}</p>
                         {selectedMedResp.ai_score != null && <p className="font-medium">Nota IA Quadro: {selectedMedResp.ai_score}/5,0</p>}

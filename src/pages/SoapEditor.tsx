@@ -8,7 +8,9 @@ import { ImportClassStudentsButton } from "@/components/classes/ImportClassStude
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -334,45 +336,46 @@ export default function SoapEditor() {
   if (!room) return <p className="p-6 text-destructive">Sala não encontrada</p>;
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey="soap" />
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/simulations/soap")}>
-          <ArrowLeft className="h-5 w-5" />
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/simulations/soap")}>
+          <ArrowLeft className="h-4 w-4" />Voltar
         </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs bg-chart-2/10 text-chart-2 border-chart-2/30">SOAP</Badge>
-            <h1 className="text-2xl font-bold">{room.title}</h1>
-          </div>
-          <p className="text-muted-foreground text-sm flex items-center gap-2">
-            PIN: {room.access_code} • Status: {room.status}
-            <span className="inline-flex items-center gap-1 ml-2"><GraduationCap className="h-3.5 w-3.5" />{displayProfessor}</span>
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {room.status === "draft" && (
-            <>
-              <Button variant="outline" onClick={() => setSplitDialogOpen(true)}>
-                <Scissors className="h-4 w-4 mr-2" />Dividir Sala
-              </Button>
-              <Button onClick={activateRoom}><Play className="h-4 w-4 mr-2" />Ativar Sala</Button>
-            </>
-          )}
-        </div>
+        <PageHeader
+          eyebrow="Etapa 2 · SOAP · Editar sala"
+          title={room.title}
+          description={
+            <span className="flex flex-wrap items-center gap-3">
+              <StatusBadge tone={room.status === "active" ? "info" : room.status === "completed" ? "ok" : "warn"} dot={room.status !== "completed"}>{room.status === "active" ? "Ativa" : room.status === "completed" ? "Concluída" : "Rascunho"}</StatusBadge>
+              <span>PIN <b className="font-mono font-medium text-foreground">{room.access_code}</b></span>
+              <span className="inline-flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5" />{displayProfessor}</span>
+            </span>
+          }
+          actions={
+            room.status === "draft" ? (
+              <>
+                <Button variant="outline" onClick={() => setSplitDialogOpen(true)}>
+                  <Scissors className="h-4 w-4" />Dividir sala
+                </Button>
+                <Button onClick={activateRoom}><Play className="h-4 w-4" />Ativar sala</Button>
+              </>
+            ) : undefined
+          }
+        />
       </div>
 
       <Tabs defaultValue="participants">
-        <TabsList>
-          <TabsTrigger value="participants"><Users className="h-4 w-4 mr-1" />Participantes ({participants.length})</TabsTrigger>
-          <TabsTrigger value="forms"><FileText className="h-4 w-4 mr-1" />Formulários ({forms.length})</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="participants"><Users className="h-4 w-4" />Participantes ({participants.length})</TabsTriggerLine>
+          <TabsTriggerLine value="forms"><FileText className="h-4 w-4" />Formulários ({forms.length})</TabsTriggerLine>
+        </TabsListLine>
 
         {/* Participants Tab */}
-        <TabsContent value="participants" className="space-y-4">
+        <TabsContent value="participants" className="mt-6 space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-              <CardTitle className="text-base">Adicionar Aluno</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Adicionar Aluno</CardTitle>
               <ImportClassStudentsButton type="simulation_soap" roomId={roomId!} participantsTable="soap_participants" existingEmails={participants.map((p: any) => p.student_email)} onDone={refetchParticipants} />
             </CardHeader>
             <CardContent>
@@ -472,7 +475,7 @@ export default function SoapEditor() {
                 {Object.keys(pairGroups).length > 0 && (
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
+                      <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                         Duplas Formadas
                         <Badge variant="secondary">{Object.keys(pairGroups).length}</Badge>
                       </CardTitle>
@@ -484,7 +487,7 @@ export default function SoapEditor() {
                           return (
                           <div key={idx} className="flex items-center justify-between py-2 px-3 rounded-lg bg-primary/5 border border-primary/10">
                             <div className="flex items-center gap-3">
-                              <Badge variant="outline" className={isSolo ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900 dark:text-amber-200" : ""}>{isSolo ? "Individual" : `Dupla ${idx}`}</Badge>
+                              <Badge variant="outline" className={isSolo ? "bg-warning/10 text-warning-ink border-warning/40" : ""}>{isSolo ? "Individual" : `Dupla ${idx}`}</Badge>
                               {members.map(m => (
                                 <span key={m.id} className="text-sm flex items-center gap-1">
                                   <span className="font-medium">{m.student_name}</span>
@@ -513,7 +516,7 @@ export default function SoapEditor() {
                 {unpaired.length > 0 && (
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
+                      <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                         Alunos sem dupla
                         <Badge variant="secondary">{unpaired.length}</Badge>
                       </CardTitle>
@@ -574,7 +577,7 @@ export default function SoapEditor() {
         </TabsContent>
 
         {/* Forms Tab */}
-        <TabsContent value="forms" className="space-y-4">
+        <TabsContent value="forms" className="mt-6 space-y-4">
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-2" />Usar Template</Button>
             <Dialog open={importFormDialogOpen} onOpenChange={setImportFormDialogOpen}>
@@ -600,7 +603,7 @@ export default function SoapEditor() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{editingFormId ? "Editar Formulário" : "Novo Formulário"}</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">{editingFormId ? "Editar Formulário" : "Novo Formulário"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-4">
@@ -642,7 +645,7 @@ export default function SoapEditor() {
             <Card key={form.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{form.title}</CardTitle>
+                  <CardTitle className="font-heading text-lg font-medium">{form.title}</CardTitle>
                    <div className="flex gap-2 items-center">
                      <Badge variant="outline">{form.form_type === "soap" ? "SOAP" : "Avaliação entre Pares"}</Badge>
                      {Array.isArray(form.content_json) && (
