@@ -562,7 +562,7 @@ export default function SoapJoin() {
       <div className="min-h-screen bg-background p-4">
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Formulário SOAP</h1>
+            <h1 className="font-heading text-2xl font-medium">Formulário SOAP</h1>
             <p className="text-muted-foreground">Preencha com base nas informações da sua anamnese</p>
             {patientName && (
               <p className="text-sm mt-1">Paciente simulado atendido: <strong>{patientName}</strong></p>
@@ -573,7 +573,7 @@ export default function SoapJoin() {
             {/* Anamnesis (read-only) */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><Eye className="h-4 w-4" />Suas Respostas de Anamnese</CardTitle>
+                <CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Eye className="h-4 w-4" />Suas Respostas de Anamnese</CardTitle>
               </CardHeader>
               <CardContent>
                 {Object.keys(anamnesisAnswers).length > 0 ? (
@@ -597,7 +597,7 @@ export default function SoapJoin() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{soapForm?.title || "SOAP"}</CardTitle>
+                  <CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><FileText className="h-4 w-4" />{soapForm?.title || "SOAP"}</CardTitle>
                   <DraftStatusBadge status={soapDraft.status} lastSavedAt={soapDraft.lastSavedAt} />
                 </div>
               </CardHeader>
@@ -631,7 +631,7 @@ export default function SoapJoin() {
             <div className="animate-pulse mb-4">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Aguardando seu par</h2>
+            <h2 className="font-heading text-xl font-medium mb-2">Aguardando seu par</h2>
             <p className="text-muted-foreground">Seu SOAP foi enviado. Aguarde o colega da dupla enviar o dele para iniciar a avaliação.</p>
             {partner && <p className="text-sm mt-4">Par: <strong>{partner.student_name}</strong></p>}
           </CardContent>
@@ -648,7 +648,7 @@ export default function SoapJoin() {
       <div className="min-h-screen bg-background p-4">
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Avaliação entre Pares</h1>
+            <h1 className="font-heading text-2xl font-medium">Avaliação entre Pares</h1>
             <p className="text-muted-foreground">Avalie o SOAP do seu colega: <strong>{partner?.student_name}</strong></p>
           </div>
 
@@ -656,7 +656,7 @@ export default function SoapJoin() {
             {/* Partner's SOAP (read-only) */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><Eye className="h-4 w-4" />SOAP de {partner?.student_name}</CardTitle>
+                <CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Eye className="h-4 w-4" />SOAP de {partner?.student_name}</CardTitle>
               </CardHeader>
               <CardContent>
                 {renderFormFields(soapFields, partnerSoapAnswers, () => {}, true)}
@@ -667,7 +667,7 @@ export default function SoapJoin() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{peerForm?.title || "Avaliação"}</CardTitle>
+                  <CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><FileText className="h-4 w-4" />{peerForm?.title || "Avaliação"}</CardTitle>
                   <DraftStatusBadge status={peerDraft.status} lastSavedAt={peerDraft.lastSavedAt} />
                 </div>
               </CardHeader>
@@ -699,7 +699,7 @@ export default function SoapJoin() {
       <Card className="w-full max-w-md text-center">
         <CardContent className="py-12">
           <CheckCircle className="h-12 w-12 mx-auto text-primary mb-4" />
-          <h2 className="text-xl font-bold mb-2">Módulo SOAP Concluído!</h2>
+          <h2 className="font-heading text-xl font-medium mb-2">Módulo SOAP Concluído!</h2>
           {awaitingTeacher ? (
             <p className="text-muted-foreground">
               Seu SOAP foi enviado. Como seu colega de dupla não compareceu, o professor fará a avaliação no lugar dele. Obrigado!

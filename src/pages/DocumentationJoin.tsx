@@ -215,7 +215,7 @@ export default function DocumentationJoin() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">Documentação</CardTitle>
+            <CardTitle className="font-heading text-xl font-medium">Documentação</CardTitle>
             <p className="text-sm text-muted-foreground">Insira o PIN e seu e-mail para entrar</p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -233,8 +233,8 @@ export default function DocumentationJoin() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="py-12">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Documentação Enviada!</h2>
+            <CheckCircle className="h-16 w-16 text-success mx-auto mb-4" />
+            <h2 className="font-heading text-xl font-medium mb-2">Documentação Enviada!</h2>
             <p className="text-muted-foreground">Aguarde a avaliação do professor.</p>
             <p className="text-sm text-muted-foreground mt-4">Redirecionando em {countdown}s...</p>
           </CardContent>
@@ -248,7 +248,7 @@ export default function DocumentationJoin() {
       <div className="max-w-3xl mx-auto space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Documentação — {room?.title}</CardTitle>
+            <CardTitle className="font-heading text-lg font-medium">Documentação — {room?.title}</CardTitle>
             <div className="flex gap-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{participant?.pair_position === "S" ? "Individual" : `Dupla ${(participant?.pair_index || 0) + 1}`}</span>
               {partner && <span>· Parceiro(a): {partner.student_name}</span>}
@@ -258,7 +258,7 @@ export default function DocumentationJoin() {
 
         {clinicalCase && (
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4" />{clinicalCase.title}</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><BookOpen className="h-4 w-4" />{clinicalCase.title}</CardTitle></CardHeader>
             <CardContent><p className="text-sm whitespace-pre-wrap">{clinicalCase.content}</p></CardContent>
           </Card>
         )}
@@ -266,7 +266,7 @@ export default function DocumentationJoin() {
         {/* Referral form */}
         {referralForm && (
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />{referralForm.title}</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><FileText className="h-4 w-4" />{referralForm.title}</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <FormRenderer
                 fields={referralFields}
@@ -281,7 +281,7 @@ export default function DocumentationJoin() {
         {/* Medication summary table */}
         {medContent && (
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Table2 className="h-4 w-4" />{medForm.title}</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Table2 className="h-4 w-4" />{medForm.title}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">Pontuação por linha: {medContent.rows_score} pts</p>
               <div className="overflow-x-auto">

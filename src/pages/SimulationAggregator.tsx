@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, BarChart3, Stethoscope, ClipboardList, Handshake, FileText, Eye, Filter, Download } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { calculateSoapStudentGrade } from "@/lib/soap-grades";
@@ -470,29 +471,28 @@ export default function SimulationAggregator() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/simulations")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />Voltar
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/simulations")}>
+          <ArrowLeft className="h-4 w-4" />Simulações
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <BarChart3 className="h-6 w-6" />Agregador de Notas
-          </h1>
-          <p className="text-muted-foreground">Visão geral das notas dos 4 módulos da simulação realística</p>
-        </div>
-        <Button
-          variant={showFilter ? "default" : "outline"}
-          size="sm"
-          onClick={() => setShowFilter(!showFilter)}
-          className="hover:text-accent-foreground"
-        >
-          <Filter className="h-4 w-4 mr-1" />
-          Filtrar Salas
-          {hiddenRoomIds.size > 0 && (
-            <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">{hiddenRoomIds.size} ocultas</Badge>
-          )}
-        </Button>
+        <PageHeader
+          eyebrow="Praticar · Simulação"
+          title="Agregador de notas"
+          description="Visão geral das notas dos 4 módulos da simulação realística."
+          actions={
+            <Button
+              variant={showFilter ? "default" : "outline"}
+              onClick={() => setShowFilter(!showFilter)}
+            >
+              <Filter className="h-4 w-4" />
+              Filtrar salas
+              {hiddenRoomIds.size > 0 && (
+                <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">{hiddenRoomIds.size} ocultas</Badge>
+              )}
+            </Button>
+          }
+        />
       </div>
 
       {/* ── Filtros de Semestre e Turma ── */}
@@ -527,7 +527,7 @@ export default function SimulationAggregator() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">Selecione as salas que deseja exibir</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Selecione as salas que deseja exibir</CardTitle>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => { setHiddenRoomIds(new Set()); localStorage.removeItem("agg-hidden-rooms"); }}>
                   <Eye className="h-3.5 w-3.5 mr-1" />Mostrar todas
@@ -575,13 +575,13 @@ export default function SimulationAggregator() {
       )}
 
       <Tabs defaultValue="by-room">
-        <TabsList>
-          <TabsTrigger value="by-room">Por Sala</TabsTrigger>
-          <TabsTrigger value="consolidated">Consolidado</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="by-room">Por Sala</TabsTriggerLine>
+          <TabsTriggerLine value="consolidated">Consolidado</TabsTriggerLine>
+        </TabsListLine>
 
         {/* ── ABA POR SALA: mostra APENAS a nota do módulo ── */}
-        <TabsContent value="by-room" className="space-y-6 mt-4">
+        <TabsContent value="by-room" className="mt-6 space-y-6 mt-4">
           {["anamnesis", "soap", "reconciliation", "documentation"].map(mod => {
             const groups = getModuleGroups(mod);
             if (groups.length === 0) return null;
@@ -596,7 +596,7 @@ export default function SimulationAggregator() {
                   <Card key={group.room.id}>
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                           {group.room.title}
                         </CardTitle>
                         <Badge variant={statusVariant(group.room.status)}>{statusLabel(group.room.status)}</Badge>
@@ -645,10 +645,10 @@ export default function SimulationAggregator() {
         </TabsContent>
 
         {/* ── ABA CONSOLIDADO ── */}
-        <TabsContent value="consolidated" className="mt-4">
+        <TabsContent value="consolidated" className="mt-6 mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Visão Consolidada por Aluno</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Visão Consolidada por Aluno</CardTitle>
               <Button size="sm" onClick={exportConsolidatedPDF} disabled={consolidated.length === 0}>
                 <Download className="h-4 w-4 mr-1" />Exportar PDF
               </Button>

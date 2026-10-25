@@ -880,9 +880,9 @@ export default function SimulationJoin() {
   };
 
   const roleBadgeColors: Record<string, string> = {
-    professional: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    patient: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    observer: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    professional: "bg-info/10 text-info",
+    patient: "bg-success/10 text-success",
+    observer: "bg-warning/10 text-warning-ink",
   };
 
   const getParticipantName = (id: string) => allParticipants.find((p: any) => p.id === id)?.student_name || id;
@@ -951,7 +951,7 @@ export default function SimulationJoin() {
                 </Badge>
                 {isProfessor && cycleMaterialsReleased && !isActive && (
                   isReady ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <CheckCircle className="h-4 w-4 text-success" />
                   ) : (
                     <Clock className="h-4 w-4 text-muted-foreground/50" />
                   )
@@ -1086,12 +1086,12 @@ export default function SimulationJoin() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">{room?.title}</h1>
+          <h1 className="font-heading text-xl font-medium text-foreground">{room?.title}</h1>
           <p className="text-sm text-muted-foreground">{participant?.student_name}</p>
         </div>
         <div className="flex items-center gap-3">
           {isProfessor && (
-            <Badge variant="secondary" className="text-sm py-1 px-3 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+            <Badge variant="secondary" className="text-sm py-1 px-3 bg-warning/10 text-warning-ink">
               <GraduationCap className="h-4 w-4 mr-1" />
               {t("sim_professor")}
             </Badge>
@@ -1114,7 +1114,7 @@ export default function SimulationJoin() {
       {isProfessor && !shouldShowPairingUI && allRounds.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("sim_round")} — {t("sim_professor")}</CardTitle>
+            <CardTitle className="font-heading text-lg font-medium">{t("sim_round")} — {t("sim_professor")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -1133,7 +1133,7 @@ export default function SimulationJoin() {
               const readyCount = students.filter((p: any) => p.status === "ready").length;
               return (
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className={`h-4 w-4 ${readyCount === students.length ? "text-green-600" : "text-muted-foreground"}`} />
+                  <CheckCircle className={`h-4 w-4 ${readyCount === students.length ? "text-success" : "text-muted-foreground"}`} />
                   <span className="text-muted-foreground">
                     {readyCount}/{students.length} alunos prontos
                   </span>
@@ -1209,7 +1209,7 @@ export default function SimulationJoin() {
                           <div className="text-sm">
                             <span className="font-medium">Rodada {r.round_number}</span>
                             <span className="text-muted-foreground"> — Ciclo {r.cycle}</span>
-                            {cycleReleased && <span className="ml-2 text-xs text-emerald-600">(materiais liberados)</span>}
+                            {cycleReleased && <span className="ml-2 text-xs text-success">(materiais liberados)</span>}
                           </div>
                           <div className="flex gap-1">
                             {!cycleReleased && (
@@ -1242,7 +1242,7 @@ export default function SimulationJoin() {
             {(canPause || isPaused) && (
               <div className="pt-2 border-t">
                 {isPaused ? (
-                  <Button onClick={resumeSimulation} className="w-full gap-2 bg-green-600 hover:bg-green-700">
+                  <Button onClick={resumeSimulation} className="w-full gap-2 bg-success hover:bg-success/90">
                     <PlayCircle className="h-4 w-4" />
                     Retomar simulação
                   </Button>
@@ -1250,7 +1250,7 @@ export default function SimulationJoin() {
                   <Button
                     variant="outline"
                     onClick={() => setPauseDialogOpen(true)}
-                    className="w-full gap-2 border-amber-400/60 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                    className="w-full gap-2 border-warning/40 text-warning-ink hover:bg-warning/10"
                   >
                     <PauseCircle className="h-4 w-4" />
                     Pausar e continuar em outro dia
@@ -1268,7 +1268,7 @@ export default function SimulationJoin() {
                 <Button
                   variant="outline"
                   onClick={() => setMakeupDialogOpen(true)}
-                  className="w-full gap-2 border-blue-400/60 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                  className="w-full gap-2 border-info/40 text-info hover:bg-info/10"
                 >
                   <UserCog className="h-4 w-4" />
                   Iniciar reposição de anamnese
@@ -1341,7 +1341,7 @@ export default function SimulationJoin() {
             return (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                     <BookOpen className="h-5 w-5" />
                     {t("sim_release_materials")} — {roleLabels.professional}
                   </CardTitle>
@@ -1381,7 +1381,7 @@ export default function SimulationJoin() {
             return (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                     <BookOpen className="h-5 w-5" />
                     {t("sim_release_materials")} — {roleLabels.patient}
                   </CardTitle>
@@ -1416,7 +1416,7 @@ export default function SimulationJoin() {
             return (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                     <BookOpen className="h-5 w-5" />
                     {t("sim_release_materials")} — {roleLabels.observer}
                   </CardTitle>
@@ -1458,7 +1458,7 @@ export default function SimulationJoin() {
       {shouldShowPairingUI && !nextPendingRound && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{distributionGenerated ? t("sim_distribution_title") : t("sim_form_pairs")}</CardTitle>
+            <CardTitle className="font-heading text-lg font-medium">{distributionGenerated ? t("sim_distribution_title") : t("sim_form_pairs")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {!distributionGenerated ? (
@@ -1740,7 +1740,7 @@ export default function SimulationJoin() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                     <FileText className="h-5 w-5" />
                     {profForm.title || t("sim_form_professor_eval")}
                   </CardTitle>
@@ -1804,7 +1804,7 @@ export default function SimulationJoin() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                 <FileText className="h-5 w-5" />
                 {form.title || roleLabels[assignment?.assigned_role]}
               </CardTitle>
@@ -1854,7 +1854,7 @@ export default function SimulationJoin() {
       {isProfessor && completedRoundsList.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
               <FileText className="h-5 w-5" />
               {t("sim_view_anamnesis")}
             </CardTitle>

@@ -198,7 +198,7 @@ export default function ReconciliationJoin() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">Reconciliação</CardTitle>
+            <CardTitle className="font-heading text-xl font-medium">Reconciliação</CardTitle>
             <p className="text-sm text-muted-foreground">Insira o PIN e seu e-mail para entrar</p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -222,8 +222,8 @@ export default function ReconciliationJoin() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="py-12">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Ficha Enviada!</h2>
+            <CheckCircle className="h-16 w-16 text-success mx-auto mb-4" />
+            <h2 className="font-heading text-xl font-medium mb-2">Ficha Enviada!</h2>
             <p className="text-muted-foreground">Sua ficha de reconciliação foi enviada com sucesso. Aguarde a avaliação do professor.</p>
             <p className="text-sm text-muted-foreground mt-4">Redirecionando em {countdown}s...</p>
           </CardContent>
@@ -238,7 +238,7 @@ export default function ReconciliationJoin() {
         {/* Header */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Reconciliação — {room?.title}</CardTitle>
+            <CardTitle className="font-heading text-lg font-medium">Reconciliação — {room?.title}</CardTitle>
             <div className="flex gap-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{participant?.pair_position === "S" ? "Individual" : `Dupla ${(participant?.pair_index || 0) + 1}`}</span>
               {partner && <span>· Parceiro(a): {partner.student_name}</span>}
@@ -250,7 +250,7 @@ export default function ReconciliationJoin() {
         {clinicalCase && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                 <BookOpen className="h-4 w-4" />
                 {clinicalCase.title}
               </CardTitle>
@@ -266,7 +266,7 @@ export default function ReconciliationJoin() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   {form.title}
                 </CardTitle>
