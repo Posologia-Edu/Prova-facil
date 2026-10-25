@@ -116,15 +116,16 @@ export function QrCheckinDialog({ open, onOpenChange, lessonId, lessonTitle, onC
       <DialogContent className="max-w-5xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Check-in por QR — {lessonTitle}
+            <div className="h-2 w-2 animate-pulse rounded-full bg-success" />
+            <span className="font-heading text-xl font-medium">Check-in por QR</span>
+            <span className="text-sm font-normal text-muted-foreground">— {lessonTitle}</span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* QR side */}
           <div className="flex flex-col items-center gap-4">
-            <div className="p-6 bg-white rounded-xl shadow-lg min-h-[320px] flex items-center justify-center">
+            <div className="flex min-h-[320px] items-center justify-center rounded-card border bg-white p-6 shadow-elev-2">
               {token ? (
                 <QRCodeSVG value={url} size={280} level="M" />
               ) : (
@@ -155,8 +156,8 @@ export function QrCheckinDialog({ open, onOpenChange, lessonId, lessonTitle, onC
           {/* Live list */}
           <div className="border rounded-lg p-3 max-h-[500px] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold">Check-ins ao vivo</h3>
-              <Badge>{checkedIn.length}</Badge>
+              <h3 className="font-heading text-base font-medium">Check-ins ao vivo</h3>
+              <span className="font-heading text-2xl font-medium">{checkedIn.length}</span>
             </div>
             {checkedIn.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Aguardando alunos escanearem…</p>
@@ -165,7 +166,7 @@ export function QrCheckinDialog({ open, onOpenChange, lessonId, lessonTitle, onC
                 {checkedIn.sort((a, b) => (b.checkin_at || "").localeCompare(a.checkin_at || "")).map(r => (
                   <div key={r.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/40 text-sm">
                     <div className="flex items-center gap-2">
-                      {r.status === "late" ? <Clock className="h-4 w-4 text-amber-500" /> : <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                      {r.status === "late" ? <Clock className="h-4 w-4 text-warning" /> : <CheckCircle2 className="h-4 w-4 text-success" />}
                       <span>{r.student_name}</span>
                     </div>
                     <span className="text-xs text-muted-foreground">{r.checkin_at ? new Date(r.checkin_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</span>

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Users, UserPlus, Upload, Search, Trash2, Loader2, Download, KeyRound, MapPin } from "lucide-react";
@@ -218,7 +218,7 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
       ) : students.length === 0 ? (
         <Card><CardContent className="py-12 text-center">
           <Users className="h-12 w-12 mx-auto text-muted-foreground/30 mb-2" />
-          <p className="font-semibold">Nenhum aluno neste semestre</p>
+          <p className="font-heading text-lg font-medium">Nenhum aluno neste semestre</p>
           <p className="text-sm text-muted-foreground">Adicione individualmente ou cole uma lista.</p>
         </CardContent></Card>
       ) : (
@@ -226,7 +226,6 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12"></TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead className="w-32">Matrícula</TableHead>
@@ -237,15 +236,17 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
               {filtered.map(s => (
                 <TableRow key={s.id}>
                   <TableCell>
-                    <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
-                      {initials(s.student_name)}
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-medium text-brand-text" aria-hidden>
+                        {initials(s.student_name)}
+                      </span>
+                      <span className="font-medium">{s.student_name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">{s.student_name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{s.student_email || "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{s.student_registration || "—"}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => remove(s.id)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => remove(s.id)} aria-label={`Remover ${s.student_name}`} title="Remover aluno">
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </TableCell>
@@ -256,6 +257,10 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
           {filtered.length === 0 && (
             <div className="py-6 text-center text-sm text-muted-foreground">Nenhum resultado para "{query}"</div>
           )}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3 text-xs text-muted-foreground">
+            <span>Cada linha do lote: <span className="font-mono">Nome; E-mail; Matrícula</span></span>
+            <span>{students.length} alunos no semestre</span>
+          </div>
         </Card>
       )}
 
@@ -333,7 +338,7 @@ export function StudentsTab({ classId, semesterId, onChanged }: Props) {
           </div>
 
           <DialogFooter>
-            <Badge variant="outline">{students.length} alunos no semestre</Badge>
+            <StatusBadge>{students.length} alunos no semestre</StatusBadge>
           </DialogFooter>
         </DialogContent>
       </Dialog>

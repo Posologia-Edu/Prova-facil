@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, Download, Loader2, BookOpenCheck } from "lucide-react";
@@ -126,9 +126,9 @@ export function GradebookTab({ classId, semesterId }: Props) {
   function gradeColor(value: number | null, max = 10) {
     if (value == null) return "";
     const pct = value / max;
-    if (pct >= 0.7) return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
-    if (pct >= 0.5) return "bg-amber-500/10 text-amber-700 dark:text-amber-300";
-    return "bg-rose-500/10 text-rose-700 dark:text-rose-300";
+    if (pct >= 0.7) return "bg-success-soft text-success";
+    if (pct >= 0.5) return "bg-warning-soft text-warning-ink";
+    return "bg-destructive/10 text-destructive";
   }
 
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -137,7 +137,7 @@ export function GradebookTab({ classId, semesterId }: Props) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <div>
-          <h3 className="font-semibold flex items-center gap-2"><BookOpenCheck className="h-4 w-4 text-primary" />Caderno de notas</h3>
+          <h3 className="font-heading text-lg font-medium">Caderno de notas</h3>
           <p className="text-xs text-muted-foreground">Configure colunas com peso e nota máxima. A média é calculada normalizando cada nota para a escala 0–10.</p>
         </div>
         <div className="flex gap-2">
@@ -167,10 +167,10 @@ export function GradebookTab({ classId, semesterId }: Props) {
                   <th key={c.id} className="text-left p-3 min-w-[150px] border-l">
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="font-semibold truncate">{c.label}</div>
+                        <div className="truncate font-medium">{c.label}</div>
                         <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <Badge variant="outline" className="text-[9px] px-1.5 py-0">{SOURCE_LABELS[c.source_type] || c.source_type}</Badge>
-                          peso {c.weight} · max {c.max_score}
+                          <StatusBadge className="px-1.5 py-0 text-[9px]">{SOURCE_LABELS[c.source_type] || c.source_type}</StatusBadge>
+                          <span className="font-mono">peso {c.weight} · máx {c.max_score}</span>
                         </div>
                       </div>
                       <div className="flex shrink-0">
@@ -186,7 +186,7 @@ export function GradebookTab({ classId, semesterId }: Props) {
                     </div>
                   </th>
                 ))}
-                <th className="text-left p-3 min-w-[110px] border-l bg-primary/5">Média</th>
+                <th className="min-w-[110px] border-l bg-brand-soft/50 p-3 text-left">Média</th>
               </tr>
             </thead>
             <tbody>
@@ -212,8 +212,8 @@ export function GradebookTab({ classId, semesterId }: Props) {
                         </td>
                       );
                     })}
-                    <td className={cn("p-2 border-l font-bold tabular-nums", gradeColor(avg, 10))}>
-                      {avg !== null ? avg.toFixed(2) : "—"}
+                    <td className={cn("border-l p-2 font-mono font-bold tabular-nums", gradeColor(avg, 10), avg !== null && avg < 6 && "text-destructive")}>
+                      {avg !== null ? avg.toFixed(2).replace(".", ",") : "—"}
                     </td>
                   </tr>
                 );

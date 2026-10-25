@@ -399,7 +399,7 @@ export default function ClassDetail() {
               <TabsTriggerLine value="overview"><LayoutDashboard className="h-4 w-4" />Visão geral</TabsTriggerLine>
               <TabsTriggerLine value="activities"><ListChecks className="h-4 w-4" />Atividades</TabsTriggerLine>
               <TabsTriggerLine value="schedule"><Calendar className="h-4 w-4" />Cronograma</TabsTriggerLine>
-              <TabsTriggerLine value="students"><Users className="h-4 w-4" />Alunos</TabsTriggerLine>
+              <TabsTriggerLine value="students"><Users className="h-4 w-4" />Alunos{semesterStudents.length > 0 && <span className="ml-1.5 font-mono text-xs text-muted-foreground">{semesterStudents.length}</span>}</TabsTriggerLine>
               <TabsTriggerLine value="grades"><BookOpenCheck className="h-4 w-4" />Notas</TabsTriggerLine>
               <TabsTriggerLine value="attendance"><ClipboardCheck className="h-4 w-4" />Presença</TabsTriggerLine>
               <TabsTriggerLine value="analytics"><BarChart3 className="h-4 w-4" />Análises</TabsTriggerLine>

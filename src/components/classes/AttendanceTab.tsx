@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -29,10 +29,10 @@ interface AttendanceRow {
 }
 
 const STATUS_META: Record<string, { label: string; icon: any; cls: string }> = {
-  present:   { label: "Presente",   icon: CheckCircle2, cls: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300" },
-  absent:    { label: "Ausente",    icon: XCircle,      cls: "bg-rose-500/10 text-rose-700 border-rose-500/30 dark:text-rose-300" },
-  late:      { label: "Atrasado",   icon: Clock,        cls: "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300" },
-  justified: { label: "Justificado",icon: FileText,     cls: "bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-300" },
+  present:   { label: "Presente",   icon: CheckCircle2, cls: "bg-success-soft text-success border-success/30" },
+  absent:    { label: "Ausente",    icon: XCircle,      cls: "bg-destructive/10 text-destructive border-destructive/30" },
+  late:      { label: "Atrasado",   icon: Clock,        cls: "bg-warning-soft text-warning-ink border-warning/30" },
+  justified: { label: "Justificado",icon: FileText,     cls: "bg-info-soft text-info border-info/30" },
 };
 
 interface Props { semesterId: string; }
@@ -142,10 +142,10 @@ export function AttendanceTab({ semesterId }: Props) {
               ))}
             </SelectContent>
           </Select>
-          {style && <Badge variant="outline" className={cn("gap-1", style.badge)}><style.icon className="h-3 w-3" />{style.label}</Badge>}
+          {style && <StatusBadge className={cn("gap-1", style.badge)}><style.icon className="h-3 w-3" />{style.label}</StatusBadge>}
         </div>
         <div className="flex gap-1">
-          <Button size="sm" onClick={() => setQrOpen(true)} disabled={!activeLessonId} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white">
+          <Button size="sm" onClick={() => setQrOpen(true)} disabled={!activeLessonId}>
             <QrCode className="h-4 w-4 mr-1" />Check-in por QR
           </Button>
           <Button size="sm" variant="outline" onClick={() => markAll("present")} disabled={saving === "__all__"}>Todos presentes</Button>
@@ -161,7 +161,7 @@ export function AttendanceTab({ semesterId }: Props) {
               <CardContent className="p-3 flex items-center gap-2">
                 <Icon className="h-4 w-4" />
                 <div>
-                  <div className="text-lg font-bold leading-none">{stats[k]}</div>
+                  <div className="font-heading text-2xl font-medium leading-none">{stats[k]}</div>
                   <div className="text-[11px] opacity-80">{meta.label}</div>
                 </div>
               </CardContent>
@@ -172,7 +172,7 @@ export function AttendanceTab({ semesterId }: Props) {
           <CardContent className="p-3 flex items-center gap-2">
             <div className="text-muted-foreground">—</div>
             <div>
-              <div className="text-lg font-bold leading-none">{stats.unmarked}</div>
+              <div className="font-heading text-2xl font-medium leading-none">{stats.unmarked}</div>
               <div className="text-[11px] text-muted-foreground">Não marcado</div>
             </div>
           </CardContent>
@@ -196,14 +196,21 @@ export function AttendanceTab({ semesterId }: Props) {
                 const r = rows[s.id];
                 return (
                   <TableRow key={s.id}>
-                    <TableCell className="font-medium">{s.student_name}</TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-medium text-brand-text" aria-hidden>
+                          {s.student_name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")}
+                        </span>
+                        <span className="font-medium">{s.student_name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="inline-flex gap-0.5 rounded-lg border bg-muted/50 p-0.5" role="group" aria-label={`Situação de ${s.student_name}`}>
                         {(["present","absent","late","justified"] as const).map(k => {
                           const meta = STATUS_META[k]; const Icon = meta.icon;
                           const active = r?.status === k;
                           return (
-                            <Button key={k} size="sm" variant={active ? "default" : "outline"} className={cn("h-8", active && meta.cls)}
+                            <Button key={k} size="sm" variant="ghost" aria-pressed={active} className={cn("h-8 rounded-md px-2.5 text-xs", active ? cn("border", meta.cls) : "text-muted-foreground hover:bg-background")}
                               onClick={() => setStatus(s.id, k)} disabled={saving === s.id}>
                               <Icon className="h-3.5 w-3.5 mr-1" />{meta.label}
                             </Button>
