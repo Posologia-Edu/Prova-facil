@@ -5,10 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Stethoscope, ClipboardCheck, BookOpen, BarChart3, Eye, Mic, MicOff, Phone, LogIn, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -381,8 +381,9 @@ export default function OsceEvaluator() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <Stethoscope className="h-10 w-10 mx-auto text-primary mb-2" />
-            <CardTitle>Portal do Avaliador OSCE</CardTitle>
+            <Stethoscope className="h-10 w-10 mx-auto text-brand-text mb-2" />
+            <div className="eyebrow">OSCE</div>
+            <CardTitle className="font-heading text-2xl font-medium">Portal do Avaliador</CardTitle>
             <p className="text-sm text-muted-foreground">Código: {accessCode}</p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -423,7 +424,7 @@ export default function OsceEvaluator() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center p-8">
           <Stethoscope className="h-10 w-10 mx-auto text-destructive mb-4" />
-          <h2 className="text-lg font-bold mb-2">Circuito Não Encontrado</h2>
+          <h2 className="font-heading text-xl font-medium mb-2">Circuito Não Encontrado</h2>
           <p className="text-muted-foreground text-sm">
             O código <strong>{accessCode}</strong> não corresponde a nenhum circuito OSCE ativo.
           </p>
@@ -437,7 +438,7 @@ export default function OsceEvaluator() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center p-8">
           <Stethoscope className="h-10 w-10 mx-auto text-destructive mb-4" />
-          <h2 className="text-lg font-bold mb-2">Sem Estação Atribuída</h2>
+          <h2 className="font-heading text-xl font-medium mb-2">Sem Estação Atribuída</h2>
           <p className="text-muted-foreground text-sm">
             O email <strong>{evaluatorEmail}</strong> não está vinculado a nenhuma estação neste circuito.
             Entre em contato com o administrador.
@@ -453,7 +454,8 @@ export default function OsceEvaluator() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center p-8">
           <div className="space-y-4">
-            <h2 className="text-lg font-bold">Estação: {currentStation?.title}</h2>
+            <div className="eyebrow">Estação</div>
+            <h2 className="font-heading text-xl font-medium">{currentStation?.title}</h2>
             <p className="text-muted-foreground">Avaliador: {evaluatorName}</p>
             <div className="py-6">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
@@ -470,10 +472,11 @@ export default function OsceEvaluator() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md p-6 space-y-4 text-center">
-          <h2 className="text-lg font-bold">Estação: {currentStation?.title}</h2>
-          <div className="bg-primary/5 rounded-lg p-4">
+          <div className="eyebrow">Estação</div>
+          <h2 className="font-heading text-xl font-medium">{currentStation?.title}</h2>
+          <div className="bg-brand-soft rounded-lg p-4">
             <p className="text-sm text-muted-foreground">Aluno na estação:</p>
-            <p className="text-xl font-bold mt-1">{currentStudent.student_name}</p>
+            <p className="font-heading text-2xl font-medium mt-1">{currentStudent.student_name}</p>
           </div>
           <Button className="w-full h-12 text-lg" onClick={() => createEvaluation.mutate()}>
             Iniciar Avaliação
@@ -510,7 +513,10 @@ export default function OsceEvaluator() {
             onTimeUp={handleTimeUp}
           />
           <div className="flex items-center justify-between mt-2 text-sm">
-            <span className="font-medium">{currentStation?.title}</span>
+            <div className="min-w-0">
+              <div className="eyebrow">Estação · Avaliador</div>
+              <span className="font-heading text-base font-medium">{currentStation?.title}</span>
+            </div>
             <div className="flex items-center gap-2">
               {/* Audio controls */}
               {audioDevices.length > 1 && (
@@ -531,10 +537,10 @@ export default function OsceEvaluator() {
                 className="gap-1 h-7 px-2"
               >
                 {isMuted ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
-                {isConnected && <Phone className="h-3 w-3 text-green-500" />}
+                {isConnected && <Phone className="h-3 w-3 text-success" />}
               </Button>
               <span className="text-muted-foreground">
-                Aluno: {studentName} {studentTimeUp && "(desconectado)"}
+                Aluno: <b className="text-foreground font-medium">{studentName}</b> {studentTimeUp && "(desconectado)"}
               </span>
             </div>
           </div>
@@ -544,12 +550,12 @@ export default function OsceEvaluator() {
       {/* Content */}
       <div className="flex-1 max-w-2xl mx-auto w-full p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-4 h-12">
-            <TabsTrigger value="checklist" className="text-sm gap-1"><ClipboardCheck className="h-4 w-4" /> Checklist</TabsTrigger>
-            <TabsTrigger value="student" className="text-sm gap-1"><Eye className="h-4 w-4" /> Aluno</TabsTrigger>
-            <TabsTrigger value="case" className="text-sm gap-1"><BookOpen className="h-4 w-4" /> Caso</TabsTrigger>
-            <TabsTrigger value="general" className="text-sm gap-1"><BarChart3 className="h-4 w-4" /> Geral</TabsTrigger>
-          </TabsList>
+          <TabsListLine className="w-full grid grid-cols-4">
+            <TabsTriggerLine value="checklist" className="text-sm gap-1"><ClipboardCheck className="h-4 w-4" /> Checklist</TabsTriggerLine>
+            <TabsTriggerLine value="student" className="text-sm gap-1"><Eye className="h-4 w-4" /> Aluno</TabsTriggerLine>
+            <TabsTriggerLine value="case" className="text-sm gap-1"><BookOpen className="h-4 w-4" /> Caso</TabsTriggerLine>
+            <TabsTriggerLine value="general" className="text-sm gap-1"><BarChart3 className="h-4 w-4" /> Geral</TabsTriggerLine>
+          </TabsListLine>
 
           <TabsContent value="checklist" className="mt-4">
             {checklistItems && evaluationId && (
@@ -564,12 +570,10 @@ export default function OsceEvaluator() {
           <TabsContent value="student" className="mt-4 space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                   <Eye className="h-4 w-4" /> Chat do Aluno em Tempo Real
                   {hasRemoteAudio && (
-                    <Badge variant="outline" className="gap-1 ml-auto">
-                      <Phone className="h-3 w-3 text-green-500" /> Áudio conectado
-                    </Badge>
+                    <StatusBadge tone="ok" dot className="gap-1 ml-auto">Áudio conectado</StatusBadge>
                   )}
                 </CardTitle>
               </CardHeader>
@@ -600,7 +604,7 @@ export default function OsceEvaluator() {
             </Card>
             {stationMaterials && stationMaterials.length > 0 && (
               <Card>
-                <CardHeader><CardTitle className="text-base">Materiais da Estação</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="font-heading text-lg font-medium">Materiais da Estação</CardTitle></CardHeader>
                 <CardContent>
                   <OsceMaterialViewer materials={stationMaterials} />
                 </CardContent>
@@ -610,30 +614,31 @@ export default function OsceEvaluator() {
 
           <TabsContent value="case" className="mt-4 space-y-4">
             <Card>
-              <CardHeader><CardTitle className="text-base">Instruções do Estudante</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Instruções do Estudante</CardTitle></CardHeader>
               <CardContent><p className="text-sm whitespace-pre-wrap">{currentStation?.student_instructions || "Sem instruções"}</p></CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="text-base">Caso Clínico</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Caso Clínico</CardTitle></CardHeader>
               <CardContent><p className="text-sm whitespace-pre-wrap">{currentStation?.case_summary || "Sem resumo"}</p></CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="text-base">Roteiro do Paciente</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Roteiro do Paciente</CardTitle></CardHeader>
               <CardContent><p className="text-sm whitespace-pre-wrap">{currentStation?.patient_script || "Sem roteiro"}</p></CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="general" className="mt-4 space-y-4">
             <Card>
-              <CardHeader><CardTitle className="text-base">Pontuação</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Pontuação</CardTitle></CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-center">
-                  {scoreInfo.total.toFixed(1)} / {scoreInfo.max.toFixed(1)}
+                <div className="label-mono text-center">Nota parcial</div>
+                <div className="font-heading text-5xl font-medium text-center mt-1">
+                  {scoreInfo.total.toFixed(1)} <span className="text-muted-foreground text-3xl">/ {scoreInfo.max.toFixed(1)}</span>
                 </div>
-                <div className="text-center mt-2">
-                  <Badge variant={scoreInfo.passed ? "default" : "destructive"}>
+                <div className="text-center mt-3">
+                  <StatusBadge tone={scoreInfo.passed ? "ok" : "bad"} dot>
                     {scoreInfo.passed ? "Aprovado" : "Reprovado (item crítico)"}
-                  </Badge>
+                  </StatusBadge>
                 </div>
               </CardContent>
             </Card>
@@ -641,7 +646,7 @@ export default function OsceEvaluator() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Observações</CardTitle>
+                  <CardTitle className="font-heading text-lg font-medium">Observações</CardTitle>
                   <Button size="sm" variant={isRecording ? "destructive" : "outline"} onClick={toggleVoice} className="gap-1">
                     {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                     {isRecording ? "Parar" : "Ditar"}

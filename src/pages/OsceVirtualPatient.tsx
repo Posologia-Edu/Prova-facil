@@ -122,7 +122,7 @@ export default function OsceVirtualPatient() {
       <div className="flex items-center justify-center min-h-screen p-4">
         <Card className="max-w-md text-center p-8">
           <Stethoscope className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-lg font-bold mb-2">Paciente Virtual não disponível</h2>
+          <h2 className="font-heading text-xl font-medium mb-2">Paciente Virtual não disponível</h2>
           <p className="text-muted-foreground">Esta estação não possui paciente virtual habilitado.</p>
         </Card>
       </div>
@@ -133,11 +133,12 @@ export default function OsceVirtualPatient() {
     <div className="flex flex-col h-screen bg-background">
       <div className="border-b p-4 bg-card">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bot className="h-5 w-5 text-primary" />
+          <div className="h-10 w-10 rounded-full bg-brand-soft flex items-center justify-center">
+            <Bot className="h-5 w-5 text-brand-text" />
           </div>
           <div>
-            <h1 className="font-bold">Paciente Virtual</h1>
+            <div className="eyebrow">OSCE</div>
+            <h1 className="font-heading text-lg font-medium">Paciente Virtual</h1>
             <p className="text-xs text-muted-foreground">{station.title}</p>
           </div>
         </div>
@@ -155,8 +156,8 @@ export default function OsceVirtualPatient() {
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               {msg.role === "assistant" && (
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Bot className="h-4 w-4 text-primary" />
+                <div className="h-8 w-8 rounded-full bg-brand-soft flex items-center justify-center shrink-0">
+                  <Bot className="h-4 w-4 text-brand-text" />
                 </div>
               )}
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${

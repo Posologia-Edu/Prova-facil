@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Stethoscope, LogIn, Loader2, Clock, Send, Mic, MicOff, Phone } from "lucide-react";
 import { toast } from "sonner";
@@ -181,8 +181,9 @@ export default function OsceStudentPortal() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <Stethoscope className="h-10 w-10 mx-auto text-primary mb-2" />
-            <CardTitle>Portal do Aluno — OSCE Online</CardTitle>
+            <Stethoscope className="h-10 w-10 mx-auto text-brand-text mb-2" />
+            <div className="eyebrow">OSCE online</div>
+            <CardTitle className="font-heading text-2xl font-medium">Portal do Aluno</CardTitle>
             <p className="text-sm text-muted-foreground">Código: {accessCode}</p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -222,7 +223,7 @@ export default function OsceStudentPortal() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center p-8">
           <Stethoscope className="h-10 w-10 mx-auto text-destructive mb-4" />
-          <h2 className="text-lg font-bold mb-2">Circuito Não Encontrado</h2>
+          <h2 className="font-heading text-xl font-medium mb-2">Circuito Não Encontrado</h2>
           <p className="text-muted-foreground text-sm">
             O código <strong>{accessCode}</strong> não corresponde a nenhum circuito OSCE ativo.
           </p>
@@ -236,7 +237,7 @@ export default function OsceStudentPortal() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center p-8">
           <Stethoscope className="h-10 w-10 mx-auto text-destructive mb-4" />
-          <h2 className="text-lg font-bold mb-2">Email Não Encontrado</h2>
+          <h2 className="font-heading text-xl font-medium mb-2">Email Não Encontrado</h2>
           <p className="text-muted-foreground text-sm">
             O email <strong>{email}</strong> não está cadastrado neste circuito OSCE. Verifique com seu professor.
           </p>
@@ -253,15 +254,15 @@ export default function OsceStudentPortal() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center p-8">
-          <Clock className="h-12 w-12 mx-auto text-primary mb-4 animate-pulse" />
-          <h2 className="text-xl font-bold mb-2">Aguarde</h2>
+          <Clock className="h-12 w-12 mx-auto text-brand-text mb-4 animate-pulse" />
+          <h2 className="font-heading text-xl font-medium mb-2">Aguarde</h2>
           <p className="text-muted-foreground mb-4">
             Você está na fila de espera. O sistema irá encaminhá-lo automaticamente para sua estação.
           </p>
           <p className="text-sm font-medium">{myStudent.student_name}</p>
-          <Badge variant="secondary" className="mt-2">
+          <StatusBadge tone="info" className="mt-2">
             Estações visitadas: {(myStudent as any).visited_stations?.length || 0}
-          </Badge>
+          </StatusBadge>
         </Card>
       </div>
     );
@@ -272,7 +273,7 @@ export default function OsceStudentPortal() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center p-8">
-          <h2 className="text-xl font-bold mb-2">Exame Concluído</h2>
+          <h2 className="font-heading text-xl font-medium mb-2">Exame Concluído</h2>
           <p className="text-muted-foreground">Você completou todas as estações. Obrigado!</p>
         </Card>
       </div>
@@ -285,7 +286,7 @@ export default function OsceStudentPortal() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center p-8">
           <Clock className="h-12 w-12 mx-auto text-destructive mb-4" />
-          <h2 className="text-xl font-bold mb-2">Tempo Esgotado</h2>
+          <h2 className="font-heading text-xl font-medium mb-2">Tempo Esgotado</h2>
           <p className="text-muted-foreground mb-4">
             O tempo desta estação terminou. Aguarde enquanto o avaliador finaliza sua avaliação. 
             Você será redirecionado automaticamente para a próxima estação.
@@ -312,7 +313,10 @@ export default function OsceStudentPortal() {
             onTimeUp={handleTimeUp}
           />
           <div className="flex items-center justify-between mt-2 text-sm">
-            <span className="font-medium">{currentStation?.title}</span>
+            <div className="min-w-0">
+              <div className="eyebrow">Estação · Aluno</div>
+              <span className="font-heading text-base font-medium">{currentStation?.title}</span>
+            </div>
             <div className="flex items-center gap-2">
               {/* Audio controls */}
               {audioDevices.length > 1 && (
@@ -333,11 +337,11 @@ export default function OsceStudentPortal() {
                 className="gap-1 h-7 px-2"
               >
                 {isMuted ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
-                {isConnected && <Phone className="h-3 w-3 text-green-500" />}
+                {isConnected && <Phone className="h-3 w-3 text-success" />}
               </Button>
-              <Badge variant="secondary">
+              <StatusBadge tone="info">
                 Estação {((myStudent as any).visited_stations?.length || 0) + 1}
-              </Badge>
+              </StatusBadge>
             </div>
           </div>
         </div>
@@ -346,9 +350,9 @@ export default function OsceStudentPortal() {
       {/* Instructions banner */}
       {currentStation?.student_instructions && (
         <div className="max-w-2xl mx-auto w-full px-4 pt-4">
-          <Card className="bg-primary/5 border-primary/20">
+          <Card className="bg-brand-soft border-primary/20">
             <CardContent className="p-4">
-              <h3 className="font-semibold text-sm mb-1">Instruções</h3>
+              <h3 className="font-heading text-base font-medium mb-1">Instruções</h3>
               <p className="text-sm whitespace-pre-wrap">{currentStation.student_instructions}</p>
             </CardContent>
           </Card>

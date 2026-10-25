@@ -4,9 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, BarChart3, Users, AlertTriangle, Calendar, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -131,6 +132,12 @@ export default function OsceResults() {
     return { ...station, avgScore: avg, avgMax: avgMax, count: stationEvals.length, failCount };
   });
 
+  const finishedEvals = (evaluations || []).filter((e: any) => e.finished_at);
+  const finishedMax = finishedEvals.reduce((s: number, e: any) => s + (e.max_score || 0), 0);
+  const overallPct = finishedMax > 0
+    ? Math.round((finishedEvals.reduce((s: number, e: any) => s + (e.total_score || 0), 0) / finishedMax) * 100)
+    : null;
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("pt-BR", {
       day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
@@ -164,15 +171,16 @@ export default function OsceResults() {
   if (!exam) return <div className="p-8 text-muted-foreground">Carregando...</div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/osce")}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold">Resultados: {exam.title}</h1>
-          <p className="text-sm text-muted-foreground">{students.length} alunos • {stations?.length || 0} estações</p>
-        </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <PageHeader
+        eyebrow={
+          <button type="button" onClick={() => navigate("/osce")} className="inline-flex items-center gap-1 hover:text-foreground">
+            <ArrowLeft className="h-3.5 w-3.5" /> OSCE · Resultados
+          </button>
+        }
+        title={exam.title}
+        description={`${students.length} alunos · ${stations?.length || 0} estações`}
+        actions={
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" disabled={students.length === 0}>
@@ -184,6 +192,22 @@ export default function OsceResults() {
             <DropdownMenuItem onClick={() => exportOsceResultsCsv(buildExportInput())}><FileSpreadsheet className="mr-2 h-4 w-4" />CSV (Excel)</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        }
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="p-5">
+          <div className="label-mono">Alunos</div>
+          <div className="font-heading text-4xl font-medium mt-1">{students.length}</div>
+        </Card>
+        <Card className="p-5">
+          <div className="label-mono">Avaliações concluídas</div>
+          <div className="font-heading text-4xl font-medium mt-1">{finishedEvals.length}</div>
+        </Card>
+        <Card className="p-5">
+          <div className="label-mono">Média geral</div>
+          <div className="font-heading text-4xl font-medium mt-1">{overallPct === null ? "—" : `${overallPct}%`}</div>
+        </Card>
       </div>
 
       {/* Circuit selector */}
@@ -212,16 +236,16 @@ export default function OsceResults() {
       )}
 
       <Tabs defaultValue="students">
-        <TabsList>
-          <TabsTrigger value="students" className="gap-1"><Users className="h-3 w-3" /> Alunos</TabsTrigger>
-          <TabsTrigger value="stations" className="gap-1"><BarChart3 className="h-3 w-3" /> Estações</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="students" className="gap-1"><Users className="h-3.5 w-3.5" /> Alunos</TabsTriggerLine>
+          <TabsTriggerLine value="stations" className="gap-1"><BarChart3 className="h-3.5 w-3.5" /> Estações</TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="students" className="mt-4">
+        <TabsContent value="students" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Student list */}
             <Card className="lg:col-span-1">
-              <CardHeader><CardTitle className="text-base">Alunos</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Alunos</CardTitle></CardHeader>
               <CardContent className="space-y-1 p-2">
                 {students.map((name) => {
                   const evals = studentMap[name];
@@ -233,14 +257,19 @@ export default function OsceResults() {
                       key={name}
                       onClick={() => setSelectedStudent(name)}
                       className={`w-full text-left p-3 rounded-lg text-sm transition-colors ${
-                        selectedStudent === name ? "bg-primary/10 border border-primary" : "hover:bg-muted"
+                        selectedStudent === name ? "bg-brand-soft border border-primary" : "hover:bg-muted border border-transparent"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium">{name}</span>
+                        <span className="flex items-center gap-2.5 min-w-0">
+                          <span className="h-8 w-8 shrink-0 rounded-full bg-brand-soft text-brand-text grid place-items-center text-xs font-medium">
+                            {name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
+                          </span>
+                          <span className="font-medium truncate">{name}</span>
+                        </span>
                         <div className="flex items-center gap-2">
-                          {anyFailed && <AlertTriangle className="h-3 w-3 text-destructive" />}
-                          <Badge variant="outline">{maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0}%</Badge>
+                          {anyFailed && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
+                          <StatusBadge tone={anyFailed ? "bad" : "ok"} className="font-mono">{maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0}%</StatusBadge>
                         </div>
                       </div>
                     </button>
@@ -255,7 +284,7 @@ export default function OsceResults() {
               {selectedStudent ? (
                 <>
                   <Card>
-                    <CardHeader><CardTitle className="text-base">Desempenho por Competência — {selectedStudent}</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-heading text-lg font-medium">Desempenho por Competência — {selectedStudent}</CardTitle></CardHeader>
                     <CardContent>
                       {radarData.length > 0 ? (
                         <OsceRadarChart data={radarData} />
@@ -266,7 +295,7 @@ export default function OsceResults() {
                   </Card>
 
                   <Card>
-                    <CardHeader><CardTitle className="text-base">Estações</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-heading text-lg font-medium">Estações</CardTitle></CardHeader>
                     <CardContent>
                       <Table>
                         <TableHeader>
@@ -285,9 +314,9 @@ export default function OsceResults() {
                                 <TableCell className="font-medium">{station?.title || "—"}</TableCell>
                                 <TableCell>{ev.total_score?.toFixed(1) || 0} / {ev.max_score?.toFixed(1) || 0}</TableCell>
                                 <TableCell>
-                                  <Badge variant={ev.passed ? "default" : "destructive"}>
+                                  <StatusBadge tone={ev.passed ? "ok" : "bad"} dot>
                                     {ev.passed ? "Aprovado" : "Reprovado"}
-                                  </Badge>
+                                  </StatusBadge>
                                 </TableCell>
                                 <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{ev.observations || "—"}</TableCell>
                               </TableRow>
@@ -300,16 +329,18 @@ export default function OsceResults() {
                 </>
               ) : (
                 <Card className="p-12 text-center">
-                  <p className="text-muted-foreground">Selecione um aluno para ver os resultados</p>
+                  <Users className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+                  <p className="font-heading text-lg">Selecione um aluno</p>
+                  <p className="text-sm text-muted-foreground mt-1">Escolha um nome na lista para ver as notas e o radar de competências.</p>
                 </Card>
               )}
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="stations" className="mt-4">
+        <TabsContent value="stations" className="mt-6">
           <Card>
-            <CardHeader><CardTitle className="text-base">Desempenho por Estação</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium">Desempenho por Estação</CardTitle></CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -324,7 +355,7 @@ export default function OsceResults() {
                 <TableBody>
                   {stationStats.map((s: any) => (
                     <TableRow key={s.id}>
-                      <TableCell><Badge variant="secondary">{s.position}</Badge></TableCell>
+                      <TableCell><StatusBadge tone="neutral" className="font-mono">{s.position}</StatusBadge></TableCell>
                       <TableCell className="font-medium">{s.title}</TableCell>
                       <TableCell>
                         {s.count > 0 ? `${s.avgScore.toFixed(1)} / ${s.avgMax.toFixed(1)}` : "—"}
@@ -337,7 +368,7 @@ export default function OsceResults() {
                       <TableCell>{s.count}</TableCell>
                       <TableCell>
                         {s.failCount > 0 ? (
-                          <Badge variant="destructive">{s.failCount}</Badge>
+                          <StatusBadge tone="bad" className="font-mono">{s.failCount}</StatusBadge>
                         ) : (
                           <span className="text-muted-foreground">0</span>
                         )}
