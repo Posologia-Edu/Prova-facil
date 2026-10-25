@@ -100,6 +100,7 @@ export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsPr
 
   // Detail dialog
   const [detailGrade, setDetailGrade] = useState<GradeRow | null>(null);
+  const [detailTab, setDetailTab] = useState("notas");
   const [transcript, setTranscript] = useState<TranscriptMsg[]>([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -121,6 +122,7 @@ export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsPr
   const [grading, setGrading] = useState(false);
 
   useEffect(() => { loadFilters(); }, []);
+  useEffect(() => { setDetailTab("notas"); }, [detailGrade?.id]);
   useEffect(() => { if (classId) { setSelectedClass(classId); setSelectedCvp("all"); } }, [classId]);
   useEffect(() => { loadGrades(); }, [selectedClass, selectedCvp, modeFilter]);
 
@@ -1255,13 +1257,26 @@ export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsPr
 
       {/* Detail Dialog */}
       <Dialog open={!!detailGrade} onOpenChange={(open) => { if (!open) { setDetailGrade(null); setEditMode(false); } }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between gap-3">
-              <span>Detalhes — {detailGrade?.student_name || detailGrade?.student_email || "Aluno"}</span>
+            <DialogTitle className="flex items-center justify-between gap-3 pr-6">
+              <span className="min-w-0">
+                <span className="block truncate font-heading text-xl font-medium">{detailGrade?.student_name || detailGrade?.student_email || "Aluno"}</span>
+                {detailGrade && (
+                  <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-normal text-muted-foreground">
+                    {detailGrade.group_label && <StatusBadge tone="brand">{detailGrade.group_label}</StatusBadge>}
+                    {(() => { const c = cvps.find((x) => x.id === detailGrade.class_virtual_patient_id); return c ? vpName(c.patient_id) : null; })()}
+                    {detailGrade.correction_status === "graded" && (
+                      <StatusBadge tone={finalWithBonus(detailGrade.nota_final, detailGrade.nota_microlearning) >= 6 ? "ok" : "bad"} className="font-mono">
+                        Nota {finalWithBonus(detailGrade.nota_final, detailGrade.nota_microlearning).toFixed(1)}
+                      </StatusBadge>
+                    )}
+                  </span>
+                )}
+              </span>
               {detailGrade && !editMode && (
-                <Button size="sm" variant="outline" onClick={() => setEditMode(true)}>
-                  <Pencil className="h-3.5 w-3.5 mr-1.5" /> Ajustar avaliação
+                <Button size="sm" variant="outline" className="shrink-0" onClick={() => { setEditMode(true); setDetailTab("notas"); }}>
+                  <Pencil className="h-3.5 w-3.5" /> Ajustar avaliação
                 </Button>
               )}
             </DialogTitle>
@@ -1272,15 +1287,29 @@ export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsPr
             const clinicalCase = vpById[patientId]?.clinicalCase;
             const patientName = cvp ? vpName(cvp.patient_id) : "";
             return (
-            <div className="flex-1 overflow-y-auto pr-4 -mr-2">
-              <div className="space-y-6 pb-4">
+            <Tabs value={detailTab} onValueChange={setDetailTab} className="flex min-h-0 flex-1 flex-col">
+              <TabsListLine>
+                <TabsTriggerLine value="notas">Notas</TabsTriggerLine>
+                <TabsTriggerLine value="feedback">Feedback e flags</TabsTriggerLine>
+                {detailGrade.mai_json && <TabsTriggerLine value="mai">MAI</TabsTriggerLine>}
+                {detailGrade.group_id && <TabsTriggerLine value="pares">Pares{peerEvals.length > 0 && <span className="ml-1.5 font-mono text-xs text-muted-foreground">{peerEvals.length}</span>}</TabsTriggerLine>}
+                <TabsTriggerLine value="conversa">Conversa</TabsTriggerLine>
+              </TabsListLine>
+              {editMode && (
+                <div className="mt-3 flex items-start gap-2 rounded-card border border-warning/30 bg-warning-soft px-3 py-2 text-xs">
+                  <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-ink" />
+                  <span>Modo de ajuste: edite as notas, o feedback e as flags e salve no rodapé.{detailGrade.group_id ? " O ajuste vale para todos os integrantes do grupo." : ""} Ele alimenta a calibração da IA.</span>
+                </div>
+              )}
+              <div className="-mr-2 min-h-0 flex-1 overflow-y-auto pr-4 pt-4">
+              <TabsContent value="notas" className="mt-0 space-y-6 pb-4">
                 {/* P16: o que a IA tinha dado antes do ajuste do docente */}
                 {detailGrade.adjusted_at && detailGrade.ia_original && (() => {
                   const ia = detailGrade.ia_original as Record<string, any>;
                   const deltas = Object.entries(subscoreDeltas(ia.subscores, detailGrade.subscores)).filter(([, v]) => v !== 0);
                   const labels: Record<string, string> = { ...subscoreLabels, ...FICHA_LABELS };
                   return (
-                    <div className="rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+                    <div className="rounded-card border border-warning/30 bg-warning-soft p-3 space-y-2">
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <Pencil className="h-3.5 w-3.5" />
                         Ajustada pelo docente em {new Date(detailGrade.adjusted_at).toLocaleDateString("pt-BR")}
@@ -1598,8 +1627,11 @@ export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsPr
                   </div>
                 )}
 
+              </TabsContent>
+
+              <TabsContent value="pares" className="mt-0 space-y-6 pb-4">
                 {/* Avaliação entre pares (somente leitura — visão do professor, com identidade do avaliador) */}
-                {!editMode && detailGrade.group_id && (
+                {detailGrade.group_id && (
                   <div>
                     <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                       Avaliação entre Pares
@@ -1683,6 +1715,9 @@ export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsPr
                   </div>
                 )}
 
+              </TabsContent>
+
+              <TabsContent value="feedback" className="mt-0 space-y-6 pb-4">
                 {/* Feedback */}
                 <div>
                   <h4 className="text-sm font-semibold mb-2">Feedback Resumido</h4>
@@ -1734,8 +1769,9 @@ export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsPr
                   ) : <p className="text-sm text-muted-foreground italic">Nenhuma flag.</p>}
                 </div>
 
-                <Separator />
+              </TabsContent>
 
+              <TabsContent value="mai" className="mt-0 space-y-6 pb-4">
                 {/* MAI submitted */}
                 {detailGrade.mai_json && (
                   <div>
@@ -1869,8 +1905,9 @@ export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsPr
                   </div>
                 )}
 
-                <Separator />
+              </TabsContent>
 
+              <TabsContent value="conversa" className="mt-0 space-y-6 pb-4">
                 {/* Transcript */}
                 <div>
                   <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
@@ -1914,8 +1951,9 @@ export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsPr
                     </div>
                   )}
                 </div>
+              </TabsContent>
               </div>
-            </div>
+            </Tabs>
             );
           })()}
           {editMode && (
