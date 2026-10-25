@@ -67,11 +67,11 @@ export default function StudentCheckin() {
   if (result && "success" in result) {
     const isLate = result.status === "late";
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-sunken">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center">
-            {isLate ? <Clock className="h-16 w-16 mx-auto text-amber-500 mb-4" /> : <CheckCircle2 className="h-16 w-16 mx-auto text-emerald-500 mb-4" />}
-            <h2 className="text-2xl font-bold mb-2">{isLate ? "Check-in registrado — Atrasado" : "Presença confirmada"}</h2>
+            {isLate ? <Clock className="h-16 w-16 mx-auto text-warning-ink mb-4" /> : <CheckCircle2 className="h-16 w-16 mx-auto text-success mb-4" />}
+            <h2 className="font-heading text-2xl font-medium mb-2">{isLate ? "Check-in registrado — Atrasado" : "Presença confirmada"}</h2>
             <p className="text-muted-foreground mb-1">{result.student_name}</p>
             <p className="text-sm text-muted-foreground">{result.lesson_title}</p>
             <p className="text-xs text-muted-foreground mt-4">{new Date(result.time).toLocaleString("pt-BR")}</p>
@@ -82,10 +82,11 @@ export default function StudentCheckin() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-sunken">
       <Card className="max-w-md w-full">
         <CardHeader>
-          <CardTitle className="text-center">Check-in de presença</CardTitle>
+          <p className="eyebrow text-center mb-2">Aula</p>
+          <CardTitle className="text-center font-heading text-2xl font-medium">Check-in de presença</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>

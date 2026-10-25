@@ -312,56 +312,56 @@ export default function ExamProctoring({
   if (showConsent && !consentGiven) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-lg w-full bg-card rounded-xl border shadow-lg p-8 space-y-6">
+        <div className="max-w-lg w-full bg-card rounded-xl border p-8 space-y-6" style={{ boxShadow: "var(--shadow-2)" }}>
           <div className="text-center space-y-2">
-            <Shield className="h-12 w-12 mx-auto text-primary" />
-            <h1 className="text-xl font-bold">Prova com Monitoramento Ativo</h1>
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-soft text-brand-text"><Shield className="h-7 w-7" /></span>
+            <h1 className="font-heading text-2xl font-medium">Prova com monitoramento ativo</h1>
             <p className="text-sm text-muted-foreground">
               Esta avaliação possui medidas de segurança para garantir a integridade do processo.
             </p>
           </div>
 
           <div className="space-y-3 text-sm">
-            <p className="font-semibold">Ao prosseguir, você concorda com:</p>
+            <p className="label-mono">Ao prosseguir, você concorda com</p>
             <ul className="space-y-2 text-muted-foreground">
               {config.fullscreen && (
                 <li className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
+                  <AlertTriangle className="h-4 w-4 mt-0.5 text-warning-ink shrink-0" />
                   Modo tela cheia obrigatório — sair registra violação
                 </li>
               )}
               {config.blockCopyPaste && (
                 <li className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
+                  <AlertTriangle className="h-4 w-4 mt-0.5 text-warning-ink shrink-0" />
                   Bloqueio de copiar, colar e atalhos do teclado
                 </li>
               )}
               {config.requirePhoto && (
                 <li className="flex items-start gap-2">
-                  <Camera className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
+                  <Camera className="h-4 w-4 mt-0.5 text-warning-ink shrink-0" />
                   Captura de imagem pela webcam para identificação
                 </li>
               )}
               {config.periodicPhotos && (
                 <li className="flex items-start gap-2">
-                  <Camera className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
+                  <Camera className="h-4 w-4 mt-0.5 text-warning-ink shrink-0" />
                   Fotos periódicas a cada {config.photoIntervalMinutes || 5} minutos
                 </li>
               )}
               {config.watermark && (
                 <li className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
+                  <AlertTriangle className="h-4 w-4 mt-0.5 text-warning-ink shrink-0" />
                   Marca d'água com seus dados na tela
                 </li>
               )}
               <li className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
+                <AlertTriangle className="h-4 w-4 mt-0.5 text-warning-ink shrink-0" />
                 Registro completo de todas as suas ações (log de auditoria)
               </li>
             </ul>
             {config.maxViolations && (
-              <p className="text-xs text-destructive font-medium mt-2">
-                ⚠ Limite de {config.maxViolations} violações. Exceder bloqueará sua prova.
+              <p className="rounded-md bg-destructive/10 p-3 text-xs text-destructive font-medium mt-2">
+                Limite de {config.maxViolations} violações. Exceder bloqueará sua prova.
               </p>
             )}
           </div>
@@ -379,9 +379,9 @@ export default function ExamProctoring({
   if (blocked) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-card rounded-xl border border-destructive shadow-lg p-8 text-center space-y-4">
+        <div className="max-w-md w-full bg-card rounded-xl border border-destructive p-8 text-center space-y-4" style={{ boxShadow: "var(--shadow-2)" }}>
           <AlertTriangle className="h-16 w-16 mx-auto text-destructive" />
-          <h1 className="text-xl font-bold text-destructive">Prova Bloqueada</h1>
+          <h1 className="font-heading text-2xl font-medium text-destructive">Prova bloqueada</h1>
           <p className="text-sm text-muted-foreground">
             Sua prova foi bloqueada por excesso de violações de segurança ({violationCount} violações registradas).
             Entre em contato com seu professor.
@@ -431,9 +431,9 @@ export default function ExamProctoring({
 
       {/* Violation counter badge */}
       {violationCount > 0 && (
-        <div className="fixed top-2 right-2 z-50 bg-destructive text-destructive-foreground text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+        <div className="fixed top-2 right-2 z-50 bg-destructive text-destructive-foreground text-xs font-medium px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
           <AlertTriangle className="h-3 w-3" />
-          {violationCount} violação(ões)
+          {violationCount} {violationCount === 1 ? "violação" : "violações"}
         </div>
       )}
 

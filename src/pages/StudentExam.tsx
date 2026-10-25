@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -330,21 +330,16 @@ export default function StudentExam() {
       studentName={sessionStorage.getItem("student_name") || ""}
       studentEmail={studentEmail || ""}
     >
-    <div className={`min-h-screen bg-muted/30 flex flex-col ${getA11yClasses(a11y)}`} style={getA11yStyle(a11y)}>
+    <div className={`min-h-screen bg-sunken flex flex-col ${getA11yClasses(a11y)}`} style={getA11yStyle(a11y)}>
       {/* Top bar */}
-      <header className="bg-card border-b shadow-sm sticky top-0 z-20">
+      <header className="bg-card border-b sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-14">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 rounded-lg p-1.5">
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="font-semibold text-sm sm:text-base leading-tight">{examTitle}</h1>
-                <p className="text-[11px] text-muted-foreground">
-                  Questão {currentIdx + 1} de {answerableQuestions.length}
-                </p>
-              </div>
+          <div className="flex items-center justify-between h-16">
+            <div className="min-w-0">
+              <h1 className="font-heading text-lg font-medium leading-tight truncate">{examTitle}</h1>
+              <p className="label-mono mt-1.5">
+                Questão {currentIdx + 1} de {answerableQuestions.length}
+              </p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -353,13 +348,12 @@ export default function StudentExam() {
                   role="timer"
                   aria-live="polite"
                   aria-label={`Tempo restante: ${formatTime(timeLeft)}`}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-sm font-bold ${
-                    isTimeLow 
-                      ? "bg-destructive/10 text-destructive animate-pulse border border-destructive/20" 
-                      : "bg-muted text-foreground"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-sm font-medium ${
+                    isTimeLow
+                      ? "bg-destructive/10 text-destructive animate-pulse border border-destructive/20"
+                      : "bg-sunken text-foreground"
                   }`}>
-                  {isTimeLow && <AlertTriangle className="h-4 w-4" />}
-                  <Clock className="h-4 w-4" />
+                  {isTimeLow ? <AlertTriangle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
                   {formatTime(timeLeft)}
                 </div>
               )}
@@ -367,7 +361,7 @@ export default function StudentExam() {
                 size="sm"
                 onClick={() => setShowSubmitDialog(true)}
                 disabled={submitting}
-                className="gap-1.5 font-semibold"
+                className="gap-1.5"
               >
                 <Send className="h-3.5 w-3.5" />
                 Entregar
@@ -386,17 +380,15 @@ export default function StudentExam() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-6">
           {/* Question card */}
           <div className="space-y-4">
             {currentStem && (
-              <div className="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-500 rounded-xl border shadow-sm overflow-hidden">
-                <div className="px-6 py-3 border-b border-amber-200/60 dark:border-amber-900/40 flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-amber-700 dark:text-amber-400" />
-                  <span className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">
-                    Enunciado base
-                  </span>
+              <div className="rounded-xl border border-highlight/40 border-l-4 border-l-highlight bg-highlight/10 overflow-hidden">
+                <div className="px-6 py-3 border-b border-highlight/30 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-warning-ink" />
+                  <span className="label-mono text-warning-ink">Enunciado base</span>
                 </div>
                 <div className="px-6 py-4">
                   <div className="leading-relaxed text-foreground" style={{ fontSize: 'inherit' }}>
@@ -416,17 +408,15 @@ export default function StudentExam() {
               </div>
             )}
             {currentQ && (
-              <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                <div className="px-6 py-4 bg-muted/30 border-b flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground text-xs font-bold px-2.5 py-1 rounded-md">
+              <div className="bg-card rounded-xl border overflow-hidden">
+                <div className="px-6 py-4 bg-sunken border-b flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="font-heading text-2xl font-medium tabular-nums leading-none">
                       {currentIdx + 1}
                     </span>
-                    <Badge variant="outline" className="text-[10px] font-medium">
-                      {currentQ.section_name}
-                    </Badge>
+                    {currentQ.section_name && <StatusBadge tone="neutral">{currentQ.section_name}</StatusBadge>}
                   </div>
-                  <span className="text-xs font-semibold text-muted-foreground">
+                  <span className="label-mono">
                     {currentQ.points} {currentQ.points === 1 ? "ponto" : "pontos"}
                   </span>
                 </div>
@@ -463,15 +453,17 @@ export default function StudentExam() {
                           <label
                             key={i}
                             htmlFor={`alt-${currentQ.id}-${i}`}
-                            className={`flex items-start gap-3 p-3.5 rounded-lg border-2 cursor-pointer transition-all ${
+                            className={`flex items-start gap-3 p-3.5 rounded-lg border cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-ring ${
                               isSelected
-                                ? "border-primary bg-primary/5 shadow-sm"
-                                : "border-transparent bg-muted/40 hover:bg-muted/70 hover:border-muted-foreground/20"
+                                ? "border-primary bg-brand-soft"
+                                : "border-border bg-card hover:bg-sunken"
                             }`}
                           >
-                            <RadioGroupItem value={alt.letter} id={`alt-${currentQ.id}-${i}`} className="mt-0.5 shrink-0" />
-                            <span className="leading-relaxed" style={{ fontSize: 'inherit' }}>
-                              <span className="font-bold text-primary mr-1.5">{alt.letter.toUpperCase()})</span>
+                            <RadioGroupItem value={alt.letter} id={`alt-${currentQ.id}-${i}`} className="sr-only" />
+                            <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border font-mono text-xs font-medium ${isSelected ? "border-primary bg-primary text-primary-foreground" : "bg-sunken text-muted-foreground"}`}>
+                              {alt.letter.toUpperCase()}
+                            </span>
+                            <span className="leading-relaxed pt-0.5" style={{ fontSize: 'inherit' }}>
                               <RichTextRenderer text={alt.text} />
                             </span>
                           </label>
@@ -484,7 +476,7 @@ export default function StudentExam() {
                     <RadioGroup
                       value={(answers[currentQ.id]?.answer_json as Record<string, string>)?.selected || ""}
                       onValueChange={(val) => setAnswer(currentQ.id, val, { selected: val })}
-                      className="space-y-2"
+                      className="grid grid-cols-1 gap-2 sm:grid-cols-2"
                     >
                       {[
                         { value: "true", label: "Verdadeiro" },
@@ -495,14 +487,14 @@ export default function StudentExam() {
                           <label
                             key={opt.value}
                             htmlFor={`tf-${currentQ.id}-${opt.value}`}
-                            className={`flex items-start gap-3 p-3.5 rounded-lg border-2 cursor-pointer transition-all ${
+                            className={`flex items-center justify-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-ring ${
                               isSelected
-                                ? "border-primary bg-primary/5 shadow-sm"
-                                : "border-transparent bg-muted/40 hover:bg-muted/70"
+                                ? "border-primary bg-brand-soft"
+                                : "border-border bg-card hover:bg-sunken"
                             }`}
                           >
-                            <RadioGroupItem value={opt.value} id={`tf-${currentQ.id}-${opt.value}`} className="mt-0.5 shrink-0" />
-                            <span className="font-medium" style={{ fontSize: 'inherit' }}>{opt.label}</span>
+                            <RadioGroupItem value={opt.value} id={`tf-${currentQ.id}-${opt.value}`} className="sr-only" />
+                            <span className={`font-medium ${isSelected ? "text-brand-text" : ""}`} style={{ fontSize: 'inherit' }}>{opt.label}</span>
                           </label>
                         );
                       })}
@@ -515,11 +507,11 @@ export default function StudentExam() {
                     const currentMatches = (answers[currentQ.id]?.answer_json as Record<string, string>)?.matches || {};
                     return (
                       <div className="space-y-3">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Associe cada item da Coluna A com o item correspondente da Coluna B:</p>
+                        <p className="text-xs text-muted-foreground mb-2">Associe cada item da Coluna A com o item correspondente da Coluna B:</p>
                         {colA.map((itemA, i) => (
-                          <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 p-3 rounded-lg bg-muted/40 border">
+                          <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 p-3 rounded-lg bg-sunken border">
                             <div className="flex-1 text-sm font-medium min-w-0">
-                              <span className="text-primary font-bold mr-1.5">{i + 1}.</span>
+                              <span className="font-mono text-primary mr-1.5">{i + 1}.</span>
                               {itemA}
                             </div>
                             <Select
@@ -536,7 +528,7 @@ export default function StudentExam() {
                               <SelectContent>
                                 {colB.map((itemB, j) => (
                                   <SelectItem key={j} value={String(j)}>
-                                    <span className="font-bold mr-1">{String.fromCharCode(65 + j)})</span> {itemB.length > 80 ? itemB.slice(0, 80) + "..." : itemB}
+                                    <span className="font-mono mr-1">{String.fromCharCode(65 + j)})</span> {itemB.length > 80 ? itemB.slice(0, 80) + "..." : itemB}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -544,12 +536,12 @@ export default function StudentExam() {
                           </div>
                         ))}
                         {colB.length > 0 && (
-                          <div className="mt-4 p-3 rounded-lg border bg-muted/20">
-                            <p className="text-xs font-semibold text-muted-foreground mb-2">Coluna B - Opções:</p>
+                          <div className="mt-4 p-3 rounded-lg border">
+                            <p className="label-mono mb-2">Coluna B · opções</p>
                             <div className="space-y-1.5">
                               {colB.map((itemB, j) => (
                                 <p key={j} className="text-xs text-muted-foreground">
-                                  <span className="font-bold text-foreground">{String.fromCharCode(65 + j)})</span> {itemB}
+                                  <span className="font-mono text-foreground">{String.fromCharCode(65 + j)})</span> {itemB}
                                 </p>
                               ))}
                             </div>
@@ -585,7 +577,7 @@ export default function StudentExam() {
                 Anterior
               </Button>
               <span className="text-xs text-muted-foreground">
-                {answeredCount}/{answerableQuestions.length} respondidas
+                <span className="font-mono text-foreground">{answeredCount}/{answerableQuestions.length}</span> respondidas
               </span>
               <Button
                 variant="outline"
@@ -602,8 +594,8 @@ export default function StudentExam() {
 
           {/* Question navigator sidebar */}
           <div className="hidden lg:block">
-            <div className="bg-card rounded-xl border shadow-sm p-4 sticky top-20">
-              <p className="text-xs font-semibold text-muted-foreground mb-3">Navegação</p>
+            <div className="bg-card rounded-xl border p-4 sticky top-24">
+              <p className="label-mono mb-3">Navegação</p>
               <div className="grid grid-cols-5 gap-1.5">
                 {answerableQuestions.map((q, i) => {
                   const answered = !!(answers[q.id]?.answer_text || (answers[q.id]?.answer_json as Record<string, string>)?.selected);
@@ -611,18 +603,25 @@ export default function StudentExam() {
                     <button
                       key={q.id}
                       onClick={() => setCurrentIdx(i)}
-                      className={`h-8 w-8 rounded-md text-xs font-bold transition-all ${
+                      aria-label={`Questão ${i + 1}${answered ? " respondida" : " em branco"}`}
+                      aria-current={i === currentIdx ? "true" : undefined}
+                      className={`h-8 w-8 rounded-md font-mono text-xs font-medium transition-colors ${
                         i === currentIdx
-                          ? "bg-primary text-primary-foreground shadow-sm"
+                          ? "bg-primary text-primary-foreground"
                           : answered
-                          ? "bg-primary/15 text-primary border border-primary/30"
-                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          ? "bg-brand-soft text-brand-text border border-primary/30"
+                          : "bg-sunken text-muted-foreground hover:bg-muted"
                       }`}
                     >
                       {i + 1}
                     </button>
                   );
                 })}
+              </div>
+              <div className="mt-4 space-y-1.5 border-t pt-3 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm bg-primary" />Atual</div>
+                <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm border border-primary/30 bg-brand-soft" />Respondida</div>
+                <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm bg-sunken border" />Em branco</div>
               </div>
             </div>
           </div>
@@ -664,11 +663,11 @@ export default function StudentExam() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
           <div className="bg-card border-2 border-destructive rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl animate-in fade-in zoom-in-95">
             <AlertTriangle className="h-16 w-16 text-destructive mx-auto mb-4 animate-pulse" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">Tempo quase esgotado!</h2>
+            <h2 className="font-heading text-2xl font-medium text-foreground mb-2">Tempo quase esgotado!</h2>
             <p className="text-muted-foreground mb-4">
               Sua prova será enviada automaticamente em
             </p>
-            <div className="text-5xl font-mono font-bold text-destructive mb-4">
+            <div className="text-5xl font-mono font-medium text-destructive mb-4">
               {timeLeft}s
             </div>
             <p className="text-sm text-muted-foreground mb-6">
