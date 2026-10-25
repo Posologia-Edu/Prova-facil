@@ -4,9 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ArrowLeft, Users, Clock, CheckCircle, BarChart3, FileText, Stethoscope, Eye, GraduationCap, Play, BookOpen, Square, PauseCircle, PlayCircle, SkipForward, UserCog } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -378,11 +378,6 @@ export default function SimulationControl() {
     professor: t("sim_professor"),
   };
 
-  const roleColors: Record<string, string> = {
-    professional: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    patient: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    observer: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  };
 
   // Analytics computations
   const getParticipantName = (id: string) => participants.find((p: any) => p.id === id)?.student_name || id;
@@ -483,32 +478,44 @@ export default function SimulationControl() {
     );
   };
 
+  const studentsOnly = participants.filter((p: any) => p.participant_role === "student");
+  const presentCount = studentsOnly.filter((p: any) => onlineIds.includes(p.id) || p.status === "ready").length;
+  const completedRounds = rounds.filter((r: any) => r.status === "completed").length;
+  const maxCycle = rounds.reduce((m: number, r: any) => Math.max(m, r.cycle || 0), 0);
+  const currentCycle = activeRound?.cycle ?? nextPendingRound?.cycle ?? maxCycle;
+  const currentRoundNumber = activeRound?.round_number ?? Math.min(completedRounds + 1, rounds.length);
+  const submittedCount = responses.filter((r: any) => r.submitted_at).length;
+
+  const roleTone: Record<string, "info" | "ok" | "warn"> = { professional: "info", patient: "ok", observer: "warn" };
+
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleControlHeader
         accent="anamnese"
         moduleLabel="Anamnese"
         moduleIcon={MessageSquareText}
-        title={`${room?.title || ""} — ${t("sim_control")}`}
+        title={room?.title || ""}
         pin={room?.access_code}
         backTo="/simulations"
-        rightSlot={timeLeft !== null ? (
-          <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-xl font-bold tabular-nums ${
-            timeLeft <= 60
-              ? "bg-red-500/20 text-red-100 ring-1 ring-red-300/40"
-              : "bg-white/10 text-white ring-1 ring-white/20"
-          }`}>
-            <Clock className="h-4 w-4" />
-            {formatTime(timeLeft)}
-          </div>
-        ) : undefined}
-      />
-
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {t("sim_control_admin_hint") || "A liberação das rodadas é realizada pelo professor na sala virtual."}
-        </p>
-        {analyticsData.studentSummaries.length > 0 && (
+        meta={
+          <span className="flex flex-wrap items-center gap-3">
+            <StatusBadge tone={isPaused ? "warn" : room?.status === "completed" ? "ok" : "info"} dot>
+              {isPaused ? "Pausada" : room?.status === "completed" ? "Concluída" : "Ativa"}
+            </StatusBadge>
+            <span>A liberação das rodadas é feita pelo professor na sala virtual.</span>
+          </span>
+        }
+        rightSlot={
+          <>
+            {timeLeft !== null && (
+              <div className={`flex items-center gap-2 rounded-lg px-3 py-2 font-mono text-xl font-medium tabular-nums ${
+                timeLeft <= 60 ? "bg-destructive/10 text-destructive ring-1 ring-destructive/30" : "bg-sunken"
+              }`}>
+                <Clock className="h-4 w-4" />
+                {formatTime(timeLeft)}
+              </div>
+            )}
+            {analyticsData.studentSummaries.length > 0 && (
           <SimulationReportGenerator
             stageName="Anamnese"
             stageType="anamnese"
@@ -536,7 +543,7 @@ export default function SimulationControl() {
                 }
                 return { title: `Rodada ${ra.round.round_number} — Paciente: ${ra.patientName}`, items };
               });
-
+      
               const avg = s.scores.length > 0 ? s.scores.reduce((a, b) => a + b, 0) / s.scores.length : 0;
               return {
                 pairIndex: idx,
@@ -550,6 +557,33 @@ export default function SimulationControl() {
             })}
           />
         )}
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Card className="p-5">
+          <div className="label-mono">Presentes</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{presentCount}<span className="text-xl text-muted-foreground"> /{studentsOnly.length}</span></div>
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            {presentCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-success" />}em tempo real
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="label-mono">Ciclo</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{rounds.length ? currentCycle : "—"}<span className="text-xl text-muted-foreground">{rounds.length ? ` /${maxCycle}` : ""}</span></div>
+          <div className="mt-1 text-xs text-muted-foreground">{needsMaterialRelease ? "materiais a liberar" : "materiais liberados"}</div>
+        </Card>
+        <Card className="p-5">
+          <div className="label-mono">Rodada</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{rounds.length ? currentRoundNumber : "—"}<span className="text-xl text-muted-foreground">{rounds.length ? ` /${rounds.length}` : ""}</span></div>
+          <div className="mt-1 text-xs text-muted-foreground">{completedRounds} {completedRounds === 1 ? "concluída" : "concluídas"}</div>
+        </Card>
+        <Card className="p-5">
+          <div className="label-mono">Respostas</div>
+          <div className="mt-3 font-heading text-4xl font-medium tabular-nums">{submittedCount}</div>
+          <div className="mt-1 text-xs text-muted-foreground">formulários enviados</div>
+        </Card>
       </div>
 
       {rounds.length > 0 && (
@@ -581,139 +615,116 @@ export default function SimulationControl() {
       </AlertDialog>
 
       <Tabs defaultValue="monitoring">
-        <TabsList>
-          <TabsTrigger value="monitoring"><Users className="h-4 w-4 mr-1" />{t("sim_round")}</TabsTrigger>
-          <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1" />{t("sim_tab_analytics")}</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="monitoring"><Users className="h-4 w-4" />{t("sim_round")}</TabsTriggerLine>
+          <TabsTriggerLine value="analytics"><BarChart3 className="h-4 w-4" />{t("sim_tab_analytics")}</TabsTriggerLine>
+        </TabsListLine>
 
         {/* Monitoring Tab */}
-        <TabsContent value="monitoring" className="space-y-4">
+        <TabsContent value="monitoring" className="mt-6 space-y-4">
           {rounds.length === 0 && students.length > 0 && (
-            <Card className="border-primary/30 bg-primary/5">
-              <CardContent className="p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div className="space-y-1">
-                  <p className="font-medium text-foreground">A simulação ainda não foi preparada.</p>
-                  <p className="text-sm text-muted-foreground">
-                    {readyStudentsCount > 0
-                      ? `${readyStudentsCount}/${students.length} alunos prontos. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`
-                      : `${students.length} alunos cadastrados. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`}
-                  </p>
-                </div>
-                <Button onClick={openProfessorRoom} className="gap-2 shrink-0">
-                  <Play className="h-4 w-4" />
-                  Abrir sala do professor
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Professor Action Buttons */}
-          {rounds.length > 0 && (
-            <Card className="border-primary/30 bg-primary/5">
-              <CardContent className="p-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  {needsMaterialRelease && (
-                    <Button onClick={releaseMaterials} className="gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      Liberar Materiais — Ciclo {nextPendingRound?.cycle}
-                    </Button>
-                  )}
-                  {materialsReleasedButNotStarted && (
-                    <Button onClick={startNextRound} className="gap-2">
-                      <Play className="h-4 w-4" />
-                      Iniciar Rodada {nextPendingRound?.round_number}
-                    </Button>
-                  )}
-                  {activeRound && (
-                    <Button variant="destructive" onClick={endActiveRound} className="gap-2">
-                      <Square className="h-4 w-4" />
-                      Encerrar Rodada {activeRound.round_number}
-                    </Button>
-                  )}
-                  {!needsMaterialRelease && !materialsReleasedButNotStarted && !activeRound && rounds.every((r: any) => r.status === "completed") && (
-                    <Badge variant="outline" className="text-sm py-1.5 px-3">
-                      <CheckCircle className="h-4 w-4 mr-1" /> Todas as rodadas concluídas
-                    </Badge>
-                  )}
-                  {!needsMaterialRelease && !materialsReleasedButNotStarted && !activeRound && nextPendingRound && (
-                    <Button onClick={releaseMaterials} className="gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      Liberar Materiais — Ciclo {nextPendingRound.cycle}
-                    </Button>
-                  )}
-
-                  {/* Pause / Resume controls for multi-day execution */}
-                  {isPaused && (
-                    <Button onClick={resumeSimulation} className="gap-2 ml-auto bg-green-600 hover:bg-green-700">
-                      <PlayCircle className="h-4 w-4" />
-                      Retomar simulação
-                    </Button>
-                  )}
-                  {canPause && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setPauseDialogOpen(true)}
-                      className="gap-2 ml-auto border-amber-400/60 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"
-                    >
-                      <PauseCircle className="h-4 w-4" />
-                      Pausar e continuar em outro dia
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Show all participants */}
-          {participants.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Participantes ({participants.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {`${readyStudentsCount}/${students.length} alunos prontos.`}
+            <Card className="border-primary/30 bg-brand-soft p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <p className="font-medium text-foreground">A simulação ainda não foi preparada.</p>
+                <p className="text-sm text-muted-foreground">
+                  {readyStudentsCount > 0
+                    ? `${readyStudentsCount}/${students.length} alunos prontos. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`
+                    : `${students.length} alunos cadastrados. Abra a sala do professor para formar duplas, gerar as rodadas e liberar a atividade.`}
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  {participants.map((p: any) => (
-                    <div key={p.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                      <Badge variant="outline" className="text-xs">
-                        {p.pair_position}
-                      </Badge>
-                      <div className="min-w-0">
-                        <span className="text-sm font-medium block truncate">{p.student_name}</span>
-                        {p.student_email && (
-                          <span className="text-xs text-muted-foreground block truncate">{p.student_email}</span>
-                        )}
-                      </div>
-                      <Badge
-                        variant={p.status === "ready" ? "default" : onlineIds.includes(p.id) ? "outline" : "secondary"}
-                        className="ml-auto text-xs shrink-0"
-                      >
-                        {p.status === "ready" ? "Pronto" : onlineIds.includes(p.id) ? "Na sala" : "Aguardando"}
-                      </Badge>
+              </div>
+              <Button onClick={openProfessorRoom} className="gap-2 shrink-0">
+                <Play className="h-4 w-4" />
+                Abrir sala do professor
+              </Button>
+            </Card>
+          )}
 
+          {/* Professor action buttons */}
+          {rounds.length > 0 && (
+            <Card className="p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                {needsMaterialRelease && (
+                  <Button onClick={releaseMaterials} className="gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Liberar materiais — ciclo {nextPendingRound?.cycle}
+                  </Button>
+                )}
+                {materialsReleasedButNotStarted && (
+                  <Button onClick={startNextRound} className="gap-2">
+                    <Play className="h-4 w-4" />
+                    Iniciar rodada {nextPendingRound?.round_number}
+                  </Button>
+                )}
+                {activeRound && (
+                  <Button variant="destructive" onClick={endActiveRound} className="gap-2">
+                    <Square className="h-4 w-4" />
+                    Encerrar rodada {activeRound.round_number}
+                  </Button>
+                )}
+                {!needsMaterialRelease && !materialsReleasedButNotStarted && !activeRound && rounds.every((r: any) => r.status === "completed") && (
+                  <StatusBadge tone="ok"><CheckCircle className="h-3.5 w-3.5" /> Todas as rodadas concluídas</StatusBadge>
+                )}
+                {!needsMaterialRelease && !materialsReleasedButNotStarted && !activeRound && nextPendingRound && (
+                  <Button onClick={releaseMaterials} className="gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Liberar materiais — ciclo {nextPendingRound.cycle}
+                  </Button>
+                )}
+
+                {/* Pause / Resume controls for multi-day execution */}
+                {isPaused && (
+                  <Button onClick={resumeSimulation} className="gap-2 ml-auto">
+                    <PlayCircle className="h-4 w-4" />
+                    Retomar simulação
+                  </Button>
+                )}
+                {canPause && (
+                  <Button variant="outline" onClick={() => setPauseDialogOpen(true)} className="gap-2 ml-auto">
+                    <PauseCircle className="h-4 w-4" />
+                    Pausar e continuar em outro dia
+                  </Button>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* All participants */}
+          {participants.length > 0 && (
+            <Card className="p-5">
+              <div className="flex items-baseline justify-between gap-3 mb-3">
+                <h3 className="font-heading text-lg font-medium">Participantes <span className="font-mono text-sm text-muted-foreground">{participants.length}</span></h3>
+                <span className="text-xs text-muted-foreground">{`${readyStudentsCount}/${students.length} alunos prontos`}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {participants.map((p: any) => (
+                  <div key={p.id} className="flex items-center gap-2 rounded-lg bg-sunken p-2.5">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-medium text-brand-text">
+                      {(p.student_name || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((w: string) => w[0]?.toUpperCase()).join("")}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-sm font-medium block truncate">{p.student_name}</span>
+                      {p.student_email && (
+                        <span className="text-xs text-muted-foreground block truncate">{p.student_email}</span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
+                    <StatusBadge tone={p.status === "ready" ? "ok" : onlineIds.includes(p.id) ? "info" : "neutral"} className="shrink-0">
+                      {p.status === "ready" ? "Pronto" : onlineIds.includes(p.id) ? "Na sala" : "Aguardando"}
+                    </StatusBadge>
+                  </div>
+                ))}
+              </div>
             </Card>
           )}
 
           {rounds.length === 0 && participants.length === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground">Nenhum aluno acessou a sala ainda.</p>
-                <p className="text-sm text-muted-foreground mt-1">Compartilhe o PIN <span className="font-mono font-bold">{room?.access_code}</span> com os alunos.</p>
-                <Button onClick={openProfessorRoom} variant="outline" className="mt-4 gap-2">
-                  <Play className="h-4 w-4" />
-                  Abrir sala do professor
-                </Button>
-              </CardContent>
+            <Card className="flex flex-col items-center justify-center py-14 text-center">
+              <Users className="h-10 w-10 text-muted-foreground/40 mb-4" />
+              <p className="text-muted-foreground">Nenhum aluno acessou a sala ainda.</p>
+              <p className="text-sm text-muted-foreground mt-1">Compartilhe o PIN <span className="font-mono font-semibold text-foreground">{room?.access_code}</span> com os alunos.</p>
+              <Button onClick={openProfessorRoom} variant="outline" className="mt-4 gap-2">
+                <Play className="h-4 w-4" />
+                Abrir sala do professor
+              </Button>
             </Card>
           )}
 
@@ -736,60 +747,57 @@ export default function SimulationControl() {
               return (a.student_name || "").localeCompare(b.student_name || "");
             });
 
-
             return (
-              <Card key={round.id} className={isActive ? "ring-2 ring-primary" : ""}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">
-                      {t("sim_round")} {round.round_number} — {t("sim_cycle")} {round.cycle}
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      {isCompleted && <Badge variant="secondary"><CheckCircle className="h-3 w-3 mr-1" />{t("sim_status_completed")}</Badge>}
-                      {isActive && <Badge className="bg-green-600">{t("sim_status_active")}</Badge>}
-                      {isPending && <Badge variant="outline">{t("sim_status_pending")}</Badge>}
-                      {isPending && !activeRound && nextPendingRound?.id !== round.id && (
-                        <Button size="sm" variant="outline" onClick={() => startSpecificRound(round)} className="gap-1">
-                          <SkipForward className="h-3.5 w-3.5" />
-                          Iniciar esta rodada
-                        </Button>
-                      )}
-                    </div>
+              <Card key={round.id} className={`overflow-hidden ${isActive ? "ring-2 ring-primary" : ""}`}>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-sunken px-5 py-3">
+                  <h3 className="font-heading text-lg font-medium">
+                    {t("sim_round")} {round.round_number} <span className="text-sm text-muted-foreground">· {t("sim_cycle")} {round.cycle}</span>
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {isCompleted && <StatusBadge tone="ok"><CheckCircle className="h-3 w-3" />{t("sim_status_completed")}</StatusBadge>}
+                    {isActive && <StatusBadge tone="info" dot>{t("sim_status_active")}</StatusBadge>}
+                    {isPending && <StatusBadge tone="neutral">{t("sim_status_pending")}</StatusBadge>}
+                    {isPending && !activeRound && nextPendingRound?.id !== round.id && (
+                      <Button size="sm" variant="outline" onClick={() => startSpecificRound(round)} className="gap-1">
+                        <SkipForward className="h-3.5 w-3.5" />
+                        Iniciar esta rodada
+                      </Button>
+                    )}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-3">
-                    {roundAssignments.map((a: any) => {
-                      let caseLabel = "";
-                      if (a.assigned_role === "patient" && a.case_index != null) {
-                        const patientScriptForm = forms.find((f: any) => f.form_type === "patient_script");
-                        const content = patientScriptForm?.content_json as any;
-                        if (Array.isArray(content) && content[0]?.cases) {
-                          caseLabel = content[0].cases[a.case_index]?.title || `Caso ${a.case_index + 1}`;
-                        }
+                </div>
+                <div className="divide-y">
+                  {roundAssignments.map((a: any) => {
+                    let caseLabel = "";
+                    if (a.assigned_role === "patient" && a.case_index != null) {
+                      const patientScriptForm = forms.find((f: any) => f.form_type === "patient_script");
+                      const content = patientScriptForm?.content_json as any;
+                      if (Array.isArray(content) && content[0]?.cases) {
+                        caseLabel = content[0].cases[a.case_index]?.title || `Caso ${a.case_index + 1}`;
                       }
-                      const canSwap = !isCompleted && (a.assigned_role === "patient" || a.assigned_role === "observer");
-                      const canChangeCase = !isCompleted && a.assigned_role === "patient" && availableCases.length > 0;
-                      return (
-                        <div key={a.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                          <Badge className={roleColors[a.assigned_role] || ""}>
-                            {roleLabels[a.assigned_role] || a.assigned_role}
-                          </Badge>
-                          <span className="text-sm font-medium">
-                            {a.simulation_participants?.student_name || "—"}
-                          </span>
-                          {caseLabel && (
-                            <span className="text-xs text-muted-foreground">({caseLabel})</span>
-                          )}
-                          {roundResponses.some((r: any) => r.participant_id === a.participant_id && r.submitted_at) && (
-                            <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                          )}
+                    }
+                    const canSwap = !isCompleted && (a.assigned_role === "patient" || a.assigned_role === "observer");
+                    const canChangeCase = !isCompleted && a.assigned_role === "patient" && availableCases.length > 0;
+                    return (
+                      <div key={a.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                        <StatusBadge tone={roleTone[a.assigned_role] || "neutral"} className="w-28 justify-center">
+                          {roleLabels[a.assigned_role] || a.assigned_role}
+                        </StatusBadge>
+                        <span className="text-sm font-medium">
+                          {a.simulation_participants?.student_name || "—"}
+                        </span>
+                        {caseLabel && (
+                          <span className="text-xs text-muted-foreground">({caseLabel})</span>
+                        )}
+                        {roundResponses.some((r: any) => r.participant_id === a.participant_id && r.submitted_at) && (
+                          <StatusBadge tone="ok"><CheckCircle className="h-3 w-3" />Enviou</StatusBadge>
+                        )}
+                        <div className="ml-auto flex flex-wrap items-center gap-2">
                           {canChangeCase && (
                             <Select
                               value={a.case_index != null ? String(a.case_index) : undefined}
                               onValueChange={(val) => changeAssignmentCase(a.id, Number(val))}
                             >
-                              <SelectTrigger className="h-7 w-auto text-xs gap-1 border-dashed">
+                              <SelectTrigger className="h-8 w-auto text-xs gap-1 border-dashed">
                                 <FileText className="h-3 w-3" />
                                 <SelectValue placeholder="Trocar caso" />
                               </SelectTrigger>
@@ -804,7 +812,7 @@ export default function SimulationControl() {
                           )}
                           {canSwap && swapCandidates.length > 0 && (
                             <Select onValueChange={(val) => swapAssignmentParticipant(a.id, val)}>
-                              <SelectTrigger className="h-7 w-auto text-xs gap-1 border-dashed">
+                              <SelectTrigger className="h-8 w-auto text-xs gap-1 border-dashed">
                                 <UserCog className="h-3 w-3" />
                                 <SelectValue placeholder="Substituir" />
                               </SelectTrigger>
@@ -820,144 +828,126 @@ export default function SimulationControl() {
                                       </SelectItem>
                                     );
                                   })}
-
                               </SelectContent>
                             </Select>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
+                      </div>
+                    );
+                  })}
+                </div>
               </Card>
             );
           })}
         </TabsContent>
 
         {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6">
-          {/* Student Summary */}
+        <TabsContent value="analytics" className="mt-6 space-y-6">
           {analyticsData.studentSummaries.length > 0 ? (
             <>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t("sim_analytics_avg")} — {t("sim_analytics_student")}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t("sim_analytics_student")}</TableHead>
-                        <TableHead className="text-center">{t("sim_round")}</TableHead>
-                        <TableHead className="text-center">{t("sim_analytics_avg")}</TableHead>
+              <Card className="p-6">
+                <h3 className="font-heading text-lg font-medium mb-4">{t("sim_analytics_avg")} — {t("sim_analytics_student")}</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("sim_analytics_student")}</TableHead>
+                      <TableHead className="text-center">{t("sim_round")}</TableHead>
+                      <TableHead className="text-center">{t("sim_analytics_avg")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {analyticsData.studentSummaries.map((s) => (
+                      <TableRow key={s.name}>
+                        <TableCell className="font-medium">{s.name}</TableCell>
+                        <TableCell className="text-center font-mono">{s.roundCount}</TableCell>
+                        <TableCell className="text-center font-mono font-medium">{s.avg}</TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {analyticsData.studentSummaries.map((s) => (
-                        <TableRow key={s.name}>
-                          <TableCell className="font-medium">{s.name}</TableCell>
-                          <TableCell className="text-center">{s.roundCount}</TableCell>
-                          <TableCell className="text-center font-bold">{s.avg}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
+                    ))}
+                  </TableBody>
+                </Table>
               </Card>
 
-              {/* Detailed per-round */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t("sim_analytics_responses")}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Accordion type="single" collapsible className="w-full">
-                    {analyticsData.roundAnalytics.map((ra) => (
-                      <AccordionItem key={ra.round.id} value={ra.round.id}>
-                        <AccordionTrigger className="text-sm">
-                          <div className="flex items-center gap-3">
-                            <span>{t("sim_round")} {ra.round.round_number} — {t("sim_cycle")} {ra.round.cycle}</span>
-                            <Badge variant="outline" className="text-xs">
-                              <Stethoscope className="h-3 w-3 mr-1" />{ra.professionalName}
-                            </Badge>
-                            <span className="font-bold">{ra.totalScore.toFixed(1)}/10</span>
+              <Card className="p-6">
+                <h3 className="font-heading text-lg font-medium mb-2">{t("sim_analytics_responses")}</h3>
+                <Accordion type="single" collapsible className="w-full">
+                  {analyticsData.roundAnalytics.map((ra) => (
+                    <AccordionItem key={ra.round.id} value={ra.round.id}>
+                      <AccordionTrigger className="text-sm">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span>{t("sim_round")} {ra.round.round_number} · {t("sim_cycle")} {ra.round.cycle}</span>
+                          <StatusBadge tone="neutral">
+                            <Stethoscope className="h-3 w-3" />{ra.professionalName}
+                          </StatusBadge>
+                          <span className="font-mono font-medium">{ra.totalScore.toFixed(1)}/10</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4">
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          <div className="flex items-center gap-1.5">
+                            <Stethoscope className="h-4 w-4 text-info" />
+                            <span>{ra.professionalName}</span>
                           </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="space-y-4">
-                          {/* Participants */}
-                          <div className="grid grid-cols-3 gap-2 text-sm">
-                            <div className="flex items-center gap-1">
-                              <Stethoscope className="h-4 w-4 text-blue-600" />
-                              <span>{ra.professionalName}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4 text-green-600" />
-                              <span>{ra.patientName}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Eye className="h-4 w-4 text-yellow-600" />
-                              <span>{ra.observerName}</span>
-                            </div>
+                          <div className="flex items-center gap-1.5">
+                            <Users className="h-4 w-4 text-success" />
+                            <span>{ra.patientName}</span>
                           </div>
-
-                          {/* Scores */}
-                          <div className="grid grid-cols-3 gap-2">
-                            <Card className="p-3">
-                              <p className="text-xs text-muted-foreground">{t("sim_form_professor_eval")}</p>
-                              <p className="text-lg font-bold">{ra.profScore.toFixed(1)}/10</p>
-                            </Card>
-                            <Card className="p-3">
-                              <p className="text-xs text-muted-foreground">{t("sim_form_observer_eval")}</p>
-                              <p className="text-lg font-bold">{ra.obsScore.toFixed(1)}/10</p>
-                            </Card>
-                            <Card className="p-3">
-                              <p className="text-xs text-muted-foreground">{t("sim_score_average_label")}</p>
-                              <p className="text-lg font-bold text-primary">{ra.totalScore.toFixed(1)}/10</p>
-                            </Card>
+                          <div className="flex items-center gap-1.5">
+                            <Eye className="h-4 w-4 text-warning-ink" />
+                            <span>{ra.observerName}</span>
                           </div>
+                        </div>
 
-                          {/* Anamnesis response */}
-                          {ra.anamnesisResponse && (
-                            <div className="border rounded-lg p-3">
-                              <p className="text-sm font-medium mb-2 flex items-center gap-1">
-                                <FileText className="h-4 w-4" /> {t("sim_form_anamnesis")}
-                              </p>
-                              {renderFormResponseReadOnly(ra.anamnesisResponse, forms.find((f: any) => f.form_type === "anamnesis"))}
-                            </div>
-                          )}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="rounded-lg bg-sunken p-3">
+                            <p className="label-mono">{t("sim_form_professor_eval")}</p>
+                            <p className="mt-2 font-heading text-2xl font-medium tabular-nums">{ra.profScore.toFixed(1)}<span className="text-sm text-muted-foreground">/10</span></p>
+                          </div>
+                          <div className="rounded-lg bg-sunken p-3">
+                            <p className="label-mono">{t("sim_form_observer_eval")}</p>
+                            <p className="mt-2 font-heading text-2xl font-medium tabular-nums">{ra.obsScore.toFixed(1)}<span className="text-sm text-muted-foreground">/10</span></p>
+                          </div>
+                          <div className="rounded-lg bg-brand-soft p-3">
+                            <p className="label-mono">{t("sim_score_average_label")}</p>
+                            <p className="mt-2 font-heading text-2xl font-medium tabular-nums text-brand-text">{ra.totalScore.toFixed(1)}<span className="text-sm">/10</span></p>
+                          </div>
+                        </div>
 
-                          {/* Professor evaluation */}
-                          {ra.profResponse && (
-                            <div className="border rounded-lg p-3">
-                              <p className="text-sm font-medium mb-2 flex items-center gap-1">
-                                <GraduationCap className="h-4 w-4" /> {t("sim_form_professor_eval")}
-                              </p>
-                              {renderFormResponseReadOnly(ra.profResponse, forms.find((f: any) => f.form_type === "professor_eval"))}
-                            </div>
-                          )}
+                        {ra.anamnesisResponse && (
+                          <div className="rounded-lg border p-3">
+                            <p className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                              <FileText className="h-4 w-4" /> {t("sim_form_anamnesis")}
+                            </p>
+                            {renderFormResponseReadOnly(ra.anamnesisResponse, forms.find((f: any) => f.form_type === "anamnesis"))}
+                          </div>
+                        )}
 
-                          {/* Observer evaluation */}
-                          {ra.obsResponse && (
-                            <div className="border rounded-lg p-3">
-                              <p className="text-sm font-medium mb-2 flex items-center gap-1">
-                                <Eye className="h-4 w-4" /> {t("sim_form_observer_eval")}
-                              </p>
-                              {renderFormResponseReadOnly(ra.obsResponse, forms.find((f: any) => f.form_type === "observer_eval"))}
-                            </div>
-                          )}
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </CardContent>
+                        {ra.profResponse && (
+                          <div className="rounded-lg border p-3">
+                            <p className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                              <GraduationCap className="h-4 w-4" /> {t("sim_form_professor_eval")}
+                            </p>
+                            {renderFormResponseReadOnly(ra.profResponse, forms.find((f: any) => f.form_type === "professor_eval"))}
+                          </div>
+                        )}
+
+                        {ra.obsResponse && (
+                          <div className="rounded-lg border p-3">
+                            <p className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                              <Eye className="h-4 w-4" /> {t("sim_form_observer_eval")}
+                            </p>
+                            {renderFormResponseReadOnly(ra.obsResponse, forms.find((f: any) => f.form_type === "observer_eval"))}
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               </Card>
             </>
           ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <BarChart3 className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground">{t("sim_analytics_no_data")}</p>
-              </CardContent>
+            <Card className="flex flex-col items-center justify-center py-14 text-center">
+              <BarChart3 className="h-10 w-10 text-muted-foreground/40 mb-4" />
+              <p className="text-muted-foreground">{t("sim_analytics_no_data")}</p>
             </Card>
           )}
         </TabsContent>

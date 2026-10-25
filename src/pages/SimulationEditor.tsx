@@ -4,12 +4,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ImportClassStudentsButton } from "@/components/classes/ImportClassStudentsButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
@@ -51,6 +54,8 @@ export default function SimulationEditor() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [restartOpen, setRestartOpen] = useState(false);
+  const initialsOf = (name?: string | null) => (name || "").split(/s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
 
   const { data: room, isLoading: roomLoading } = useQuery({
     queryKey: ["simulation-room", roomId],
@@ -345,9 +350,7 @@ export default function SimulationEditor() {
   };
 
   const restartSimulation = async () => {
-    if (!roomId || !window.confirm("Deseja reiniciar a atividade do começo? As rodadas e respostas atuais serão apagadas.")) {
-      return;
-    }
+    if (!roomId) return;
 
     const { data: roomRounds } = await supabase
       .from("simulation_rounds")
@@ -501,243 +504,231 @@ export default function SimulationEditor() {
   const isEvalForm = activeFormType === "observer_eval" || activeFormType === "professor_eval";
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey="anamnese" />
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/simulations")}>
-            <ArrowLeft className="h-4 w-4 mr-1" />{t("pricing_back")}
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">Anamnese</Badge>
-              <h1 className="text-2xl font-bold text-foreground">{room.title}</h1>
-            </div>
-            <p className="text-sm text-muted-foreground">PIN: <span className="font-mono">{room.access_code}</span></p>
-          </div>
-        </div>
-        <Dialog open={importOpen} onOpenChange={setImportOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-1" />{t("sim_import")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("sim_import_from")}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {otherRooms.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("sim_no_other_rooms")}</p>
-              ) : (
-                <>
-                  <div>
-                    <Label>{t("sim_import_select_room")}</Label>
-                    <Select value={importRoomId} onValueChange={setImportRoomId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("sim_import_select_room")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {otherRooms.map((r: any) => (
-                          <SelectItem key={r.id} value={r.id}>{r.title} ({r.access_code})</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="import-participants" checked={importParticipants} onCheckedChange={(c) => setImportParticipants(!!c)} />
-                      <Label htmlFor="import-participants" className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />{t("sim_import_participants")}
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="import-forms" checked={importForms} onCheckedChange={(c) => setImportForms(!!c)} />
-                      <Label htmlFor="import-forms" className="flex items-center gap-1">
-                        <FileText className="h-4 w-4" />{t("sim_import_forms")}
-                      </Label>
-                    </div>
-                  </div>
-                  <Button onClick={handleImport} disabled={!importRoomId || importing} className="w-full">
-                    {importing ? t("loading") : t("sim_import")}
-                  </Button>
-                </>
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/simulations")}>
+          <ArrowLeft className="h-4 w-4" />Simulações
+        </Button>
+        <PageHeader
+          eyebrow="Anamnese · Editar sala"
+          title={room.title}
+          actions={
+            <>
+              <StatusBadge tone={room.status === "active" ? "info" : room.status === "completed" ? "ok" : "warn"} dot={room.status !== "completed"}>
+                {room.status === "active" ? "Ativa" : room.status === "completed" ? "Concluída" : "Rascunho"}
+              </StatusBadge>
+              <span className="text-xs text-muted-foreground">PIN <b className="font-mono font-medium text-foreground">{room.access_code}</b></span>
+              <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+                <Download className="h-4 w-4" />Importar de outra sala
+              </Button>
+              {room.status === "draft" && (
+                <Button size="sm" onClick={startSimulation}>
+                  <Play className="h-4 w-4" />Iniciar simulação
+                </Button>
               )}
-            </div>
-          </DialogContent>
-        </Dialog>
+            </>
+          }
+        />
       </div>
 
+      {room.status === "draft" && !scoreValidation.allValid && (
+        <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning-ink">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <strong>Falta ajustar as notas para iniciar.</strong> Cada avaliação precisa somar 10: a do professor soma {scoreValidation.profTotal} e a do observador soma {scoreValidation.obsTotal}. Ajuste na aba Formulários.
+          </span>
+        </div>
+      )}
+
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl font-medium">{t("sim_import_from")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {otherRooms.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("sim_no_other_rooms")}</p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>{t("sim_import_select_room")}</Label>
+                  <Select value={importRoomId} onValueChange={setImportRoomId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("sim_import_select_room")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {otherRooms.map((r: any) => (
+                        <SelectItem key={r.id} value={r.id}>{r.title} ({r.access_code})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="import-participants" checked={importParticipants} onCheckedChange={(c) => setImportParticipants(!!c)} />
+                    <Label htmlFor="import-participants" className="flex items-center gap-1">
+                      <Users className="h-4 w-4" />{t("sim_import_participants")}
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="import-forms" checked={importForms} onCheckedChange={(c) => setImportForms(!!c)} />
+                    <Label htmlFor="import-forms" className="flex items-center gap-1">
+                      <FileText className="h-4 w-4" />{t("sim_import_forms")}
+                    </Label>
+                  </div>
+                </div>
+                <Button onClick={handleImport} disabled={!importRoomId || importing} className="w-full">
+                  {importing ? t("loading") : t("sim_import")}
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Tabs defaultValue="participants">
-        <TabsList>
-          <TabsTrigger value="participants"><Users className="h-4 w-4 mr-1" />{t("sim_tab_participants")}</TabsTrigger>
-          <TabsTrigger value="forms"><FileText className="h-4 w-4 mr-1" />{t("sim_tab_forms")}</TabsTrigger>
-          <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1" />{t("nav_settings")}</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="participants"><Users className="h-4 w-4" />{t("sim_tab_participants")} <span className="font-mono text-xs text-muted-foreground">{students.length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="forms"><FileText className="h-4 w-4" />{t("sim_tab_forms")} <span className="font-mono text-xs text-muted-foreground">{forms.length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="settings"><Settings className="h-4 w-4" />{t("nav_settings")}</TabsTriggerLine>
+        </TabsListLine>
 
         {/* Participants Tab */}
-        <TabsContent value="participants" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("sim_professor")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {professor ? (
-                editingId === (professor as any).id ? (
-                  <div className="flex gap-2 items-center p-3 bg-muted rounded-lg">
-                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="flex-1" />
-                    <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email" className="flex-1" />
-                    <Button variant="ghost" size="sm" onClick={() => saveEdit((professor as any).id)}>
-                      <Check className="h-4 w-4 text-green-600" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div>
-                      <p className="font-medium">{(professor as any).student_name}</p>
-                      <p className="text-sm text-muted-foreground">{(professor as any).student_email}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => startEditing(professor)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => removeParticipant((professor as any).id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )
-              ) : (
-                <div className="flex gap-2">
-                  <Input placeholder={t("sim_name_placeholder")} value={profName} onChange={(e) => setProfName(e.target.value)} />
-                  <Input placeholder="Email" value={profEmail} onChange={(e) => setProfEmail(e.target.value)} type="email" />
-                  <Button onClick={() => addParticipant("professor")} disabled={!profName.trim()}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-              <CardTitle className="text-base">{t("sim_students_list")}</CardTitle>
-              <ImportClassStudentsButton type="simulation_anamnese" roomId={roomId!} participantsTable="simulation_participants" existingEmails={participants.map((p: any) => p.student_email)} onDone={refetchParticipants} />
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <TabsContent value="participants" className="mt-6">
+          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+            <Card className="overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+                <h3 className="font-heading text-lg font-medium">{t("sim_students_list")}</h3>
+                <ImportClassStudentsButton type="simulation_anamnese" roomId={roomId!} participantsTable="simulation_participants" existingEmails={participants.map((p: any) => p.student_email)} onDone={refetchParticipants} />
+              </div>
               {students.length > 0 ? (
-                <div className="space-y-2">
+                <div className="divide-y">
                   {students.map((p: any) => (
                     editingId === p.id ? (
-                      <div key={p.id} className="flex gap-2 items-center p-2 bg-muted rounded-lg">
+                      <div key={p.id} className="flex items-center gap-2 bg-sunken p-3">
                         <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="flex-1" />
                         <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email" className="flex-1" />
-                        <Button variant="ghost" size="sm" onClick={() => saveEdit(p.id)}>
-                          <Check className="h-3.5 w-3.5 text-green-600" />
+                        <Button variant="ghost" size="sm" onClick={() => saveEdit(p.id)} aria-label="Salvar">
+                          <Check className="h-4 w-4 text-success" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
-                          <X className="h-3.5 w-3.5" />
+                        <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} aria-label="Cancelar">
+                          <X className="h-4 w-4" />
                         </Button>
                       </div>
                     ) : (
-                      <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                        <div>
-                          <span className="font-medium">{p.student_name}</span>
-                          {p.student_email && <span className="text-sm text-muted-foreground ml-2">{p.student_email}</span>}
+                      <div key={p.id} className="flex items-center gap-3 px-5 py-3">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-medium text-brand-text">{initialsOf(p.student_name)}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{p.student_name}</p>
+                          {p.student_email && <p className="truncate text-xs text-muted-foreground">{p.student_email}</p>}
                         </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => startEditing(p)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => removeParticipant(p.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => startEditing(p)} aria-label="Editar">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => removeParticipant(p.id)} aria-label="Remover">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     )
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">{t("sim_add_student")}</p>
+                <p className="px-5 py-8 text-center text-sm text-muted-foreground">{t("sim_add_student")}</p>
               )}
 
-              <div className="border-t pt-4">
-                <p className="text-sm text-muted-foreground mb-2">{t("sim_add_student")}</p>
+              <div className="border-t bg-sunken px-5 py-4">
+                <p className="label-mono mb-2">{t("sim_add_student")}</p>
                 <div className="flex gap-2">
                   <Input placeholder={t("sim_name_placeholder")} value={newName} onChange={(e) => setNewName(e.target.value)} />
-                  <Input placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} type="email" />
-                  <Button onClick={() => addParticipant("student")} disabled={!newName.trim()}>
+                  <Input placeholder="E-mail" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} type="email" />
+                  <Button onClick={() => addParticipant("student")} disabled={!newName.trim()} aria-label="Adicionar aluno">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </Card>
+
+            <div className="space-y-4">
+              <Card className="p-5">
+                <h3 className="font-heading text-lg font-medium mb-3">{t("sim_professor")}</h3>
+                {professor ? (
+                  editingId === (professor as any).id ? (
+                    <div className="flex items-center gap-2">
+                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="flex-1" />
+                      <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email" className="flex-1" />
+                      <Button variant="ghost" size="sm" onClick={() => saveEdit((professor as any).id)} aria-label="Salvar">
+                        <Check className="h-4 w-4 text-success" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} aria-label="Cancelar">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-highlight/20 text-xs font-medium text-warning-ink">{initialsOf((professor as any).student_name)}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{(professor as any).student_name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{(professor as any).student_email}</p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => startEditing(professor)} aria-label="Editar">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => removeParticipant((professor as any).id)} aria-label="Remover">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )
+                ) : (
+                  <div className="space-y-2">
+                    <Input placeholder={t("sim_name_placeholder")} value={profName} onChange={(e) => setProfName(e.target.value)} />
+                    <Input placeholder="E-mail" value={profEmail} onChange={(e) => setProfEmail(e.target.value)} type="email" />
+                    <Button onClick={() => addParticipant("professor")} disabled={!profName.trim()} className="w-full">
+                      <Plus className="h-4 w-4" />Adicionar professor
+                    </Button>
+                  </div>
+                )}
+              </Card>
+              <p className="rounded-lg bg-sunken p-4 text-xs text-muted-foreground">
+                Os alunos entram na sala com o PIN e o e-mail cadastrado aqui. Para trazer uma turma inteira, use o botão de importar turma.
+              </p>
+            </div>
+          </div>
         </TabsContent>
 
         {/* Forms Tab */}
-        <TabsContent value="forms" className="space-y-4">
-           <div className="flex items-center gap-2 flex-wrap">
-             <Button variant="outline" size="sm" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4 mr-1" />Usar Template</Button>
-             {activeForm && (
-               <Button variant="outline" size="sm" onClick={() => { setSaveTemplateForm({ title: formTitle, form_type: activeFormType, content_json: activeFormType === "patient_script" ? clinicalCases : formFields }); setSaveTemplateDialogOpen(true); }}><BookmarkPlus className="h-4 w-4 mr-1" />Salvar como Template</Button>
-             )}
-             {activeForm && activeFormType !== "patient_script" && formFields.length > 0 && (
-               <Button variant="outline" size="sm" onClick={() => exportFormToPDF({ title: formTitle || formTypes.find(f => f.value === activeFormType)?.label || "Formulário", fields: formFields, formType: formTypes.find(f => f.value === activeFormType)?.label, showScores: isEvalForm })}><FileDown className="h-4 w-4 mr-1" />Baixar PDF</Button>
-             )}
-           </div>
-          <div className="flex gap-2 flex-wrap">
-            {formTypes.map((ft) => (
-              <Button
-                key={ft.value}
-                variant={activeFormType === ft.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveFormType(ft.value)}
-              >
-                {ft.label}
-              </Button>
-            ))}
+        <TabsContent value="forms" className="mt-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {formTypes.map((ft) => (
+                <Button
+                  key={ft.value}
+                  variant={activeFormType === ft.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveFormType(ft.value)}
+                >
+                  {ft.label}
+                </Button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setTemplateDialogOpen(true)}><Star className="h-4 w-4" />Usar template</Button>
+              {activeForm && (
+                <Button variant="outline" size="sm" onClick={() => { setSaveTemplateForm({ title: formTitle, form_type: activeFormType, content_json: activeFormType === "patient_script" ? clinicalCases : formFields }); setSaveTemplateDialogOpen(true); }}><BookmarkPlus className="h-4 w-4" />Salvar como template</Button>
+              )}
+              {activeForm && activeFormType !== "patient_script" && formFields.length > 0 && (
+                <Button variant="outline" size="sm" onClick={() => exportFormToPDF({ title: formTitle || formTypes.find(f => f.value === activeFormType)?.label || "Formulário", fields: formFields, formType: formTypes.find(f => f.value === activeFormType)?.label, showScores: isEvalForm })}><FileDown className="h-4 w-4" />Baixar PDF</Button>
+              )}
+            </div>
           </div>
 
-          {/* Score validation banner */}
-          {isEvalForm && (
-            <Card className={`border-2 ${scoreValidation.allValid && (scoreValidation.profTotal > 0 || scoreValidation.obsTotal > 0) ? "border-green-500/50" : (scoreValidation.profTotal === 0 && scoreValidation.obsTotal === 0) ? "border-muted" : !scoreValidation.allValid ? "border-destructive/50" : "border-muted"}`}>
-              <CardContent className="py-3">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{t("sim_score_total")}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm flex-wrap">
-                    <span className={`${scoreValidation.profValid ? (scoreValidation.profTotal === 10 ? "text-green-600" : "text-muted-foreground") : "text-destructive"}`}>
-                      {t("sim_form_professor_eval")}: <strong>{scoreValidation.profTotal}/10</strong>
-                      {scoreValidation.profTotal === 10 && " ✓"}
-                    </span>
-                    <span className="text-muted-foreground">|</span>
-                    <span className={`${scoreValidation.obsValid ? (scoreValidation.obsTotal === 10 ? "text-green-600" : "text-muted-foreground") : "text-destructive"}`}>
-                      {t("sim_form_observer_eval")}: <strong>{scoreValidation.obsTotal}/10</strong>
-                      {scoreValidation.obsTotal === 10 && " ✓"}
-                    </span>
-                    <span className="text-muted-foreground">→</span>
-                    <span className="text-muted-foreground text-xs">
-                      {t("sim_score_average_info")}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                {formTypes.find(f => f.value === activeFormType)?.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
+          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+            <Card className="p-6 space-y-4">
+              <div className="flex items-baseline justify-between">
+                <h3 className="font-heading text-lg font-medium">{formTypes.find(f => f.value === activeFormType)?.label}</h3>
+                {activeFormType !== "patient_script" && <span className="text-xs text-muted-foreground">{formFields.length} {formFields.length === 1 ? "campo" : "campos"}</span>}
+              </div>
+              <div className="space-y-2">
                 <Label>{t("sim_form_title")}</Label>
                 <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} />
               </div>
@@ -745,9 +736,9 @@ export default function SimulationEditor() {
               {activeFormType === "patient_script" ? (
                 <div className="space-y-4">
                   {clinicalCases.map((c, i) => (
-                    <div key={c.id} className="border rounded-lg p-4 space-y-2">
+                    <div key={c.id} className="rounded-lg border bg-sunken p-4 space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label className="font-medium">{t("sim_case_number")} {i + 1}</Label>
+                        <span className="label-mono">{t("sim_case_number")} {i + 1}</span>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="sm" title="Salvar no Banco" onClick={async () => {
                             const { data: { session } } = await supabase.auth.getSession();
@@ -757,7 +748,7 @@ export default function SimulationEditor() {
                           }}>
                             <Save className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setClinicalCases(clinicalCases.filter((_, idx) => idx !== i))}>
+                          <Button variant="ghost" size="sm" onClick={() => setClinicalCases(clinicalCases.filter((_, idx) => idx !== i))} aria-label="Remover caso">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -780,13 +771,11 @@ export default function SimulationEditor() {
                         }}
                         rows={8}
                         placeholder={t("sim_patient_script_placeholder")}
-                        className="font-mono text-sm leading-6"
+                        className="font-mono text-sm leading-6 bg-card"
                       />
                       {c.script.trim() && (
-                        <div className="rounded-xl border border-border bg-muted/20 p-4">
-                          <Label className="mb-3 block text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                            Pré-visualização
-                          </Label>
+                        <div className="rounded-xl border border-border bg-card p-4">
+                          <p className="label-mono mb-3">Pré-visualização</p>
                           <ClinicalCaseContent content={c.script} />
                         </div>
                       )}
@@ -794,10 +783,10 @@ export default function SimulationEditor() {
                   ))}
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setClinicalCases([...clinicalCases, { id: crypto.randomUUID(), title: `${t("sim_case_number")} ${clinicalCases.length + 1}`, script: "" }])}>
-                      <Plus className="h-4 w-4 mr-1" />{t("sim_add_case")}
+                      <Plus className="h-4 w-4" />{t("sim_add_case")}
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => setCaseBankOpen(true)}>
-                      <BookOpen className="h-4 w-4 mr-1" />Banco de Casos
+                      <BookOpen className="h-4 w-4" />Banco de casos
                     </Button>
                   </div>
                   <ClinicalCaseBankDialog
@@ -817,33 +806,53 @@ export default function SimulationEditor() {
                 />
               )}
 
-              <div className="space-y-2">
-                <Button onClick={() => saveForm()} className="w-full">{t("save")}</Button>
-                <p className="text-xs text-muted-foreground text-center">Salvamento automático ativado.</p>
+              <div className="flex items-center justify-between border-t pt-4">
+                <span className="text-xs text-muted-foreground">Salvamento automático ativado.</span>
+                <Button onClick={() => saveForm()}>{t("save")}</Button>
               </div>
-            </CardContent>
-          </Card>
+            </Card>
+
+            <Card className="p-5 space-y-3 self-start">
+              <h3 className="font-heading text-lg font-medium">Notas dos formulários</h3>
+              <p className="text-xs text-muted-foreground">{t("sim_score_average_info")}</p>
+              {[
+                { label: t("sim_form_professor_eval"), total: scoreValidation.profTotal, valid: scoreValidation.profValid },
+                { label: t("sim_form_observer_eval"), total: scoreValidation.obsTotal, valid: scoreValidation.obsValid },
+              ].map((row) => (
+                <div key={row.label} className="flex items-center justify-between gap-3 text-sm">
+                  <span>{row.label}</span>
+                  <StatusBadge tone={row.total === 10 ? "ok" : !row.valid ? "bad" : "neutral"}>
+                    <span className="font-mono">{row.total}/10</span>{row.total === 10 && " ✓"}
+                  </StatusBadge>
+                </div>
+              ))}
+              <p className="rounded-md bg-sunken p-3 text-xs text-muted-foreground">Para iniciar, cada avaliação precisa somar exatamente 10.</p>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("sim_settings")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
+        <TabsContent value="settings" className="mt-6 space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="p-6 space-y-4">
+              <h3 className="font-heading text-lg font-medium">Geral</h3>
+              <div className="space-y-2">
                 <Label>{t("sim_name")}</Label>
                 <Input value={roomTitle} onChange={(e) => setRoomTitle(e.target.value)} />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>{t("sim_description")}</Label>
                 <Textarea value={roomDesc} onChange={(e) => setRoomDesc(e.target.value)} />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>{t("sim_duration")} ({t("sim_minutes")})</Label>
-                <Input type="number" value={roomDuration} onChange={(e) => setRoomDuration(Number(e.target.value))} min={1} />
+                <Input type="number" value={roomDuration} onChange={(e) => setRoomDuration(Number(e.target.value))} min={1} className="w-32" />
               </div>
+              <Button onClick={saveSettings}>{t("save")}</Button>
+            </Card>
+
+            <Card className="p-6 space-y-4">
+              <h3 className="font-heading text-lg font-medium">Competências e acesso</h3>
               <CompetencySelector
                 selectedIds={room.competency_ids || []}
                 onChange={async (ids) => {
@@ -851,33 +860,52 @@ export default function SimulationEditor() {
                   queryClient.invalidateQueries({ queryKey: ["simulation-room", roomId] });
                 }}
               />
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium">PIN: <span className="font-mono text-lg">{room.access_code}</span></p>
+              <div className="rounded-lg bg-sunken p-4">
+                <p className="label-mono mb-2">PIN da sala</p>
+                <p className="font-mono text-2xl font-medium tracking-[0.14em]">{room.access_code}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={saveSettings}>{t("save")}</Button>
+            </Card>
+          </div>
+
+          {(room.status === "active" || room.status === "completed") && (
+            <Card className="border-destructive/30 p-6">
+              <h3 className="font-heading text-lg font-medium">Controle da atividade</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Retomar libera a atividade pausada. Reiniciar apaga as rodadas e as respostas e volta ao começo.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
                 {room.status === "active" && (
                   <Button variant="outline" onClick={resumeSimulation}>Retomar atividade</Button>
                 )}
-                {(room.status === "active" || room.status === "completed") && (
-                  <Button variant="destructive" onClick={restartSimulation}>Reiniciar do começo</Button>
-                )}
+                <Button variant="destructive" onClick={() => setRestartOpen(true)}>Reiniciar do começo</Button>
               </div>
-            </CardContent>
-          </Card>
+            </Card>
+          )}
 
           {room.status === "draft" && (
-            <Card>
-              <CardContent className="pt-6">
-                <Button onClick={startSimulation} className="w-full" size="lg">
-                  <Play className="h-4 w-4 mr-2" />{t("sim_start")}
-                </Button>
-                <p className="text-xs text-muted-foreground text-center mt-2">{t("sim_start_hint")}</p>
-              </CardContent>
+            <Card className="p-6 flex flex-wrap items-center justify-between gap-4">
+              <p className="text-sm text-muted-foreground max-w-xl">{t("sim_start_hint")}</p>
+              <Button onClick={startSimulation} size="lg">
+                <Play className="h-4 w-4" />{t("sim_start")}
+              </Button>
             </Card>
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={restartOpen} onOpenChange={setRestartOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reiniciar a simulação do começo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As rodadas e as respostas desta sala são apagadas e não podem ser recuperadas. Participantes e formulários permanecem.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setRestartOpen(false); restartSimulation(); }}>Reiniciar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="anamnese" onApply={(title, ft, fields) => { setFormTitle(title); setFormFields(fields); }} />
       {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="anamnese" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
     </div>

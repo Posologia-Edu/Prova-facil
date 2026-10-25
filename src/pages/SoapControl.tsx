@@ -370,12 +370,12 @@ export default function SoapControl() {
         accent="soap"
         moduleLabel="SOAP"
         moduleIcon={ClipboardList}
-        title={`${room.title} — Controle`}
+        title={`${room.title}`}
         pin={room.access_code}
         backTo="/simulations/soap"
         meta={<span>{studentsOnly.length} alunos</span>}
         rightSlot={room.status === "active" ? (
-          <Button variant="outline" size="sm" onClick={completeRoom} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
+          <Button variant="outline" size="sm" onClick={completeRoom}>
             <CheckCircle className="h-4 w-4 mr-2" />Concluir Sala
           </Button>
         ) : undefined}

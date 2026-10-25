@@ -248,7 +248,7 @@ export default function ReconciliationControl() {
         accent="reconciliacao"
         moduleLabel="Reconciliação"
         moduleIcon={Pill}
-        title={`${room?.title || ""} — Controle`}
+        title={`${room?.title || ""}`}
         pin={room?.access_code}
         backTo={`/simulations/reconciliation/editor/${roomId}`}
       />

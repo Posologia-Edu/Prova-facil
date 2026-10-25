@@ -1,7 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Progress } from "@/components/ui/progress";
-import { CalendarDays, CheckCircle2, Clock, Users } from "lucide-react";
 
 type Round = {
   id: string;
@@ -67,93 +66,75 @@ export function SimulationProgressPanel({ rounds, assignments, participants, ses
   const isPaused = roomStatus === "paused";
 
   return (
-    <Card className="border-primary/30">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center justify-between gap-2">
-          <span className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-primary" />
-            Progresso da turma
+    <Card className="p-6 space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-heading text-lg font-medium">Progresso da turma</h3>
+        {isPaused && <StatusBadge tone="warn" dot>Pausada</StatusBadge>}
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">
+            <span className="font-mono text-foreground">{completed}</span> de <span className="font-mono text-foreground">{total}</span> rodadas concluídas
           </span>
-          {isPaused && (
-            <Badge variant="outline" className="border-amber-400/60 text-amber-700 dark:text-amber-300">
-              <Clock className="h-3 w-3 mr-1" /> Pausada
-            </Badge>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
-              {completed} de {total} rodadas concluídas
-            </span>
-            <span className="font-medium">{pct}%</span>
-          </div>
-          <Progress value={pct} className="h-2" />
+          <span className="font-mono font-medium">{pct}%</span>
         </div>
+        <Progress value={pct} className="h-1.5" />
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="rounded-lg border bg-muted/40 p-3">
-            <div className="flex items-center gap-2 text-sm font-medium mb-2">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              Já avaliados ({evaluated.length})
-            </div>
-            {evaluated.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhum aluno avaliado ainda.</p>
-            ) : (
-              <ul className="space-y-1 max-h-40 overflow-y-auto">
-                {evaluated.map(s => (
-                  <li key={s.id} className="text-sm flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-600" />
-                    {s.student_name}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="rounded-lg border bg-muted/40 p-3">
-            <div className="flex items-center gap-2 text-sm font-medium mb-2">
-              <Users className="h-4 w-4 text-primary" />
-              Pendentes ({pending.length})
-            </div>
-            {pending.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Todos os alunos já foram avaliados.</p>
-            ) : (
-              <ul className="space-y-1 max-h-40 overflow-y-auto">
-                {pending.map(s => (
-                  <li key={s.id} className="text-sm flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
-                    {s.student_name}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        {sessions.length > 0 && (
-          <div className="rounded-lg border bg-card p-3">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-              Histórico de sessões
-            </p>
-            <ul className="space-y-1.5">
-              {sessions
-                .slice()
-                .sort((a, b) => a.session_number - b.session_number)
-                .map(s => (
-                  <li key={s.id} className="text-sm flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">Sessão {s.session_number}</Badge>
-                    <span className="text-muted-foreground">
-                      {fmtDate(s.started_at)}
-                      {s.ended_at ? ` → ${fmtDate(s.ended_at)}` : " — em andamento"}
-                    </span>
-                  </li>
-                ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="rounded-lg bg-sunken p-4">
+          <p className="label-mono mb-3">Já avaliados ({evaluated.length})</p>
+          {evaluated.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum aluno avaliado ainda.</p>
+          ) : (
+            <ul className="space-y-1 max-h-40 overflow-y-auto">
+              {evaluated.map(s => (
+                <li key={s.id} className="text-sm flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                  {s.student_name}
+                </li>
+              ))}
             </ul>
-          </div>
-        )}
-      </CardContent>
+          )}
+        </div>
+
+        <div className="rounded-lg bg-sunken p-4">
+          <p className="label-mono mb-3">Pendentes ({pending.length})</p>
+          {pending.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Todos os alunos já foram avaliados.</p>
+          ) : (
+            <ul className="space-y-1 max-h-40 overflow-y-auto">
+              {pending.map(s => (
+                <li key={s.id} className="text-sm flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+                  {s.student_name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {sessions.length > 0 && (
+        <div className="border-t pt-4">
+          <p className="label-mono mb-3">Histórico de sessões</p>
+          <ul className="space-y-2">
+            {sessions
+              .slice()
+              .sort((a, b) => a.session_number - b.session_number)
+              .map(s => (
+                <li key={s.id} className="text-sm flex items-center gap-3">
+                  <StatusBadge tone="neutral">Sessão {s.session_number}</StatusBadge>
+                  <span className="text-muted-foreground">
+                    {fmtDate(s.started_at)}
+                    {s.ended_at ? ` → ${fmtDate(s.ended_at)}` : " — em andamento"}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 }

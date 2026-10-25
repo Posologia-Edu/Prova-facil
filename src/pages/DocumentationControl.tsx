@@ -431,7 +431,7 @@ export default function DocumentationControl() {
         accent="documentacao"
         moduleLabel="Documentação"
         moduleIcon={FileText}
-        title={`${room?.title || ""} — Controle`}
+        title={`${room?.title || ""}`}
         pin={room?.access_code}
         backTo={`/simulations/documentation/editor/${roomId}`}
       />
