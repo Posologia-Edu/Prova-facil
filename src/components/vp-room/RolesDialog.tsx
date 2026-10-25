@@ -56,7 +56,7 @@ export function RolesDialog({ open, encounter, members, previousRegistrars, init
         onEscapeKeyDown={(e) => { if (!onCancel) e.preventDefault(); }}
       >
         <DialogHeader>
-          <DialogTitle>Funções do grupo no {encounter}º encontro</DialogTitle>
+          <DialogTitle className="font-heading text-xl font-medium">Funções do grupo no {encounter}º encontro</DialogTitle>
           <DialogDescription className="text-left">
             Marquem quem vai <strong>registrar a ficha</strong>. Os demais <strong>conduzem a conversa</strong> com o paciente.
             As funções se alternam entre os encontros para que todos experimentem as duas. A primeira confirmação vale para o grupo todo.
@@ -67,7 +67,7 @@ export function RolesDialog({ open, encounter, members, previousRegistrars, init
           {members.map((m) => {
             const canRegister = eligible.includes(m.email);
             return (
-              <label key={m.email} className="flex items-center justify-between gap-3 rounded-md border p-2.5 text-sm">
+              <label key={m.email} className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-brand-soft">
                 <span className="min-w-0">
                   <span className="font-medium">{m.name}</span>
                   {!canRegister && <span className="block text-xs text-muted-foreground">Já registrou a ficha: vez dos colegas.</span>}

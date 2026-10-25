@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Clock, MapPin } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { FichaVersao } from "@/lib/vp-ficha";
@@ -58,44 +58,45 @@ export function EncounterIntroDialog({ open, firstTime, brief, title, versao, ha
         onEscapeKeyDown={(e) => { if (firstTime) e.preventDefault(); }}
       >
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <p className="eyebrow">Cartão do encontro</p>
+          <DialogTitle className="font-heading text-xl font-medium">{title}</DialogTitle>
           <DialogDescription className="text-left">Leia o cartão do encontro antes de começar.</DialogDescription>
         </DialogHeader>
 
         <dl className="space-y-3 text-sm">
           {brief.local && (
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Local</dt>
+              <dt className="eyebrow mb-1">Local</dt>
               <dd>{brief.local}</dd>
             </div>
           )}
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cenário</dt>
+            <dt className="eyebrow mb-1">Cenário</dt>
             <dd>{brief.cenario}</dd>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Seu papel</dt>
+              <dt className="eyebrow mb-1">Seu papel</dt>
               <dd>{versao ? PAPEL[versao] : "Profissional de saúde"}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Você conversa com</dt>
+              <dt className="eyebrow mb-1">Você conversa com</dt>
               <dd>{comQuemFala(brief)}</dd>
             </div>
           </div>
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sua tarefa</dt>
+            <dt className="eyebrow mb-1">Sua tarefa</dt>
             <dd className="font-medium">{brief.tarefa}</dd>
           </div>
           {brief.tempo_min ? (
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tempo sugerido</dt>
-              <dd>{brief.tempo_min} minutos. O cronômetro é só uma referência: nada é bloqueado ao fim do tempo.</dd>
+              <dt className="eyebrow mb-1">Tempo sugerido</dt>
+              <dd><StatusBadge tone="info"><Clock className="h-3 w-3" />{brief.tempo_min} min sugeridos</StatusBadge> <span className="text-muted-foreground">O cronômetro é só uma referência: nada é bloqueado ao fim do tempo.</span></dd>
             </div>
           ) : null}
         </dl>
 
-        <div className="rounded-md border bg-muted/40 p-3 text-xs space-y-1">
+        <div className="space-y-1 rounded-card border border-info/30 bg-info-soft p-3 text-xs">
           <p className="font-semibold">Como interagir</p>
           <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
             <li>{prescritor ? "Escreva como se estivesse falando com o profissional, de forma objetiva." : "Escreva como se estivesse falando com a pessoa. Ela só responde ao que for perguntado."}</li>
@@ -123,7 +124,7 @@ export function EncounterStrip({ brief, onOpen }: { brief: EncounterBrief; onOpe
     <button
       type="button"
       onClick={onOpen}
-      className="w-full text-left border-b bg-muted/40 hover:bg-muted/60 px-4 py-2 text-xs flex items-center gap-2 flex-shrink-0 transition-colors"
+      className="flex w-full flex-shrink-0 items-center gap-3 border-b bg-brand-soft/60 px-4 py-2 text-left text-xs transition-colors hover:bg-brand-soft lg:px-6"
       title="Ver o cartão completo do encontro"
     >
       {brief.local && (
@@ -154,8 +155,8 @@ export function EncounterTimer({ sessionId, encounter, minutes }: { sessionId: s
   const ss = String(secs % 60).padStart(2, "0");
   const over = !!minutes && secs > minutes * 60;
   return (
-    <Badge variant="outline" className={`text-xs font-mono gap-1 ${over ? "border-amber-500 text-amber-600" : ""}`} title="Tempo neste encontro (referência)">
-      <Clock className="h-3 w-3" /> {mm}:{ss}{minutes ? ` / ${minutes} min` : ""}
-    </Badge>
+    <StatusBadge tone={over ? "warn" : "neutral"} className="font-mono text-sm" title="Tempo neste encontro (referência)">
+      <Clock className="h-3.5 w-3.5" /> {mm}:{ss}{minutes ? ` / ${minutes} min` : ""}
+    </StatusBadge>
   );
 }

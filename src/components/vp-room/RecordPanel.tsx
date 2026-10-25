@@ -140,10 +140,10 @@ export function RecordPanel({ sessionId, encounter, versao, studentEmail, studen
   const encounters = useMemo(() => Array.from({ length: encounter }, (_, i) => i + 1), [encounter]);
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-background">
+    <div className="flex h-full min-h-0 flex-col bg-card">
       <div className="flex items-start justify-between gap-2 border-b p-3 flex-shrink-0">
         <div className="min-w-0">
-          <h3 className="font-semibold text-sm">{schema.title}</h3>
+          <h3 className="font-heading text-base font-medium">{schema.title}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">{schema.hint}</p>
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose} title="Fechar ficha">
@@ -157,7 +157,7 @@ export function RecordPanel({ sessionId, encounter, versao, studentEmail, studen
             <TabsList className="h-8">
               {encounters.map((e) => (
                 <TabsTrigger key={e} value={String(e)} className="text-xs h-6 px-3">
-                  {e === 1 ? "Anamnese" : e === 2 ? "SBAR" : "SOAP"}
+                  {e === 1 ? "1º · Anamnese" : e === 2 ? "2º · SBAR" : "3º · SOAP"}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -175,7 +175,7 @@ export function RecordPanel({ sessionId, encounter, versao, studentEmail, studen
           const storeKey = k(tab, s.key);
           return (
             <div key={s.key} className="space-y-1">
-              <Label htmlFor={`ficha-${tab}-${s.key}`} className="text-xs font-semibold">{s.label}</Label>
+              <Label htmlFor={`ficha-${tab}-${s.key}`} className="text-sm font-medium">{s.label}</Label>
               <Textarea
                 id={`ficha-${tab}-${s.key}`}
                 value={values[storeKey] ?? ""}
@@ -201,7 +201,7 @@ export function RecordPanel({ sessionId, encounter, versao, studentEmail, studen
         ) : pendingCount > 0 ? (
           <><Loader2 className="h-3 w-3 animate-spin" /> Salvando…</>
         ) : (
-          <><Check className="h-3 w-3 text-green-600" /> Salvo automaticamente{isGroup ? " e compartilhado com o grupo" : ""}</>
+          <><Check className="h-3 w-3 text-success" /> Salvo automaticamente{isGroup ? " e compartilhado com o grupo" : ""}</>
         )}
       </div>
     </div>

@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users, Activity, ShieldCheck, Mail, FileText } from "lucide-react";
+import { ArrowLeft, Send, ChevronRight, ClipboardCheck, Loader2, Users, Activity, ShieldCheck, Mail, FileText, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
@@ -112,7 +111,10 @@ export default function VirtualPatientRoom() {
 
   // A ficha abre sozinha na primeira vez para o aluno perceber que existe.
   const fichaAvailable = !!ficha;
-  useEffect(() => { if (fichaAvailable) setShowFicha(true); }, [fichaAvailable]);
+  // Em tela larga ela fica ao lado da conversa; no celular cobriria a tela toda, então começa fechada.
+  useEffect(() => {
+    if (fichaAvailable && window.matchMedia("(min-width: 1024px)").matches) setShowFicha(true);
+  }, [fichaAvailable]);
 
   const roleMembers = groupEmails.map((e, i) => ({ email: e.toLowerCase(), name: groupNames[i] || e }));
   const rolesActive = groupRolesOn && !!ficha && isGroupSession && groupEmails.length > 1;
@@ -816,61 +818,70 @@ export default function VirtualPatientRoom() {
     );
   }
 
+  const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
+  const nameOfAuthor = (msg: Message) => (msg.author_email && msg.author_email === studentEmail ? "Você" : msg.author_name || msg.author_email || "");
+  const diffLabel = dificuldade ? ({ facil: "Fácil", medio: "Médio", dificil: "Difícil" } as Record<string, string>)[dificuldade] || dificuldade : "";
+  const encounterTitles = ["Anamnese inicial", "Eficácia e segurança", maiRequired ? "Ajustes finais + MAI" : "Ajustes finais"];
+  const conduzindo = rolesActive && currentRegistrars
+    ? namesOf(roleMembers.map((m) => m.email).filter((e) => !currentRegistrars.includes(e)))
+    : "";
+
   return (
-    <div className="flex flex-col h-screen">
-      {/* Header */}
-      <div className="border-b p-4 flex items-center justify-between flex-shrink-0 bg-background">
-        <div className="flex items-center gap-3">
-          <div>
-            <h2 className="font-semibold">
-              {patient.name}, {patient.age} anos
-            </h2>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">{patient.module}</Badge>
-              {isTreino ? (
-                <Badge className="text-xs bg-sky-600 hover:bg-sky-600 text-white">
-                  Treino{dificuldade ? ` · ${({ facil: "Fácil", medio: "Médio", dificil: "Difícil" } as Record<string, string>)[dificuldade] || dificuldade}` : ""}
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-xs">Avaliativo</Badge>
-              )}
-              {pin && (
-                <Badge
-                  variant="outline"
-                  className="text-xs font-mono tracking-widest cursor-pointer"
-                  title="PIN da sala (clique para copiar). Outro integrante usa o PIN para entrar."
-                  onClick={() => { navigator.clipboard?.writeText(pin); toast.success("PIN copiado!"); }}
-                >
-                  PIN {pin}
-                </Badge>
-              )}
-              <Badge variant="secondary" className="text-xs">{encounterLabel(encounter)}</Badge>
-            </div>
+    <div className="flex h-screen flex-col bg-background">
+      {/* Cabeçalho */}
+      <header className="flex flex-shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b bg-card px-4 py-3 lg:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-soft font-heading text-base font-medium text-brand-text">
+            {initials(patient.name)}
+          </span>
+          <div className="min-w-0">
+            <h2 className="truncate font-heading text-lg font-medium leading-tight">{patient.name}, {patient.age} anos</h2>
             {isGroupSession ? (
-              <div className="flex items-center gap-1.5 mt-1">
-                <Users className="h-3 w-3 text-muted-foreground" />
-                <p className="text-xs text-muted-foreground">
-                  Grupo: {groupNames.join(", ")}
-                </p>
-              </div>
+              <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                <Users className="h-3 w-3 shrink-0" />{groupNames.join(", ")}
+              </p>
             ) : studentName ? (
-              <p className="text-xs text-muted-foreground mt-1">Estudante: {studentName}</p>
+              <p className="truncate text-xs text-muted-foreground">Estudante: {studentName}</p>
             ) : null}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <StatusBadge tone="neutral">{patient.module}</StatusBadge>
+          {isTreino
+            ? <StatusBadge tone="info">Treino{diffLabel ? ` · ${diffLabel}` : ""}</StatusBadge>
+            : <StatusBadge tone="accent">Avaliativo</StatusBadge>}
+          {isGroupSession && <StatusBadge tone="neutral">Grupo · {groupNames.length} integrantes</StatusBadge>}
+          {pin && (
+            <button
+              type="button"
+              className="inline-flex"
+              title="PIN da sala (clique para copiar). Outro integrante usa o PIN para entrar."
+              onClick={() => { navigator.clipboard?.writeText(pin); toast.success("PIN copiado!"); }}
+            >
+              <StatusBadge tone="neutral" className="cursor-pointer font-mono tracking-widest"><Copy className="h-3 w-3" />PIN {pin}</StatusBadge>
+            </button>
+          )}
           {myRole && (
-            <Badge
-              variant="secondary"
-              className="text-xs"
+            <StatusBadge
+              tone="brand"
               title={rolesChosenBy[encounter] ? `Funções definidas por ${namesOf([rolesChosenBy[encounter]]) || rolesChosenBy[encounter]}` : undefined}
             >
               {myRole === "ficha" ? "Você registra a ficha" : "Você conduz a conversa"}
-            </Badge>
+            </StatusBadge>
+          )}
+          {sessionCompleted && <StatusBadge tone="ok" dot>Concluído</StatusBadge>}
+        </div>
+
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {isGroupSession && remoteTyping && !loading && (
+            <StatusBadge tone="info" dot>Outro integrante está conversando…</StatusBadge>
           )}
           {activeBrief && (
             <EncounterTimer sessionId={sessionId} encounter={encounter} minutes={activeBrief.tempo_min} />
+          )}
+          {activeBrief && (
+            <Button variant="outline" size="sm" onClick={() => setIntroManual(true)}>Ver cartão</Button>
           )}
           {myRole && !sessionCompleted && (
             <Button variant="ghost" size="sm" onClick={() => setShowRolesEdit(true)} title="Alterar as funções deste encontro">
@@ -879,106 +890,135 @@ export default function VirtualPatientRoom() {
           )}
           {ficha && (
             <Button variant={showFicha ? "secondary" : "outline"} size="sm" onClick={() => setShowFicha((v) => !v)}>
-              <FileText className="h-4 w-4 mr-1" /> Ficha
+              <FileText className="h-4 w-4" /> Ficha
             </Button>
           )}
           {encounter < 3 && !sessionCompleted && (
             <Button variant="outline" size="sm" onClick={advanceEncounter}>
-              Avançar Encontro <ChevronRight className="h-4 w-4 ml-1" />
+              Avançar encontro <ChevronRight className="h-4 w-4" />
             </Button>
           )}
           {encounter === 3 && !sessionCompleted && (
             <Button size="sm" onClick={requestFinish}>
-              <ClipboardCheck className="h-4 w-4 mr-1" /> {maiRequired ? "Preencher MAI" : "Concluir atendimento"}
+              <ClipboardCheck className="h-4 w-4" /> {maiRequired ? "Preencher MAI" : "Concluir atendimento"}
             </Button>
           )}
-          {sessionCompleted && (
-            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-              Concluído
-            </Badge>
-          )}
+        </div>
+      </header>
+
+      {/* Etapas dos encontros */}
+      <div className="flex-shrink-0 border-b bg-card/60 px-4 py-2.5 lg:px-6">
+        <div className="mb-1.5 flex gap-1.5" aria-hidden>
+          {[1, 2, 3].map((n) => (
+            <span key={n} className={`h-1.5 flex-1 rounded-full ${n < encounter || sessionCompleted ? "bg-primary" : n === encounter ? "bg-highlight" : "bg-muted"}`} />
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 text-xs">
+          <span className="text-muted-foreground"><b className="font-medium text-foreground">Encontro {encounter} de 3</b> · {encounterTitles[encounter - 1]}</span>
+          <span className="hidden text-muted-foreground sm:inline">
+            {encounterTitles.map((t, i) => (
+              <span key={t}>{i > 0 && " · "}<span className={i + 1 === encounter ? "font-medium text-foreground" : ""}>{t}</span></span>
+            ))}
+          </span>
         </div>
       </div>
 
       {activeBrief && <EncounterStrip brief={activeBrief} onOpen={() => setIntroManual(true)} />}
 
-      <div className="flex flex-1 min-h-0">
-      <div className="flex flex-col flex-1 min-w-0 min-h-0">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex min-h-0 flex-1">
+      <div className="flex min-w-0 min-h-0 flex-1 flex-col">
+      {conduzindo && (
+        <div className="flex-shrink-0 border-b px-4 py-2 text-xs text-muted-foreground lg:px-6">
+          Quem conduz agora: <b className="font-medium text-foreground">{conduzindo}</b>
+        </div>
+      )}
+
+      {/* Mensagens */}
+      <div className="flex-1 space-y-4 overflow-y-auto p-4 lg:px-6">
         {messages.length === 0 && (
-          <div className="text-center text-muted-foreground py-12">
-            <p className="text-lg font-medium mb-2">Inicie o atendimento</p>
+          <div className="py-12 text-center text-muted-foreground">
+            <p className="mb-2 font-heading text-xl font-medium text-foreground">Inicie o atendimento</p>
             <p className="text-sm">Cumprimente o paciente e comece a anamnese.</p>
           </div>
         )}
 
-        {messages.map((msg, i) => (
-          <div key={msg.id ?? i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            <Card className={`max-w-[80%] p-3 ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-              {isGroupSession && msg.role === "user" && (msg.author_name || msg.author_email) && (
-                <p className="text-xs font-semibold opacity-80 mb-1">
-                  {msg.author_email && msg.author_email === studentEmail ? "Você" : msg.author_name || msg.author_email}
+        {messages.map((msg, i) => {
+          const isPatient = msg.role === "assistant";
+          const mine = !isPatient && (!isGroupSession || !msg.author_email || msg.author_email === studentEmail);
+          const author = nameOfAuthor(msg);
+          return (
+            <div key={msg.id ?? i} className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
+              <span
+                className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-medium ${
+                  isPatient ? "bg-brand-soft text-brand-text" : mine ? "bg-highlight/20 text-foreground" : "bg-info-soft text-info"
+                }`}
+                aria-hidden
+              >
+                {isPatient ? initials(patient.name) : initials(author || studentName || "Você")}
+              </span>
+              <div className="max-w-[78%]">
+                <div
+                  className={`rounded-2xl px-4 py-2.5 text-sm ${
+                    isPatient ? "rounded-bl-sm bg-muted" : mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-info-soft"
+                  }`}
+                >
+                  <div className="prose prose-sm max-w-none text-inherit dark:prose-invert prose-p:my-1 first:prose-p:mt-0 last:prose-p:mb-0" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
+                </div>
+                <p className={`mt-1 text-[11px] text-muted-foreground ${mine ? "text-right" : ""}`}>
+                  {isPatient ? "paciente" : isGroupSession ? (mine ? "você" : `${author} · integrante do grupo`) : "você"}
                 </p>
-              )}
-              <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.content) }} />
-            </Card>
-          </div>
-        ))}
+              </div>
+            </div>
+          );
+        })}
 
         {(loading || remoteTyping) && (
-          <div className="flex justify-start">
-            <Card className="p-3 bg-muted flex items-center gap-2">
+          <div className="flex items-end gap-2">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-soft text-[11px] font-medium text-brand-text" aria-hidden>{initials(patient.name)}</span>
+            <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-muted px-4 py-2.5">
               <Loader2 className="h-4 w-4 animate-spin" />
               {remoteTyping && !loading && (
                 <span className="text-xs text-muted-foreground">Outro integrante do grupo está conversando…</span>
               )}
-            </Card>
+            </div>
           </div>
         )}
 
         <div ref={bottomRef} />
       </div>
 
-      {/* Vital signs quick-action: appears when student mentions measuring vitals */}
-      {showVitalsButton && (
-        <div className="border-t px-4 pt-3 flex flex-shrink-0">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={measureVitals}
-            disabled={measuringVitals || loading}
-            className="gap-1.5"
-          >
-            {measuringVitals ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Activity className="h-4 w-4" />
-            )}
-            {measuringVitals ? "Aferindo..." : "Medir Sinais Vitais"}
-          </Button>
-        </div>
-      )}
-
-      {/* Input */}
-      {!sessionCompleted && !chatBlocked && (
-        <div className="border-t p-4 flex gap-2 flex-shrink-0">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Digite sua mensagem..."
-            className="min-h-[44px] max-h-32 resize-none"
-            rows={1}
-          />
-          <Button onClick={sendMessage} disabled={loading || !input.trim()} size="icon">
-            <Send className="h-4 w-4" />
-          </Button>
+      {/* Rodapé: sinais vitais e campo de mensagem */}
+      {(showVitalsButton || (!sessionCompleted && !chatBlocked)) && (
+        <div className="flex-shrink-0 space-y-2.5 border-t bg-card px-4 py-3 lg:px-6">
+          {showVitalsButton && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button variant="secondary" size="sm" onClick={measureVitals} disabled={measuringVitals || loading}>
+                {measuringVitals ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
+                {measuringVitals ? "Aferindo..." : "Medir sinais vitais"}
+              </Button>
+              <span className="text-xs text-muted-foreground">aparece quando você diz que vai aferir</span>
+            </div>
+          )}
+          {!sessionCompleted && !chatBlocked && (
+            <div className="flex gap-2">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Digite a sua pergunta…"
+                className="max-h-32 min-h-[44px] resize-none"
+                rows={1}
+              />
+              <Button onClick={sendMessage} disabled={loading || !input.trim()}>
+                <Send className="h-4 w-4" />Enviar
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
       {chatBlocked && (
-        <div className="border-t p-4 text-sm text-muted-foreground flex-shrink-0">
+        <div className="flex-shrink-0 border-t bg-card px-4 py-3 text-sm text-muted-foreground lg:px-6">
           {rolesPending
             ? "Definam as funções do grupo para continuar."
             : `Neste encontro você registra a ficha. Quem conduz a conversa: ${namesOf(roleMembers.map((m) => m.email).filter((e) => !(currentRegistrars || []).includes(e)))}.`}
@@ -987,7 +1027,7 @@ export default function VirtualPatientRoom() {
       </div>
 
       {ficha && showFicha && sessionId && (
-        <aside className="fixed inset-0 z-40 lg:static lg:z-auto lg:w-[400px] lg:flex-shrink-0 lg:border-l min-h-0">
+        <aside className="fixed inset-0 z-40 min-h-0 lg:static lg:z-auto lg:w-[400px] lg:flex-shrink-0 lg:border-l">
           <RecordPanel
             sessionId={sessionId}
             encounter={encounter}
