@@ -500,7 +500,7 @@ export default function Simulations() {
   const inPharmacy = activeTab === "pharmacy" || inModule;
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="space-y-3">
         {inPharmacy && (
           <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setActiveTab(inModule ? "pharmacy" : "areas")}>

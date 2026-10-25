@@ -233,7 +233,7 @@ export default function DocumentationRooms() {
   const teacherName = profile?.full_name || "Professor";
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <div className="eyebrow mb-2.5">Praticar · Simulação</div>
