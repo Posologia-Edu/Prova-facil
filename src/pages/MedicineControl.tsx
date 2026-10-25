@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { PageHeader } from "@/components/ui/page-header";
+import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
@@ -23,13 +25,13 @@ function CollapsibleAnswerField({ field }: { field: any }) {
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">
       <div className="text-xs font-medium text-muted-foreground uppercase">{field.label} ({field.max_score || 0} pts)</div>
       <CollapsibleTrigger asChild>
-        <button className="w-full text-left text-sm bg-green-50 dark:bg-green-950 p-2 rounded border border-green-200 dark:border-green-800 flex items-center justify-between hover:bg-green-100 dark:hover:bg-green-900 transition-colors">
+        <button className="w-full text-left text-sm bg-success/10 p-2 rounded border border-success/40 flex items-center justify-between hover:bg-success/10 transition-colors">
           <span>{isOpen ? "Ocultar espelho" : "Ver espelho"}</span>
           {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="text-sm bg-green-50 dark:bg-green-950 p-3 rounded-b border border-t-0 border-green-200 dark:border-green-800">{answerText}</div>
+        <div className="text-sm bg-success/10 p-3 rounded-b border border-t-0 border-success/40">{answerText}</div>
       </CollapsibleContent>
     </Collapsible>
   );
@@ -146,26 +148,78 @@ export default function MedicineControl() {
   const renderAnswerValue = (value: any) => { if (Array.isArray(value)) return value.join(", "); if (typeof value === "object") return JSON.stringify(value); return String(value || "—"); };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate(`/medicine/${mt}/editor/${roomId}`)}><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Button>
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs bg-blue-600/10 text-blue-600 border-blue-600/30">{moduleLabel[mt]}</Badge>
-            <h1 className="text-xl font-bold">{room?.title} — Controle</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">PIN: {room?.access_code}</p>
-        </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate(`/medicine/${mt}/editor/${roomId}`)}>
+          <ArrowLeft className="h-4 w-4" />Voltar
+        </Button>
+        <PageHeader
+          eyebrow={<>Medicina · {moduleLabel[mt]} · Controle da sala</>}
+          title={room?.title}
+          description={<span>PIN <b className="font-mono font-medium text-foreground">{room?.access_code}</b></span>}
+        />
       </div>
 
-      <Tabs defaultValue="participants">
-        <TabsList>
-          <TabsTrigger value="participants"><Users className="h-4 w-4 mr-1" />Participantes</TabsTrigger>
-          <TabsTrigger value="responses"><FileText className="h-4 w-4 mr-1" />Respostas</TabsTrigger>
-          <TabsTrigger value="grading"><BarChart3 className="h-4 w-4 mr-1" />Avaliação</TabsTrigger>
-        </TabsList>
+      {responses.length > 0 && (
+        <SimulationReportGenerator
+          stageName="Medicina"
+          stageType="area"
+          stageLabel={`Medicina - ${moduleLabel[mt]}`}
+          roomTitle={room?.title || ""}
+          pairs={(() => {
+            const seen = new Set<number>();
+            return responses
+              .filter((r: any) => {
+                if (seen.has(r.pair_index)) return false;
+                seen.add(r.pair_index);
+                return true;
+              })
+              .map((resp: any) => {
+                const pair = pairs[resp.pair_index] || [];
+                const answerItems = standardFields
+                  .filter((f) => f.type !== "header" && f.type !== "section_header")
+                  .map((f) => ({
+                    label: f.label,
+                    value: String((resp.answers_json as any)?.[f.id] || "—"),
+                    score: (f.max_score || 0) > 0 ? `${f.max_score} pts` : undefined,
+                  }));
+                let aiFeedbackText: string | null = null;
+                if (resp.ai_feedback_json) {
+                  if (typeof resp.ai_feedback_json === "string") aiFeedbackText = resp.ai_feedback_json;
+                  else if (typeof resp.ai_feedback_json === "object") {
+                    aiFeedbackText = Object.entries(resp.ai_feedback_json as Record<string, any>)
+                      .map(([k, v]) => {
+                        const label = standardFields.find((f) => f.id === k)?.label || k;
+                        return typeof v === "object" ? `${label}: Nota ${(v as any).score || 0} — ${(v as any).feedback || ""}` : `${label}: ${v}`;
+                      })
+                      .join("\n");
+                  }
+                }
+                return {
+                  pairIndex: resp.pair_index,
+                  students: pair.map((p: any) => ({ name: p.student_name, email: p.student_email || undefined })),
+                  score: Number(resp.admin_score ?? resp.ai_score ?? 0),
+                  maxScore: 10,
+                  details: [],
+                  sections: [{ title: "Respostas", items: answerItems }],
+                  aiScore: resp.ai_score != null ? Number(resp.ai_score) : null,
+                  adminScore: resp.admin_score != null ? Number(resp.admin_score) : null,
+                  aiFeedback: aiFeedbackText,
+                  adminFeedback: resp.admin_feedback || null,
+                } as PairReport;
+              });
+          })()}
+        />
+      )}
 
-        <TabsContent value="participants" className="space-y-4">
+      <Tabs defaultValue="participants">
+        <TabsListLine>
+          <TabsTriggerLine value="participants"><Users className="h-4 w-4" />Participantes</TabsTriggerLine>
+          <TabsTriggerLine value="responses"><FileText className="h-4 w-4" />Respostas</TabsTriggerLine>
+          <TabsTriggerLine value="grading"><BarChart3 className="h-4 w-4" />Avaliação</TabsTriggerLine>
+        </TabsListLine>
+
+        <TabsContent value="participants" className="mt-6 space-y-4">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {Object.entries(pairs).map(([idx, pair]) => {
               const pairIdx = Number(idx);
@@ -174,7 +228,7 @@ export default function MedicineControl() {
                 <Card key={idx}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm">{pair.some((p: any) => p.pair_position === "S") ? "Individual" : `Dupla ${pairIdx + 1}`}</CardTitle>
+                      <CardTitle className="font-heading text-lg font-medium">{pair.some((p: any) => p.pair_position === "S") ? "Individual" : `Dupla ${pairIdx + 1}`}</CardTitle>
                       <Badge variant={hasResponse ? "default" : "outline"}>{hasResponse ? "Enviou" : pair.every(p => p.status === "ready") ? "Pronto" : "Aguardando"}</Badge>
                     </div>
                   </CardHeader>
@@ -196,7 +250,7 @@ export default function MedicineControl() {
           {room?.status === "completed" && <Badge variant="outline" className="text-sm"><CheckCircle className="h-4 w-4 mr-1" />Sala concluída</Badge>}
         </TabsContent>
 
-        <TabsContent value="responses" className="space-y-4">
+        <TabsContent value="responses" className="mt-6 space-y-4">
           {!pairIndicesWithResponses.length ? <p className="text-sm text-muted-foreground">Nenhuma resposta recebida ainda.</p> : pairIndicesWithResponses.map(pairIdx => {
             const resp = responses.find(r => r.pair_index === pairIdx && r.form_id === standardForm?.id);
             const caseData = clinicalCases.find(c => c.id === resp?.clinical_case_id);
@@ -204,7 +258,7 @@ export default function MedicineControl() {
             return (
               <Card key={pairIdx}>
                 <CardHeader>
-                  <CardTitle className="text-base">{pairNames(pairIdx)}</CardTitle>
+                  <CardTitle className="font-heading text-lg font-medium">{pairNames(pairIdx)}</CardTitle>
                   {caseData && <p className="text-sm text-muted-foreground">Caso: {caseData.title}</p>}
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -226,7 +280,7 @@ export default function MedicineControl() {
                     </div>
                   )}
                   {resp?.ai_feedback_json && (
-                    <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800">
+                    <div className="p-3 bg-info/10 rounded border border-info/40">
                       <h4 className="text-sm font-medium mb-2 flex items-center gap-1"><Bot className="h-4 w-4" />Feedback da IA</h4>
                       <p className="text-sm">{typeof resp.ai_feedback_json === "string" ? resp.ai_feedback_json : (resp.ai_feedback_json as any)?.feedback || JSON.stringify(resp.ai_feedback_json)}</p>
                       {resp.ai_score != null && <p className="font-medium text-sm mt-2">Nota IA: {resp.ai_score}/10,0</p>}
@@ -239,7 +293,7 @@ export default function MedicineControl() {
           })}
         </TabsContent>
 
-        <TabsContent value="grading" className="space-y-4">
+        <TabsContent value="grading" className="mt-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <h3 className="font-medium text-sm">Selecionar Dupla</h3>

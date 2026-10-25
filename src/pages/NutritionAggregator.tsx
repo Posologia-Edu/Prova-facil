@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ClipboardList, Scale, Apple, Salad, BarChart3 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { nutritionModuleLabel, type NutritionModuleType } from "@/lib/nutrition-modules";
 
 type RoomInfo = { id: string; title: string; status: string; module_type: string };
@@ -48,15 +49,22 @@ export default function NutritionAggregator() {
   const moduleIcons: Record<string, any> = { anamnese_nutricional: ClipboardList, avaliacao_antropometrica: Scale, plano_alimentar: Salad, orientacao_nutricional: Apple };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/nutrition")}><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Button>
-        <div><h1 className="text-2xl font-bold">Agregador de Notas — Nutrição</h1><p className="text-muted-foreground">Notas consolidadas de todos os módulos</p></div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/nutrition")}>
+          <ArrowLeft className="h-4 w-4" />Nutrição
+        </Button>
+        <PageHeader
+          eyebrow="Praticar · Simulação"
+          title="Agregador de Notas — Nutrição"
+          description="Notas consolidadas de todos os módulos"
+        />
       </div>
+
       <Tabs defaultValue="consolidated">
-        <TabsList><TabsTrigger value="consolidated"><BarChart3 className="h-4 w-4 mr-1" />Consolidado</TabsTrigger><TabsTrigger value="by-room">Por Sala</TabsTrigger></TabsList>
-        <TabsContent value="consolidated" className="space-y-4">
-          <Card><CardHeader><CardTitle>Notas Consolidadas</CardTitle></CardHeader><CardContent>
+        <TabsListLine><TabsTriggerLine value="consolidated"><BarChart3 className="h-4 w-4" />Consolidado</TabsTriggerLine><TabsTriggerLine value="by-room">Por Sala</TabsTriggerLine></TabsListLine>
+        <TabsContent value="consolidated" className="mt-6 space-y-4">
+          <Card><CardHeader><CardTitle className="font-heading text-lg font-medium">Notas Consolidadas</CardTitle></CardHeader><CardContent>
             {consolidatedData.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma nota registrada ainda.</p> : (
               <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead>{moduleTypes.map(mt => <TableHead key={mt}>{nutritionModuleLabel[mt]}</TableHead>)}<TableHead>Média</TableHead></TableRow></TableHeader>
                 <TableBody>{consolidatedData.map(student => (<TableRow key={student.email}><TableCell className="font-medium">{student.name}</TableCell>{moduleTypes.map(mt => (<TableCell key={mt}>{(student as any)[mt] != null ? Number((student as any)[mt]).toFixed(1) : "—"}</TableCell>))}<TableCell className="font-bold">{student.average != null ? student.average.toFixed(1) : "—"}</TableCell></TableRow>))}</TableBody>
@@ -64,7 +72,7 @@ export default function NutritionAggregator() {
             )}
           </CardContent></Card>
         </TabsContent>
-        <TabsContent value="by-room" className="space-y-6">
+        <TabsContent value="by-room" className="mt-6 space-y-6">
           {moduleTypes.map(mt => {
             const Icon = moduleIcons[mt]; const moduleRooms = roomsByModule[mt] || [];
             if (!moduleRooms.length) return null;

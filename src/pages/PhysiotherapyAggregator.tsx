@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Heart, Activity, ArrowRightLeft, ClipboardList, BarChart3 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { moduleLabel, type PhysiotherapyModuleType } from "@/lib/physiotherapy-modules";
 
 type RoomInfo = { id: string; title: string; status: string; module_type: string };
@@ -85,24 +86,27 @@ export default function PhysiotherapyAggregator() {
   const moduleIcons: Record<string, any> = { avaliacao_funcional: Heart, cinetico_funcional: ClipboardList, plano_fisioterapeutico: Activity, evolucao_fisio: ArrowRightLeft };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/physiotherapy")}><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Button>
-        <div>
-          <h1 className="text-2xl font-bold">Agregador de Notas — Fisioterapia</h1>
-          <p className="text-muted-foreground">Notas consolidadas de todos os módulos</p>
-        </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/physiotherapy")}>
+          <ArrowLeft className="h-4 w-4" />Fisioterapia
+        </Button>
+        <PageHeader
+          eyebrow="Praticar · Simulação"
+          title="Agregador de Notas — Fisioterapia"
+          description="Notas consolidadas de todos os módulos"
+        />
       </div>
 
       <Tabs defaultValue="consolidated">
-        <TabsList>
-          <TabsTrigger value="consolidated"><BarChart3 className="h-4 w-4 mr-1" />Consolidado</TabsTrigger>
-          <TabsTrigger value="by-room">Por Sala</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="consolidated"><BarChart3 className="h-4 w-4" />Consolidado</TabsTriggerLine>
+          <TabsTriggerLine value="by-room">Por Sala</TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="consolidated" className="space-y-4">
+        <TabsContent value="consolidated" className="mt-6 space-y-4">
           <Card>
-            <CardHeader><CardTitle>Notas Consolidadas</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium">Notas Consolidadas</CardTitle></CardHeader>
             <CardContent>
               {consolidatedData.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma nota registrada ainda.</p> : (
                 <div className="overflow-x-auto">
@@ -132,7 +136,7 @@ export default function PhysiotherapyAggregator() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="by-room" className="space-y-6">
+        <TabsContent value="by-room" className="mt-6 space-y-6">
           {moduleTypes.map(mt => {
             const Icon = moduleIcons[mt];
             const moduleRooms = roomsByModule[mt] || [];

@@ -425,17 +425,19 @@ export default function Simulations() {
     queryKey: ["simulation-area-counts"],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return {} as Record<string, number>;
+      if (!session) return {} as Record<string, { active: number; archived: number }>;
       const entries = await Promise.all(
         otherAreas.map(async (a) => {
-          const { count } = await supabase
+          const { data } = await supabase
             .from(`${a.id}_rooms` as any)
-            .select("id", { count: "exact", head: true })
+            .select("id, is_archived")
             .eq("user_id", session.user.id);
-          return [a.id, count || 0] as const;
+          const rows = (data || []) as any[];
+          const archived = rows.filter((r) => r.is_archived).length;
+          return [a.id, { active: rows.length - archived, archived }] as const;
         }),
       );
-      return Object.fromEntries(entries) as Record<string, number>;
+      return Object.fromEntries(entries) as Record<string, { active: number; archived: number }>;
     },
   });
 
@@ -553,9 +555,14 @@ export default function Simulations() {
                 </div>
                 <h3 className="font-heading text-lg font-medium">{area.title}</h3>
                 <p className="text-xs text-muted-foreground">{area.description}</p>
-                {n !== undefined && (
-                  <StatusBadge tone={n > 0 ? "ok" : "neutral"}>{n === 0 ? "nenhuma sala" : `${n} ${n === 1 ? "sala" : "salas"}`}</StatusBadge>
-                )}
+                {n !== undefined && (n.active + n.archived === 0 ? (
+                  <StatusBadge tone="neutral">nenhuma sala</StatusBadge>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <StatusBadge tone={n.active > 0 ? "ok" : "neutral"}>{n.active} {n.active === 1 ? "ativa" : "ativas"}</StatusBadge>
+                    <StatusBadge tone="neutral">{n.archived} {n.archived === 1 ? "inativa" : "inativas"}</StatusBadge>
+                  </div>
+                ))}
               </Card>
             );
           })}

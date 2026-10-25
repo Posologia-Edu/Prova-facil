@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +10,7 @@ import { ImportClassStudentsButton } from "@/components/classes/ImportClassStude
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Play, BookOpen, RotateCcw, Star, BookmarkPlus, FileDown } from "lucide-react";
@@ -187,34 +189,47 @@ export default function NursingEditor() {
   const formTypeLabel: Record<string, string> = { standard: "Formulário", answer_key: "Espelho de Respostas" };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey={mt === "acolhimento" ? "acolhimento" : mt === "sae" ? "sae" : mt === "evolucao" ? "evolucao_enfermagem" : "passagem_plantao"} />
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/nursing")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />Voltar
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/nursing")}>
+          <ArrowLeft className="h-4 w-4" />Voltar
         </Button>
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs bg-rose-500/10 text-rose-500 border-rose-500/30">{moduleLabel[mt]}</Badge>
-            <h1 className="text-xl font-bold">{room.title}</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">PIN: {room.access_code} · Status: {room.status}</p>
-        </div>
-        {room.status === "draft" && <Button className="ml-auto" onClick={activateRoom}><Play className="h-4 w-4 mr-1" />Ativar Sala</Button>}
-        {room.status === "active" && <Button className="ml-auto" onClick={() => navigate(`/nursing/${mt}/control/${roomId}`)}><Play className="h-4 w-4 mr-1" />Painel de Controle</Button>}
+        <PageHeader
+          eyebrow={<>Enfermagem · {moduleLabel[mt]} · Editar sala</>}
+          title={room.title}
+          description={
+            <span className="flex flex-wrap items-center gap-3">
+              <StatusBadge tone={room.status === "active" ? "info" : room.status === "completed" ? "ok" : "warn"} dot={room.status !== "completed"}>{room.status === "active" ? "Ativa" : room.status === "completed" ? "Concluída" : "Rascunho"}</StatusBadge>
+              <span>PIN <b className="font-mono font-medium text-foreground">{room.access_code}</b></span>
+            </span>
+          }
+          actions={
+            <>
+              {room.status === "draft" && (
+                <Button onClick={activateRoom}><Play className="h-4 w-4" />Ativar sala</Button>
+              )}
+              {room.status === "active" && (
+                <Button onClick={() => navigate(`/nursing/${mt}/control/${roomId}`)}>
+                  <Play className="h-4 w-4" />Painel de controle
+                </Button>
+              )}
+            </>
+          }
+        />
       </div>
 
       <Tabs defaultValue="participants">
-        <TabsList>
-          <TabsTrigger value="participants"><Users className="h-4 w-4 mr-1" />Participantes</TabsTrigger>
-          <TabsTrigger value="forms"><FileText className="h-4 w-4 mr-1" />Formulários</TabsTrigger>
-          <TabsTrigger value="cases"><BookOpen className="h-4 w-4 mr-1" />Casos Clínicos</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="participants"><Users className="h-4 w-4" />Participantes</TabsTriggerLine>
+          <TabsTriggerLine value="forms"><FileText className="h-4 w-4" />Formulários</TabsTriggerLine>
+          <TabsTriggerLine value="cases"><BookOpen className="h-4 w-4" />Casos Clínicos</TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="participants" className="space-y-4">
+        <TabsContent value="participants" className="mt-6 space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-              <CardTitle className="text-base">Adicionar Aluno</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Adicionar Aluno</CardTitle>
               <ImportClassStudentsButton type="nursing" roomId={roomId!} participantsTable="nursing_participants" existingEmails={participants.map((p: any) => p.student_email)} onDone={refetchParticipants} />
             </CardHeader>
             <CardContent>
@@ -259,7 +274,7 @@ export default function NursingEditor() {
               <>
                 {Object.keys(pairGroups).length > 0 && (
                   <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Duplas Formadas <Badge variant="secondary">{Object.keys(pairGroups).length}</Badge></CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="font-heading text-lg font-medium flex items-center gap-2">Duplas Formadas <Badge variant="secondary">{Object.keys(pairGroups).length}</Badge></CardTitle></CardHeader>
                     <CardContent className="p-4 pt-0">
                       <div className="space-y-2">
                         {Object.entries(pairGroups).map(([idx, members]) => {
@@ -267,7 +282,7 @@ export default function NursingEditor() {
                           return (
                           <div key={idx} className="flex items-center justify-between py-2 px-3 rounded-lg bg-primary/5 border border-primary/10">
                             <div className="flex items-center gap-3">
-                              <Badge variant="outline" className={isSolo ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900 dark:text-amber-200" : ""}>{isSolo ? "Individual" : `Dupla ${Number(idx) + 1}`}</Badge>
+                              <Badge variant="outline" className={isSolo ? "bg-warning/10 text-warning-ink border-warning/40" : ""}>{isSolo ? "Individual" : `Dupla ${Number(idx) + 1}`}</Badge>
                               {members.map(m => <span key={m.id} className="text-sm"><span className="font-medium">{m.student_name}</span>{!isSolo && <span className="text-muted-foreground ml-1">({m.pair_position})</span>}</span>)}
                             </div>
                             <Button variant="ghost" size="icon" onClick={() => undoPair(Number(idx))}><RotateCcw className="h-4 w-4" /></Button>
@@ -281,7 +296,7 @@ export default function NursingEditor() {
                 {unpaired.length > 0 && (
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">Alunos sem dupla <Badge variant="secondary">{unpaired.length}</Badge></CardTitle>
+                      <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">Alunos sem dupla <Badge variant="secondary">{unpaired.length}</Badge></CardTitle>
                       <p className="text-sm text-muted-foreground">Selecione 2 alunos para formar uma dupla ou 1 para marcar como individual</p>
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
@@ -309,7 +324,7 @@ export default function NursingEditor() {
           })()}
         </TabsContent>
 
-        <TabsContent value="forms" className="space-y-4">
+        <TabsContent value="forms" className="mt-6 space-y-4">
           <Button variant="outline" onClick={() => setTemplateDialogOpen(true)}>
             <Star className="h-4 w-4 mr-2" />Usar Template
           </Button>
@@ -319,7 +334,7 @@ export default function NursingEditor() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">{form.title}</CardTitle>
+                    <CardTitle className="font-heading text-lg font-medium">{form.title}</CardTitle>
                     <Badge variant="outline" className="mt-1">{formTypeLabel[form.form_type] || form.form_type}</Badge>
                   </div>
                    <div className="flex gap-1">
@@ -338,7 +353,7 @@ export default function NursingEditor() {
           ))}
 
           <Card>
-            <CardHeader><CardTitle className="text-base">{editingFormId ? "Editando Formulário" : "Novo Formulário"}</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium">{editingFormId ? "Editando Formulário" : "Novo Formulário"}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
                 <div className="flex-1"><Label>Título</Label><Input value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder="Ex: Ficha de Acolhimento" /></div>
@@ -378,12 +393,12 @@ export default function NursingEditor() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="cases" className="space-y-4">
+        <TabsContent value="cases" className="mt-6 space-y-4">
           {clinicalCases.map(c => (
             <Card key={c.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{c.title}</CardTitle>
+                  <CardTitle className="font-heading text-lg font-medium">{c.title}</CardTitle>
                   <Button variant="ghost" size="sm" onClick={() => deleteCase(c.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               </CardHeader>
@@ -391,7 +406,7 @@ export default function NursingEditor() {
             </Card>
           ))}
           <Card>
-            <CardHeader><CardTitle className="text-base">Novo Caso Clínico</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium">Novo Caso Clínico</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div><Label>Título</Label><Input value={newCaseTitle} onChange={e => setNewCaseTitle(e.target.value)} placeholder="Ex: Caso 1 — Paciente com HAS" /></div>
               <div><Label>Conteúdo</Label><Textarea value={newCaseContent} onChange={e => setNewCaseContent(e.target.value)} rows={4} placeholder="Descreva o caso clínico..." /></div>

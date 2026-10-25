@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ClipboardList, Scan, FileText, SmilePlus, BarChart3 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import { dentistryModuleLabel, type DentistryModuleType } from "@/lib/dentistry-modules";
 
 type RoomInfo = { id: string; title: string; status: string; module_type: string };
@@ -48,12 +49,21 @@ export default function DentistryAggregator() {
   const moduleIcons: Record<string, any> = { anamnese_odontologica: ClipboardList, exame_clinico: Scan, plano_tratamento: FileText, orientacao_higiene: SmilePlus };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4"><Button variant="ghost" onClick={() => navigate("/dentistry")}><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Button><div><h1 className="text-2xl font-bold">Agregador de Notas — Odontologia</h1><p className="text-muted-foreground">Notas consolidadas de todos os módulos</p></div></div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/dentistry")}>
+          <ArrowLeft className="h-4 w-4" />Odontologia
+        </Button>
+        <PageHeader
+          eyebrow="Praticar · Simulação"
+          title="Agregador de Notas — Odontologia"
+          description="Notas consolidadas de todos os módulos"
+        />
+      </div>
       <Tabs defaultValue="consolidated">
-        <TabsList><TabsTrigger value="consolidated"><BarChart3 className="h-4 w-4 mr-1" />Consolidado</TabsTrigger><TabsTrigger value="by-room">Por Sala</TabsTrigger></TabsList>
-        <TabsContent value="consolidated" className="space-y-4">
-          <Card><CardHeader><CardTitle>Notas Consolidadas</CardTitle></CardHeader><CardContent>
+        <TabsListLine><TabsTriggerLine value="consolidated"><BarChart3 className="h-4 w-4" />Consolidado</TabsTriggerLine><TabsTriggerLine value="by-room">Por Sala</TabsTriggerLine></TabsListLine>
+        <TabsContent value="consolidated" className="mt-6 space-y-4">
+          <Card><CardHeader><CardTitle className="font-heading text-lg font-medium">Notas Consolidadas</CardTitle></CardHeader><CardContent>
             {consolidatedData.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma nota registrada ainda.</p> : (
               <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead>{moduleTypes.map(mt => <TableHead key={mt}>{dentistryModuleLabel[mt]}</TableHead>)}<TableHead>Média</TableHead></TableRow></TableHeader>
                 <TableBody>{consolidatedData.map(student => (<TableRow key={student.email}><TableCell className="font-medium">{student.name}</TableCell>{moduleTypes.map(mt => (<TableCell key={mt}>{(student as any)[mt] != null ? Number((student as any)[mt]).toFixed(1) : "—"}</TableCell>))}<TableCell className="font-bold">{student.average != null ? student.average.toFixed(1) : "—"}</TableCell></TableRow>))}</TableBody>
@@ -61,7 +71,7 @@ export default function DentistryAggregator() {
             )}
           </CardContent></Card>
         </TabsContent>
-        <TabsContent value="by-room" className="space-y-6">
+        <TabsContent value="by-room" className="mt-6 space-y-6">
           {moduleTypes.map(mt => {
             const Icon = moduleIcons[mt]; const moduleRooms = roomsByModule[mt] || [];
             if (!moduleRooms.length) return null;

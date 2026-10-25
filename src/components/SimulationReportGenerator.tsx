@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 
-export type StageType = "anamnese" | "soap" | "reconciliacao" | "documentacao";
+export type StageType = "anamnese" | "soap" | "reconciliacao" | "documentacao" | "area";
 
 export interface ReportSection {
   title: string;
@@ -33,6 +33,8 @@ interface SimulationReportProps {
   stageType: StageType;
   roomTitle: string;
   roomDate?: string;
+  /** rótulo livre da etapa (usado nas áreas da saúde); sem ele vale o rótulo do tipo */
+  stageLabel?: string;
   pairs: PairReport[];
 }
 
@@ -41,6 +43,7 @@ const stageLabels: Record<StageType, string> = {
   soap: "SOAP",
   reconciliacao: "Reconciliacao",
   documentacao: "Documentacao",
+  area: "Simulacao",
 };
 
 // ─────────────────────────────────────────────
@@ -101,7 +104,7 @@ function parseRubric(feedback: string): RubricChunk[] {
   return chunks;
 }
 
-function generatePdf(pair: PairReport, stageType: StageType, roomTitle: string, roomDate?: string): { blob: Blob; base64: string } {
+function generatePdf(pair: PairReport, stageText: string, roomTitle: string, roomDate?: string): { blob: Blob; base64: string } {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
@@ -131,7 +134,7 @@ function generatePdf(pair: PairReport, stageType: StageType, roomTitle: string, 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...MUTED);
     doc.setFontSize(7);
-    doc.text(cleanText(roomTitle) + "  ·  " + stageLabels[stageType], pw / 2, ph - 8, { align: "center" });
+    doc.text(cleanText(roomTitle) + "  ·  " + stageText, pw / 2, ph - 8, { align: "center" });
     doc.text(`Página ${i} / ${n}`, pw - MR, ph - 8, { align: "right" });
   };
 
@@ -146,7 +149,7 @@ function generatePdf(pair: PairReport, stageType: StageType, roomTitle: string, 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...GOLD_SOFT);
     doc.setFontSize(7.5);
-    doc.text("Relatório de " + stageLabels[stageType], pw - MR, 9, { align: "right" });
+    doc.text("Relatório de " + stageText, pw - MR, 9, { align: "right" });
   };
 
   const ensureSpace = (needed: number) => {
@@ -206,7 +209,7 @@ function generatePdf(pair: PairReport, stageType: StageType, roomTitle: string, 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(28);
   doc.setTextColor(255, 255, 255);
-  doc.text("Relatório de " + stageLabels[stageType], ML, 46);
+  doc.text("Relatório de " + stageText, ML, 46);
 
   // Subtitle: room + date
   doc.setFont("helvetica", "normal");
@@ -469,7 +472,8 @@ function generatePdf(pair: PairReport, stageType: StageType, roomTitle: string, 
 // ═══════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════
-export function SimulationReportGenerator({ stageName, stageType, roomTitle, roomDate, pairs }: SimulationReportProps) {
+export function SimulationReportGenerator({ stageName, stageType, roomTitle, roomDate, stageLabel, pairs }: SimulationReportProps) {
+  const stageText = stageLabel ?? stageLabels[stageType];
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -481,7 +485,7 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
     try {
       const pdfs = new Map<number, { blob: Blob; base64: string }>();
       for (const pair of pairs) {
-        const result = generatePdf(pair, stageType, roomTitle, roomDate);
+        const result = generatePdf(pair, stageText, roomTitle, roomDate);
         pdfs.set(pair.pairIndex, result);
       }
       setGeneratedPdfs(pdfs);
@@ -525,7 +529,7 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
           pdfBase64: pdf.base64,
           fileName: `relatorio-${stageType}-${pair.pairIndex + 1}.pdf`,
           roomTitle,
-          stageName: stageLabels[stageType],
+          stageName: stageText,
           studentNames,
         },
       });
@@ -561,7 +565,7 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
             pdfBase64: pdf.base64,
             fileName: `relatorio-${stageType}-${pair.pairIndex + 1}.pdf`,
             roomTitle,
-            stageName: stageLabels[stageType],
+            stageName: stageText,
             studentNames: pair.students.map(s => s.name),
           },
         });
@@ -593,7 +597,7 @@ export function SimulationReportGenerator({ stageName, stageType, roomTitle, roo
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Relatorios - {stageLabels[stageType]}</DialogTitle>
+            <DialogTitle>Relatorios - {stageText}</DialogTitle>
             <DialogDescription>{roomTitle} - {pairs.length} relatorio(s) gerado(s)</DialogDescription>
           </DialogHeader>
 
