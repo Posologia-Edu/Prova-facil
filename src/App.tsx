@@ -34,6 +34,7 @@ import Marketplace from "./pages/Marketplace";
 import OsceExams from "./pages/OsceExams";
 import SctExams from "./pages/SctExams";
 import Forms from "./pages/Forms";
+import { StudentA11yShell } from "@/components/StudentA11yShell";
 import SctEditor from "./pages/SctEditor";
 import SctExpertPortal from "./pages/SctExpertPortal";
 import SctStudentPortal from "./pages/SctStudentPortal";
@@ -147,13 +148,13 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
 
             {/* Student routes */}
-            <Route path="/student/auth" element={<StudentAuth />} />
+            <Route path="/student/auth" element={<StudentA11yShell><StudentAuth /></StudentA11yShell>} />
             <Route path="/checkin/:token" element={<StudentCheckin />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/exam/:sessionId" element={<StudentExam />} />
-            <Route path="/student/results/:sessionId" element={<StudentResults />} />
-            <Route path="/student/gamification" element={<StudentGamification />} />
-            <Route path="/student/portfolio" element={<StudentPortfolio />} />
+            <Route path="/student/results/:sessionId" element={<StudentA11yShell><StudentResults /></StudentA11yShell>} />
+            <Route path="/student/gamification" element={<StudentA11yShell><StudentGamification /></StudentA11yShell>} />
+            <Route path="/student/portfolio" element={<StudentA11yShell><StudentPortfolio /></StudentA11yShell>} />
 
             {/* Teacher routes */}
             <Route
@@ -377,15 +378,15 @@ const App = () => (
             {/* Public OSCE routes (no auth required) */}
             <Route path="/osce/evaluate/:accessCode" element={<OsceEvaluator />} />
             <Route path="/osce/patient/:stationId" element={<OsceVirtualPatient />} />
-            <Route path="/osce/student/:accessCode" element={<OsceStudentPortal />} />
+            <Route path="/osce/student/:accessCode" element={<StudentA11yShell><OsceStudentPortal /></StudentA11yShell>} />
             {/* Public Simulation route */}
-            <Route path="/simulation/join" element={<SimulationJoin />} />
+            <Route path="/simulation/join" element={<StudentA11yShell><SimulationJoin /></StudentA11yShell>} />
             {/* Public SOAP route */}
-            <Route path="/simulation/soap/join" element={<SoapJoin />} />
+            <Route path="/simulation/soap/join" element={<StudentA11yShell><SoapJoin /></StudentA11yShell>} />
             {/* Public Reconciliation route */}
-            <Route path="/simulation/reconciliation/join" element={<ReconciliationJoin />} />
+            <Route path="/simulation/reconciliation/join" element={<StudentA11yShell><ReconciliationJoin /></StudentA11yShell>} />
             {/* Public Documentation route */}
-            <Route path="/simulation/documentation/join" element={<DocumentationJoin />} />
+            <Route path="/simulation/documentation/join" element={<StudentA11yShell><DocumentationJoin /></StudentA11yShell>} />
             {/* Reconciliation routes */}
             <Route
               path="/simulations/reconciliation"
@@ -450,37 +451,37 @@ const App = () => (
             <Route path="/nursing/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><NursingEditor /></AppLayout></ProtectedRoute>} />
             <Route path="/nursing/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><NursingControl /></AppLayout></ProtectedRoute>} />
             {/* Public Nursing route */}
-            <Route path="/nursing/join" element={<NursingJoin />} />
+            <Route path="/nursing/join" element={<StudentA11yShell><NursingJoin /></StudentA11yShell>} />
             {/* Nutrition routes */}
             <Route path="/nutrition" element={<ProtectedRoute><AppLayout><NutritionSimulations /></AppLayout></ProtectedRoute>} />
             <Route path="/nutrition/aggregator" element={<ProtectedRoute><AppLayout><NutritionAggregator /></AppLayout></ProtectedRoute>} />
             <Route path="/nutrition/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><NutritionEditor /></AppLayout></ProtectedRoute>} />
             <Route path="/nutrition/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><NutritionControl /></AppLayout></ProtectedRoute>} />
-            <Route path="/nutrition/join" element={<NutritionJoin />} />
+            <Route path="/nutrition/join" element={<StudentA11yShell><NutritionJoin /></StudentA11yShell>} />
             {/* Dentistry routes */}
             <Route path="/dentistry" element={<ProtectedRoute><AppLayout><DentistrySimulations /></AppLayout></ProtectedRoute>} />
             <Route path="/dentistry/aggregator" element={<ProtectedRoute><AppLayout><DentistryAggregator /></AppLayout></ProtectedRoute>} />
             <Route path="/dentistry/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><DentistryEditor /></AppLayout></ProtectedRoute>} />
             <Route path="/dentistry/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><DentistryControl /></AppLayout></ProtectedRoute>} />
-            <Route path="/dentistry/join" element={<DentistryJoin />} />
+            <Route path="/dentistry/join" element={<StudentA11yShell><DentistryJoin /></StudentA11yShell>} />
             {/* Medicine routes */}
             <Route path="/medicine" element={<ProtectedRoute><AppLayout><MedicineSimulations /></AppLayout></ProtectedRoute>} />
             <Route path="/medicine/aggregator" element={<ProtectedRoute><AppLayout><MedicineAggregator /></AppLayout></ProtectedRoute>} />
             <Route path="/medicine/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><MedicineEditor /></AppLayout></ProtectedRoute>} />
             <Route path="/medicine/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><MedicineControl /></AppLayout></ProtectedRoute>} />
-            <Route path="/medicine/join" element={<MedicineJoin />} />
+            <Route path="/medicine/join" element={<StudentA11yShell><MedicineJoin /></StudentA11yShell>} />
             {/* Physiotherapy routes */}
             <Route path="/physiotherapy" element={<ProtectedRoute><AppLayout><PhysiotherapySimulations /></AppLayout></ProtectedRoute>} />
             <Route path="/physiotherapy/aggregator" element={<ProtectedRoute><AppLayout><PhysiotherapyAggregator /></AppLayout></ProtectedRoute>} />
             <Route path="/physiotherapy/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><PhysiotherapyEditor /></AppLayout></ProtectedRoute>} />
             <Route path="/physiotherapy/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><PhysiotherapyControl /></AppLayout></ProtectedRoute>} />
-            <Route path="/physiotherapy/join" element={<PhysiotherapyJoin />} />
+            <Route path="/physiotherapy/join" element={<StudentA11yShell><PhysiotherapyJoin /></StudentA11yShell>} />
             {/* Biomedicine routes */}
             <Route path="/biomedicine" element={<ProtectedRoute><AppLayout><BiomedicineSimulations /></AppLayout></ProtectedRoute>} />
             <Route path="/biomedicine/aggregator" element={<ProtectedRoute><AppLayout><BiomedicineAggregator /></AppLayout></ProtectedRoute>} />
             <Route path="/biomedicine/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><BiomedicineEditor /></AppLayout></ProtectedRoute>} />
             <Route path="/biomedicine/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><BiomedicineControl /></AppLayout></ProtectedRoute>} />
-            <Route path="/biomedicine/join" element={<BiomedicineJoin />} />
+            <Route path="/biomedicine/join" element={<StudentA11yShell><BiomedicineJoin /></StudentA11yShell>} />
             {/* Virtual Patients */}
             <Route
               path="/virtual-patients"
@@ -523,9 +524,9 @@ const App = () => (
               }
             />
             {/* Public Virtual Patient Room (student access via PIN) */}
-            <Route path="/virtual-patients/room/:cvpId" element={<VirtualPatientRoom />} />
-            <Route path="/virtual-patients/feedback/:cvpId" element={<VirtualPatientFeedback />} />
-            <Route path="/virtual-patients/peer-eval/:token" element={<VpPeerEvaluation />} />
+            <Route path="/virtual-patients/room/:cvpId" element={<StudentA11yShell><VirtualPatientRoom /></StudentA11yShell>} />
+            <Route path="/virtual-patients/feedback/:cvpId" element={<StudentA11yShell><VirtualPatientFeedback /></StudentA11yShell>} />
+            <Route path="/virtual-patients/peer-eval/:token" element={<StudentA11yShell><VpPeerEvaluation /></StudentA11yShell>} />
             <Route path="/guia-de-estilo" element={<StyleGuide />} />
             <Route path="/guia-de-estilo/app" element={<StyleGuideApp />} />
             <Route path="/forms" element={<ProtectedRoute><AppLayout><Forms /></AppLayout></ProtectedRoute>} />
@@ -548,7 +549,7 @@ const App = () => (
             />
             {/* Public SCT routes */}
             <Route path="/sct/expert/:examId" element={<SctExpertPortal />} />
-            <Route path="/sct/student/:examId" element={<SctStudentPortal />} />
+            <Route path="/sct/student/:examId" element={<StudentA11yShell><SctStudentPortal /></StudentA11yShell>} />
             {/* KFE Routes */}
             <Route
               path="/kfe"
@@ -567,7 +568,7 @@ const App = () => (
               }
             />
             {/* Public KFE route */}
-            <Route path="/kfe/student/:examId" element={<KfeStudentPortal />} />
+            <Route path="/kfe/student/:examId" element={<StudentA11yShell><KfeStudentPortal /></StudentA11yShell>} />
             {/* Mini-CEX/DOPS Routes */}
             <Route path="/clinical-observations" element={<ProtectedRoute><AppLayout><ClinicalObservations /></AppLayout></ProtectedRoute>} />
             <Route path="/clinical-observations/:id/edit" element={<ProtectedRoute><AppLayout><ClinicalObservationEditor /></AppLayout></ProtectedRoute>} />
@@ -575,18 +576,18 @@ const App = () => (
             {/* SJT Routes */}
             <Route path="/sjt" element={<ProtectedRoute><AppLayout><SjtExams /></AppLayout></ProtectedRoute>} />
             <Route path="/sjt/:id/edit" element={<ProtectedRoute><AppLayout><SjtEditor /></AppLayout></ProtectedRoute>} />
-            <Route path="/sjt/student/:examId" element={<SjtStudentPortal />} />
+            <Route path="/sjt/student/:examId" element={<StudentA11yShell><SjtStudentPortal /></StudentA11yShell>} />
             {/* Progress Test Routes */}
             <Route path="/progress-test" element={<ProtectedRoute><AppLayout><ProgressTests /></AppLayout></ProtectedRoute>} />
             <Route path="/progress-test/:id/edit" element={<ProtectedRoute><AppLayout><ProgressTestEditor /></AppLayout></ProtectedRoute>} />
-            <Route path="/progress-test/student/:testId" element={<ProgressTestStudentPortal />} />
+            <Route path="/progress-test/student/:testId" element={<StudentA11yShell><ProgressTestStudentPortal /></StudentA11yShell>} />
             {/* Mock Trial Routes */}
             <Route path="/mock-trials" element={<ProtectedRoute><AppLayout><MockTrials /></AppLayout></ProtectedRoute>} />
             <Route path="/mock-trials/:id/edit" element={<ProtectedRoute><AppLayout><MockTrialEditor /></AppLayout></ProtectedRoute>} />
             {/* Public Mock Trial routes — accessed via StudentAuth PIN */}
-            <Route path="/mock-trial/portal/:accessCode" element={<MockTrialStudent />} />
+            <Route path="/mock-trial/portal/:accessCode" element={<StudentA11yShell><MockTrialStudent /></StudentA11yShell>} />
             <Route path="/mock-trial/judge/:accessCode" element={<MockTrialJudge />} />
-            <Route path="/mock-trial/peer-eval/:token" element={<MtPeerEvaluation />} />
+            <Route path="/mock-trial/peer-eval/:token" element={<StudentA11yShell><MtPeerEvaluation /></StudentA11yShell>} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/funcionalidades" element={<Features />} />
             <Route path="/planos" element={<PublicPricing />} />

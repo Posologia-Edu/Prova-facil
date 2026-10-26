@@ -46,6 +46,8 @@ interface Props {
   onChange: (s: A11ySettings) => void;
   currentQuestionText?: string;
   currentAlternatives?: Array<{ letter: string; text: string }>;
+  /** leitura por voz e atalhos são da prova; as demais telas do aluno os escondem */
+  showExamTools?: boolean;
 }
 
 export function useA11ySettings() {
@@ -108,7 +110,7 @@ export function ReadingMask() {
   );
 }
 
-export default function AccessibilityPanel({ settings, onChange, currentQuestionText, currentAlternatives }: Props) {
+export default function AccessibilityPanel({ settings, onChange, currentQuestionText, currentAlternatives, showExamTools = true }: Props) {
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
@@ -234,6 +236,8 @@ export default function AccessibilityPanel({ settings, onChange, currentQuestion
             />
           </div>
 
+          {showExamTools && (
+          <>
           <Separator />
 
           {/* TTS */}
@@ -284,6 +288,9 @@ export default function AccessibilityPanel({ settings, onChange, currentQuestion
               </div>
             </div>
           </div>
+
+          </>
+          )}
 
           <Separator />
 
