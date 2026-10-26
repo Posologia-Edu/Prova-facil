@@ -189,7 +189,7 @@ export function CaseImagesPanel({ caseId }: Props) {
 
 
   const StatusBadge = ({ status }: { status: string }) => {
-    if (status === "ready") return <Badge className="bg-green-500/15 text-green-700 border-green-500/30 dark:text-green-300"><CheckCircle2 className="h-3 w-3 mr-1" />Pronta</Badge>;
+    if (status === "ready") return <Badge className="bg-success/15 text-success border-success/30"><CheckCircle2 className="h-3 w-3 mr-1" />Pronta</Badge>;
     if (status === "processing") return <Badge variant="secondary"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Gerando</Badge>;
     if (status === "failed") return <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Falhou</Badge>;
     return <Badge variant="outline">Pendente</Badge>;

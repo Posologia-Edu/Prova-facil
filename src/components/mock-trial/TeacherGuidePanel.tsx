@@ -42,10 +42,10 @@ export function TeacherGuidePanel({ caseId, teacherGuide, hasContent, onUpdated 
 
   return (
     <>
-      <div className="mt-3 border rounded-lg p-3 bg-amber-500/5 border-amber-500/30 space-y-2">
+      <div className="mt-3 border rounded-lg p-3 bg-warning/5 border-warning/30 space-y-2">
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <div className="flex items-start gap-2 min-w-0">
-            <GraduationCap className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <GraduationCap className="h-4 w-4 mt-0.5 text-warning-ink shrink-0" />
             <div className="min-w-0">
               <p className="text-sm font-semibold flex items-center gap-2 flex-wrap">
                 Roteiro de Condução (Professor)
@@ -53,7 +53,7 @@ export function TeacherGuidePanel({ caseId, teacherGuide, hasContent, onUpdated 
                   <Lock className="h-2.5 w-2.5" /> Apenas docente
                 </Badge>
                 {teacherGuide && (
-                  <Badge className="bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/30 text-[10px]">
+                  <Badge className="bg-success/15 text-success border-success/30 text-[10px]">
                     Pronto
                   </Badge>
                 )}
@@ -87,7 +87,7 @@ export function TeacherGuidePanel({ caseId, teacherGuide, hasContent, onUpdated 
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <GraduationCap className="h-5 w-5 text-warning-ink" />
               Roteiro de Condução do Professor
             </DialogTitle>
             <DialogDescription>
@@ -97,14 +97,14 @@ export function TeacherGuidePanel({ caseId, teacherGuide, hasContent, onUpdated 
           <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto pr-2
                           prose-headings:scroll-mt-4 prose-headings:font-semibold
                           prose-h1:text-xl prose-h1:mt-6 prose-h1:mb-3 prose-h1:pb-2 prose-h1:border-b
-                          prose-h2:text-lg prose-h2:mt-6 prose-h2:mb-2 prose-h2:text-amber-700 dark:prose-h2:text-amber-400
+                          prose-h2:text-lg prose-h2:mt-6 prose-h2:mb-2 prose-h2:text-warning-ink
                           prose-h3:text-base prose-h3:mt-4 prose-h3:mb-1
                           prose-p:my-2 prose-li:my-0.5
                           prose-strong:text-foreground
                           [&_table]:w-full [&_table]:my-3 [&_table]:text-[12.5px] [&_table]:border-collapse [&_table]:block [&_table]:overflow-x-auto
                           [&_th]:bg-muted [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:border [&_th]:border-border [&_th]:font-semibold
                           [&_td]:px-2 [&_td]:py-1.5 [&_td]:border [&_td]:border-border [&_td]:align-top
-                          [&_blockquote]:border-l-4 [&_blockquote]:border-amber-500/40 [&_blockquote]:bg-amber-500/5 [&_blockquote]:px-3 [&_blockquote]:py-1 [&_blockquote]:rounded-r [&_blockquote]:not-italic
+                          [&_blockquote]:border-l-4 [&_blockquote]:border-warning/40 [&_blockquote]:bg-warning/5 [&_blockquote]:px-3 [&_blockquote]:py-1 [&_blockquote]:rounded-r [&_blockquote]:not-italic
                           [&_hr]:my-4 [&_hr]:border-border">
             {teacherGuide ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{teacherGuide}</ReactMarkdown>

@@ -87,7 +87,7 @@ export function MockTrialEvaluationForm({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
             <Badge
               variant={evaluatedRole === "prosecution" ? "destructive" : "default"}
             >
@@ -96,7 +96,7 @@ export function MockTrialEvaluationForm({
             <span>{groupLabel}</span>
           </CardTitle>
           {savedAt && (
-            <Badge className="bg-green-600 text-white border-green-700">
+            <Badge className="bg-success text-white border-success">
               <CheckCircle2 className="h-3 w-3 mr-1" />
               Salvo • Nota {score.toFixed(1)}/10
             </Badge>

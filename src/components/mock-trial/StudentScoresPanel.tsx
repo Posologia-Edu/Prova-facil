@@ -77,9 +77,9 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const ROLE_CHIP: Record<string, string> = {
-  prosecution: "bg-red-600/10 text-red-700 border-red-600/30",
+  prosecution: "bg-destructive/10 text-destructive border-destructive/30",
   defense: "bg-primary/10 text-primary border-primary/30",
-  jury: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+  jury: "bg-warning/10 text-warning-ink border-warning/30",
 };
 
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
@@ -89,8 +89,8 @@ const STATUS_LABEL: Record<AttendanceStatus, string> = {
 };
 
 const STATUS_DOT: Record<AttendanceStatus, string> = {
-  present: "bg-emerald-500",
-  absent: "bg-red-500",
+  present: "bg-success",
+  absent: "bg-destructive",
   excused: "bg-muted-foreground",
 };
 
@@ -339,7 +339,7 @@ export function StudentScoresPanel({
                 <Scroll className="h-3.5 w-3.5" />
                 <span>Relação Nominal de Apenados</span>
               </div>
-              <CardTitle className="text-base">
+              <CardTitle className="font-heading text-lg font-medium">
                 Notas dos Alunos · Júri Simulado
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
@@ -457,7 +457,7 @@ export function StudentScoresPanel({
                                     {p.peerBonus !== 0 && (
                                       <>
                                         {" "}+ pares{" "}
-                                        <strong className={p.peerBonus > 0 ? "text-emerald-600" : "text-red-600"}>
+                                        <strong className={p.peerBonus > 0 ? "text-success" : "text-destructive"}>
                                           {p.peerBonus >= 0 ? "+" : ""}{p.peerBonus.toFixed(2)}
                                         </strong>
                                       </>
@@ -521,7 +521,7 @@ export function StudentScoresPanel({
                                     {new Set(p.peerEvals.map((e) => `${e.preparacao_score}-${e.atuacao_score}-${e.colaboracao_score}`)).size === 1 &&
                                       p.peerEvals.length > 1 && (
                                         <span title="Todos os avaliadores deram exatamente as mesmas notas">
-                                          <AlertTriangle className="h-3 w-3 text-amber-600" />
+                                          <AlertTriangle className="h-3 w-3 text-warning-ink" />
                                         </span>
                                       )}
                                   </div>
@@ -654,10 +654,10 @@ export function StudentScoresPanel({
                         r.average == null
                           ? "text-muted-foreground"
                           : r.average >= 7
-                          ? "text-emerald-600"
+                          ? "text-success"
                           : r.average >= 5
-                          ? "text-amber-600"
-                          : "text-red-600"
+                          ? "text-warning-ink"
+                          : "text-destructive"
                       }`}
                     >
                       {r.average != null ? r.average.toFixed(2) : "—"}

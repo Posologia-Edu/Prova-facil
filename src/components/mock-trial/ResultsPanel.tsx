@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { BarChart3, CheckCircle2, Clock, RefreshCw, Sparkles, Gavel, GraduationCap, Users, FileText, Scale, Scroll, UserSquare2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -29,9 +29,9 @@ const ROLE_LABEL: Record<string, string> = {
   jury: "Júri Técnico",
 };
 const ROLE_COLOR: Record<string, string> = {
-  prosecution: "bg-red-500/10 text-red-700 border-red-500/30",
-  defense: "bg-blue-500/10 text-blue-700 border-blue-500/30",
-  jury: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+  prosecution: "bg-destructive/10 text-destructive border-destructive/30",
+  defense: "bg-info/10 text-info border-info/30",
+  jury: "bg-warning/10 text-warning-ink border-warning/30",
 };
 
 export function ResultsPanel(props: Props) {
@@ -45,7 +45,7 @@ export function ResultsPanel(props: Props) {
       <Card>
         <CardContent className="py-12 text-center">
           <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium">Crie processos para acompanhar resultados</h3>
+          <h3 className="font-heading text-lg font-medium">Crie processos para acompanhar resultados</h3>
         </CardContent>
       </Card>
     );
@@ -107,9 +107,9 @@ export function ResultsPanel(props: Props) {
   const juryEval = caseEvaluations.find(e => e.evaluator_type === "ai_jury_panel" && e.evaluated_role === "jury");
 
   const roleStyles: Record<string, { wrap: string; chip: string; icon: any; label: string }> = {
-    prosecution: { wrap: "border-l-[6px] border-l-red-600", chip: "bg-red-600 text-white", icon: Scale, label: "Acusação" },
+    prosecution: { wrap: "border-l-[6px] border-l-destructive", chip: "bg-destructive text-white", icon: Scale, label: "Acusação" },
     defense:     { wrap: "border-l-[6px] border-l-primary", chip: "bg-primary text-primary-foreground", icon: Scale, label: "Defesa" },
-    jury:        { wrap: "border-l-[6px] border-l-amber-500", chip: "bg-amber-500 text-white", icon: Gavel, label: "Júri Técnico" },
+    jury:        { wrap: "border-l-[6px] border-l-warning", chip: "bg-warning text-warning-foreground", icon: Gavel, label: "Júri Técnico" },
   };
 
   return (
@@ -141,7 +141,7 @@ export function ResultsPanel(props: Props) {
                     ].join(" ")}
                   >
                     {active && (
-                      <span className="absolute -top-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-amber-500 text-white text-[9px] px-2 py-0.5 font-bold uppercase tracking-wider shadow ring-2 ring-background whitespace-nowrap">
+                      <span className="absolute -top-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-warning text-warning-foreground text-[9px] px-2 py-0.5 font-bold uppercase tracking-wider shadow ring-2 ring-background whitespace-nowrap">
                         Em pauta
                       </span>
                     )}
@@ -175,13 +175,13 @@ export function ResultsPanel(props: Props) {
       )}
 
       <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="summary">Notas Consolidadas</TabsTrigger>
-          <TabsTrigger value="submissions">Envios dos Grupos</TabsTrigger>
-          <TabsTrigger value="ai">Avaliação dos Jurados (IA)</TabsTrigger>
-          <TabsTrigger value="jury-panel">Avaliar Júri Técnico</TabsTrigger>
-          <TabsTrigger value="teacher">Avaliação do Professor</TabsTrigger>
-        </TabsList>
+        <TabsListLine className="flex-wrap">
+          <TabsTriggerLine value="summary">Notas Consolidadas</TabsTriggerLine>
+          <TabsTriggerLine value="submissions">Envios dos Grupos</TabsTriggerLine>
+          <TabsTriggerLine value="ai">Avaliação dos Jurados (IA)</TabsTriggerLine>
+          <TabsTriggerLine value="jury-panel">Avaliar Júri Técnico</TabsTriggerLine>
+          <TabsTriggerLine value="teacher">Avaliação do Professor</TabsTriggerLine>
+        </TabsListLine>
 
 
         {/* === Notas consolidadas === */}
@@ -202,7 +202,7 @@ export function ResultsPanel(props: Props) {
                           <Scale className="h-3 w-3" />
                           {style?.label || ROLE_LABEL[c.role]}
                         </span>
-                        <CardTitle className="text-base">{formatGroupLabel(group)}</CardTitle>
+                        <CardTitle className="font-heading text-lg font-medium">{formatGroupLabel(group)}</CardTitle>
                       </div>
                       {members.length > 0 ? (
                         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -243,7 +243,7 @@ export function ResultsPanel(props: Props) {
                         <Gavel className="h-3 w-3" />
                         Júri Técnico
                       </span>
-                      <CardTitle className="text-base">{formatGroupLabel(juryGroup)}</CardTitle>
+                      <CardTitle className="font-heading text-lg font-medium">{formatGroupLabel(juryGroup)}</CardTitle>
                     </div>
                     {juryMembers.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -262,9 +262,9 @@ export function ResultsPanel(props: Props) {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                       <ScoreBox icon={<Sparkles className="h-4 w-4" />} label="Interrogação" value={juryEval?.criteria_json?.capacidade_interrogacao} hint="Esclarecer pontos" />
                       <ScoreBox icon={<Scale className="h-4 w-4" />} label="Julgamento justo" value={juryEval?.criteria_json?.julgamento_justo} hint="Provas + contra-argumentos" />
-                      <div className="rounded-lg border-2 border-amber-500 p-3 bg-amber-500/5">
+                      <div className="rounded-lg border-2 border-warning p-3 bg-warning/5">
                         <div className="text-xs text-muted-foreground">Nota Final do Júri Técnico</div>
-                        <div className="text-3xl font-bold text-amber-600">
+                        <div className="text-3xl font-bold text-warning-ink">
                           {juryEval ? Number(juryEval.score).toFixed(1) : "—"}
                         </div>
                         <div className="text-[10px] text-muted-foreground">Avaliação IA</div>
@@ -302,7 +302,7 @@ export function ResultsPanel(props: Props) {
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline">{ROLE_LABEL[a.role]}</Badge>
-                        <CardTitle className="text-sm">
+                        <CardTitle className="font-heading text-lg font-medium">
                           {formatGroupLabel(group)}
                         </CardTitle>
                         <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
@@ -313,13 +313,13 @@ export function ResultsPanel(props: Props) {
                       </div>
                       <div className="flex items-center gap-2">
                         {judgeEval && (
-                          <Badge className="bg-amber-600 text-white border-amber-700">
+                          <Badge className="bg-warning text-white border-warning">
                             <Gavel className="h-3 w-3 mr-1" />
                             Juiz: {Number(judgeEval.score).toFixed(1)}/10
                           </Badge>
                         )}
                         {groupResponses.length > 0 ? (
-                          <Badge className="bg-green-600 text-white border-green-700">
+                          <Badge className="bg-success text-white border-success">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             {groupResponses.length} envio(s)
                           </Badge>
@@ -333,8 +333,8 @@ export function ResultsPanel(props: Props) {
                   </CardHeader>
                   <CardContent>
                     {judgeEval?.feedback && (
-                      <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-1">
+                      <div className="mb-3 rounded-md border border-warning bg-warning/10 p-3">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-warning-ink uppercase tracking-wider mb-1">
                           <Gavel className="h-3 w-3" /> Observação do Juiz
                         </div>
                         <p className="text-sm text-foreground/90 whitespace-pre-wrap">{judgeEval.feedback}</p>
@@ -374,7 +374,7 @@ export function ResultsPanel(props: Props) {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
                     Avaliação dos Jurados pela IA
                   </CardTitle>
@@ -432,8 +432,8 @@ export function ResultsPanel(props: Props) {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Gavel className="h-4 w-4 text-amber-600" />
+                  <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
+                    <Gavel className="h-4 w-4 text-warning-ink" />
                     Avaliação do Júri Técnico pela IA
                   </CardTitle>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -460,7 +460,7 @@ export function ResultsPanel(props: Props) {
                       </span>
                       <span className="font-medium text-sm">{formatGroupLabel(juryGroup)}</span>
                     </div>
-                    <Badge className="text-base px-3 py-1 bg-amber-500 text-white border-amber-600">
+                    <Badge className="text-base px-3 py-1 bg-warning text-warning-foreground border-warning">
                       {Number(juryEval.score).toFixed(1)}/10
                     </Badge>
                   </div>

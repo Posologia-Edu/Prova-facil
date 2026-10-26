@@ -95,7 +95,7 @@ export function MockTrialSectionsBuilder({ caseId, sections, onChange }: Props) 
   const StatusBadge = ({ status }: { status: string }) => {
     if (status === "ready")
       return (
-        <Badge className="bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/30">
+        <Badge className="bg-success/15 text-success border-success/30">
           <CheckCircle2 className="h-3 w-3 mr-1" />
           Pronta
         </Badge>
