@@ -282,7 +282,8 @@ export default function MockTrialStudent() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <Gavel className="h-10 w-10 text-primary mx-auto mb-2" />
-            <CardTitle>Júri Simulado - Portal do Aluno</CardTitle>
+            <div className="eyebrow mb-1">Júri Simulado</div>
+            <CardTitle className="font-heading text-2xl font-medium">Portal do Aluno</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -301,7 +302,8 @@ export default function MockTrialStudent() {
       <div className="flex items-start gap-4">
         <Gavel className="h-6 w-6 text-primary mt-1" />
         <div className="flex-1">
-          <h1 className="text-xl font-bold">{trial?.title}</h1>
+          <div className="eyebrow mb-1">Júri Simulado</div>
+          <h1 className="font-heading text-2xl font-medium">{trial?.title}</h1>
           <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
             <span className="font-medium text-foreground">{myGroup?.name}</span>
             {myRole && (
@@ -378,7 +380,7 @@ export default function MockTrialStudent() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Gavel className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium">Sessão finalizada</h3>
+                <h3 className="font-heading text-lg font-medium">Sessão finalizada</h3>
                 <p className="text-muted-foreground">Este processo foi encerrado pelo(a) juiz(a).</p>
               </CardContent>
             </Card>
@@ -391,7 +393,7 @@ export default function MockTrialStudent() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium">Seu grupo não participa deste processo</h3>
+                <h3 className="font-heading text-lg font-medium">Seu grupo não participa deste processo</h3>
                 <p className="text-muted-foreground">Selecione outro processo ou aguarde instruções</p>
               </CardContent>
             </Card>
@@ -455,7 +457,7 @@ export default function MockTrialStudent() {
                         <Badge variant={char.side === "prosecution" ? "destructive" : "default"}>
                           Testemunha da {char.side === "prosecution" ? "Acusação" : "Defesa"}
                         </Badge>
-                        <CardTitle className="text-base">{char.name}</CardTitle>
+                        <CardTitle className="font-heading text-lg font-medium">{char.name}</CardTitle>
                       </div>
                       <p className="text-sm text-muted-foreground">{char.profession}</p>
                     </CardHeader>
@@ -515,7 +517,7 @@ function MockTrialFormCard({
     return (
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle className="text-base">{form.title}</CardTitle>
+          <CardTitle className="font-heading text-lg font-medium">{form.title}</CardTitle>
         </CardHeader>
         <CardContent className="py-8 text-center">
           <p className="text-primary font-medium">✓ Resposta enviada com sucesso!</p>
@@ -530,7 +532,7 @@ function MockTrialFormCard({
   return (
     <Card className="mb-4">
       <CardHeader>
-        <CardTitle className="text-base">{form.title}</CardTitle>
+        <CardTitle className="font-heading text-lg font-medium">{form.title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <FormRenderer

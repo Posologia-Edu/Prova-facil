@@ -21,9 +21,9 @@ const ROLE_LABELS: Record<string, string> = {
   jury: "Júri Técnico",
 };
 const ROLE_COLORS: Record<string, string> = {
-  prosecution: "bg-red-500/10 text-red-700 border-red-500/30 dark:text-red-300",
-  defense: "bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-300",
-  jury: "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300",
+  prosecution: "bg-destructive/10 text-destructive border-destructive/30",
+  defense: "bg-info/10 text-info border-info/30",
+  jury: "bg-warning/10 text-warning-ink border-warning/30",
 };
 
 const PHASES = [
@@ -415,7 +415,8 @@ export default function MockTrialJudge() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <Gavel className="h-10 w-10 text-primary mx-auto mb-2" />
-            <CardTitle>Painel do Juiz</CardTitle>
+            <div className="eyebrow mb-1">Júri Simulado</div>
+            <CardTitle className="font-heading text-2xl font-medium">Painel do Juiz</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -439,7 +440,8 @@ export default function MockTrialJudge() {
       <div className="flex items-center gap-4">
         <Gavel className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold">{trial?.title || "Júri Simulado"}</h1>
+          <div className="eyebrow mb-1">Painel do juiz</div>
+          <h1 className="font-heading text-2xl font-medium">{trial?.title || "Júri Simulado"}</h1>
           <p className="text-muted-foreground">Juiz(a): {judgeName}</p>
         </div>
       </div>
@@ -512,7 +514,7 @@ export default function MockTrialJudge() {
       {isActive && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Fases da Sessão</CardTitle>
+            <CardTitle className="font-heading text-lg font-medium">Fases da Sessão</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex gap-2 flex-wrap">
@@ -538,7 +540,7 @@ export default function MockTrialJudge() {
             {currentPhase && (
               <Card className="bg-muted/40 border-primary/30">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
+                  <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                     <SkipForward className="h-4 w-4" />
                     Orientações – {currentPhase.label}
                   </CardTitle>
@@ -560,7 +562,7 @@ export default function MockTrialJudge() {
       {selectedCase && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
               <Users className="h-4 w-4" />
               Grupos Participantes deste Processo
             </CardTitle>
@@ -592,7 +594,7 @@ export default function MockTrialJudge() {
                       </div>
                       {formForRole && (
                         submitted ? (
-                          <Badge className="bg-green-600 text-white border-green-700">
+                          <Badge className="bg-success text-white border-success">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Formulário enviado
                           </Badge>
@@ -634,7 +636,7 @@ export default function MockTrialJudge() {
         return (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                 <Gavel className="h-4 w-4" />
                 Avaliação do Juiz
               </CardTitle>
@@ -672,7 +674,7 @@ export default function MockTrialJudge() {
       {selectedCase && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Texto do Processo
             </CardTitle>

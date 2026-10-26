@@ -143,7 +143,7 @@ export default function MtPeerEvaluation() {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-2xl mx-auto space-y-6">
         <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
+          <h1 className="font-heading text-2xl font-medium flex items-center gap-2">
             <Gavel className="h-5 w-5 text-primary" /> Avaliação entre pares
           </h1>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -160,7 +160,7 @@ export default function MtPeerEvaluation() {
         {teammates.map((t) => (
           <Card key={t.email}>
             <CardHeader>
-              <CardTitle className="text-base">{t.name || t.email}</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">{t.name || t.email}</CardTitle>
               <CardDescription>{t.email}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -214,7 +214,7 @@ function StatusCard({ icon, title, description }: { icon: React.ReactNode; title
       <Card className="max-w-md">
         <CardContent className="p-8 text-center space-y-4">
           {icon}
-          <h2 className="text-lg font-semibold">{title}</h2>
+          <h2 className="font-heading text-xl font-medium">{title}</h2>
           <p className="text-sm text-muted-foreground">{description}</p>
         </CardContent>
       </Card>
