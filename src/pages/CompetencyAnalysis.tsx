@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import { Loader2, Brain, TrendingUp, TrendingDown, Minus, BarChart3, LineChart as LineChartIcon, Users, Settings } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,12 +24,12 @@ interface CompScore {
 }
 
 const SOURCE_COLORS: Record<string, string> = {
-  exam: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  osce: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
-  simulation: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
-  virtual_patient: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  mini_cex: "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200",
-  progress_test: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
+  exam: "bg-info/10 text-info",
+  osce: "bg-success/10 text-success",
+  simulation: "bg-warning/10 text-warning-ink",
+  virtual_patient: "bg-brand-soft text-brand-text",
+  mini_cex: "bg-secondary text-secondary-foreground",
+  progress_test: "bg-muted text-muted-foreground",
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -42,11 +43,11 @@ const SOURCE_LABELS: Record<string, string> = {
 
 const CHART_COLORS = [
   "hsl(var(--primary))",
-  "hsl(142, 76%, 36%)",
-  "hsl(38, 92%, 50%)",
-  "hsl(280, 65%, 60%)",
-  "hsl(350, 80%, 55%)",
-  "hsl(190, 80%, 42%)",
+  "hsl(var(--success))",
+  "hsl(var(--warning))",
+  "hsl(var(--info))",
+  "hsl(var(--destructive))",
+  "hsl(var(--brand-text))",
 ];
 
 export default function CompetencyAnalysis() {
@@ -149,13 +150,12 @@ export default function CompetencyAnalysis() {
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Brain className="h-6 w-6 text-primary" /> Análise de Competências</h1>
-          <p className="text-muted-foreground">Dashboard longitudinal de desempenho por competência</p>
-        </div>
-        <div className="flex gap-2">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <PageHeader
+        eyebrow="Gestão"
+        title="Competências"
+        description="Dashboard longitudinal de desempenho por competência."
+        actions={<>
           <Select value={selectedSource} onValueChange={setSelectedSource}>
             <SelectTrigger className="w-44"><SelectValue placeholder="Fonte" /></SelectTrigger>
             <SelectContent>
@@ -170,22 +170,22 @@ export default function CompetencyAnalysis() {
               {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
-        </div>
-      </div>
+        </>}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="management"><Settings className="h-4 w-4 mr-1" /> Gestão</TabsTrigger>
+        <TabsListLine>
+          <TabsTriggerLine value="management"><Settings className="h-4 w-4" /> Gestão</TabsTriggerLine>
           {competencies.length > 0 && (
             <>
-              <TabsTrigger value="overview"><BarChart3 className="h-4 w-4 mr-1" /> Visão Geral</TabsTrigger>
-              <TabsTrigger value="timeline"><LineChartIcon className="h-4 w-4 mr-1" /> Evolução</TabsTrigger>
-              <TabsTrigger value="students"><Users className="h-4 w-4 mr-1" /> Por Aluno</TabsTrigger>
+              <TabsTriggerLine value="overview"><BarChart3 className="h-4 w-4" /> Visão Geral</TabsTriggerLine>
+              <TabsTriggerLine value="timeline"><LineChartIcon className="h-4 w-4" /> Evolução</TabsTriggerLine>
+              <TabsTriggerLine value="students"><Users className="h-4 w-4" /> Por Aluno</TabsTriggerLine>
             </>
           )}
-        </TabsList>
+        </TabsListLine>
 
-        <TabsContent value="management">
+        <TabsContent value="management" className="mt-6">
           <CompetencyManagement />
         </TabsContent>
 
@@ -194,30 +194,30 @@ export default function CompetencyAnalysis() {
 
 
 
-          <TabsContent value="overview" className="space-y-4">
+          <TabsContent value="overview" className="space-y-4 mt-6">
             {/* Summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card><CardContent className="pt-6 text-center">
-                <p className="text-2xl font-bold">{competencies.length}</p>
-                <p className="text-xs text-muted-foreground">Competências</p>
-              </CardContent></Card>
-              <Card><CardContent className="pt-6 text-center">
-                <p className="text-2xl font-bold">{students.length}</p>
-                <p className="text-xs text-muted-foreground">Alunos avaliados</p>
-              </CardContent></Card>
-              <Card><CardContent className="pt-6 text-center">
-                <p className="text-2xl font-bold">{filteredScores.length}</p>
-                <p className="text-xs text-muted-foreground">Registros</p>
-              </CardContent></Card>
-              <Card><CardContent className="pt-6 text-center">
-                <p className="text-2xl font-bold">{availableSources.length}</p>
-                <p className="text-xs text-muted-foreground">Fontes de dados</p>
-              </CardContent></Card>
+              <Card className="p-5">
+                <div className="label-mono">Competências</div>
+                <div className="font-heading text-4xl font-medium mt-1">{competencies.length}</div>
+              </Card>
+              <Card className="p-5">
+                <div className="label-mono">Alunos avaliados</div>
+                <div className="font-heading text-4xl font-medium mt-1">{students.length}</div>
+              </Card>
+              <Card className="p-5">
+                <div className="label-mono">Registros</div>
+                <div className="font-heading text-4xl font-medium mt-1">{filteredScores.length}</div>
+              </Card>
+              <Card className="p-5">
+                <div className="label-mono">Fontes de dados</div>
+                <div className="font-heading text-4xl font-medium mt-1">{availableSources.length}</div>
+              </Card>
             </div>
 
             {/* Radar Chart */}
             <Card>
-              <CardHeader><CardTitle>Média Geral por Competência</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Média Geral por Competência</CardTitle></CardHeader>
               <CardContent>
                 {radarData.length > 0 && radarData.some(d => d.turma > 0) ? (
                   <ResponsiveContainer width="100%" height={350}>
@@ -235,9 +235,9 @@ export default function CompetencyAnalysis() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="timeline" className="space-y-4">
+          <TabsContent value="timeline" className="space-y-4 mt-6">
             <Card>
-              <CardHeader><CardTitle>Evolução Temporal das Competências</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Evolução Temporal das Competências</CardTitle></CardHeader>
               <CardContent>
                 {timelineData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={400}>
@@ -267,9 +267,9 @@ export default function CompetencyAnalysis() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="students" className="space-y-4">
+          <TabsContent value="students" className="space-y-4 mt-6">
             <Card>
-              <CardHeader><CardTitle>Detalhamento por Aluno</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-heading text-lg font-medium">Detalhamento por Aluno</CardTitle></CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
@@ -314,7 +314,7 @@ export default function CompetencyAnalysis() {
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   <span className="font-medium">{Math.round(avg)}%</span>
-                                  {diff > 5 ? <TrendingUp className="h-3 w-3 text-green-600" /> : diff < -5 ? <TrendingDown className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-muted-foreground" />}
+                                  {diff > 5 ? <TrendingUp className="h-3 w-3 text-success" /> : diff < -5 ? <TrendingDown className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-muted-foreground" />}
                                 </div>
                               </TableCell>
                               <TableCell className="text-center">

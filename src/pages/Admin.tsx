@@ -39,7 +39,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface UserProfile {
   user_id: string;
@@ -182,74 +183,37 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Painel Administrativo</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Gerencie usuários, aprovações e visualize estatísticas do sistema.
-        </p>
-      </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-8">
+      <PageHeader
+        eyebrow="Gestão · Administração"
+        title="Painel administrativo"
+        description="Gerencie usuários, aprovações e visualize estatísticas do sistema."
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.totalUsers || 0}</p>
-                <p className="text-xs text-muted-foreground">Total de Usuários</p>
-              </div>
-            </div>
-          </CardContent>
+        <Card className="p-5">
+          <div className="label-mono">Total de usuários</div>
+          <div className="font-heading text-4xl font-medium mt-1">{stats?.totalUsers || 0}</div>
         </Card>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.pendingUsers || 0}</p>
-                <p className="text-xs text-muted-foreground">Aguardando Aprovação</p>
-              </div>
-            </div>
-          </CardContent>
+        <Card className="p-5">
+          <div className="label-mono">Aguardando aprovação</div>
+          <div className="font-heading text-4xl font-medium mt-1 text-destructive">{stats?.pendingUsers || 0}</div>
         </Card>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center">
-                <Library className="h-5 w-5 text-secondary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.totalQuestions || 0}</p>
-                <p className="text-xs text-muted-foreground">Questões no Sistema</p>
-              </div>
-            </div>
-          </CardContent>
+        <Card className="p-5">
+          <div className="label-mono">Questões no sistema</div>
+          <div className="font-heading text-4xl font-medium mt-1">{stats?.totalQuestions || 0}</div>
         </Card>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
-                <FileEdit className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.totalExams || 0}</p>
-                <p className="text-xs text-muted-foreground">Provas no Sistema</p>
-              </div>
-            </div>
-          </CardContent>
+        <Card className="p-5">
+          <div className="label-mono">Provas no sistema</div>
+          <div className="font-heading text-4xl font-medium mt-1">{stats?.totalExams || 0}</div>
         </Card>
       </div>
 
       {/* Invite Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
             Convidar Usuário Premium
           </CardTitle>
@@ -282,7 +246,7 @@ export default function AdminPage() {
                     <div className="flex items-center gap-3">
                       <Circle
                         className={`h-3 w-3 fill-current ${
-                          inv.status === "completed" ? "text-green-500" : "text-red-500"
+                          inv.status === "completed" ? "text-success" : "text-destructive"
                         }`}
                       />
                       <div>
@@ -295,7 +259,7 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="gap-1 border-amber-500/30 text-amber-600 bg-amber-500/10">
+                      <Badge variant="outline" className="gap-1 border-warning/30 text-warning-ink bg-warning/10">
                         <Gift className="h-3 w-3" />
                         Premium Convidado
                       </Badge>
@@ -316,30 +280,30 @@ export default function AdminPage() {
 
       {/* Tabs: Users + Subscribers */}
       <Tabs defaultValue="pending" onValueChange={(v) => { if (v === "subscribers" && subscribers.length === 0) loadSubscribers(); }}>
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="pending" className="gap-2">
+        <TabsListLine className="flex-wrap">
+          <TabsTriggerLine value="pending" className="gap-2">
             <Clock className="h-4 w-4" />
             Pendentes ({pendingUsers.length})
-          </TabsTrigger>
-          <TabsTrigger value="approved" className="gap-2">
+          </TabsTriggerLine>
+          <TabsTriggerLine value="approved" className="gap-2">
             <CheckCircle className="h-4 w-4" />
             Aprovados ({approvedUsers.length})
-          </TabsTrigger>
-          <TabsTrigger value="subscribers" className="gap-2">
+          </TabsTriggerLine>
+          <TabsTriggerLine value="subscribers" className="gap-2">
             <CreditCard className="h-4 w-4" />
             Assinantes
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-2">
+          </TabsTriggerLine>
+          <TabsTriggerLine value="analytics" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Analytics
-          </TabsTrigger>
-        </TabsList>
+          </TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="pending" className="mt-4">
+        <TabsContent value="pending" className="mt-6">
           {pendingUsers.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-muted-foreground">
-                <CheckCircle className="h-12 w-12 mx-auto mb-3 text-green-500" />
+                <CheckCircle className="h-10 w-10 mx-auto mb-3 text-success" />
                 <p className="font-medium">Nenhum usuário pendente</p>
                 <p className="text-sm">Todos os cadastros foram processados.</p>
               </CardContent>
@@ -359,7 +323,7 @@ export default function AdminPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="approved" className="mt-4">
+        <TabsContent value="approved" className="mt-6">
           <div className="space-y-3">
             {approvedUsers.map((u) => (
               <UserCard
@@ -373,7 +337,7 @@ export default function AdminPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="subscribers" className="mt-4">
+        <TabsContent value="subscribers" className="mt-6">
           {subscribersLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -458,7 +422,7 @@ export default function AdminPage() {
                             Cadastro em {new Date(inv.completed_at || inv.invited_at).toLocaleDateString("pt-BR")}
                           </p>
                         </div>
-                        <Badge variant="outline" className="gap-1 border-amber-500/30 text-amber-600 bg-amber-500/10">
+                        <Badge variant="outline" className="gap-1 border-warning/30 text-warning-ink bg-warning/10">
                           <Gift className="h-3 w-3" />
                           Premium Convidado (Vitalício)
                         </Badge>
@@ -470,7 +434,7 @@ export default function AdminPage() {
             </div>
           )}
         </TabsContent>
-        <TabsContent value="analytics" className="mt-4">
+        <TabsContent value="analytics" className="mt-6">
           <AdminAnalytics />
         </TabsContent>
       </Tabs>
