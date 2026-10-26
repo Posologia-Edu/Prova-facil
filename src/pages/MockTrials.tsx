@@ -4,7 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Edit, Trash2, Gavel, Copy, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -79,6 +81,8 @@ export default function MockTrials() {
 
     navigate(`/mock-trials/${data.id}/edit`);
   };
+
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   const deleteTrial = async (id: string) => {
     const { error } = await supabase
@@ -243,10 +247,10 @@ export default function MockTrials() {
     finished: "Finalizado",
   };
 
-  const statusColors: Record<string, string> = {
-    draft: "secondary",
-    active: "default",
-    finished: "outline",
+  const statusTones: Record<string, StatusTone> = {
+    draft: "warn",
+    active: "ok",
+    finished: "neutral",
   };
 
   if (loading) {
@@ -263,84 +267,88 @@ export default function MockTrials() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Gavel className="h-6 w-6" />
-            Júri Simulado
-          </h1>
-          <p className="text-muted-foreground">Crie e gerencie sessões de júri simulado clínico</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <SystemPromptViewer toolKey="mock-trials" />
-          <Button onClick={createTrial}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Júri Simulado
-          </Button>
-        </div>
-      </div>
-
-      {trials.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Gavel className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Nenhum júri simulado</h3>
-            <p className="text-muted-foreground mb-4">Crie seu primeiro júri simulado clínico</p>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <PageHeader
+        eyebrow="Praticar"
+        title="Júri Simulado"
+        description="Processos clínicos julgados pelos alunos em grupos de acusação, defesa e júri técnico, com a mediação de um juiz."
+        actions={
+          <>
+            <SystemPromptViewer toolKey="mock-trials" />
             <Button onClick={createTrial}>
               <Plus className="h-4 w-4 mr-2" />
-              Criar Júri Simulado
+              Novo Júri Simulado
             </Button>
-          </CardContent>
+          </>
+        }
+      />
+
+      {trials.length === 0 ? (
+        <Card className="flex flex-col items-center justify-center py-14 text-center">
+          <Gavel className="h-10 w-10 text-muted-foreground/40 mb-3" />
+          <h3 className="font-heading text-lg font-medium">Nenhum júri simulado</h3>
+          <p className="text-sm text-muted-foreground mt-1 mb-4">Comece pelos processos.</p>
+          <Button onClick={createTrial}>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Júri Simulado
+          </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="divide-y overflow-hidden">
           {trials.map(trial => (
-            <Card key={trial.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-base line-clamp-2">{trial.title}</CardTitle>
-                  <Badge variant={statusColors[trial.status] as any}>
+            <div key={trial.id} className="flex flex-wrap items-center gap-4 p-4 hover:bg-muted/40 transition-colors">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand-text"><Gavel className="h-5 w-5" /></span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" className="font-medium truncate text-left hover:underline" onClick={() => navigate(`/mock-trials/${trial.id}/edit`)}>{trial.title}</button>
+                  <StatusBadge tone={statusTones[trial.status] || "neutral"} dot={trial.status !== "finished"}>
                     {statusLabels[trial.status] || trial.status}
-                  </Badge>
+                  </StatusBadge>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {trial.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{trial.description}</p>
-                )}
-                <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
-                  <span>{trial._caseCount} processo(s)</span>
-                  {trial.judge_name && <span>Juiz: {trial.judge_name}</span>}
-                </div>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Criado em {format(new Date(trial.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                {trial.description && <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">{trial.description}</p>}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {trial._caseCount} processo(s)
+                  {trial.judge_name ? ` · Juiz: ${trial.judge_name}` : ""}
+                  {` · Criado em ${format(new Date(trial.created_at), "dd/MM/yyyy", { locale: ptBR })}`}
                 </p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate(`/mock-trials/${trial.id}/edit`)}>
-                    <Edit className="h-3 w-3 mr-1" />
-                    Editar
-                  </Button>
-                  <Button size="sm" variant="ghost" title="Renomear" onClick={() => openRename(trial)}>
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                  <Button size="sm" variant="ghost" title="Duplicar" disabled={duplicating === trial.id} onClick={() => duplicateTrial(trial)}>
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                  <Button size="sm" variant="ghost" title="Excluir" onClick={() => deleteTrial(trial.id)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" onClick={() => navigate(`/mock-trials/${trial.id}/edit`)}>
+                  <Edit className="h-3.5 w-3.5 mr-1.5" />
+                  Abrir
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" title="Renomear" onClick={() => openRename(trial)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" title="Duplicar" disabled={duplicating === trial.id} onClick={() => duplicateTrial(trial)}>
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Excluir" onClick={() => setDeleteTarget({ id: trial.id, title: trial.title })}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
           ))}
-        </div>
+        </Card>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir “{deleteTarget?.title}”?</AlertDialogTitle>
+            <AlertDialogDescription>O Júri Simulado vai para a Lixeira, de onde você pode restaurá-lo.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (deleteTarget) deleteTrial(deleteTarget.id); setDeleteTarget(null); }}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!renameTrial} onOpenChange={(o) => !o && setRenameTrial(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Renomear Júri Simulado</DialogTitle>
+            <DialogTitle className="font-heading text-xl font-medium">Renomear Júri Simulado</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             <Label htmlFor="trial-name">Nome</Label>

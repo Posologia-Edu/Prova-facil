@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -760,7 +762,15 @@ export default function MockTrialEditor() {
     }, 500);
   };
 
+  const [mtTab, setMtTab] = useState("cases");
   const roleLabels: Record<string, string> = { prosecution: "Acusação", defense: "Defesa", jury: "Júri" };
+  const MT_STEPS = [
+    { label: "Preparar", tabs: [{ value: "cases", label: "Processos", icon: FileText }] },
+    { label: "Distribuir", tabs: [{ value: "groups", label: "Grupos", icon: Users }, { value: "distribution", label: "Distribuição", icon: Shuffle }] },
+    { label: "Aplicar", tabs: [{ value: "forms", label: "Formulários", icon: ClipboardList }, { value: "judge", label: "Painel do Juiz", icon: Gavel }] },
+    { label: "Resultados", tabs: [{ value: "results", label: "Resultados", icon: BarChart3 }, { value: "student-scores", label: "Notas dos Alunos", icon: Users }] },
+  ];
+  const currentStepIndex = Math.max(0, MT_STEPS.findIndex((st) => st.tabs.some((t) => t.value === mtTab)));
 
   const accessCode = trial?.access_code || "";
   const judgeLink = trial ? `${window.location.origin}/mock-trial/judge/${accessCode}` : "";
@@ -768,18 +778,33 @@ export default function MockTrialEditor() {
   if (isLoading) return <div className="p-6"><div className="animate-pulse h-8 bg-muted rounded w-1/3" /></div>;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ModuleHelpGuide moduleKey="mock_trial" />
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/mock-trials")}>
-          <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate("/mock-trials")}>
+          <ArrowLeft className="h-4 w-4" /> Júris
         </Button>
-        <div className="flex-1">
-          <Input value={title} onChange={e => setTitle(e.target.value)} className="text-xl font-bold border-none px-0 focus-visible:ring-0" placeholder="Título do Júri Simulado" />
-        </div>
-        <Badge variant={trial?.status === "active" ? "default" : trial?.status === "finished" ? "outline" : "secondary"}>
-          {trial?.status === "active" ? "Ativo" : trial?.status === "finished" ? "Finalizado" : "Rascunho"}
-        </Badge>
+        <PageHeader
+          eyebrow="Júri Simulado · Editar"
+          title={
+            <Input
+              aria-label="Título do Júri Simulado"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="h-auto border-0 bg-transparent p-0 font-heading text-[2rem] font-medium leading-[1.1] shadow-none focus-visible:ring-0 md:text-[2rem]"
+              placeholder="Título do Júri Simulado"
+            />
+          }
+          actions={
+            <>
+              <StatusBadge tone={trial?.status === "active" ? "ok" : trial?.status === "finished" ? "neutral" : "warn"} dot>
+                {trial?.status === "active" ? "Ativo" : trial?.status === "finished" ? "Finalizado" : "Rascunho"}
+              </StatusBadge>
+              {accessCode && (
+                <Button size="sm" variant="outline" title="Copiar PIN de acesso" onClick={() => { navigator.clipboard.writeText(accessCode); toast.success("PIN copiado!"); }}>
+                  <span className="label-mono mr-2">PIN</span><span className="font-mono tracking-widest">{accessCode}</span>
+                </Button>
+              )}
         <Button
           size="sm"
           variant="outline"
@@ -814,12 +839,15 @@ export default function MockTrialEditor() {
             Desativar
           </Button>
         )}
+            </>
+          }
+        />
       </div>
 
       {activeJobId && jobProgress && (
         <Card className="border-primary/40 bg-primary/5 sticky top-2 z-20 shadow-lg">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
               {jobProgress.mode === "regenerate" ? "Regenerando processo" : "Gerando novo processo"}
             </CardTitle>
@@ -836,7 +864,7 @@ export default function MockTrialEditor() {
               </p>
             )}
             {Array.isArray(jobProgress.validation_issues) && jobProgress.validation_issues.length > 0 && (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300 flex gap-2">
+              <div className="rounded-md border border-warning/40 bg-warning/5 p-2 text-xs text-warning-ink flex gap-2">
                 <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
                 <div>
                   <strong>Avisos de validação:</strong>
@@ -855,16 +883,28 @@ export default function MockTrialEditor() {
         </Card>
       )}
 
-      <Tabs defaultValue="cases" className="space-y-4">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="cases"><FileText className="h-4 w-4 mr-1" />Processos</TabsTrigger>
-          <TabsTrigger value="groups"><Users className="h-4 w-4 mr-1" />Grupos</TabsTrigger>
-          <TabsTrigger value="distribution"><Shuffle className="h-4 w-4 mr-1" />Distribuição</TabsTrigger>
-          <TabsTrigger value="forms"><ClipboardList className="h-4 w-4 mr-1" />Formulários</TabsTrigger>
-          <TabsTrigger value="judge"><Gavel className="h-4 w-4 mr-1" />Painel do Juiz</TabsTrigger>
-          <TabsTrigger value="results"><BarChart3 className="h-4 w-4 mr-1" />Resultados</TabsTrigger>
-          <TabsTrigger value="student-scores"><Users className="h-4 w-4 mr-1" />Notas dos Alunos</TabsTrigger>
-        </TabsList>
+      <Tabs value={mtTab} onValueChange={setMtTab} className="space-y-6">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {MT_STEPS.map((st, i) => (
+            <button
+              key={st.label}
+              type="button"
+              onClick={() => setMtTab(st.tabs[0].value)}
+              className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${i === currentStepIndex ? "border-primary bg-brand-soft" : "hover:bg-muted"}`}
+            >
+              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full font-mono text-xs font-medium ${i === currentStepIndex ? "bg-primary text-primary-foreground" : "bg-sunken text-muted-foreground"}`}>{i + 1}</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">{st.label}</span>
+                <span className="block truncate text-xs text-muted-foreground">{st.tabs.map((t) => t.label).join(" · ")}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <TabsListLine className="flex-wrap">
+          {MT_STEPS[currentStepIndex].tabs.map((t) => (
+            <TabsTriggerLine key={t.value} value={t.value}><t.icon className="h-4 w-4" />{t.label}</TabsTriggerLine>
+          ))}
+        </TabsListLine>
 
         {/* PROCESSOS TAB */}
         <TabsContent value="cases" className="space-y-4">
@@ -1084,7 +1124,7 @@ export default function MockTrialEditor() {
         <TabsContent value="groups" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Adicionar Aluno</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Adicionar Aluno</CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs value={studentAddMode} onValueChange={(v) => setStudentAddMode(v as "single" | "batch")}>
@@ -1143,7 +1183,7 @@ export default function MockTrialEditor() {
             <Card className="border-dashed">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <CardTitle className="text-base">
+                  <CardTitle className="font-heading text-lg font-medium">
                     Alunos sem grupo ({students.filter(s => !s.group_id).length})
                   </CardTitle>
                   <Button size="sm" variant="secondary" onClick={distributeUnassignedStudents} disabled={groups.length === 0}>
@@ -1207,7 +1247,7 @@ export default function MockTrialEditor() {
                           <span>Câmara</span>
                           <span className="font-mono text-foreground/70">{String(gIdx + 1).padStart(2, "0")}</span>
                         </div>
-                        <CardTitle className="text-sm font-bold truncate text-foreground">{g.name}</CardTitle>
+                        <CardTitle className="font-heading text-lg font-medium truncate text-foreground">{g.name}</CardTitle>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
                           {groupStudents.length} integrante(s) cadastrado(s)
                         </p>
@@ -1343,11 +1383,11 @@ export default function MockTrialEditor() {
                           const currentRole = assignment ? (assignment as any).role : "none";
                           const roleStyle =
                             currentRole === "prosecution"
-                              ? "border-red-500/40 bg-red-500/5 text-red-700"
+                              ? "border-destructive/40 bg-destructive/5 text-destructive"
                               : currentRole === "defense"
                                 ? "border-primary/40 bg-primary/5 text-primary"
                                 : currentRole === "jury"
-                                  ? "border-amber-500/40 bg-amber-500/5 text-amber-700"
+                                  ? "border-warning/40 bg-warning/5 text-warning-ink"
                                   : "border-dashed border-foreground/20 text-muted-foreground";
                           return (
                             <td key={c.id} className="text-center px-2 py-2 border-r border-foreground/10 last:border-r-0">
@@ -1396,7 +1436,7 @@ export default function MockTrialEditor() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-base">{form.title}</CardTitle>
+                    <CardTitle className="font-heading text-lg font-medium">{form.title}</CardTitle>
                     <Badge variant={
                       form.target_role === "prosecution" ? "destructive" :
                       form.target_role === "defense" ? "default" : "secondary"
@@ -1423,7 +1463,7 @@ export default function MockTrialEditor() {
         <TabsContent value="judge" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Configurações do Juiz</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Configurações do Juiz</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -1439,7 +1479,7 @@ export default function MockTrialEditor() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Acesso via Portal de Avaliação</CardTitle>
+              <CardTitle className="font-heading text-lg font-medium">Acesso via Portal de Avaliação</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
