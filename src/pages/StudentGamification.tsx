@@ -60,7 +60,7 @@ export default function StudentGamification() {
         <Button variant="ghost" size="sm" onClick={() => navigate("/student/auth")} className="mb-2">
           <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
         </Button>
-        <h1 className="text-xl font-bold flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /> Gamificação</h1>
+        <h1 className="font-heading text-xl font-medium flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /> Gamificação</h1>
       </header>
 
       <main className="max-w-4xl mx-auto p-6 space-y-6">
@@ -68,7 +68,7 @@ export default function StudentGamification() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardContent className="py-6 text-center">
-              <Star className="h-8 w-8 mx-auto text-yellow-500 mb-2" />
+              <Star className="h-8 w-8 mx-auto text-highlight mb-2" />
               <p className="text-3xl font-bold">{totalPoints}</p>
               <p className="text-sm text-muted-foreground">Pontos Totais</p>
             </CardContent>
@@ -82,7 +82,7 @@ export default function StudentGamification() {
           </Card>
           <Card>
             <CardContent className="py-6 text-center">
-              <Crown className="h-8 w-8 mx-auto text-amber-500 mb-2" />
+              <Crown className="h-8 w-8 mx-auto text-warning-ink mb-2" />
               <p className="text-3xl font-bold">{myRank > 0 ? `#${myRank}` : "-"}</p>
               <p className="text-sm text-muted-foreground">Ranking</p>
             </CardContent>
@@ -91,7 +91,7 @@ export default function StudentGamification() {
 
         {/* Achievements */}
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" /> Conquistas</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Trophy className="h-5 w-5" /> Conquistas</CardTitle></CardHeader>
           <CardContent>
             {achievements.length === 0 ? (
               <p className="text-muted-foreground text-sm">Nenhuma conquista desbloqueada ainda. Continue realizando avaliações!</p>
@@ -121,7 +121,7 @@ export default function StudentGamification() {
 
         {/* Leaderboard */}
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Flame className="h-5 w-5" /> Top 10 Ranking</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Flame className="h-5 w-5" /> Top 10 Ranking</CardTitle></CardHeader>
           <CardContent>
             {rankings.length === 0 ? (
               <p className="text-muted-foreground text-sm">Nenhum dado de ranking disponível.</p>
@@ -143,7 +143,7 @@ export default function StudentGamification() {
 
         {/* Recent points */}
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5" /> Pontos Recentes</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Zap className="h-5 w-5" /> Pontos Recentes</CardTitle></CardHeader>
           <CardContent>
             {points.length === 0 ? (
               <p className="text-muted-foreground text-sm">Nenhum ponto registrado.</p>

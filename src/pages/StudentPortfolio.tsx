@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { ArrowLeft, BookOpen, Trophy, Bot, TrendingUp, FileDown, Loader2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,7 +93,7 @@ export default function StudentPortfolio() {
             <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
           </Button>
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /> Meu Portfólio</h1>
+            <h1 className="font-heading text-xl font-medium flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /> Meu Portfólio</h1>
             <Button size="sm" onClick={exportPDF}><FileDown className="h-4 w-4 mr-2" /> Exportar PDF</Button>
           </div>
         </header>
@@ -101,7 +102,7 @@ export default function StudentPortfolio() {
       <div className={isTeacherView ? "" : "max-w-4xl mx-auto p-6 space-y-6"}>
         {isTeacherView && (
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">Portfólio: {email}</h2>
+            <h2 className="font-heading text-2xl font-medium">Portfólio: {email}</h2>
             <Button size="sm" onClick={exportPDF}><FileDown className="h-4 w-4 mr-2" /> Exportar PDF</Button>
           </div>
         )}
@@ -133,7 +134,7 @@ export default function StudentPortfolio() {
         {/* Evolution chart */}
         {chartData.length > 1 && (
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Evolução</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Evolução</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={chartData}>
@@ -150,7 +151,7 @@ export default function StudentPortfolio() {
 
         {/* Timeline */}
         <Card>
-          <CardHeader><CardTitle>Histórico de Avaliações</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-heading text-lg font-medium">Histórico de Avaliações</CardTitle></CardHeader>
           <CardContent>
             {entries.length === 0 ? (
               <p className="text-muted-foreground text-sm">Nenhuma avaliação registrada no portfólio.</p>
@@ -167,7 +168,7 @@ export default function StudentPortfolio() {
                           <p className="text-xs text-muted-foreground">{new Date(e.entry_date).toLocaleDateString("pt-BR")} · {typeMap[e.entry_type] || e.entry_type}</p>
                         </div>
                       </div>
-                      {pct !== null && <Badge variant={pct >= 70 ? "default" : pct >= 50 ? "secondary" : "destructive"}>{pct}%</Badge>}
+                      {pct !== null && <StatusBadge tone={pct >= 70 ? "ok" : pct >= 50 ? "warn" : "bad"}>{pct}%</StatusBadge>}
                     </div>
                   );
                 })}
@@ -179,7 +180,7 @@ export default function StudentPortfolio() {
         {/* AI Feedbacks */}
         {feedbacks.length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Bot className="h-5 w-5" /> Feedbacks da IA</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Bot className="h-5 w-5" /> Feedbacks da IA</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {feedbacks.map((fb: any) => (
                 <div key={fb.id} className="p-3 rounded-lg bg-primary/5 border text-sm">
@@ -194,7 +195,7 @@ export default function StudentPortfolio() {
         {/* Achievements */}
         {achievements.length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" /> Conquistas</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Trophy className="h-5 w-5" /> Conquistas</CardTitle></CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 {achievements.map((a: any) => (

@@ -121,7 +121,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="text-center max-w-md space-y-4">
           <ShieldX className="h-16 w-16 mx-auto text-destructive" />
-          <h2 className="text-xl font-bold">{t("protected_student_title")}</h2>
+          <h2 className="font-heading text-2xl font-medium">{t("protected_student_title")}</h2>
           <p className="text-muted-foreground text-sm">{t("protected_student_desc")}</p>
           <div className="flex gap-3 justify-center">
             <Button variant="outline" onClick={async () => { await supabase.auth.signOut(); navigate("/"); }}>
@@ -146,7 +146,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
         <div className="min-h-screen flex items-center justify-center bg-background px-4">
           <div className="text-center max-w-md space-y-5">
             <Ban className="h-16 w-16 mx-auto text-destructive" />
-            <h2 className="text-xl font-bold">{t("protected_rejected_title")}</h2>
+            <h2 className="font-heading text-2xl font-medium">{t("protected_rejected_title")}</h2>
             <p className="text-muted-foreground text-sm">{t("protected_rejected_desc")}</p>
             {userEmail && (
               <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2 inline-block">
@@ -174,7 +174,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
           <div className="relative inline-block">
             <Clock className="h-16 w-16 mx-auto text-primary animate-pulse" />
           </div>
-          <h2 className="text-xl font-bold">{t("protected_pending_title")}</h2>
+          <h2 className="font-heading text-2xl font-medium">{t("protected_pending_title")}</h2>
           <p className="text-muted-foreground text-sm">
             {t("protected_pending_desc")}
           </p>
@@ -203,7 +203,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="text-center max-w-md space-y-4">
           <ShieldX className="h-16 w-16 mx-auto text-destructive" />
-          <h2 className="text-xl font-bold">{t("protected_admin_title")}</h2>
+          <h2 className="font-heading text-2xl font-medium">{t("protected_admin_title")}</h2>
           <p className="text-muted-foreground text-sm">{t("protected_admin_desc")}</p>
           <Button variant="outline" onClick={() => navigate("/dashboard")}>
             {t("protected_back_dashboard")}

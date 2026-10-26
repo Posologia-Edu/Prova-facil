@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { GraduationCap, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -137,19 +137,20 @@ const Auth = () => {
         <Card className="border shadow-lg">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-2">
-              <GraduationCap className="h-10 w-10 text-secondary" />
+              <GraduationCap className="h-10 w-10 text-brand-text" />
             </div>
-            <CardTitle className="text-2xl font-bold">ProvaFácil</CardTitle>
+            <div className="eyebrow mb-1">Acesso do professor</div>
+            <CardTitle className="font-heading text-2xl font-medium">ProvaFácil</CardTitle>
             <CardDescription>
               {tab === "login" ? t("auth_login_desc") : t("auth_signup_desc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs value={tab} onValueChange={setTab}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">{t("auth_login")}</TabsTrigger>
-                <TabsTrigger value="signup">{t("auth_signup")}</TabsTrigger>
-              </TabsList>
+              <TabsListLine className="grid w-full grid-cols-2 mb-6">
+                <TabsTriggerLine value="login" className="justify-center">{t("auth_login")}</TabsTriggerLine>
+                <TabsTriggerLine value="signup" className="justify-center">{t("auth_signup")}</TabsTriggerLine>
+              </TabsListLine>
 
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
@@ -162,7 +163,7 @@ const Auth = () => {
                       <Label htmlFor="login-password">{t("auth_password")}</Label>
                       <button
                         type="button"
-                        className="text-xs text-secondary hover:underline"
+                        className="text-xs text-brand-text hover:underline"
                         onClick={async () => {
                           if (!email) {
                             toast({ title: "Informe seu e-mail", description: "Digite seu e-mail no campo acima para recuperar a senha.", variant: "destructive" });
@@ -183,7 +184,7 @@ const Auth = () => {
                     </div>
                     <Input id="login-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
                   </div>
-                  <Button type="submit" className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90" disabled={loading}>
+                  <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t("auth_login")}
                   </Button>
@@ -204,7 +205,7 @@ const Auth = () => {
                     <Label htmlFor="signup-password">{t("auth_password")}</Label>
                     <Input id="signup-password" type="password" placeholder={t("auth_min_chars")} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                   </div>
-                  <Button type="submit" className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90" disabled={loading}>
+                  <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t("auth_create_account")}
                   </Button>

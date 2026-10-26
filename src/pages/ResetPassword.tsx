@@ -78,9 +78,9 @@ export default function ResetPassword() {
         <Card className="border shadow-lg">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-2">
-              <GraduationCap className="h-10 w-10 text-secondary" />
+              <GraduationCap className="h-10 w-10 text-brand-text" />
             </div>
-            <CardTitle className="text-2xl font-bold">
+            <CardTitle className="font-heading text-2xl font-medium">
               {success ? "Senha definida!" : "Definir nova senha"}
             </CardTitle>
             <CardDescription>
@@ -92,7 +92,7 @@ export default function ResetPassword() {
           <CardContent>
             {success ? (
               <div className="flex flex-col items-center gap-3 py-6">
-                <CheckCircle className="h-16 w-16 text-green-500" />
+                <CheckCircle className="h-16 w-16 text-success" />
                 <p className="text-sm text-muted-foreground">Redirecionando para o painel...</p>
               </div>
             ) : !sessionReady ? (
@@ -128,7 +128,7 @@ export default function ResetPassword() {
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                  className="w-full"
                   disabled={loading}
                 >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -576,7 +576,8 @@ export default function StudentAuth() {
             <div className="flex justify-center mb-2">
               <GraduationCap className="h-10 w-10 text-primary" />
             </div>
-            <CardTitle className="text-2xl font-bold">{t("student_portal_title")}</CardTitle>
+            <div className="eyebrow mb-1">Portal do aluno</div>
+            <CardTitle className="font-heading text-2xl font-medium">{t("student_portal_title")}</CardTitle>
             <CardDescription>{t("student_portal_desc")}</CardDescription>
           </CardHeader>
           <CardContent>
