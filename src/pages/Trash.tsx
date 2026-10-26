@@ -16,7 +16,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -296,6 +298,12 @@ export default function TrashPage() {
     return date.toLocaleDateString("pt-BR");
   };
 
+  const purgeDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + 30);
+    return d.toLocaleDateString("pt-BR");
+  };
+
   const formatFullDate = (dateStr: string) =>
     new Date(dateStr).toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" });
 
@@ -411,7 +419,7 @@ export default function TrashPage() {
       return (
         <div className="text-center py-16">
           <Trash2 className="h-12 w-12 mx-auto text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground mt-3">A lixeira está vazia</p>
+          <p className="font-heading text-lg mt-3">A lixeira está vazia</p>
           <p className="text-xs text-muted-foreground mt-1">
             Itens excluídos aparecerão aqui por 30 dias
           </p>
@@ -420,30 +428,28 @@ export default function TrashPage() {
     }
 
     return (
-      <div className="space-y-2">
+      <Card className="divide-y overflow-hidden">
         {filteredItems.map((item) => {
           const Icon = typeIcons[item.type];
           return (
-            <Card
+            <div
               key={item.id}
-              className="group hover:shadow-md transition-shadow cursor-pointer"
+              className="group flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer"
               onClick={() => setPreviewItem(item)}
             >
-              <CardContent className="p-4 flex items-center gap-4">
+              <>
                 <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
                   <Icon className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{item.name}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <Badge variant="outline" className="text-[10px]">
-                      {typeLabels[item.type]}
-                    </Badge>
+                    <StatusBadge tone="neutral">{typeLabels[item.type]}</StatusBadge>
                     {item.details && (
                       <span className="text-[11px] text-muted-foreground">{item.details}</span>
                     )}
                     <span className="text-[11px] text-muted-foreground">
-                      · Excluído {formatDate(item.deletedAt)}
+                      · Excluído {formatDate(item.deletedAt)} · apaga em {purgeDate(item.deletedAt)}
                     </span>
                   </div>
                 </div>
@@ -475,51 +481,47 @@ export default function TrashPage() {
                     Excluir
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </>
+            </div>
           );
         })}
-      </div>
+      </Card>
     );
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Trash2 className="h-6 w-6" />
-            Lixeira
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {items.length} {items.length === 1 ? "item" : "itens"} na lixeira · Itens são excluídos permanentemente após 30 dias
-          </p>
-        </div>
-        {items.length > 0 && (
-          <Button variant="destructive" size="sm" onClick={() => setEmptyTrashOpen(true)}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Esvaziar Lixeira
-          </Button>
-        )}
-      </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <PageHeader
+        eyebrow="Gestão"
+        title="Lixeira"
+        description={`${items.length} ${items.length === 1 ? "item" : "itens"} na lixeira. Os itens excluídos ficam aqui por 30 dias e depois são apagados de vez.`}
+        actions={
+          items.length > 0 ? (
+            <Button variant="destructive" onClick={() => setEmptyTrashOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Esvaziar lixeira
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">Todos ({items.length})</TabsTrigger>
-          <TabsTrigger value="question">Questões ({items.filter((i) => i.type === "question").length})</TabsTrigger>
-          <TabsTrigger value="exam">Provas ({items.filter((i) => i.type === "exam").length})</TabsTrigger>
-          <TabsTrigger value="class">Turmas ({items.filter((i) => i.type === "class").length})</TabsTrigger>
-          <TabsTrigger value="form">Formulários ({filterByType("form").length})</TabsTrigger>
-          <TabsTrigger value="osce">OSCE ({filterByType("osce").length})</TabsTrigger>
-          <TabsTrigger value="mock_trial">Júri ({filterByType("mock_trial").length})</TabsTrigger>
-        </TabsList>
-        <TabsContent value="all" className="mt-4">{renderItems(filterByType("all"))}</TabsContent>
-        <TabsContent value="question" className="mt-4">{renderItems(filterByType("question"))}</TabsContent>
-        <TabsContent value="exam" className="mt-4">{renderItems(filterByType("exam"))}</TabsContent>
-        <TabsContent value="class" className="mt-4">{renderItems(filterByType("class"))}</TabsContent>
-        <TabsContent value="form" className="mt-4">{renderItems(filterByType("form"))}</TabsContent>
-        <TabsContent value="osce" className="mt-4">{renderItems(filterByType("osce"))}</TabsContent>
-        <TabsContent value="mock_trial" className="mt-4">{renderItems(filterByType("mock_trial"))}</TabsContent>
+        <TabsListLine>
+          <TabsTriggerLine value="all">Todos <span className="font-mono text-xs text-muted-foreground">{items.length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="question">Questões <span className="font-mono text-xs text-muted-foreground">{items.filter((i) => i.type === "question").length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="exam">Provas <span className="font-mono text-xs text-muted-foreground">{items.filter((i) => i.type === "exam").length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="class">Turmas <span className="font-mono text-xs text-muted-foreground">{items.filter((i) => i.type === "class").length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="form">Formulários <span className="font-mono text-xs text-muted-foreground">{filterByType("form").length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="osce">OSCE <span className="font-mono text-xs text-muted-foreground">{filterByType("osce").length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="mock_trial">Júri <span className="font-mono text-xs text-muted-foreground">{filterByType("mock_trial").length}</span></TabsTriggerLine>
+        </TabsListLine>
+        <TabsContent value="all" className="mt-6">{renderItems(filterByType("all"))}</TabsContent>
+        <TabsContent value="question" className="mt-6">{renderItems(filterByType("question"))}</TabsContent>
+        <TabsContent value="exam" className="mt-6">{renderItems(filterByType("exam"))}</TabsContent>
+        <TabsContent value="class" className="mt-6">{renderItems(filterByType("class"))}</TabsContent>
+        <TabsContent value="form" className="mt-6">{renderItems(filterByType("form"))}</TabsContent>
+        <TabsContent value="osce" className="mt-6">{renderItems(filterByType("osce"))}</TabsContent>
+        <TabsContent value="mock_trial" className="mt-6">{renderItems(filterByType("mock_trial"))}</TabsContent>
       </Tabs>
 
       {/* Detail preview dialog */}
@@ -529,12 +531,12 @@ export default function TrashPage() {
             <>
               <DialogHeader>
                 <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline">{typeLabels[previewItem.type]}</Badge>
+                  <StatusBadge tone="neutral">{typeLabels[previewItem.type]}</StatusBadge>
                   <span className="text-xs text-muted-foreground">
                     Excluído em {formatFullDate(previewItem.deletedAt)}
                   </span>
                 </div>
-                <DialogTitle className="text-base">{previewItem.name}</DialogTitle>
+                <DialogTitle className="font-heading text-lg font-medium">{previewItem.name}</DialogTitle>
                 <DialogDescription className="sr-only">
                   Detalhes do item excluído
                 </DialogDescription>

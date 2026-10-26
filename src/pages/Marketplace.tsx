@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
@@ -364,14 +365,12 @@ export default function Marketplace() {
     });
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Marketplace</h1>
-        <p className="text-muted-foreground mt-1">
-          Explore provas compartilhadas pela comunidade, avalie e importe para sua área.
-        </p>
-      </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <PageHeader
+        eyebrow="Gestão"
+        title="Marketplace"
+        description="Explore provas compartilhadas pela comunidade, avalie e importe para sua área."
+      />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -416,11 +415,11 @@ export default function Marketplace() {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : filteredExams.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
-          <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-40" />
-          <p className="text-lg font-medium">Nenhuma prova encontrada</p>
+        <Card className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+          <BookOpen className="h-10 w-10 mb-3 text-muted-foreground/40" />
+          <p className="font-heading text-lg text-foreground">Nenhuma prova encontrada</p>
           <p className="text-sm">Seja o primeiro a compartilhar uma prova no Marketplace!</p>
-        </div>
+        </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredExams.map((exam) => (
@@ -431,7 +430,7 @@ export default function Marketplace() {
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
+                  <CardTitle className="font-heading text-lg font-medium line-clamp-2 group-hover:text-primary transition-colors">
                     {exam.title}
                   </CardTitle>
                 </div>
@@ -486,7 +485,7 @@ export default function Marketplace() {
               </CardContent>
               <CardFooter className="pt-0 flex items-center justify-between text-sm">
                 <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <Star className="h-4 w-4 fill-highlight text-highlight" />
                   <span className="font-medium">{exam.avg_rating > 0 ? exam.avg_rating.toFixed(1) : "—"}</span>
                   <span className="text-muted-foreground">({exam.rating_count})</span>
                 </div>
@@ -506,7 +505,7 @@ export default function Marketplace() {
       <Dialog open={!!selectedExam} onOpenChange={(open) => !open && setSelectedExam(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-xl">{selectedExam?.title}</DialogTitle>
+            <DialogTitle className="font-heading text-2xl font-medium">{selectedExam?.title}</DialogTitle>
             <DialogDescription>{selectedExam?.description}</DialogDescription>
           </DialogHeader>
 
@@ -535,7 +534,7 @@ export default function Marketplace() {
               {/* Question topics */}
               {selectedExam?.question_topics && selectedExam.question_topics.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-sm mb-2 flex items-center gap-1.5">
+                  <h3 className="font-heading text-base font-medium mb-2 flex items-center gap-1.5">
                     <Tag className="h-4 w-4" />
                     Assuntos das questões
                   </h3>
@@ -557,7 +556,7 @@ export default function Marketplace() {
 
               {/* Rating */}
               <div className="space-y-2">
-                <h3 className="font-semibold text-sm">
+                <h3 className="font-heading text-base font-medium">
                   {isAuthor ? "Avaliações da sua prova" : "Sua avaliação"}
                 </h3>
                 {isAuthor ? (
@@ -568,7 +567,7 @@ export default function Marketplace() {
                           key={star}
                           className={`h-5 w-5 ${
                             star <= (selectedExam?.avg_rating || 0)
-                              ? "fill-amber-400 text-amber-400"
+                              ? "fill-highlight text-highlight"
                               : "text-muted-foreground/30"
                           }`}
                         />
@@ -593,7 +592,7 @@ export default function Marketplace() {
                         <Star
                           className={`h-6 w-6 ${
                             star <= (hoverRating || userRating)
-                              ? "fill-amber-400 text-amber-400"
+                              ? "fill-highlight text-highlight"
                               : "text-muted-foreground/30"
                           }`}
                         />
@@ -628,7 +627,7 @@ export default function Marketplace() {
 
               {/* Comments */}
               <div className="space-y-3">
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-heading text-base font-medium flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
                   Comentários ({comments.length})
                 </h3>
