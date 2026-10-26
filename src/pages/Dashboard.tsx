@@ -138,13 +138,13 @@ export default function DashboardPage() {
         // OSCE
         supabase.from("osce_exams" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id).is("deleted_at", null),
         // Simulations (multiple areas)
-        supabase.from("medicine_rooms").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("nursing_rooms" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("reconciliation_rooms" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("biomedicine_rooms").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("dentistry_rooms").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("nutrition_rooms" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("physiotherapy_rooms" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("medicine_rooms").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("deleted_at", null),
+        supabase.from("nursing_rooms" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id).is("deleted_at", null),
+        supabase.from("reconciliation_rooms" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id).is("deleted_at", null),
+        supabase.from("biomedicine_rooms").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("deleted_at", null),
+        supabase.from("dentistry_rooms").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("deleted_at", null),
+        supabase.from("nutrition_rooms" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id).is("deleted_at", null),
+        supabase.from("physiotherapy_rooms" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id).is("deleted_at", null),
         // Other modules
         supabase.from("virtual_patients" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id).is("deleted_at", null),
         supabase.from("sct_exams").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("deleted_at", null),
@@ -219,6 +219,7 @@ export default function DashboardPage() {
         .from("medicine_rooms")
         .select("id, title, created_at, status")
         .eq("user_id", user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(2);
 

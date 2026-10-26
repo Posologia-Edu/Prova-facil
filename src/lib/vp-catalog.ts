@@ -58,6 +58,7 @@ export async function fetchVpCatalog(): Promise<VpCatalogEntry[]> {
   const { data, error } = await supabase
     .from("custom_virtual_patients")
     .select("id, slug, name, age, category, description, is_legacy, status, clinical_case, created_at")
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
   if (error || !data) return STATIC_VP_CATALOG;
 

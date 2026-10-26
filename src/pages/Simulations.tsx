@@ -81,6 +81,7 @@ export default function Simulations() {
         .from("simulation_rooms")
         .select("*")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -96,6 +97,7 @@ export default function Simulations() {
         .from("soap_rooms")
         .select("*")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -131,6 +133,7 @@ export default function Simulations() {
         .from("reconciliation_rooms")
         .select("*")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -146,6 +149,7 @@ export default function Simulations() {
         .from("documentation_rooms")
         .select("*")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -198,7 +202,7 @@ export default function Simulations() {
 
   const deleteRoom = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("simulation_rooms").delete().eq("id", id);
+      const { error } = await supabase.from("simulation_rooms").update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["simulation-rooms"] }),
@@ -208,7 +212,7 @@ export default function Simulations() {
     mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from("soap_rooms")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() } as any)
         .eq("id", id)
         .select("id");
 
@@ -217,7 +221,7 @@ export default function Simulations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["soap-rooms-list"] });
-      toast({ title: "Sala SOAP excluída com sucesso!" });
+      toast({ title: "Sala SOAP movida para a lixeira" });
     },
     onError: (error: Error) => {
       toast({ title: "Erro ao excluir sala SOAP", description: error.message, variant: "destructive" });
@@ -226,7 +230,7 @@ export default function Simulations() {
 
   const deleteReconciliationRoom = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("reconciliation_rooms").delete().eq("id", id);
+      const { error } = await supabase.from("reconciliation_rooms").update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reconciliation-rooms-list"] }),
@@ -234,7 +238,7 @@ export default function Simulations() {
 
   const deleteDocumentationRoom = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("documentation_rooms").delete().eq("id", id);
+      const { error } = await supabase.from("documentation_rooms").update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["documentation-rooms-list"] }),

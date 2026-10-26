@@ -77,7 +77,8 @@ export default function SimulationAggregator() {
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [];
-      const { data } = await supabase.from("simulation_rooms").select("id, title, status, created_at").eq("user_id", session.user.id).order("created_at", { ascending: false });
+      const { data } = await supabase.from("simulation_rooms").select("id, title, status, created_at").eq("user_id", session.user.id)
+        .is("deleted_at", null).order("created_at", { ascending: false });
       return (data || []) as RoomInfo[];
     },
   });
@@ -87,7 +88,8 @@ export default function SimulationAggregator() {
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [];
-      const { data } = await supabase.from("soap_rooms").select("id, title, status, created_at").eq("user_id", session.user.id).order("created_at", { ascending: false });
+      const { data } = await supabase.from("soap_rooms").select("id, title, status, created_at").eq("user_id", session.user.id)
+        .is("deleted_at", null).order("created_at", { ascending: false });
       return (data || []) as RoomInfo[];
     },
   });
@@ -97,7 +99,8 @@ export default function SimulationAggregator() {
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [];
-      const { data } = await supabase.from("reconciliation_rooms").select("id, title, status, created_at").eq("user_id", session.user.id).order("created_at", { ascending: false });
+      const { data } = await supabase.from("reconciliation_rooms").select("id, title, status, created_at").eq("user_id", session.user.id)
+        .is("deleted_at", null).order("created_at", { ascending: false });
       return (data || []) as RoomInfo[];
     },
   });
@@ -107,7 +110,8 @@ export default function SimulationAggregator() {
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [];
-      const { data } = await supabase.from("documentation_rooms").select("id, title, status, created_at").eq("user_id", session.user.id).order("created_at", { ascending: false });
+      const { data } = await supabase.from("documentation_rooms").select("id, title, status, created_at").eq("user_id", session.user.id)
+        .is("deleted_at", null).order("created_at", { ascending: false });
       return (data || []) as RoomInfo[];
     },
   });

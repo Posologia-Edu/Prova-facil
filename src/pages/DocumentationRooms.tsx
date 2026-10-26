@@ -36,6 +36,7 @@ export default function DocumentationRooms() {
         .from("documentation_rooms")
         .select("*")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -51,6 +52,7 @@ export default function DocumentationRooms() {
         .from("reconciliation_rooms")
         .select("id, title, access_code")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       return data || [];
     },
@@ -157,7 +159,7 @@ export default function DocumentationRooms() {
 
   const deleteRoom = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("documentation_rooms").delete().eq("id", id);
+      const { error } = await supabase.from("documentation_rooms").update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["documentation-rooms"] }),

@@ -12,6 +12,8 @@ import {
   ClipboardList,
   Stethoscope,
   Gavel,
+  HeartPulse,
+  UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,10 +42,10 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-type TrashType = "question" | "exam" | "class" | "sct" | "kfe" | "sjt" | "progress_test" | "observation" | "osce" | "mock_trial";
+type TrashType = "question" | "exam" | "class" | "sct" | "kfe" | "sjt" | "progress_test" | "observation" | "osce" | "mock_trial" | "sim_anamnese" | "sim_soap" | "sim_reconciliation" | "sim_documentation" | "sim_medicine" | "sim_nursing" | "sim_dentistry" | "sim_nutrition" | "sim_physiotherapy" | "sim_biomedicine" | "custom_vp";
 
 // Formulários e módulos com exclusão em lixeira (colunas deleted_at e title). Cada um fica na aba do seu grupo.
-const SIMPLE_TYPES: { type: TrashType; table: string; label: string; group: "form" | "osce" | "mock_trial" }[] = [
+const SIMPLE_TYPES: { type: TrashType; table: string; label: string; group: "form" | "osce" | "mock_trial" | "sim" | "vp"; titleCol?: string }[] = [
   { type: "sct", table: "sct_exams", label: "SCT", group: "form" },
   { type: "kfe", table: "kfe_exams", label: "KFE", group: "form" },
   { type: "sjt", table: "sjt_exams", label: "SJT", group: "form" },
@@ -51,6 +53,17 @@ const SIMPLE_TYPES: { type: TrashType; table: string; label: string; group: "for
   { type: "observation", table: "clinical_observations", label: "Mini-CEX / DOPS", group: "form" },
   { type: "osce", table: "osce_exams", label: "OSCE", group: "osce" },
   { type: "mock_trial", table: "mock_trials", label: "Júri Simulado", group: "mock_trial" },
+  { type: "sim_anamnese", table: "simulation_rooms", label: "Simulação · Anamnese", group: "sim" },
+  { type: "sim_soap", table: "soap_rooms", label: "Simulação · SOAP", group: "sim" },
+  { type: "sim_reconciliation", table: "reconciliation_rooms", label: "Simulação · Reconciliação", group: "sim" },
+  { type: "sim_documentation", table: "documentation_rooms", label: "Simulação · Documentação", group: "sim" },
+  { type: "sim_medicine", table: "medicine_rooms", label: "Simulação · Medicina", group: "sim" },
+  { type: "sim_nursing", table: "nursing_rooms", label: "Simulação · Enfermagem", group: "sim" },
+  { type: "sim_dentistry", table: "dentistry_rooms", label: "Simulação · Odontologia", group: "sim" },
+  { type: "sim_nutrition", table: "nutrition_rooms", label: "Simulação · Nutrição", group: "sim" },
+  { type: "sim_physiotherapy", table: "physiotherapy_rooms", label: "Simulação · Fisioterapia", group: "sim" },
+  { type: "sim_biomedicine", table: "biomedicine_rooms", label: "Simulação · Biomedicina", group: "sim" },
+  { type: "custom_vp", table: "custom_virtual_patients", label: "Paciente Virtual", group: "vp", titleCol: "name" },
 ];
 const tableOf = (type: TrashType) =>
   type === "question" ? "question_bank" : type === "exam" ? "exams" : type === "class" ? "classes" : SIMPLE_TYPES.find((t) => t.type === type)!.table;
@@ -64,7 +77,7 @@ interface TrashItem {
   rawData?: any;
 }
 
-const typeIcons: Record<TrashType, typeof Library> = {
+const typeIcons: Record<string, typeof Library> = {
   question: Library,
   exam: FileEdit,
   class: GraduationCap,
@@ -77,7 +90,7 @@ const typeIcons: Record<TrashType, typeof Library> = {
   mock_trial: Gavel,
 };
 
-const typeLabels: Record<TrashType, string> = {
+const typeLabels: Record<string, string> = {
   question: "Questão",
   exam: "Prova",
   class: "Turma",
@@ -89,6 +102,11 @@ const typeLabels: Record<TrashType, string> = {
   osce: "OSCE",
   mock_trial: "Júri Simulado",
 };
+
+SIMPLE_TYPES.forEach((t) => {
+  if (!typeIcons[t.type]) typeIcons[t.type] = t.group === "sim" ? HeartPulse : UserRound;
+  if (!typeLabels[t.type]) typeLabels[t.type] = t.label;
+});
 
 const difficultyLabels: Record<string, string> = {
   easy: "Fácil",
@@ -153,7 +171,7 @@ export default function TrashPage() {
         ...SIMPLE_TYPES.map((t) =>
           (supabase as any)
             .from(t.table)
-            .select("id, title, status, created_at, deleted_at")
+            .select(t.titleCol ? `id, title:${t.titleCol}, status, created_at, deleted_at` : "id, title, status, created_at, deleted_at")
             .eq("user_id", user.id)
             .not("deleted_at", "is", null)
         ),
@@ -281,7 +299,7 @@ export default function TrashPage() {
 
   const filterByType = (type: string) => {
     if (type === "all") return items;
-    if (type === "form" || type === "osce" || type === "mock_trial") {
+    if (type === "form" || type === "osce" || type === "mock_trial" || type === "sim" || type === "vp") {
       const types = SIMPLE_TYPES.filter((t) => t.group === type).map((t) => t.type);
       return items.filter((i) => types.includes(i.type));
     }
@@ -513,6 +531,8 @@ export default function TrashPage() {
           <TabsTriggerLine value="class">Turmas <span className="font-mono text-xs text-muted-foreground">{items.filter((i) => i.type === "class").length}</span></TabsTriggerLine>
           <TabsTriggerLine value="form">Formulários <span className="font-mono text-xs text-muted-foreground">{filterByType("form").length}</span></TabsTriggerLine>
           <TabsTriggerLine value="osce">OSCE <span className="font-mono text-xs text-muted-foreground">{filterByType("osce").length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="sim">Simulação <span className="font-mono text-xs text-muted-foreground">{filterByType("sim").length}</span></TabsTriggerLine>
+          <TabsTriggerLine value="vp">Pacientes Virtuais <span className="font-mono text-xs text-muted-foreground">{filterByType("vp").length}</span></TabsTriggerLine>
           <TabsTriggerLine value="mock_trial">Júri <span className="font-mono text-xs text-muted-foreground">{filterByType("mock_trial").length}</span></TabsTriggerLine>
         </TabsListLine>
         <TabsContent value="all" className="mt-6">{renderItems(filterByType("all"))}</TabsContent>
@@ -521,6 +541,8 @@ export default function TrashPage() {
         <TabsContent value="class" className="mt-6">{renderItems(filterByType("class"))}</TabsContent>
         <TabsContent value="form" className="mt-6">{renderItems(filterByType("form"))}</TabsContent>
         <TabsContent value="osce" className="mt-6">{renderItems(filterByType("osce"))}</TabsContent>
+        <TabsContent value="sim" className="mt-6">{renderItems(filterByType("sim"))}</TabsContent>
+        <TabsContent value="vp" className="mt-6">{renderItems(filterByType("vp"))}</TabsContent>
         <TabsContent value="mock_trial" className="mt-6">{renderItems(filterByType("mock_trial"))}</TabsContent>
       </Tabs>
 

@@ -38,6 +38,7 @@ export default function SoapRooms() {
         .from("soap_rooms")
         .select("*")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -53,6 +54,7 @@ export default function SoapRooms() {
         .from("simulation_rooms")
         .select("id, title, access_code")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -200,7 +202,7 @@ export default function SoapRooms() {
     mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from("soap_rooms")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() } as any)
         .eq("id", id)
         .select("id");
 

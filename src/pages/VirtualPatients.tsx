@@ -65,6 +65,7 @@ export default function VirtualPatients() {
       .from("custom_virtual_patients")
       .select("id, name, age, profession, description, category, status")
       .eq("user_id", user.id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     if (data) {
       setCustomPatients(data.map((p: any) => ({
@@ -85,11 +86,11 @@ export default function VirtualPatients() {
   };
 
   const deleteCustom = async (id: string) => {
-    if (!confirm("Excluir este paciente customizado?")) return;
-    const { error } = await supabase.from("custom_virtual_patients").delete().eq("id", id);
+    if (!confirm("Mover este paciente customizado para a lixeira?")) return;
+    const { error } = await supabase.from("custom_virtual_patients").update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
     if (error) toast.error(error.message);
     else {
-      toast.success("Paciente excluído.");
+      toast.success("Paciente movido para a lixeira.");
       loadCustom();
     }
   };

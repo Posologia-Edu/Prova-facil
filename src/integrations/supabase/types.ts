@@ -368,6 +368,7 @@ export type Database = {
       }
       biomedicine_rooms: {
         Row: {
+          deleted_at: string | null
           access_code: string
           competency_ids: string[] | null
           created_at: string
@@ -380,6 +381,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -392,6 +394,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -1616,6 +1619,7 @@ export type Database = {
       }
       custom_virtual_patients: {
         Row: {
+          deleted_at: string | null
           age: number
           baseline_context: string
           baseline_vitals: Json
@@ -1637,6 +1641,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          deleted_at?: string | null
           age: number
           baseline_context?: string
           baseline_vitals?: Json
@@ -1658,6 +1663,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          deleted_at?: string | null
           age?: number
           baseline_context?: string
           baseline_vitals?: Json
@@ -1863,6 +1869,7 @@ export type Database = {
       }
       dentistry_rooms: {
         Row: {
+          deleted_at: string | null
           access_code: string
           competency_ids: string[] | null
           created_at: string
@@ -1875,6 +1882,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -1887,6 +1895,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -2103,6 +2112,7 @@ export type Database = {
       }
       documentation_rooms: {
         Row: {
+          deleted_at: string | null
           access_code: string
           competency_ids: string[] | null
           created_at: string
@@ -2116,6 +2126,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -2129,6 +2140,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -3089,6 +3101,7 @@ export type Database = {
       }
       medicine_rooms: {
         Row: {
+          deleted_at: string | null
           access_code: string
           competency_ids: string[] | null
           created_at: string
@@ -3101,6 +3114,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -3113,6 +3127,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -4113,6 +4128,7 @@ export type Database = {
       }
       nursing_rooms: {
         Row: {
+          deleted_at: string | null
           access_code: string
           competency_ids: string[] | null
           created_at: string
@@ -4125,6 +4141,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -4137,6 +4154,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -4333,6 +4351,7 @@ export type Database = {
       }
       nutrition_rooms: {
         Row: {
+          deleted_at: string | null
           access_code: string
           competency_ids: string[] | null
           created_at: string
@@ -4345,6 +4364,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -4357,6 +4377,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -5076,6 +5097,7 @@ export type Database = {
       }
       physiotherapy_rooms: {
         Row: {
+          deleted_at: string | null
           access_code: string
           competency_ids: string[] | null
           created_at: string
@@ -5088,6 +5110,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -5100,6 +5123,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -5648,6 +5672,7 @@ export type Database = {
       }
       reconciliation_rooms: {
         Row: {
+          deleted_at: string | null
           access_code: string
           competency_ids: string[] | null
           created_at: string
@@ -5661,6 +5686,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -5674,6 +5700,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -6063,6 +6090,7 @@ export type Database = {
       }
       simulation_rooms: {
         Row: {
+          deleted_at: string | null
           access_code: string
           competency_ids: string[] | null
           created_at: string
@@ -6078,6 +6106,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -6093,6 +6122,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           access_code?: string
           competency_ids?: string[] | null
           created_at?: string
@@ -6603,6 +6633,7 @@ export type Database = {
       }
       soap_rooms: {
         Row: {
+          deleted_at: string | null
           access_code: string
           anamnesis_room_id: string | null
           competency_ids: string[] | null
@@ -6616,6 +6647,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           access_code?: string
           anamnesis_room_id?: string | null
           competency_ids?: string[] | null
@@ -6629,6 +6661,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           access_code?: string
           anamnesis_room_id?: string | null
           competency_ids?: string[] | null

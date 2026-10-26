@@ -58,7 +58,7 @@ export default function AreaSimulationsPage({ config }: { config: AreaConfig }) 
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [] as any[];
-      const { data, error } = await supabase.from(roomsTable as any).select("*").eq("user_id", session.user.id).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from(roomsTable as any).select("*").eq("user_id", session.user.id).is("deleted_at", null).order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as any[];
     },
@@ -110,10 +110,10 @@ export default function AreaSimulationsPage({ config }: { config: AreaConfig }) 
 
   const deleteRoom = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from(roomsTable as any).delete().eq("id", id);
+      const { error } = await supabase.from(roomsTable as any).update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { refresh(); toast({ title: "Sala excluída" }); },
+    onSuccess: () => { refresh(); toast({ title: "Sala movida para a lixeira" }); },
     onError: () => toast({ title: "Erro", description: "Não foi possível excluir a sala.", variant: "destructive" }),
   });
 

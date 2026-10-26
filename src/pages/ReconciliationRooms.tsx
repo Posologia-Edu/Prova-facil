@@ -36,6 +36,7 @@ export default function ReconciliationRooms() {
         .from("reconciliation_rooms")
         .select("*")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -51,6 +52,7 @@ export default function ReconciliationRooms() {
         .from("soap_rooms")
         .select("id, title, access_code")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -114,7 +116,7 @@ export default function ReconciliationRooms() {
 
   const deleteRoom = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("reconciliation_rooms").delete().eq("id", id);
+      const { error } = await supabase.from("reconciliation_rooms").update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reconciliation-rooms"] }),
