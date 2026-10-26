@@ -1156,7 +1156,7 @@ export default function VPAnalytics({ classId, embedded = false }: VPAnalyticsPr
                       <TableHead className="text-center">Nota (0–10)</TableHead>
                       <TableHead className="text-center">Eficiência clínica</TableHead>
                       <TableHead className="text-center">Flags</TableHead>
-                      <TableHead className="text-right">Feedback e detalhes</TableHead>
+                      <TableHead className="whitespace-normal text-right">Feedback e detalhes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

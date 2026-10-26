@@ -377,7 +377,7 @@ export default function AnalyticsPage({ initialTab = "overview" }: { initialTab?
   }, []);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
       <PageHeader
         eyebrow="Gestão"
         title="Análises"
@@ -393,7 +393,7 @@ export default function AnalyticsPage({ initialTab = "overview" }: { initialTab?
         }
       />
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as AnalyticsTab)}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as AnalyticsTab)} className="min-w-0">
         <TabsListLine className="overflow-x-auto">
           <TabsTriggerLine value="overview">Visão geral</TabsTriggerLine>
           <TabsTriggerLine value="exams">Provas online</TabsTriggerLine>
@@ -403,7 +403,7 @@ export default function AnalyticsPage({ initialTab = "overview" }: { initialTab?
         </TabsListLine>
         <TabsContent value="overview" className="mt-6"><OverviewTab classId={classId} onGo={setTab} /></TabsContent>
         <TabsContent value="exams" className="mt-6"><ExamsAnalyticsTab selectedClass={classId} /></TabsContent>
-        <TabsContent value="vp" className="mt-6"><VPAnalytics embedded classId={classId === "all" ? undefined : classId} /></TabsContent>
+        <TabsContent value="vp" className="mt-6 min-w-0"><VPAnalytics embedded classId={classId === "all" ? undefined : classId} /></TabsContent>
         <TabsContent value="osce" className="mt-6"><OsceTab classId={classId} /></TabsContent>
         <TabsContent value="forms" className="mt-6"><FormsTab classId={classId} /></TabsContent>
       </Tabs>
