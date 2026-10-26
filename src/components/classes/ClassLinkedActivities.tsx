@@ -12,7 +12,7 @@ import {
 } from "@/lib/class-activities";
 import { cn } from "@/lib/utils";
 
-const GROUPS: ClassActivityGroup[] = ["OSCE", "Simulação", "Formulários"];
+const GROUPS: ClassActivityGroup[] = ["OSCE", "Simulação", "Formulários", "Júri Simulado"];
 
 const statusTone = (status: string | null): StatusTone => {
   if (!status) return "neutral";

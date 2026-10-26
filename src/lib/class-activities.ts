@@ -6,9 +6,10 @@ export type ClassActivityType =
   | "osce"
   | "simulation_anamnese" | "simulation_soap" | "simulation_reconciliation" | "simulation_documentation"
   | "nursing" | "nutrition" | "dentistry" | "medicine" | "physiotherapy" | "biomedicine"
-  | "sct" | "kfe" | "sjt" | "progress_test" | "clinical_observation";
+  | "sct" | "kfe" | "sjt" | "progress_test" | "clinical_observation"
+  | "mock_trial";
 
-export type ClassActivityGroup = "OSCE" | "Simulação" | "Formulários";
+export type ClassActivityGroup = "OSCE" | "Simulação" | "Formulários" | "Júri Simulado";
 
 interface ActivityTypeConfig {
   label: string;
@@ -40,6 +41,7 @@ export const CLASS_ACTIVITY_TYPES: Record<ClassActivityType, ActivityTypeConfig>
   sjt: { label: "SJT", group: "Formulários", table: "sjt_exams", hasSoftDelete: true, route: (id) => `/sjt/${id}/edit` },
   progress_test: { label: "Progress Test", group: "Formulários", table: "progress_tests", hasSoftDelete: true, route: (id) => `/progress-test/${id}/edit` },
   clinical_observation: { label: "Mini-CEX e DOPS", group: "Formulários", table: "clinical_observations", hasSoftDelete: true, route: (id) => `/clinical-observations/${id}/edit` },
+  mock_trial: { label: "Júri Simulado", group: "Júri Simulado", table: "mock_trials", hasSoftDelete: true, route: (id) => `/mock-trials/${id}/edit` },
 };
 
 export const CLASS_ACTIVITY_TYPE_KEYS = Object.keys(CLASS_ACTIVITY_TYPES) as ClassActivityType[];

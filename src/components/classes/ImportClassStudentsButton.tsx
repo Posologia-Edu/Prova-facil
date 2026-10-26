@@ -21,12 +21,14 @@ interface ImportClassStudentsButtonProps {
   participantsTable: string;
   /** e-mails que já estão na sala; esses alunos não são duplicados */
   existingEmails: (string | null | undefined)[];
+  /** monta a linha a gravar; sem isso usa o formato dos participantes das simulações (Júri Simulado usa o próprio) */
+  rowBuilder?: (student: { student_name: string; student_email: string | null }) => Record<string, unknown>;
   onDone: () => void;
 }
 
 // Traz os alunos de uma turma para a sala com um clique e liga a sala à turma (aba Atividades).
 // Usa os alunos do semestre ativo da turma; sem semestre ativo, usa todos.
-export function ImportClassStudentsButton({ type, roomId, participantsTable, existingEmails, onDone }: ImportClassStudentsButtonProps) {
+export function ImportClassStudentsButton({ type, roomId, participantsTable, existingEmails, rowBuilder, onDone }: ImportClassStudentsButtonProps) {
   const [open, setOpen] = useState(false);
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,12 +74,12 @@ export function ImportClassStudentsButton({ type, roomId, participantsTable, exi
         return !email || !known.has(email);
       });
       if (fresh.length === 0) {
-        toast.info("Todos os alunos desta turma já estão na sala.");
+        toast.info("Todos os alunos desta turma já estão na atividade.");
         setOpen(false);
         return;
       }
 
-      const rows = fresh.map((s) => ({
+      const rows = fresh.map((s) => rowBuilder ? rowBuilder(s) : ({
         room_id: roomId,
         student_name: s.student_name,
         student_email: s.student_email ?? "",
@@ -108,7 +110,7 @@ export function ImportClassStudentsButton({ type, roomId, participantsTable, exi
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[80vh] max-w-md overflow-y-auto">
           <DialogHeader><DialogTitle>Importar alunos da turma</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Os alunos entram na sala e a sala fica vinculada à turma. Quem já está na sala não é repetido.</p>
+          <p className="text-sm text-muted-foreground">Os alunos entram na atividade e ela fica vinculada à turma. Quem já está nela não é repetido.</p>
           {loading ? (
             <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : classes.length === 0 ? (

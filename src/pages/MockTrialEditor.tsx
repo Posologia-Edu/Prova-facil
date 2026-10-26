@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page-header";
+import { ImportClassStudentsButton } from "@/components/classes/ImportClassStudentsButton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1123,8 +1124,16 @@ export default function MockTrialEditor() {
         {/* GRUPOS TAB */}
         <TabsContent value="groups" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="font-heading text-lg font-medium">Adicionar Aluno</CardTitle>
+              <ImportClassStudentsButton
+                type="mock_trial"
+                roomId={id!}
+                participantsTable="mock_trial_students"
+                existingEmails={students.map((s: any) => s.student_email)}
+                rowBuilder={(s) => ({ mock_trial_id: id, student_name: s.student_name, student_email: s.student_email, group_id: null })}
+                onDone={() => refetchStudents()}
+              />
             </CardHeader>
             <CardContent>
               <Tabs value={studentAddMode} onValueChange={(v) => setStudentAddMode(v as "single" | "batch")}>
