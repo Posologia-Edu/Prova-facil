@@ -14,7 +14,7 @@ export default function CookiePolicy() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <GraduationCap className="h-7 w-7 text-secondary" />
-            <span className="text-xl font-bold text-foreground">ProvaFácil</span>
+            <span className="text-xl font-heading font-medium text-foreground">ProvaFácil</span>
           </Link>
           <Link to="/">
             <Button variant="ghost" size="sm" className="gap-1.5">
@@ -27,17 +27,17 @@ export default function CookiePolicy() {
 
       <section className="flex-1 pt-28 pb-16">
         <div className="container mx-auto px-4 max-w-3xl">
-          <h1 className="text-3xl font-extrabold text-foreground mb-2">Política de Cookies</h1>
+          <h1 className="text-3xl font-heading font-medium text-foreground mb-2">Política de Cookies</h1>
           <p className="text-sm text-muted-foreground mb-8">Última atualização: {new Date().toLocaleDateString("pt-BR")}</p>
 
           <div className="space-y-6 text-sm text-muted-foreground leading-relaxed rounded-xl border bg-card p-6 md:p-8">
             <div>
-              <h2 className="text-lg font-semibold text-foreground mb-2">1. O que são Cookies</h2>
+              <h2 className="text-lg font-heading font-medium text-foreground mb-2">1. O que são Cookies</h2>
               <p>Cookies são pequenos arquivos de texto armazenados no seu navegador quando você visita um site. Eles são amplamente utilizados para fazer sites funcionarem de maneira eficiente e fornecer informações aos proprietários do site.</p>
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-foreground mb-2">2. Cookies que Utilizamos</h2>
+              <h2 className="text-lg font-heading font-medium text-foreground mb-2">2. Cookies que Utilizamos</h2>
               <div className="space-y-3 mt-3">
                 <div className="rounded-lg bg-muted/50 p-4">
                   <h3 className="font-medium text-foreground mb-1">Cookies Essenciais</h3>
@@ -55,34 +55,34 @@ export default function CookiePolicy() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-foreground mb-2">3. Cookies de Terceiros</h2>
+              <h2 className="text-lg font-heading font-medium text-foreground mb-2">3. Cookies de Terceiros</h2>
               <p>Utilizamos serviços de terceiros que podem definir seus próprios cookies, incluindo: processamento de pagamentos (Stripe) e serviços de autenticação. Esses cookies são regidos pelas políticas de privacidade dos respectivos terceiros.</p>
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-foreground mb-2">4. Armazenamento Local (Local Storage)</h2>
+              <h2 className="text-lg font-heading font-medium text-foreground mb-2">4. Armazenamento Local (Local Storage)</h2>
               <p>Além de cookies, utilizamos o armazenamento local do navegador para manter dados de sessão e preferências. Esses dados são armazenados apenas no seu dispositivo e não são enviados para servidores externos.</p>
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-foreground mb-2">5. Como Gerenciar Cookies</h2>
+              <h2 className="text-lg font-heading font-medium text-foreground mb-2">5. Como Gerenciar Cookies</h2>
               <p>Você pode controlar e gerenciar cookies nas configurações do seu navegador. Note que desabilitar cookies essenciais pode afetar o funcionamento da plataforma. A maioria dos navegadores permite: bloquear todos os cookies, aceitar apenas cookies do site visitado e excluir cookies ao fechar o navegador.</p>
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-foreground mb-2">6. Alterações nesta Política</h2>
+              <h2 className="text-lg font-heading font-medium text-foreground mb-2">6. Alterações nesta Política</h2>
               <p>Podemos atualizar esta política de cookies periodicamente para refletir mudanças em nossas práticas ou por motivos legais.</p>
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-foreground mb-2">7. Contato</h2>
+              <h2 className="text-lg font-heading font-medium text-foreground mb-2">7. Contato</h2>
               <p>Para dúvidas sobre o uso de cookies, entre em contato através da nossa <Link to="/contato-publico" className="text-secondary hover:underline">página de contato</Link>.</p>
             </div>
 
             <div className="pt-4 border-t">
               <Button 
                 onClick={() => setShowPreferences(true)} 
-                className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                className="gap-2"
               >
                 <Settings2 className="h-4 w-4" />
                 Gerenciar Preferências de Cookies

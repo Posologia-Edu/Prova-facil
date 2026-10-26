@@ -72,7 +72,7 @@ export default function Features() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <GraduationCap className="h-7 w-7 text-secondary" />
-            <span className="text-xl font-bold text-foreground">ProvaFácil</span>
+            <span className="text-xl font-heading font-medium text-foreground">ProvaFácil</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/">
@@ -94,10 +94,10 @@ export default function Features() {
       <section className="pt-28 pb-12 bg-muted/40">
         <div className="container mx-auto px-4 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-1.5 text-sm text-muted-foreground mb-4">
-            <Zap className="h-4 w-4 text-secondary" />
+            <Zap className="h-4 w-4 text-brand-text" />
             Tudo que você precisa para criar provas
           </div>
-          <h1 className="text-4xl font-extrabold text-foreground md:text-5xl">
+          <h1 className="text-4xl font-heading font-medium text-foreground md:text-5xl">
             Funcionalidades do <span className="text-secondary">ProvaFácil</span>
           </h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -122,7 +122,7 @@ export default function Features() {
                 </div>
               </div>
               <div className="flex-1 space-y-4">
-                <h2 className="text-2xl font-bold text-foreground">{feature.title}</h2>
+                <h2 className="text-2xl font-heading font-medium text-foreground">{feature.title}</h2>
                 <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
                 <div className="flex flex-wrap gap-2">
                   {feature.highlights.map((h) => (
@@ -145,7 +145,7 @@ export default function Features() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl rounded-2xl bg-primary p-10 md:p-14 text-center">
-            <h2 className="text-3xl font-bold text-primary-foreground md:text-4xl">
+            <h2 className="text-3xl font-heading font-medium text-primary-foreground md:text-4xl">
               Pronto para simplificar suas provas?
             </h2>
             <p className="mt-4 text-primary-foreground/80 text-lg">

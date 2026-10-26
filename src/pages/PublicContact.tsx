@@ -63,7 +63,7 @@ export default function PublicContact() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <GraduationCap className="h-7 w-7 text-secondary" />
-            <span className="text-xl font-bold text-foreground">ProvaFácil</span>
+            <span className="text-xl font-heading font-medium text-foreground">ProvaFácil</span>
           </Link>
           <Link to="/">
             <Button variant="ghost" size="sm" className="gap-1.5">
@@ -78,7 +78,7 @@ export default function PublicContact() {
       <section className="flex-1 pt-28 pb-16">
         <div className="container mx-auto px-4 max-w-2xl">
           <div className="mb-8 text-center">
-            <h1 className="text-3xl font-extrabold text-foreground">Fale Conosco</h1>
+            <h1 className="text-3xl font-heading font-medium text-foreground">Fale Conosco</h1>
             <p className="mt-2 text-muted-foreground">
               Envie sua mensagem e responderemos o mais breve possível.
             </p>

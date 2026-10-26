@@ -23,7 +23,7 @@ const features = [
 
 const renderValue = (value: string | boolean) => {
   if (typeof value === "boolean") {
-    return value ? <Check className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-muted-foreground/40" />;
+    return value ? <Check className="h-4 w-4 text-success" /> : <X className="h-4 w-4 text-muted-foreground/40" />;
   }
   return <span className="text-sm font-medium">{value}</span>;
 };
@@ -60,7 +60,7 @@ export default function PublicPricing() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <GraduationCap className="h-7 w-7 text-primary" />
-            <span className="text-lg font-bold text-primary">ProvaFácil</span>
+            <span className="text-lg font-heading font-medium text-primary">ProvaFácil</span>
           </Link>
           <div className="flex items-center gap-2">
             <Link to="/">
@@ -78,7 +78,7 @@ export default function PublicPricing() {
 
       <section className="py-20 px-4">
         <div className="container mx-auto max-w-4xl text-center">
-          <h1 className="text-4xl font-extrabold mb-4 tracking-tight">Planos e Preços</h1>
+          <h1 className="text-4xl font-heading font-medium mb-4 tracking-tight">Planos e Preços</h1>
           <p className="text-muted-foreground mb-12 text-lg">
             Comece gratuitamente e faça upgrade quando precisar de mais recursos.
           </p>
@@ -87,9 +87,9 @@ export default function PublicPricing() {
             {/* Free */}
             <Card className="border-2">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl"><Zap className="h-5 w-5" /> Gratuito</CardTitle>
+                <CardTitle className="font-heading text-xl font-medium flex items-center gap-2"><Zap className="h-5 w-5" /> Gratuito</CardTitle>
                 <CardDescription>Para experimentar o ProvaFácil</CardDescription>
-                <p className="text-3xl font-bold mt-2">R$ 0<span className="text-sm text-muted-foreground font-normal">/mês</span></p>
+                <p className="font-heading text-4xl font-medium mt-2">R$ 0<span className="text-sm text-muted-foreground font-normal">/mês</span></p>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
@@ -114,12 +114,12 @@ export default function PublicPricing() {
             {/* Premium */}
             <Card className="border-2 border-secondary shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl"><Crown className="h-5 w-5 text-secondary" /> Premium</CardTitle>
+                <CardTitle className="font-heading text-xl font-medium flex items-center gap-2"><Crown className="h-5 w-5 text-brand-text" /> Premium</CardTitle>
                 <CardDescription>Para professores que precisam de mais</CardDescription>
-                <p className="text-3xl font-bold mt-2">
+                <p className="font-heading text-4xl font-medium mt-2">
                   R$ 29,90<span className="text-sm text-muted-foreground font-normal">/mês</span>
                 </p>
-                <p className="text-xs text-green-600 font-medium mt-1">🎉 7 dias grátis para testar • Cancele quando quiser</p>
+                <p className="text-xs text-success font-medium mt-1">🎉 7 dias grátis para testar • Cancele quando quiser</p>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
@@ -135,7 +135,7 @@ export default function PublicPricing() {
                 <Button
                   onClick={handleSubscribe}
                   disabled={loadingCheckout}
-                  className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2"
+                  className="w-full gap-2"
                 >
                   {loadingCheckout ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
