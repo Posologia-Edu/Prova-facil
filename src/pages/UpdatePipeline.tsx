@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/use-admin";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -153,19 +154,13 @@ export default function UpdatePipeline() {
   if (isLoading) return <p className="p-6 text-muted-foreground">Carregando...</p>;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Rocket className="h-6 w-6 text-primary" />
-            Pipeline de Atualizações
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Histórico de funcionalidades e planejamento futuro do sistema.
-          </p>
-        </div>
-        {isAdmin && (
-          <div className="flex gap-2">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <PageHeader
+        eyebrow="Gestão"
+        title="Atualizações"
+        description="Histórico de funcionalidades e planejamento futuro do sistema."
+        actions={isAdmin ? (
+          <>
             <Button variant="outline" onClick={generateRoadmapSuggestions} disabled={generating}>
               {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
               {generating ? "Gerando..." : "Gerar Roadmap IA"}
@@ -174,30 +169,30 @@ export default function UpdatePipeline() {
               <Plus className="h-4 w-4 mr-1" />
               Nova Entrada
             </Button>
-          </div>
-        )}
-      </div>
+          </>
+        ) : undefined}
+      />
 
       <Tabs defaultValue="changelog">
-        <TabsList>
-          <TabsTrigger value="changelog" className="gap-1">
+        <TabsListLine>
+          <TabsTriggerLine value="changelog" className="gap-1">
             <CheckCircle2 className="h-4 w-4" />
             Changelog ({completed.length})
-          </TabsTrigger>
-          <TabsTrigger value="roadmap" className="gap-1">
+          </TabsTriggerLine>
+          <TabsTriggerLine value="roadmap" className="gap-1">
             <Lightbulb className="h-4 w-4" />
             Roadmap ({planned.length})
-          </TabsTrigger>
-        </TabsList>
+          </TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="changelog" className="space-y-3 mt-4">
+        <TabsContent value="changelog" className="space-y-3 mt-6">
           {completed.map((u) => (
-            <Card key={u.id} className="border-l-4 border-l-green-500/50">
+            <Card key={u.id} className="border-l-4 border-l-success/50">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <CardTitle className="text-base">{u.title}</CardTitle>
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <CardTitle className="font-heading text-lg font-medium">{u.title}</CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -224,14 +219,14 @@ export default function UpdatePipeline() {
           )}
         </TabsContent>
 
-        <TabsContent value="roadmap" className="space-y-3 mt-4">
+        <TabsContent value="roadmap" className="space-y-3 mt-6">
           {planned.map((u) => (
-            <Card key={u.id} className="border-l-4 border-l-blue-500/50">
+            <Card key={u.id} className="border-l-4 border-l-info/50">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-blue-500" />
-                    <CardTitle className="text-base">{u.title}</CardTitle>
+                    <Sparkles className="h-4 w-4 text-info" />
+                    <CardTitle className="font-heading text-lg font-medium">{u.title}</CardTitle>
                     <Badge variant={priorityBadge[u.priority]?.variant || "secondary"}>
                       {priorityBadge[u.priority]?.label || u.priority}
                     </Badge>

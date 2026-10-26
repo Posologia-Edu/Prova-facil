@@ -21,7 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export default function Pricing() {
+export default function Pricing({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useLanguage();
   const { isPremium, subscriptionEnd, isLoading, checkSubscription } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -70,27 +70,30 @@ export default function Pricing() {
 
   const renderFeatureValue = (value: string | boolean) => {
     if (typeof value === "boolean") {
-      return value ? <Check className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-muted-foreground/40" />;
+      return value ? <Check className="h-4 w-4 text-success" /> : <X className="h-4 w-4 text-muted-foreground/40" />;
     }
     return <span className="text-sm font-medium">{value}</span>;
   };
 
   return (
     <div className="flex flex-col items-center w-full space-y-8 py-4">
-      <div className="w-full max-w-4xl">
-        <div className="mb-2">
-          <h1 className="text-2xl font-bold">{t("pricing_title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("pricing_subtitle")}</p>
+      {!embedded && (
+        <div className="w-full max-w-4xl">
+          <div className="mb-2">
+            <div className="eyebrow mb-2.5">Conta</div>
+            <h1 className="font-heading text-[2rem] font-medium leading-[1.1]">{t("pricing_title")}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{t("pricing_subtitle")}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-8 max-w-4xl w-full">
         <Card className={`relative pt-4 ${!isPremium ? "border-primary" : ""}`}>
           {!isPremium && <Badge className="absolute -top-3 left-6 z-10 bg-primary text-primary-foreground" variant="default">{t("pricing_current_plan")}</Badge>}
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5" />{t("pricing_free")}</CardTitle>
+            <CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Zap className="h-5 w-5" />{t("pricing_free")}</CardTitle>
             <CardDescription>{t("pricing_free_desc")}</CardDescription>
-            <p className="text-3xl font-bold mt-2">R$ 0<span className="text-sm text-muted-foreground font-normal">{t("pricing_month")}</span></p>
+            <p className="font-heading text-4xl font-medium mt-2">R$ 0<span className="text-sm text-muted-foreground font-normal">{t("pricing_month")}</span></p>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
@@ -114,10 +117,10 @@ export default function Pricing() {
         <Card className={`relative pt-4 ${isPremium ? "border-primary shadow-lg" : "border-secondary/50"}`}>
           {isPremium && <Badge className="absolute -top-3 left-6 z-10 bg-primary text-primary-foreground">{t("pricing_current_plan")}</Badge>}
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-secondary" />{t("pricing_premium")}</CardTitle>
+            <CardTitle className="font-heading text-lg font-medium flex items-center gap-2"><Crown className="h-5 w-5 text-secondary" />{t("pricing_premium")}</CardTitle>
             <CardDescription>{t("pricing_premium_desc")}</CardDescription>
-            <p className="text-3xl font-bold mt-2">R$ 29,90<span className="text-sm text-muted-foreground font-normal">{t("pricing_month")}</span></p>
-            <p className="text-xs text-green-600 font-medium mt-1">🎉 7 dias grátis para testar • Cancele quando quiser</p>
+            <p className="font-heading text-4xl font-medium mt-2">R$ 29,90<span className="text-sm text-muted-foreground font-normal">{t("pricing_month")}</span></p>
+            <p className="text-xs text-success font-medium mt-1">🎉 7 dias grátis para testar • Cancele quando quiser</p>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
@@ -157,7 +160,7 @@ export default function Pricing() {
                 </AlertDialog>
               </>
             ) : (
-              <Button className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90" onClick={handleCheckout} disabled={checkoutLoading || isLoading}>
+              <Button className="w-full " onClick={handleCheckout} disabled={checkoutLoading || isLoading}>
                 {checkoutLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Crown className="h-4 w-4 mr-2" />}
                 {t("pricing_subscribe")}
               </Button>

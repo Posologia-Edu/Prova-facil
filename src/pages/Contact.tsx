@@ -7,7 +7,7 @@ import { Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-export default function Contact() {
+export default function Contact({ embedded = false }: { embedded?: boolean } = {}) {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [subject, setSubject] = useState("");
@@ -69,9 +69,10 @@ export default function Contact() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className={embedded ? "max-w-2xl" : "container mx-auto px-4 py-8 max-w-2xl"}>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">Fale Conosco</h1>
+        {!embedded && <div className="eyebrow mb-2.5">Conta</div>}
+        <h2 className="font-heading text-2xl font-medium text-foreground">Fale conosco</h2>
         <p className="mt-1 text-muted-foreground">
           Envie sua mensagem e responderemos o mais breve possível.
         </p>
@@ -118,7 +119,7 @@ export default function Contact() {
         </div>
 
         <div className="flex justify-end pt-2">
-          <Button type="submit" size="lg" disabled={sending} className="bg-secondary text-secondary-foreground hover:bg-secondary/90 px-8">
+          <Button type="submit" size="lg" disabled={sending} className=" px-8">
             {sending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

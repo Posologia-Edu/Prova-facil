@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -134,21 +135,22 @@ export default function LmsIntegration() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><FileText className="h-6 w-6 text-primary" /> Integração LMS</h1>
-        <p className="text-muted-foreground">Exporte notas e importe questões de plataformas como Moodle, Canvas e Google Classroom</p>
-      </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <PageHeader
+        eyebrow="Gestão"
+        title="Integração LMS"
+        description="Exporte notas e importe questões de plataformas como Moodle, Canvas e Google Classroom."
+      />
 
       <Tabs defaultValue="export">
-        <TabsList>
-          <TabsTrigger value="export"><Download className="h-4 w-4 mr-2" /> Exportar</TabsTrigger>
-          <TabsTrigger value="import"><Upload className="h-4 w-4 mr-2" /> Importar</TabsTrigger>
-        </TabsList>
+        <TabsListLine>
+          <TabsTriggerLine value="export"><Download className="h-4 w-4" /> Exportar</TabsTriggerLine>
+          <TabsTriggerLine value="import"><Upload className="h-4 w-4" /> Importar</TabsTriggerLine>
+        </TabsListLine>
 
-        <TabsContent value="export" className="space-y-4 mt-4">
+        <TabsContent value="export" className="space-y-4 mt-6">
           <Card>
-            <CardHeader><CardTitle>Exportar Notas</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium">Exportar Notas</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -186,9 +188,9 @@ export default function LmsIntegration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="import" className="space-y-4 mt-4">
+        <TabsContent value="import" className="space-y-4 mt-6">
           <Card>
-            <CardHeader><CardTitle>Importar Questões</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-lg font-medium">Importar Questões</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Formato</label>

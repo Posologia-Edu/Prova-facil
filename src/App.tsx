@@ -18,7 +18,6 @@ import Classes from "./pages/Classes";
 import ClassDetail from "./pages/ClassDetail";
 import Analytics from "./pages/Analytics";
 import Admin from "./pages/Admin";
-import Pricing from "./pages/Pricing";
 import StudentAuth from "./pages/StudentAuth";
 import StudentCheckin from "./pages/StudentCheckin";
 import StudentDashboard from "./pages/StudentDashboard";
@@ -29,7 +28,6 @@ import ExamCalendar from "./pages/ExamCalendar";
 import NotFound from "./pages/NotFound";
 import Documentation from "./pages/Documentation";
 import Settings from "./pages/Settings";
-import Contact from "./pages/Contact";
 import Trash from "./pages/Trash";
 import ResetPassword from "./pages/ResetPassword";
 import Marketplace from "./pages/Marketplace";
@@ -250,7 +248,7 @@ const App = () => (
               path="/pricing"
               element={
                 <ProtectedRoute>
-                  <AppLayout><Pricing /></AppLayout>
+                  <AppLayout><Settings initialTab="plan" /></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -601,7 +599,7 @@ const App = () => (
               path="/contato"
               element={
                 <ProtectedRoute>
-                  <AppLayout><Contact /></AppLayout>
+                  <AppLayout><Settings initialTab="contact" /></AppLayout>
                 </ProtectedRoute>
               }
             />
