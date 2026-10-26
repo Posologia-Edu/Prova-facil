@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { BarChart3, PieChart, TrendingUp, Users, Award, AlertTriangle, ArrowDownUp, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
+import VPAnalytics from "@/pages/VPAnalytics";
+import { OverviewTab, OsceTab, FormsTab, type AnalyticsTab } from "@/components/analytics/AnalyticsExtraTabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -17,17 +21,16 @@ interface SessionRow { id: string; student_id: string; total_score: number | nul
 interface AnswerRow { question_id: string; is_correct: boolean | null; points_earned: number | null; max_points: number | null; content_json: Record<string, any>; tags: string[] | null; }
 
 const COLORS = [
-  "hsl(142, 60%, 45%)", "hsl(45, 90%, 50%)", "hsl(0, 70%, 50%)",
-  "hsl(210, 70%, 50%)", "hsl(280, 60%, 50%)", "hsl(30, 80%, 50%)",
+  "hsl(var(--success))", "hsl(var(--highlight))", "hsl(var(--destructive))",
+  "hsl(210, 70%, 50%)", "hsl(280, 60%, 50%)", "hsl(var(--warning))",
 ];
 
-export default function AnalyticsPage() {
+function ExamsAnalyticsTab({ selectedClass }: { selectedClass: string }) {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [exams, setExams] = useState<ExamOption[]>([]);
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [selectedExam, setSelectedExam] = useState<string>("all");
-  const [selectedClass, setSelectedClass] = useState<string>("all");
 
   // Computed data
   const [sessions, setSessions] = useState<SessionRow[]>([]);
@@ -145,11 +148,11 @@ export default function AnalyticsPage() {
 
   // Score distribution (ranges: 0-20, 21-40, 41-60, 61-80, 81-100)
   const scoreRanges = [
-    { range: "0-20%", count: 0, color: "hsl(0, 70%, 50%)" },
-    { range: "21-40%", count: 0, color: "hsl(30, 80%, 50%)" },
-    { range: "41-60%", count: 0, color: "hsl(45, 90%, 50%)" },
-    { range: "61-80%", count: 0, color: "hsl(142, 50%, 50%)" },
-    { range: "81-100%", count: 0, color: "hsl(142, 60%, 35%)" },
+    { range: "0-20%", count: 0, color: "hsl(var(--destructive))" },
+    { range: "21-40%", count: 0, color: "hsl(var(--warning))" },
+    { range: "41-60%", count: 0, color: "hsl(var(--highlight))" },
+    { range: "61-80%", count: 0, color: "hsl(var(--success))" },
+    { range: "81-100%", count: 0, color: "hsl(var(--success))" },
   ];
   finishedSessions.forEach(s => {
     const pct = ((s.total_score || 0) / (s.max_score || 1)) * 100;
@@ -205,13 +208,8 @@ export default function AnalyticsPage() {
   const hasData = finishedSessions.length > 0;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("analytics_title")}</h1>
-          <p className="text-muted-foreground text-sm mt-1">{t("analytics_subtitle")}</p>
-        </div>
-        <div className="flex gap-3">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-end gap-3">
           <AdvancedPDFReport
             variant="sm"
             data={{
@@ -228,17 +226,6 @@ export default function AnalyticsPage() {
               chartElementId: "analytics-chart-area",
             }}
           />
-          <Select value={selectedClass} onValueChange={setSelectedClass}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder={t("analytics_all_classes")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("analytics_all_classes")}</SelectItem>
-              {classes.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select value={selectedExam} onValueChange={setSelectedExam}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder={t("analytics_all_exams")} />
@@ -250,7 +237,6 @@ export default function AnalyticsPage() {
               ))}
             </SelectContent>
           </Select>
-        </div>
       </div>
 
       {loading ? (
@@ -269,57 +255,21 @@ export default function AnalyticsPage() {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-secondary/10 p-2.5">
-                    <Users className="h-5 w-5 text-secondary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{totalStudents}</p>
-                    <p className="text-xs text-muted-foreground">{t("analytics_total_students")}</p>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="p-5">
+              <div className="label-mono">{t("analytics_total_students")}</div>
+              <div className="font-heading text-4xl font-medium mt-1">{totalStudents}</div>
             </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-secondary/10 p-2.5">
-                    <Award className="h-5 w-5 text-secondary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{avgScore.toFixed(1)}%</p>
-                    <p className="text-xs text-muted-foreground">{t("analytics_avg_score")}</p>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="p-5">
+              <div className="label-mono">{t("analytics_avg_score")}</div>
+              <div className="font-heading text-4xl font-medium mt-1">{`${avgScore.toFixed(1)}%`}</div>
             </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-secondary/10 p-2.5">
-                    <TrendingUp className="h-5 w-5 text-secondary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{passRate.toFixed(1)}%</p>
-                    <p className="text-xs text-muted-foreground">{t("analytics_pass_rate")}</p>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="p-5">
+              <div className="label-mono">{t("analytics_pass_rate")}</div>
+              <div className="font-heading text-4xl font-medium mt-1">{`${passRate.toFixed(1)}%`}</div>
             </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-secondary/10 p-2.5">
-                    <ArrowDownUp className="h-5 w-5 text-secondary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{finishedSessions.length}</p>
-                    <p className="text-xs text-muted-foreground">{t("analytics_total_submissions")}</p>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="p-5">
+              <div className="label-mono">{t("analytics_total_submissions")}</div>
+              <div className="font-heading text-4xl font-medium mt-1">{finishedSessions.length}</div>
             </Card>
           </div>
 
@@ -327,7 +277,7 @@ export default function AnalyticsPage() {
             {/* Score Distribution */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" />
                   {t("analytics_score_distribution")}
                 </CardTitle>
@@ -352,7 +302,7 @@ export default function AnalyticsPage() {
             {/* Performance by Topic */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                   <PieChart className="h-4 w-4" />
                   {t("analytics_by_topic")}
                 </CardTitle>
@@ -367,7 +317,7 @@ export default function AnalyticsPage() {
                       <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                       <YAxis dataKey="topic" type="category" tick={{ fontSize: 10 }} width={100} />
                       <Tooltip formatter={(value: number) => `${value}%`} />
-                      <Bar dataKey="rate" name={t("analytics_correct_rate")} fill="hsl(142, 60%, 45%)" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="rate" name={t("analytics_correct_rate")} fill="hsl(var(--success))" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -378,7 +328,7 @@ export default function AnalyticsPage() {
           {/* Most Missed Questions */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="font-heading text-lg font-medium flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 {t("analytics_most_missed")}
               </CardTitle>
@@ -397,9 +347,9 @@ export default function AnalyticsPage() {
                           {q.wrong}/{q.total} {t("analytics_errors")}
                         </p>
                       </div>
-                      <Badge variant={q.errorRate > 70 ? "destructive" : q.errorRate > 40 ? "secondary" : "default"}>
+                      <StatusBadge tone={q.errorRate > 70 ? "bad" : q.errorRate > 40 ? "warn" : "ok"}>
                         {q.errorRate.toFixed(0)}% {t("analytics_error_rate")}
-                      </Badge>
+                      </StatusBadge>
                     </div>
                   ))}
                 </div>
@@ -408,6 +358,55 @@ export default function AnalyticsPage() {
           </Card>
         </>
       )}
+    </div>
+  );
+}
+
+export default function AnalyticsPage({ initialTab = "overview" }: { initialTab?: AnalyticsTab } = {}) {
+  const [tab, setTab] = useState<AnalyticsTab>(initialTab);
+  const [classId, setClassId] = useState("all");
+  const [classes, setClasses] = useState<ClassOption[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("classes").select("id, name").eq("user_id", user.id).is("deleted_at", null).order("name");
+      setClasses(data || []);
+    })();
+  }, []);
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <PageHeader
+        eyebrow="Gestão"
+        title="Análises"
+        description="Um só lugar para ler o desempenho: provas online, pacientes virtuais, OSCE e formulários. A análise detalhada de cada atividade continua dentro dela e dentro da Turma."
+        actions={
+          <Select value={classId} onValueChange={setClassId}>
+            <SelectTrigger className="w-56"><SelectValue placeholder="Turma" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as turmas</SelectItem>
+              {classes.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        }
+      />
+
+      <Tabs value={tab} onValueChange={(v) => setTab(v as AnalyticsTab)}>
+        <TabsListLine className="overflow-x-auto">
+          <TabsTriggerLine value="overview">Visão geral</TabsTriggerLine>
+          <TabsTriggerLine value="exams">Provas online</TabsTriggerLine>
+          <TabsTriggerLine value="vp">Pacientes virtuais</TabsTriggerLine>
+          <TabsTriggerLine value="osce">OSCE</TabsTriggerLine>
+          <TabsTriggerLine value="forms">Formulários</TabsTriggerLine>
+        </TabsListLine>
+        <TabsContent value="overview" className="mt-6"><OverviewTab classId={classId} onGo={setTab} /></TabsContent>
+        <TabsContent value="exams" className="mt-6"><ExamsAnalyticsTab selectedClass={classId} /></TabsContent>
+        <TabsContent value="vp" className="mt-6"><VPAnalytics embedded classId={classId === "all" ? undefined : classId} /></TabsContent>
+        <TabsContent value="osce" className="mt-6"><OsceTab classId={classId} /></TabsContent>
+        <TabsContent value="forms" className="mt-6"><FormsTab classId={classId} /></TabsContent>
+      </Tabs>
     </div>
   );
 }

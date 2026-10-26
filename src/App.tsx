@@ -510,7 +510,7 @@ const App = () => (
               path="/virtual-patients/analytics"
               element={
                 <ProtectedRoute>
-                  <AppLayout><VPAnalytics /></AppLayout>
+                  <AppLayout><Analytics initialTab="vp" /></AppLayout>
                 </ProtectedRoute>
               }
             />
