@@ -59,7 +59,7 @@ export default function PublicDocumentation() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <GraduationCap className="h-7 w-7 text-secondary" />
-            <span className="text-xl font-bold text-foreground">ProvaFácil</span>
+            <span className="text-xl font-heading font-medium text-foreground">ProvaFácil</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/">
@@ -84,7 +84,7 @@ export default function PublicDocumentation() {
             <BookOpen className="h-4 w-4 text-secondary" />
             {t("docs_badge")}
           </div>
-          <h1 className="text-4xl font-extrabold text-foreground md:text-5xl">{t("docs_title")}</h1>
+          <h1 className="text-4xl font-heading font-medium text-foreground md:text-5xl">{t("docs_title")}</h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">{t("docs_subtitle")}</p>
 
           {/* Search */}
@@ -133,7 +133,7 @@ export default function PublicDocumentation() {
                 <div className="rounded-lg bg-secondary/10 p-2.5">
                   <s.icon className="h-5 w-5 text-secondary" />
                 </div>
-                <h2 className="text-2xl font-bold text-foreground">{s.title}</h2>
+                <h2 className="text-2xl font-heading font-medium text-foreground">{s.title}</h2>
               </div>
               <div className="rounded-xl border bg-card p-6 text-muted-foreground leading-relaxed whitespace-pre-line text-sm">
                 {s.content}
@@ -148,7 +148,7 @@ export default function PublicDocumentation() {
         <div className="container mx-auto px-4 max-w-3xl">
           <div className="flex items-center gap-3 mb-8 justify-center">
             <HelpCircle className="h-6 w-6 text-secondary" />
-            <h2 className="text-2xl font-bold text-foreground">{t("docs_faq_title")}</h2>
+            <h2 className="text-2xl font-heading font-medium text-foreground">{t("docs_faq_title")}</h2>
           </div>
           <Accordion type="single" collapsible className="space-y-3">
             {faqs.map((faq, i) => (
@@ -168,7 +168,7 @@ export default function PublicDocumentation() {
       {/* CTA */}
       <section className="py-12">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-2xl font-bold text-foreground mb-4">Pronto para começar?</h2>
+          <h2 className="text-2xl font-heading font-medium text-foreground mb-4">Pronto para começar?</h2>
           <p className="text-muted-foreground mb-6">Crie sua conta gratuitamente e explore todas as funcionalidades.</p>
           <Link to="/auth?tab=signup">
             <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2">
