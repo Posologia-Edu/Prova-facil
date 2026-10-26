@@ -95,13 +95,13 @@ const Index = () => {
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#0a0a1a]/70 backdrop-blur-xl"
+        className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#0c1a38]/70 backdrop-blur-xl"
       >
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <div className="relative">
-              <div className="absolute inset-0 bg-indigo-500 blur-md opacity-60 animate-[landing-pulse-glow_3s_ease-in-out_infinite]" />
-              <GraduationCap className="h-7 w-7 relative" style={{ color: "#7c74ff" }} />
+              <div className="absolute inset-0 bg-amber-500 blur-md opacity-60 animate-[landing-pulse-glow_3s_ease-in-out_infinite]" />
+              <GraduationCap className="h-7 w-7 relative" style={{ color: "#f7b93b" }} />
             </div>
             <span className="text-xl font-bold font-display tracking-tight">ProvaFácil</span>
           </div>
@@ -113,7 +113,7 @@ const Index = () => {
                   {LANGUAGE_FLAGS[language]}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#141432] border-white/10 text-white">
+              <DropdownMenuContent align="end" className="bg-[#14264d] border-white/10 text-white">
                 {languages.map((lang) => (
                   <DropdownMenuItem key={lang} onClick={() => setLanguage(lang)}
                     className={`focus:bg-white/10 focus:text-white ${language === lang ? "bg-white/5" : ""}`}>
@@ -153,7 +153,7 @@ const Index = () => {
         >
           <div className="relative w-[600px] h-[600px]">
             <div className="absolute inset-0 rounded-full border border-white/5 animate-[landing-orbit_60s_linear_infinite]">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-indigo-400 shadow-[0_0_30px_10px_rgba(124,116,255,0.6)]" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_30px_10px_rgba(247,185,59,0.6)]" />
             </div>
             <div className="absolute inset-8 rounded-full border border-white/5 animate-[landing-orbit_40s_linear_infinite_reverse]">
               <div className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/2 w-2 h-2 rounded-full bg-white shadow-[0_0_20px_6px_rgba(255,255,255,0.5)]" />
@@ -169,8 +169,8 @@ const Index = () => {
           >
             <div className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md px-4 py-1.5 text-xs text-white/70">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-400" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
               </span>
               <span className="font-mono-alt tracking-wide uppercase">v2.0 · {t("landing_ai_badge")}</span>
               <ArrowUpRight className="h-3 w-3 opacity-60 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -189,7 +189,7 @@ const Index = () => {
                   <motion.span
                     key={rotatingWords[wordIndex]}
                     className="whitespace-nowrap overflow-visible px-[0.18em]"
-                    style={{ color: "#a78bfa" }}
+                    style={{ color: "#ffd37a" }}
                     initial="hidden"
                     animate="show"
                     exit="exit"
@@ -203,7 +203,7 @@ const Index = () => {
                       <motion.span
                         key={i}
                         className="inline-block overflow-visible bg-clip-text text-transparent pb-[0.08em]"
-                        style={{ backgroundImage: "linear-gradient(120deg, #7c74ff 0%, #4f46e5 50%, #a78bfa 100%)" }}
+                        style={{ backgroundImage: "linear-gradient(120deg, #f7b93b 0%, #e39500 50%, #ffd37a 100%)" }}
                         variants={{
                           hidden: { opacity: 0, y: "0.4em", filter: "blur(6px)" },
                           show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
@@ -236,12 +236,12 @@ const Index = () => {
                 size="lg"
                 className="relative overflow-hidden group text-base px-8 py-6 rounded-full border-0"
                 style={{
-                  background: "linear-gradient(135deg, #4f46e5 0%, #7c74ff 100%)",
-                  boxShadow: "0 10px 40px -10px rgba(79,70,229,0.6), inset 0 1px 0 rgba(255,255,255,0.2)"
+                  background: "linear-gradient(135deg, #e39500 0%, #f7b93b 100%)",
+                  boxShadow: "0 10px 40px -10px rgba(227,149,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)"
                 }}
               >
                 <span className="absolute inset-0 landing-shine opacity-0 group-hover:opacity-100 transition-opacity" />
-                <span className="relative flex items-center gap-2 text-white font-medium">
+                <span className="relative flex items-center gap-2 text-[#1a1200] font-medium">
                   {t("landing_start_free")}
                   <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </span>
@@ -267,7 +267,7 @@ const Index = () => {
           >
             <div
               className="absolute -inset-px rounded-2xl opacity-60 blur-xl"
-              style={{ background: "linear-gradient(120deg, #4f46e5, transparent 40%, #7c74ff)" }}
+              style={{ background: "linear-gradient(120deg, #e39500, transparent 40%, #f7b93b)" }}
             />
             <div className="relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] backdrop-blur-2xl p-8 md:p-10">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-4 divide-x divide-white/5">
@@ -280,7 +280,7 @@ const Index = () => {
                     className="text-center px-4 first:pl-0"
                   >
                     <div className="font-display text-4xl md:text-5xl font-semibold bg-clip-text text-transparent"
-                      style={{ backgroundImage: "linear-gradient(180deg, #ffffff, #b4b4d8)" }}>
+                      style={{ backgroundImage: "linear-gradient(180deg, #ffffff, #b9c3d9)" }}>
                       {s.value}
                     </div>
                     <div className="mt-2 text-xs md:text-sm uppercase tracking-wider text-white/50 font-mono-alt">
@@ -295,11 +295,11 @@ const Index = () => {
       </section>
 
       {/* Marquee */}
-      <section className="relative py-6 border-y border-white/5 bg-[#05050f] overflow-hidden">
+      <section className="relative py-6 border-y border-white/5 bg-[#08122a] overflow-hidden">
         <div className="flex landing-marquee-track whitespace-nowrap">
           {[...marqueeItems, ...marqueeItems].map((item, i) => (
             <div key={i} className="flex items-center gap-6 px-6 text-white/40 text-sm uppercase tracking-widest font-mono-alt">
-              <CircleDot className="h-3 w-3 text-indigo-400" />
+              <CircleDot className="h-3 w-3 text-amber-400" />
               {item}
             </div>
           ))}
@@ -310,7 +310,7 @@ const Index = () => {
       <section id="features" className="relative py-32 overflow-hidden">
         <div className="absolute inset-0 -z-10">
           <div className="absolute top-0 left-0 w-[500px] h-[500px] rounded-full blur-3xl opacity-30"
-            style={{ background: "radial-gradient(circle, #4f46e5, transparent 70%)" }} />
+            style={{ background: "radial-gradient(circle, #e39500, transparent 70%)" }} />
         </div>
 
         <div className="container mx-auto px-4">
@@ -322,8 +322,8 @@ const Index = () => {
             className="max-w-3xl mb-20"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="h-px w-12 bg-indigo-400" />
-              <span className="text-xs uppercase tracking-[0.3em] text-indigo-400 font-mono-alt">Recursos</span>
+              <div className="h-px w-12 bg-amber-400" />
+              <span className="text-xs uppercase tracking-[0.3em] text-amber-400 font-mono-alt">Recursos</span>
             </div>
             <h2 className="text-4xl md:text-6xl font-display font-semibold leading-tight">
               {t("landing_features_heading")}
@@ -341,19 +341,19 @@ const Index = () => {
               transition={{ duration: 0.8 }}
               className="lg:col-span-7 lg:row-span-2 group relative overflow-hidden rounded-3xl border border-white/10 p-10 min-h-[420px]"
               style={{
-                background: "linear-gradient(135deg, rgba(79,70,229,0.18) 0%, rgba(20,20,50,0.4) 60%)"
+                background: "linear-gradient(135deg, rgba(227,149,0,0.18) 0%, rgba(20,38,77,0.4) 60%)"
               }}
             >
               <div className="absolute -right-20 -top-20 w-96 h-96 rounded-full blur-3xl opacity-40"
-                style={{ background: "radial-gradient(circle, #7c74ff, transparent 70%)" }} />
+                style={{ background: "radial-gradient(circle, #f7b93b, transparent 70%)" }} />
               <div className="relative h-full flex flex-col justify-between">
                 <div>
-                  <div className="inline-flex items-center gap-2 text-xs font-mono-alt uppercase tracking-widest text-indigo-300 mb-8">
+                  <div className="inline-flex items-center gap-2 text-xs font-mono-alt uppercase tracking-widest text-amber-300 mb-8">
                     <span>01</span>
-                    <span className="h-px w-8 bg-indigo-400/40" />
+                    <span className="h-px w-8 bg-amber-400/40" />
                     <span>Destaque</span>
                   </div>
-                  <Brain className="h-14 w-14 text-indigo-300 mb-6" strokeWidth={1.2} />
+                  <Brain className="h-14 w-14 text-amber-300 mb-6" strokeWidth={1.2} />
                   <h3 className="font-display text-3xl md:text-4xl font-semibold leading-tight max-w-lg">
                     {features[0].title}
                   </h3>
@@ -361,7 +361,7 @@ const Index = () => {
                     {features[0].description}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-indigo-300 group-hover:gap-3 transition-all">
+                <div className="flex items-center gap-2 text-sm text-amber-300 group-hover:gap-3 transition-all">
                   <span>Explorar recurso</span>
                   <ArrowUpRight className="h-4 w-4" />
                 </div>
@@ -380,13 +380,13 @@ const Index = () => {
                 style={{ minHeight: i < 2 ? "200px" : undefined }}
               >
                 <div className="flex items-start justify-between mb-4">
-                  <f.icon className="h-8 w-8 text-indigo-300" strokeWidth={1.4} />
+                  <f.icon className="h-8 w-8 text-amber-300" strokeWidth={1.4} />
                   <span className="text-xs font-mono-alt text-white/30">{f.tag}</span>
                 </div>
                 <h3 className="font-display text-lg font-semibold mb-2">{f.title}</h3>
                 <p className="text-white/50 text-sm leading-relaxed line-clamp-2">{f.description}</p>
                 <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                  style={{ background: "linear-gradient(135deg, rgba(79,70,229,0.1), transparent 50%)" }} />
+                  style={{ background: "linear-gradient(135deg, rgba(227,149,0,0.1), transparent 50%)" }} />
               </motion.div>
             )).slice(0, 2)}
 
@@ -401,7 +401,7 @@ const Index = () => {
                 className="lg:col-span-3 group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] backdrop-blur-sm p-6 transition-all"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <f.icon className="h-7 w-7 text-indigo-300" strokeWidth={1.4} />
+                  <f.icon className="h-7 w-7 text-amber-300" strokeWidth={1.4} />
                   <span className="text-xs font-mono-alt text-white/30">{f.tag}</span>
                 </div>
                 <h3 className="font-display text-base font-semibold mb-2 leading-snug">{f.title}</h3>
@@ -424,16 +424,16 @@ const Index = () => {
             className="text-center max-w-3xl mx-auto mb-20"
           >
             <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="h-px w-12 bg-indigo-400" />
-              <span className="text-xs uppercase tracking-[0.3em] text-indigo-400 font-mono-alt">Processo</span>
-              <div className="h-px w-12 bg-indigo-400" />
+              <div className="h-px w-12 bg-amber-400" />
+              <span className="text-xs uppercase tracking-[0.3em] text-amber-400 font-mono-alt">Processo</span>
+              <div className="h-px w-12 bg-amber-400" />
             </div>
             <h2 className="text-4xl md:text-5xl font-display font-semibold">{t("landing_how_heading")}</h2>
           </motion.div>
 
           <div className="relative max-w-5xl mx-auto">
             {/* Vertical line */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-indigo-500/30 to-transparent hidden md:block" />
+            <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-amber-500/30 to-transparent hidden md:block" />
 
             {[
               { step: "01", title: t("landing_step1_title"), desc: t("landing_step1_desc"), icon: Layers },
@@ -450,8 +450,8 @@ const Index = () => {
               >
                 <div className="flex-1 text-center md:text-left">
                   <div className={`inline-flex items-center gap-3 mb-4 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}>
-                    <span className="font-mono-alt text-xs text-indigo-400 tracking-widest">STEP {item.step}</span>
-                    <div className="h-px w-8 bg-indigo-400/40" />
+                    <span className="font-mono-alt text-xs text-amber-400 tracking-widest">STEP {item.step}</span>
+                    <div className="h-px w-8 bg-amber-400/40" />
                   </div>
                   <h3 className="font-display text-2xl md:text-3xl font-semibold mb-3">{item.title}</h3>
                   <p className="text-white/60 leading-relaxed">{item.desc}</p>
@@ -460,9 +460,9 @@ const Index = () => {
                 {/* Center node */}
                 <div className="relative shrink-0">
                   <div className="absolute inset-0 blur-2xl opacity-60 animate-[landing-pulse-glow_3s_ease-in-out_infinite]"
-                    style={{ background: "#4f46e5", borderRadius: "50%" }} />
-                  <div className="relative w-20 h-20 rounded-full border border-white/10 bg-gradient-to-br from-[#1e1e5a] to-[#0a0a1a] flex items-center justify-center backdrop-blur-lg">
-                    <item.icon className="h-8 w-8 text-indigo-300" strokeWidth={1.5} />
+                    style={{ background: "#e39500", borderRadius: "50%" }} />
+                  <div className="relative w-20 h-20 rounded-full border border-white/10 bg-gradient-to-br from-[#1d3a73] to-[#0c1a38] flex items-center justify-center backdrop-blur-lg">
+                    <item.icon className="h-8 w-8 text-amber-300" strokeWidth={1.5} />
                   </div>
                 </div>
 
@@ -484,8 +484,8 @@ const Index = () => {
             className="max-w-3xl mb-16"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="h-px w-12 bg-indigo-400" />
-              <span className="text-xs uppercase tracking-[0.3em] text-indigo-400 font-mono-alt">Por que escolher</span>
+              <div className="h-px w-12 bg-amber-400" />
+              <span className="text-xs uppercase tracking-[0.3em] text-amber-400 font-mono-alt">Por que escolher</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-display font-semibold">{t("landing_testimonials_heading")}</h2>
           </motion.div>
@@ -506,14 +506,14 @@ const Index = () => {
                 className="group relative rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-8 backdrop-blur-sm overflow-hidden"
               >
                 <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full blur-3xl opacity-0 group-hover:opacity-40 transition-opacity"
-                  style={{ background: "#4f46e5" }} />
+                  style={{ background: "#e39500" }} />
                 <div className="relative">
                   <div className="text-4xl mb-6">{c.icon}</div>
                   <h3 className="font-display text-xl font-semibold mb-3">{c.title}</h3>
                   <p className="text-white/60 leading-relaxed">{c.text}</p>
                   <div className="mt-6 flex gap-1">
                     {[...Array(5)].map((_, s) => (
-                      <Star key={s} className="h-3.5 w-3.5 fill-indigo-400 text-indigo-400" />
+                      <Star key={s} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                     ))}
                   </div>
                 </div>
@@ -534,7 +534,7 @@ const Index = () => {
             className="relative mx-auto max-w-5xl rounded-[2rem] overflow-hidden border border-white/10"
           >
             <div className="absolute inset-0"
-              style={{ background: "radial-gradient(120% 100% at 50% 0%, #4f46e5 0%, #1e1e5a 40%, #0a0a1a 100%)" }} />
+              style={{ background: "radial-gradient(120% 100% at 50% 0%, #e39500 0%, #1d3a73 40%, #0c1a38 100%)" }} />
             <div className="absolute inset-0 landing-grid-bg opacity-30" />
             <div className="absolute inset-0 landing-noise opacity-10 mix-blend-overlay" />
 
@@ -543,13 +543,13 @@ const Index = () => {
               animate={{ x: [0, 40, 0], y: [0, -20, 0] }}
               transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
               className="absolute top-10 right-10 w-40 h-40 rounded-full blur-3xl opacity-50"
-              style={{ background: "#7c74ff" }}
+              style={{ background: "#f7b93b" }}
             />
             <motion.div
               animate={{ x: [0, -30, 0], y: [0, 30, 0] }}
               transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
               className="absolute bottom-10 left-10 w-52 h-52 rounded-full blur-3xl opacity-40"
-              style={{ background: "#4f46e5" }}
+              style={{ background: "#e39500" }}
             />
 
             <div className="relative p-12 md:p-20 text-center">
@@ -566,7 +566,7 @@ const Index = () => {
               <Link to="/auth?tab=signup" className="inline-block mt-10">
                 <Button
                   size="lg"
-                  className="relative overflow-hidden group text-base px-10 py-7 rounded-full border-0 bg-white text-[#0a0a1a] hover:bg-white/90"
+                  className="relative overflow-hidden group text-base px-10 py-7 rounded-full border-0 bg-white text-[#0c1a38] hover:bg-white/90"
                   style={{ boxShadow: "0 20px 60px -20px rgba(255,255,255,0.5)" }}
                 >
                   <span className="relative flex items-center gap-2 font-semibold">
