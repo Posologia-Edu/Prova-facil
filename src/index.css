@@ -307,9 +307,10 @@
   }
 }
 
-/* Impressão do roteiro do paciente padronizado: só o roteiro marcado (data-roteiro-print) sai no papel ou PDF. */
+/* Impressão do roteiro do paciente padronizado: PatientScriptView desenha uma cópia (.roteiro-print-root) direto no body e
+   marca o body com .imprimindo-roteiro; no papel, tudo o mais some. Na tela, a cópia nunca aparece. */
+.roteiro-print-root { display: none; }
 @media print {
-  body:has([data-roteiro-print]) * { visibility: hidden !important; }
-  [data-roteiro-print], [data-roteiro-print] * { visibility: visible !important; }
-  [data-roteiro-print] { position: absolute; left: 0; top: 0; width: 100%; }
+  body.imprimindo-roteiro > *:not(.roteiro-print-root) { display: none !important; }
+  body.imprimindo-roteiro .roteiro-print-root { display: block; background: #fff; color: #000; padding: 0; }
 }

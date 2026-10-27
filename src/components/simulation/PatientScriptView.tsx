@@ -1,4 +1,5 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -47,18 +48,8 @@ export function PatientScriptGuide({ local }: { local?: string }) {
   );
 }
 
-export default function PatientScriptView({ roteiro: r, showGuide = false, className }: { roteiro: PatientRoteiro; showGuide?: boolean; className?: string }) {
+function RoteiroConteudo({ roteiro: r, showGuide }: { roteiro: PatientRoteiro; showGuide: boolean }) {
   const id = r.identidade;
-  const raiz = useRef<HTMLDivElement>(null);
-  // Imprime só este roteiro: marca a raiz, o CSS de impressão esconde o resto da página, e a marca sai depois.
-  const imprimir = () => {
-    const el = raiz.current;
-    if (!el) return;
-    el.setAttribute("data-roteiro-print", "true");
-    const limpar = () => { el.removeAttribute("data-roteiro-print"); window.removeEventListener("afterprint", limpar); };
-    window.addEventListener("afterprint", limpar);
-    window.print();
-  };
   const resumo = [
     `${id.nome} (${id.idade} anos, ${id.sexo.toLowerCase()}, ${id.ocupacao})`,
     [id.estado_civil, id.moradia].filter(Boolean).join(". "),
@@ -72,12 +63,7 @@ export default function PatientScriptView({ roteiro: r, showGuide = false, class
   const fatosPorNivel = NIVEIS.map((n) => ({ nivel: n, itens: r.fatos.filter((f) => f.nivel === n) })).filter((g) => g.itens.length);
 
   return (
-    <div ref={raiz} className={cn("space-y-6", className)}>
-      <div className="flex justify-end print:hidden">
-        <Button type="button" variant="outline" size="sm" onClick={imprimir}>
-          <Printer className="h-4 w-4" />Imprimir ou salvar em PDF
-        </Button>
-      </div>
+    <div className="space-y-6">
       {showGuide && <PatientScriptGuide local={r.local} />}
       <Card className="space-y-8 p-6">
         <Secao titulo="Quem você é">
@@ -106,7 +92,7 @@ export default function PatientScriptView({ roteiro: r, showGuide = false, class
           </div>
           <div className="space-y-3">
             {fatosPorNivel.flatMap((g) => g.itens).map((f) => (
-              <div key={f.id} className="space-y-1.5 rounded-lg border bg-card p-4 text-sm">
+              <div key={f.id} className="space-y-1.5 rounded-lg border bg-card p-4 text-sm print:break-inside-avoid">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge tone={NIVEL_TONE[f.nivel]}>{NIVEL_SELO[f.nivel]}</StatusBadge>
                   <span className="text-xs text-muted-foreground">{f.id} · {f.categoria}</span>
@@ -133,7 +119,7 @@ export default function PatientScriptView({ roteiro: r, showGuide = false, class
                 </thead>
                 <tbody>
                   {r.medicamentos.map((m, i) => (
-                    <tr key={i} className="border-b align-top last:border-0">
+                    <tr key={i} className="border-b align-top last:border-0 print:break-inside-avoid">
                       <td className="py-2.5 pr-3 font-medium">{m.como_chama}</td>
                       <td className="py-2.5 pr-3">{m.prescrito}</td>
                       <td className="py-2.5 pr-3">{m.uso_real}</td>
@@ -150,7 +136,7 @@ export default function PatientScriptView({ roteiro: r, showGuide = false, class
           <Secao titulo="Cartões de achados (só informe quando pedirem)">
             <div className="grid gap-3 sm:grid-cols-2">
               {r.achados.map((a, i) => (
-                <div key={i} className="space-y-1 rounded-lg border border-dashed bg-sunken p-4 text-sm">
+                <div key={i} className="space-y-1 rounded-lg border border-dashed bg-sunken p-4 text-sm print:break-inside-avoid">
                   <p className="text-xs text-muted-foreground">{ACHADO_TIPO_LABEL[a.tipo]}</p>
                   <p className="font-medium">{a.titulo}: <span className="text-primary">{a.conteudo}</span></p>
                   <p className="text-xs text-muted-foreground">{a.quando}</p>
@@ -173,6 +159,48 @@ export default function PatientScriptView({ roteiro: r, showGuide = false, class
         {r.fora_do_roteiro.length > 0 && <Secao titulo="Se perguntarem algo fora do roteiro"><Lista itens={r.fora_do_roteiro} /></Secao>}
         {r.dicas_de_atuacao.length > 0 && <Secao titulo="Dicas de atuação"><Lista itens={r.dicas_de_atuacao} /></Secao>}
       </Card>
+    </div>
+  );
+}
+
+/**
+ * Roteiro do paciente padronizado, com o botão de impressão.
+ * Ao imprimir, uma cópia do roteiro é desenhada direto no body (fora do layout do app, que tem áreas com rolagem e altura
+ * fixa que cortariam o papel) e o resto da página fica escondido pelo CSS de impressão. O tema escuro é desligado durante
+ * a impressão, para sair em fundo branco.
+ */
+export default function PatientScriptView({ roteiro, showGuide = false, className }: { roteiro: PatientRoteiro; showGuide?: boolean; className?: string }) {
+  const [imprimindo, setImprimindo] = useState(false);
+
+  useEffect(() => {
+    if (!imprimindo) return;
+    const html = document.documentElement;
+    const tinhaEscuro = html.classList.contains("dark");
+    const aoTerminar = () => setImprimindo(false);
+    window.addEventListener("afterprint", aoTerminar);
+    document.body.classList.add("imprimindo-roteiro");
+    html.classList.remove("dark");
+    const t = window.setTimeout(() => window.print(), 150); // dá tempo de a cópia ser desenhada
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("afterprint", aoTerminar);
+      document.body.classList.remove("imprimindo-roteiro");
+      if (tinhaEscuro) html.classList.add("dark");
+    };
+  }, [imprimindo]);
+
+  return (
+    <div className={cn("space-y-6", className)}>
+      <div className="flex justify-end">
+        <Button type="button" variant="outline" size="sm" onClick={() => setImprimindo(true)} disabled={imprimindo}>
+          <Printer className="h-4 w-4" />Imprimir ou salvar em PDF
+        </Button>
+      </div>
+      <RoteiroConteudo roteiro={roteiro} showGuide={showGuide} />
+      {imprimindo && createPortal(
+        <div className="roteiro-print-root"><RoteiroConteudo roteiro={roteiro} showGuide /></div>,
+        document.body,
+      )}
     </div>
   );
 }
