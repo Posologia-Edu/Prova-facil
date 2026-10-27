@@ -19,6 +19,8 @@ import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Settings, Play, GripVertical, Download, AlertTriangle, CheckCircle, Pencil, Check, X, Star, BookmarkPlus, FileDown, BookOpen, Save } from "lucide-react";
 import ClinicalCaseBankDialog from "@/components/ClinicalCaseBankDialog";
 import ClinicalCaseContent from "@/components/ClinicalCaseContent";
+import { CaseScriptContent } from "@/components/simulation/PatientScriptView";
+import type { PatientRoteiro } from "@/lib/vp-patient-roteiro";
 import { exportFormToPDF } from "@/lib/form-pdf-export";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import FormBuilder from "@/components/forms/FormBuilder";
@@ -177,7 +179,7 @@ export default function SimulationEditor() {
   const activeForm = forms.find((f: any) => f.form_type === activeFormType);
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [formTitle, setFormTitle] = useState("");
-  const [clinicalCases, setClinicalCases] = useState<{ id: string; title: string; script: string }[]>([]);
+  const [clinicalCases, setClinicalCases] = useState<{ id: string; title: string; script: string; roteiro?: PatientRoteiro }[]>([]);
   const lastSavedFormSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(true);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
@@ -762,22 +764,35 @@ export default function SimulationEditor() {
                           setClinicalCases(updated);
                         }}
                       />
-                      <Textarea
-                        value={c.script}
-                        onChange={(e) => {
-                          const updated = [...clinicalCases];
-                          updated[i] = { ...updated[i], script: e.target.value };
-                          setClinicalCases(updated);
-                        }}
-                        rows={8}
-                        placeholder={t("sim_patient_script_placeholder")}
-                        className="font-mono text-sm leading-6 bg-card"
-                      />
-                      {c.script.trim() && (
-                        <div className="rounded-xl border border-border bg-card p-4">
-                          <p className="label-mono mb-3">Pré-visualização</p>
-                          <ClinicalCaseContent content={c.script} />
+                      {c.roteiro ? (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground">
+                            Caso copiado de um paciente virtual. O roteiro abaixo é o que o aluno-paciente verá. Para mudá-lo, edite o paciente virtual e aplique-o de novo.
+                          </p>
+                          <div className="rounded-xl border border-border bg-card p-4">
+                            <CaseScriptContent caseItem={c} />
+                          </div>
                         </div>
+                      ) : (
+                        <>
+                          <Textarea
+                            value={c.script}
+                            onChange={(e) => {
+                              const updated = [...clinicalCases];
+                              updated[i] = { ...updated[i], script: e.target.value };
+                              setClinicalCases(updated);
+                            }}
+                            rows={8}
+                            placeholder={t("sim_patient_script_placeholder")}
+                            className="font-mono text-sm leading-6 bg-card"
+                          />
+                          {c.script.trim() && (
+                            <div className="rounded-xl border border-border bg-card p-4">
+                              <p className="label-mono mb-3">Pré-visualização</p>
+                              <ClinicalCaseContent content={c.script} />
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   ))}
@@ -906,7 +921,14 @@ export default function SimulationEditor() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="anamnese" onApply={(title, ft, fields) => { setFormTitle(title); setFormFields(fields); }} />
+      <FormTemplateDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        area="pharmacy"
+        moduleType="anamnese"
+        onApply={(title, ft, fields) => { setFormTitle(title); setFormFields(fields); }}
+        virtualPatients={activeFormType === "patient_script" ? { onApplyCase: (c) => setClinicalCases((prev) => [...prev, { id: crypto.randomUUID(), ...c }]) } : undefined}
+      />
       {saveTemplateForm && <SaveAsTemplateDialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen} area="pharmacy" moduleType="anamnese" formTitle={saveTemplateForm.title} formType={saveTemplateForm.form_type} contentJson={Array.isArray(saveTemplateForm.content_json) ? saveTemplateForm.content_json : []} />}
     </div>
   );

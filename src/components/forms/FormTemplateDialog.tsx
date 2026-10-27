@@ -12,7 +12,9 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getNativeTemplates, type NativeTemplate } from "@/lib/form-templates";
-import { BookmarkPlus, FileText, Share2, Star, Trash2, Users } from "lucide-react";
+import { BookmarkPlus, FileText, HeartPulse, Share2, Star, Trash2, Users } from "lucide-react";
+import { isCaseDataV2, type VpCaseData } from "@/lib/vp-case-schema";
+import { buildPatientRoteiro, roteiroTitle, roteiroToText, type PatientRoteiro } from "@/lib/vp-patient-roteiro";
 import type { FormField } from "./types";
 import ShareTemplateDialog from "./ShareTemplateDialog";
 
@@ -22,9 +24,11 @@ type FormTemplateDialogProps = {
   area: string;
   moduleType: string;
   onApply: (title: string, formType: string, fields: FormField[]) => void;
+  /** Só no roteiro do paciente da simulação: habilita a aba "Pacientes virtuais" (casos v2 de Farmácia do professor). */
+  virtualPatients?: { onApplyCase: (c: { title: string; script: string; roteiro: PatientRoteiro }) => void };
 };
 
-export default function FormTemplateDialog({ open, onOpenChange, area, moduleType, onApply }: FormTemplateDialogProps) {
+export default function FormTemplateDialog({ open, onOpenChange, area, moduleType, onApply, virtualPatients }: FormTemplateDialogProps) {
   const queryClient = useQueryClient();
   const nativeTemplates = getNativeTemplates(area, moduleType);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -87,6 +91,36 @@ export default function FormTemplateDialog({ open, onOpenChange, area, moduleTyp
     enabled: open,
   });
 
+  // Casos v2 publicados do professor, com versão Farmácia. Lista ao vivo: um paciente virtual novo aparece sozinho.
+  const { data: vpCases = [], isLoading: vpLoading } = useQuery({
+    queryKey: ["form-templates-vp-cases"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("custom_virtual_patients")
+        .select("id, name, age, status, is_legacy, case_data, created_at")
+        .eq("user_id", user.id)
+        .eq("is_legacy", false)
+        .neq("status", "draft")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || [])
+        .filter((r: any) => isCaseDataV2(r.case_data) && !!(r.case_data as VpCaseData).versoes?.farmaceutico)
+        .map((r: any) => ({ id: r.id as string, name: r.name as string, data: r.case_data as VpCaseData }));
+    },
+    enabled: open && !!virtualPatients,
+  });
+
+  const applyVpCase = (vp: { name: string; data: VpCaseData }) => {
+    const roteiro = buildPatientRoteiro(vp.data, "farmaceutico");
+    if (!roteiro || !virtualPatients) return;
+    virtualPatients.onApplyCase({ title: roteiroTitle(roteiro), script: roteiroToText(roteiro), roteiro });
+    onOpenChange(false);
+    toast({ title: "Caso adicionado!", description: `"${vp.name}" entrou na lista de casos da sala.` });
+  };
+
   const applyTemplate = (t: NativeTemplate | any) => {
     const fields = Array.isArray(t.content_json) ? t.content_json : JSON.parse(t.content_json);
     onApply(t.title, t.form_type, fields);
@@ -129,8 +163,14 @@ export default function FormTemplateDialog({ open, onOpenChange, area, moduleTyp
             </DialogTitle>
           </DialogHeader>
 
-          <Tabs defaultValue="native">
+          <Tabs defaultValue={virtualPatients ? "vp" : "native"}>
             <TabsList className="w-full">
+              {virtualPatients && (
+                <TabsTrigger value="vp" className="flex-1">
+                  <HeartPulse className="h-4 w-4 mr-1" />
+                  Pacientes virtuais ({vpCases.length})
+                </TabsTrigger>
+              )}
               <TabsTrigger value="native" className="flex-1">
                 <Star className="h-4 w-4 mr-1" />
                 Nativos ({nativeTemplates.length})
@@ -146,6 +186,44 @@ export default function FormTemplateDialog({ open, onOpenChange, area, moduleTyp
             </TabsList>
 
             <ScrollArea className="h-[55vh] mt-3">
+              {virtualPatients && (
+                <TabsContent value="vp" className="space-y-3 mt-0">
+                  <p className="text-xs text-muted-foreground">
+                    Seus pacientes virtuais publicados, na versão Farmácia. Aplicar adiciona o caso à lista da sala, com o roteiro do paciente copiado neste momento.
+                  </p>
+                  {vpLoading && <p className="text-sm text-muted-foreground text-center py-8">Carregando…</p>}
+                  {!vpLoading && vpCases.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-muted-foreground">Nenhum paciente virtual publicado com versão Farmácia.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Crie ou publique um caso em Pacientes Virtuais para ele aparecer aqui.</p>
+                    </div>
+                  )}
+                  {vpCases.map((vp) => {
+                    const r = buildPatientRoteiro(vp.data, "farmaceutico");
+                    return (
+                      <Card key={vp.id} className="hover:border-primary/50 transition-colors">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <CardTitle className="text-sm">{vp.name}</CardTitle>
+                              {r && <p className="text-xs text-muted-foreground mt-1">{roteiroTitle(r)} · {r.local}</p>}
+                            </div>
+                            <Button size="sm" onClick={() => applyVpCase(vp)}>Aplicar</Button>
+                          </div>
+                        </CardHeader>
+                        {r && (
+                          <CardContent className="pt-0">
+                            <div className="flex gap-2">
+                              <Badge variant="outline" className="text-xs">{r.fatos.length} informações</Badge>
+                              <Badge variant="secondary" className="text-xs">{r.medicamentos.length} medicamentos</Badge>
+                            </div>
+                          </CardContent>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </TabsContent>
+              )}
               <TabsContent value="native" className="space-y-3 mt-0">
                 {nativeTemplates.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-8">Nenhum template nativo para este módulo.</p>

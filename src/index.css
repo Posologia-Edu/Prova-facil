@@ -306,3 +306,10 @@
     100% { background-position: -100% 0; }
   }
 }
+
+/* Impressão do roteiro do paciente padronizado (editor do paciente virtual): só a área .print-roteiro sai no papel/PDF. */
+@media print {
+  body * { visibility: hidden !important; }
+  .print-roteiro, .print-roteiro * { visibility: visible !important; }
+  .print-roteiro { position: absolute; left: 0; top: 0; width: 100%; }
+}

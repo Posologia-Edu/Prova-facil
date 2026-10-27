@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Clock, HeartPulse, History, Loader2, MessageSquare, Plus, Save, Send } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Clock, HeartPulse, History, Loader2, MessageSquare, Plus, Printer, Save, Send, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,8 @@ import { NucleoEditor } from "@/components/vp-case/NucleoEditor";
 import { PreviewChat } from "@/components/vp-case/PreviewChat";
 import { RevisaoPanel, revisaoPendentes } from "@/components/vp-case/RevisaoPanel";
 import { VersaoEditor } from "@/components/vp-case/VersaoEditor";
+import PatientScriptView from "@/components/simulation/PatientScriptView";
+import { buildPatientRoteiro } from "@/lib/vp-patient-roteiro";
 import { VERSAO_LABEL, cloneVersao, emptyVersao } from "@/components/vp-case/defaults";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
@@ -324,6 +326,9 @@ export default function VirtualPatientCaseEditor() {
             );
           })}
           <TabsTrigger value="previa"><MessageSquare className="mr-1.5 h-3.5 w-3.5" />Prévia</TabsTrigger>
+          {draft.versoes.farmaceutico && (
+            <TabsTrigger value="roteiro"><UserRound className="mr-1.5 h-3.5 w-3.5" />Roteiro do paciente</TabsTrigger>
+          )}
           {canEdit && (
             <TabsTrigger value="historico">
               <History className="mr-1.5 h-3.5 w-3.5" />Histórico
@@ -376,6 +381,22 @@ export default function VirtualPatientCaseEditor() {
             <p className="text-sm text-muted-foreground">Crie ao menos uma versão para usar a prévia.</p>
           )}
         </TabsContent>
+
+        {draft.versoes.farmaceutico && (
+          <TabsContent value="roteiro" className="mt-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                Roteiro padronizado para um colega representar este paciente na simulação realística de anamnese (versão Farmácia). Reflete o caso como está aberto no editor.
+                Para usá-lo numa sala, aplique o caso em Simulações, no roteiro do paciente, pelo botão Usar template.
+              </p>
+              <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" />Imprimir ou salvar em PDF</Button>
+            </div>
+            {(() => {
+              const roteiro = buildPatientRoteiro(draft, "farmaceutico");
+              return roteiro ? <div className="print-roteiro"><PatientScriptView roteiro={roteiro} showGuide /></div> : null;
+            })()}
+          </TabsContent>
+        )}
 
         {canEdit && (
           <TabsContent value="historico" className="mt-6 space-y-4">

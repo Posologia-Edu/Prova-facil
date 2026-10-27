@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
-import ClinicalCaseContent from "@/components/ClinicalCaseContent";
+import { CaseScriptContent } from "@/components/simulation/PatientScriptView";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -732,7 +732,7 @@ export default function SimulationJoin() {
 
   // Get clinical cases from patient_script form
   const patientScriptForm = forms.find((f: any) => f.form_type === "patient_script");
-  const clinicalCases: { id: string; title: string; script: string }[] = (() => {
+  const clinicalCases: { id: string; title: string; script: string; roteiro?: unknown }[] = (() => {
     if (!patientScriptForm) return [];
     const content = patientScriptForm.content_json as any;
     if (Array.isArray(content) && content.length > 0 && content[0]?.cases) {
@@ -1390,7 +1390,7 @@ export default function SimulationJoin() {
                   {assignedCase ? (
                     <div className="border rounded-lg p-4 space-y-2">
                       <p className="text-sm font-semibold">{assignedCase.title}</p>
-                      <ClinicalCaseContent content={assignedCase.script} />
+                      <CaseScriptContent caseItem={assignedCase} showGuide />
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t("sim_no_cases")}</p>
@@ -1824,7 +1824,7 @@ export default function SimulationJoin() {
                     return (
                       <div>
                         <p className="font-semibold mb-2">{assignedCase.title}</p>
-                        <ClinicalCaseContent content={assignedCase.script} />
+                        <div className="whitespace-normal"><CaseScriptContent caseItem={assignedCase} showGuide /></div>
                       </div>
                     );
                   }
