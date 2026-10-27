@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   GraduationCap, Plus, Users, MoreHorizontal, BookOpen, Pencil, Copy, Trash2,
-  UserCog, Loader2, UserPlus, X, Upload, Search, LayoutGrid, List, Archive, Layers, ChevronDown, ListChecks, FolderOpen,
+  UserCog, Loader2, UserPlus, X, Upload, Search, LayoutGrid, List, Archive, Layers, ChevronRight, ListChecks, FolderOpen, ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,7 +22,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 interface ClassItem {
   id: string;
@@ -47,6 +47,8 @@ const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2)
 // alunos, cronograma, notas e presença.
 export default function ClassesPage() {
   const navigate = useNavigate();
+  const [sp, setSp] = useSearchParams();
+  const disciplinaAberta = sp.get("disciplina");
   const [loading, setLoading] = useState(true);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -76,7 +78,11 @@ export default function ClassesPage() {
   const [listSearch, setListSearch] = useState("");
   const [listView, setListView] = useState<"groups" | "all">("groups");
   const [activeTab, setActiveTab] = useState<"active" | "inactive">("active");
-  const [collapsedDisciplines, setCollapsedDisciplines] = useState<Set<string>>(new Set());
+  // Página da disciplina: abas de semestres e diálogo de novo semestre
+  const [semTab, setSemTab] = useState<"active" | "inactive">("active");
+  const [novoSemOpen, setNovoSemOpen] = useState(false);
+  const [novoSemLabel, setNovoSemLabel] = useState("");
+  const [novoSemBusy, setNovoSemBusy] = useState(false);
 
   const fetchClasses = async () => {
     setLoading(true);
@@ -203,15 +209,16 @@ export default function ClassesPage() {
     fetchClasses();
   };
 
-  const handleDuplicateClass = async (cls: ClassItem) => {
+  // Com `novoSemestre`, a cópia é o próximo semestre da mesma disciplina: mantém o nome e troca o rótulo.
+  const handleDuplicateClass = async (cls: ClassItem, novoSemestre?: string): Promise<boolean> => {
     const { data: user } = await supabase.auth.getUser();
-    if (!user.user) return;
-    const tId = toast.loading("Duplicando turma...");
+    if (!user.user) return false;
+    const tId = toast.loading(novoSemestre ? "Criando novo semestre..." : "Duplicando turma...");
     try {
       const { data: newClass, error } = await supabase.from("classes").insert({
         user_id: user.user.id,
-        name: `${cls.name} (cópia)`,
-        semester: cls.semester,
+        name: novoSemestre ? cls.name : `${cls.name} (cópia)`,
+        semester: novoSemestre ?? cls.semester,
         description: cls.description,
       }).select().single();
       if (error || !newClass) throw error || new Error("Falha ao duplicar");
@@ -287,10 +294,12 @@ export default function ClassesPage() {
         }
       }
 
-      toast.success("Turma duplicada com cronograma, professores e materiais.", { id: tId });
+      toast.success(novoSemestre ? "Novo semestre criado com cronograma, professores e materiais." : "Turma duplicada com cronograma, professores e materiais.", { id: tId });
       fetchClasses();
+      return true;
     } catch (err: any) {
       toast.error(err?.message || "Erro ao duplicar.", { id: tId });
+      return false;
     }
   };
 
@@ -424,21 +433,44 @@ export default function ClassesPage() {
     const q = listSearch.trim().toLowerCase();
     return matchesTab && (c.name.toLowerCase().includes(q) || (c.semester || "").toLowerCase().includes(q) || (c.description || "").toLowerCase().includes(q));
   });
-  const activeCount = classes.filter(c => c.is_active ?? true).length;
-  const inactiveCount = classes.length - activeCount;
   const totalStudents = filteredClasses.reduce((a, c) => a + c.studentCount, 0);
   const totalExams = filteredClasses.reduce((a, c) => a + c.examCount, 0);
+
+  // Disciplina = turmas de mesmo nome (cada turma é um semestre). Está ativa se tiver ao menos um semestre ativo.
+  const qBusca = listSearch.trim().toLowerCase();
+  const disciplineMap = new Map<string, ClassItem[]>();
+  classes
+    .filter(c => !qBusca || c.name.toLowerCase().includes(qBusca) || (c.semester || "").toLowerCase().includes(qBusca) || (c.description || "").toLowerCase().includes(qBusca))
+    .forEach(c => {
+      if (!disciplineMap.has(c.name)) disciplineMap.set(c.name, []);
+      disciplineMap.get(c.name)!.push(c);
+    });
+  const disciplines = Array.from(disciplineMap.entries())
+    .map(([name, items]) => ({ name, items, active: items.some(i => i.is_active ?? true) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const disciplinesShown = disciplines.filter(d => (activeTab === "active" ? d.active : !d.active));
+  const activeCount = listView === "groups" ? disciplines.filter(d => d.active).length : classes.filter(c => c.is_active ?? true).length;
+  const inactiveCount = listView === "groups" ? disciplines.length - activeCount : classes.length - classes.filter(c => c.is_active ?? true).length;
   const disciplinesCount = new Set(filteredClasses.map(c => c.name)).size;
+  const nothingToShow = listView === "groups" ? disciplinesShown.length === 0 : filteredClasses.length === 0;
 
-  // agrupa pelo nome da disciplina
-  const groupsMap = new Map<string, ClassItem[]>();
-  filteredClasses.forEach(c => {
-    if (!groupsMap.has(c.name)) groupsMap.set(c.name, []);
-    groupsMap.get(c.name)!.push(c);
-  });
-  const groups = Array.from(groupsMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+  // Página da disciplina aberta (todos os semestres, sem filtro de busca)
+  const semestres = disciplinaAberta ? classes.filter(c => c.name === disciplinaAberta) : [];
+  const semestresAtivos = semestres.filter(c => c.is_active ?? true);
+  const semestresMostrados = semTab === "active" ? semestresAtivos : semestres.filter(c => !(c.is_active ?? true));
+  const abrirDisciplina = (nome: string) => { setSemTab("active"); setSp({ disciplina: nome }); };
+  const fecharDisciplina = () => setSp({});
+  const criarNovoSemestre = async () => {
+    const base = semestres[0]; // a turma mais recente (a lista vem ordenada por criação, decrescente)
+    if (!base) return;
+    if (!novoSemLabel.trim()) { toast.error("Informe o semestre (ex.: 2027.1)."); return; }
+    setNovoSemBusy(true);
+    const ok = await handleDuplicateClass(base, novoSemLabel.trim());
+    setNovoSemBusy(false);
+    if (ok) { setNovoSemOpen(false); setNovoSemLabel(""); setSemTab("active"); }
+  };
 
-  function ClassTile({ cls, compact = false }: { cls: ClassItem; compact?: boolean }) {
+  function ClassTile({ cls, compact = false, byTerm = false }: { cls: ClassItem; compact?: boolean; byTerm?: boolean }) {
     const ativa = cls.is_active ?? true;
     return (
       <Card className="surface-hover group cursor-pointer" onClick={() => navigate(`/classes/${cls.id}`)}>
@@ -479,9 +511,9 @@ export default function ClassesPage() {
             </DropdownMenu>
           </div>
           <div>
-            <h3 className={cn("font-heading text-lg font-medium leading-tight", !ativa && "text-muted-foreground")}>{cls.name}</h3>
+            <h3 className={cn("font-heading text-lg font-medium leading-tight", !ativa && "text-muted-foreground")}>{byTerm ? (cls.semester || "Sem semestre") : cls.name}</h3>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {cls.semester && <StatusBadge tone="neutral">{cls.semester}</StatusBadge>}
+              {!byTerm && cls.semester && <StatusBadge tone="neutral">{cls.semester}</StatusBadge>}
               {!ativa && <StatusBadge tone="neutral">Inativa</StatusBadge>}
             </div>
           </div>
@@ -519,6 +551,50 @@ export default function ClassesPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6 md:p-8">
+      {semestres.length > 0 ? (
+        <>
+          <div className="space-y-3">
+            <Button variant="ghost" size="sm" className="-ml-3" onClick={fecharDisciplina}>
+              <ArrowLeft className="h-4 w-4" /> Minhas turmas
+            </Button>
+            <PageHeader
+              eyebrow="Disciplina"
+              title={disciplinaAberta!}
+              description={`${semestres.length} ${semestres.length === 1 ? "semestre" : "semestres"} · ${semestres.reduce((a, c) => a + c.studentCount, 0)} alunos no total. Deixe como ativo só o semestre em andamento e inative os anteriores.`}
+              actions={<Button onClick={() => { setNovoSemLabel(""); setNovoSemOpen(true); }}><Plus className="h-4 w-4" />Novo semestre</Button>}
+            />
+          </div>
+
+          <div className="flex gap-2" role="tablist" aria-label="Estado do semestre">
+            {([["active", "Ativos", semestresAtivos.length], ["inactive", "Inativos", semestres.length - semestresAtivos.length]] as const).map(([v, rotulo, n]) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={semTab === v}
+                onClick={() => setSemTab(v)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  semTab === v ? "border-transparent bg-primary text-primary-foreground" : "border-input bg-card text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {rotulo}<span className={cn("font-mono text-[11px]", semTab === v ? "opacity-80" : "")}>{n}</span>
+              </button>
+            ))}
+          </div>
+
+          {semestresMostrados.length === 0 ? (
+            <Card><CardContent className="py-12 text-center text-muted-foreground">
+              {semTab === "active" ? "Nenhum semestre ativo. Reative um semestre na aba Inativos ou crie um novo." : "Nenhum semestre inativo."}
+            </CardContent></Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {semestresMostrados.map((cls) => <ClassTile key={cls.id} cls={cls} compact byTerm />)}
+            </div>
+          )}
+        </>
+      ) : (
+      <>
       <PageHeader
         eyebrow="Gestão"
         title="Minhas Turmas"
@@ -587,7 +663,7 @@ export default function ClassesPage() {
           <p className="mb-5 mt-1 text-sm text-muted-foreground">Cadastre sua primeira turma para organizar alunos, cronograma e notas.</p>
           <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />Criar primeira turma</Button>
         </CardContent></Card>
-      ) : filteredClasses.length === 0 ? (
+      ) : nothingToShow ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
           {listSearch ? `Nenhum resultado para "${listSearch}".` : activeTab === "active" ? "Nenhuma turma ativa." : "Nenhuma turma inativa."}
         </CardContent></Card>
@@ -596,37 +672,35 @@ export default function ClassesPage() {
           {filteredClasses.map((cls) => <ClassTile key={cls.id} cls={cls} />)}
         </div>
       ) : (
-        <div className="space-y-6">
-          {groups.map(([disciplineName, items]) => {
-            const collapsed = collapsedDisciplines.has(disciplineName);
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {disciplinesShown.map((d) => {
+            const vigentes = d.items.filter(i => i.is_active ?? true);
+            const mostrar = vigentes.length ? vigentes : d.items;
             return (
-              <div key={disciplineName}>
-                <button
-                  type="button"
-                  aria-expanded={!collapsed}
-                  onClick={() => setCollapsedDisciplines(prev => {
-                    const next = new Set(prev);
-                    if (next.has(disciplineName)) next.delete(disciplineName); else next.add(disciplineName);
-                    return next;
-                  })}
-                  className="mb-3 flex w-full items-center gap-3 rounded-card border bg-card p-3.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-soft font-heading text-sm font-medium text-brand-text">{initials(disciplineName)}</span>
-                  <span className="flex-1">
-                    <span className="block font-medium">{disciplineName}</span>
-                    <span className="block text-xs text-muted-foreground">{items.length} {items.length === 1 ? "semestre" : "semestres"} · {items.reduce((a, b) => a + b.studentCount, 0)} alunos</span>
-                  </span>
-                  <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", collapsed && "-rotate-90")} />
-                </button>
-                {!collapsed && (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {items.map(cls => <ClassTile key={cls.id} cls={cls} compact />)}
+              <Card key={d.name} className="surface-hover group cursor-pointer" onClick={() => abrirDisciplina(d.name)}>
+                <CardContent className="flex h-full flex-col gap-3 p-5">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-soft font-heading text-base font-medium text-brand-text">{initials(d.name)}</span>
+                  <div>
+                    <h3 className={cn("font-heading text-lg font-medium leading-tight", !d.active && "text-muted-foreground")}>{d.name}</h3>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {mostrar.slice(0, 3).map(i => i.semester ? <StatusBadge key={i.id} tone="neutral">{i.semester}</StatusBadge> : null)}
+                      {!d.active && <StatusBadge tone="neutral">Inativa</StatusBadge>}
+                    </div>
                   </div>
-                )}
-              </div>
+                  <div className="mt-auto flex items-center gap-4 border-t pt-3 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5" title="Semestres"><Layers className="h-4 w-4" /><span className="font-mono tabular-nums">{d.items.length}</span></span>
+                    <span className="flex items-center gap-1.5" title="Alunos nos semestres exibidos"><Users className="h-4 w-4" /><span className="font-mono tabular-nums">{mostrar.reduce((a, i) => a + i.studentCount, 0)}</span></span>
+                    <span className="flex items-center gap-1.5" title="Provas"><BookOpen className="h-4 w-4" /><span className="font-mono tabular-nums">{d.items.reduce((a, i) => a + i.examCount, 0)}</span></span>
+                    <span className="ml-auto flex items-center text-xs font-medium text-foreground opacity-0 transition-opacity group-hover:opacity-100">Abrir <ChevronRight className="h-3.5 w-3.5" /></span>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
+      )}
+
+      </>
       )}
 
       {/* Criar turma */}
@@ -652,6 +726,26 @@ export default function ClassesPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
             <Button onClick={handleEditClass}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Novo semestre da disciplina */}
+      <Dialog open={novoSemOpen} onOpenChange={(open) => { if (!novoSemBusy) setNovoSemOpen(open); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Novo semestre de {disciplinaAberta}</DialogTitle></DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="novo-semestre">Semestre *</Label>
+            <Input id="novo-semestre" placeholder="Ex: 2027.1" value={novoSemLabel} onChange={(e) => setNovoSemLabel(e.target.value)} />
+            <p className="text-xs text-muted-foreground">
+              Cria a turma a partir do semestre mais recente{semestres[0]?.semester ? ` (${semestres[0].semester})` : ""}, com cronograma, professores e materiais. Os alunos não são copiados.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovoSemOpen(false)} disabled={novoSemBusy}>Cancelar</Button>
+            <Button onClick={criarNovoSemestre} disabled={novoSemBusy}>
+              {novoSemBusy && <Loader2 className="h-4 w-4 animate-spin" />}Criar semestre
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
