@@ -153,16 +153,30 @@ ${transcript}
 
 Aplique agora a rubrica IDCG + ISC do system prompt e retorne o JSON.`;
 
-        const { response } = await callAiWithFallback({
-          model: "google/gemini-2.5-pro",
-          messages: [
-            { role: "system", content: SYSTEM },
-            { role: "user", content: userMsg },
-          ],
-        });
+        // 429 (limite de taxa do Google): até 3 novas tentativas, esperando o Retry-After ou 8, 16 e 32 s.
+        let response: Response | null = null;
+        for (let attempt = 0; attempt <= 3; attempt++) {
+          ({ response } = await callAiWithFallback({
+            model: "google/gemini-2.5-pro",
+            messages: [
+              { role: "system", content: SYSTEM },
+              { role: "user", content: userMsg },
+            ],
+          }));
+          if (response.status !== 429 || attempt === 3) break;
+          const retryAfter = Number(response.headers.get("Retry-After"));
+          const waitS = retryAfter > 0 ? Math.min(retryAfter, 40) : 8 * 2 ** attempt;
+          await new Promise((r) => setTimeout(r, waitS * 1000));
+        }
 
-        if (!response.ok) {
-          errors[sid] = `AI ${response.status}`;
+        if (!response || !response.ok) {
+          // Devolve a mensagem do próprio Google para distinguir limite por minuto de cota esgotada.
+          let detail = "";
+          try {
+            const body = await response!.clone().json();
+            detail = String((Array.isArray(body) ? body[0] : body)?.error?.message || body?.message || "").slice(0, 300);
+          } catch { /* corpo não é JSON */ }
+          errors[sid] = `AI ${response?.status}${detail ? `: ${detail}` : ""}`;
           continue;
         }
 
