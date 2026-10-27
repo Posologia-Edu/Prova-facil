@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import type { FormField } from "@/components/forms/types";
-import { getSections } from "@/components/forms/types";
+import { getSections, tableColumns, tableRowCount } from "@/components/forms/types";
 
 interface FormPDFOptions {
   title: string;
@@ -199,6 +199,9 @@ function renderField(doc: jsPDF, field: FormField, y: number, showScores: boolea
     case "file_upload":
       y = renderFileUpload(doc, y);
       break;
+    case "table":
+      y = renderTable(doc, field, y);
+      break;
   }
 
   return y + 4;
@@ -372,6 +375,44 @@ function renderFileUpload(doc: jsPDF, y: number): number {
   return y + 18;
 }
 
+// Tabela em branco: cabeçalho, linhas com bordas e, se houver rótulos fixos, a primeira coluna preenchida.
+function renderTable(doc: jsPDF, field: FormField, y: number): number {
+  const cols = tableColumns(field);
+  const rows = tableRowCount(field);
+  const fixos = field.table_row_labels && field.table_row_labels.length > 0 ? field.table_row_labels : null;
+  const nCols = cols.length + (fixos ? 1 : 0);
+  const widths = fixos
+    ? [contentWidth * 0.26, ...cols.map(() => (contentWidth * 0.74) / cols.length)]
+    : cols.map(() => contentWidth / cols.length);
+  const heads = fixos ? [field.table_row_header || "", ...cols] : cols;
+  const rowH = 7;
+
+  const drawRow = (cells: string[], top: number, header: boolean) => {
+    let x = PAGE.marginLeft;
+    for (let i = 0; i < nCols; i++) {
+      doc.setDrawColor(...COLORS.border);
+      doc.setLineWidth(0.3);
+      if (header) { doc.setFillColor(...COLORS.bg); doc.rect(x, top, widths[i], rowH, "FD"); } else { doc.rect(x, top, widths[i], rowH); }
+      doc.setFont("helvetica", header ? "bold" : "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...(header ? COLORS.dark : COLORS.medium));
+      const t = doc.splitTextToSize(cells[i] || "", widths[i] - 3)[0] || "";
+      doc.text(t, x + 1.5, top + 4.6);
+      x += widths[i];
+    }
+  };
+
+  y = checkPageBreak(doc, y, rowH * 2);
+  drawRow(heads, y, true);
+  y += rowH;
+  for (let r = 0; r < rows; r++) {
+    y = checkPageBreak(doc, y, rowH);
+    drawRow(fixos ? [fixos[r], ...cols.map(() => "")] : cols.map(() => ""), y, false);
+    y += rowH;
+  }
+  return y + 2;
+}
+
 function getFieldHeight(field: FormField): number {
   if (field.type === "section_header") return field.description ? 24 : 18;
   let h = 14; // base label + margin
@@ -386,6 +427,7 @@ function getFieldHeight(field: FormField): number {
     case "rating": h += 12; break;
     case "date": h += 14; break;
     case "file_upload": h += 20; break;
+    case "table": h += Math.min(tableRowCount(field), 3) * 7 + 9; break;
   }
   return h;
 }

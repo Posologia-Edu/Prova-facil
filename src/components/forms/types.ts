@@ -8,6 +8,7 @@ export type FormFieldType =
   | "date"
   | "file_upload"
   | "rating"
+  | "table"
   | "section_header"
   | "image_block"
   | "video_block";
@@ -29,6 +30,14 @@ export type FormField = {
   /** Scale labels */
   scale_min_label?: string;
   scale_max_label?: string;
+  /** Tabela: cabeçalhos das colunas que o aluno preenche. */
+  table_columns?: string[];
+  /** Tabela: linhas em branco (padrão 3). Ignorado se houver table_row_labels. */
+  table_rows?: number;
+  /** Tabela: rótulos fixos das linhas (primeira coluna, não editável). O número de linhas passa a ser o de rótulos. */
+  table_row_labels?: string[];
+  /** Tabela: título da coluna dos rótulos fixos (ex.: "Parâmetro"). */
+  table_row_header?: string;
   /** Correct answer for scoring — index for radio/dropdown, indices for checkbox, text for text/textarea, number for scale/rating */
   correct_answer?: string | number | number[];
   /** Per-option scores for radio/dropdown/checkbox. Maps option index → score value. Allows partial scoring. */
@@ -118,6 +127,7 @@ export const FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   rating: "Classificação",
   date: "Data",
   file_upload: "Upload de arquivo",
+  table: "Tabela",
   section_header: "Cabeçalho de seção",
   image_block: "Imagem",
   video_block: "Vídeo",
@@ -142,4 +152,13 @@ export function getSections(fields: FormField[]): { header: FormField | null; fi
   if (sections.length === 0) sections.push({ header: null, fields: [], startIndex: 0 });
 
   return sections;
+}
+
+/** Tabela: colunas efetivas (nunca vazio) e número de linhas. A resposta é uma matriz de texto linhas x colunas. */
+export function tableColumns(field: FormField): string[] {
+  return field.table_columns && field.table_columns.length > 0 ? field.table_columns : ["Coluna 1", "Coluna 2"];
+}
+export function tableRowCount(field: FormField): number {
+  if (field.table_row_labels && field.table_row_labels.length > 0) return field.table_row_labels.length;
+  return Math.max(1, Math.min(30, field.table_rows || 3));
 }

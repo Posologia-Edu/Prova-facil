@@ -307,9 +307,9 @@
   }
 }
 
-/* Impressão do roteiro do paciente padronizado (editor do paciente virtual): só a área .print-roteiro sai no papel/PDF. */
+/* Impressão do roteiro do paciente padronizado: só o roteiro marcado (data-roteiro-print) sai no papel ou PDF. */
 @media print {
-  body * { visibility: hidden !important; }
-  .print-roteiro, .print-roteiro * { visibility: visible !important; }
-  .print-roteiro { position: absolute; left: 0; top: 0; width: 100%; }
+  body:has([data-roteiro-print]) * { visibility: hidden !important; }
+  [data-roteiro-print], [data-roteiro-print] * { visibility: visible !important; }
+  [data-roteiro-print] { position: absolute; left: 0; top: 0; width: 100%; }
 }

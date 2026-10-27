@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { FormField, FormFieldType, FIELD_TYPE_LABELS, getSections } from "./types";
+import { FormField, FormFieldType, FIELD_TYPE_LABELS, getSections, tableColumns } from "./types";
 import FormImportDialog from "./FormImportDialog";
 
 interface FormBuilderProps {
@@ -215,7 +215,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
   const getFieldGlobalIndex = (field: FormField) => fields.findIndex(f => f.id === field.id);
 
   // Question types that can be selected in the type dropdown (excludes special blocks)
-  const questionTypes: FormFieldType[] = ["text", "textarea", "radio", "checkbox", "dropdown", "scale", "rating", "date", "file_upload"];
+  const questionTypes: FormFieldType[] = ["text", "textarea", "radio", "checkbox", "dropdown", "scale", "rating", "date", "table", "file_upload"];
 
   const renderFieldEditor = (field: FormField, globalIdx: number) => {
     const isSelected = selectedFieldId === field.id;
@@ -320,7 +320,7 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
                 onChange={(e) => updateField(globalIdx, { label: e.target.value })}
                 className="flex-1 min-w-[180px]"
               />
-              <Select value={field.type} onValueChange={(v) => updateField(globalIdx, { type: v as FormFieldType })}>
+              <Select value={field.type} onValueChange={(v) => updateField(globalIdx, { type: v as FormFieldType, ...(v === "table" && !field.table_columns ? { table_columns: ["Coluna 1", "Coluna 2", "Coluna 3"], table_rows: 3 } : {}) })}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -396,6 +396,79 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
                 >
                   <Plus className="h-3 w-3 mr-1" /> Adicionar opção
                 </Button>
+              </div>
+            )}
+
+            {/* Table settings */}
+            {field.type === "table" && (
+              <div className="space-y-2 text-sm">
+                <div className="space-y-1.5">
+                  <span className="text-muted-foreground">Colunas</span>
+                  {tableColumns(field).map((col, ci) => (
+                    <div key={ci} className="flex items-center gap-2">
+                      <Input
+                        value={col}
+                        onChange={(e) => {
+                          const next = [...tableColumns(field)];
+                          next[ci] = e.target.value;
+                          updateField(globalIdx, { table_columns: next });
+                        }}
+                        className="h-8 flex-1 text-xs"
+                        placeholder={`Coluna ${ci + 1}`}
+                      />
+                      <Button
+                        variant="ghost" size="sm" className="h-7 w-7 p-0"
+                        disabled={tableColumns(field).length <= 1}
+                        onClick={() => updateField(globalIdx, { table_columns: tableColumns(field).filter((_, i) => i !== ci) })}
+                        aria-label="Remover coluna"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="ghost" size="sm" className="text-xs text-primary"
+                    disabled={tableColumns(field).length >= 8}
+                    onClick={() => updateField(globalIdx, { table_columns: [...tableColumns(field), `Coluna ${tableColumns(field).length + 1}`] })}
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Adicionar coluna
+                  </Button>
+                </div>
+                {isSelected && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">Linhas:</span>
+                      <Input
+                        type="number" min={1} max={30}
+                        value={field.table_row_labels && field.table_row_labels.length > 0 ? field.table_row_labels.length : (field.table_rows || 3)}
+                        disabled={!!(field.table_row_labels && field.table_row_labels.length > 0)}
+                        onChange={(e) => updateField(globalIdx, { table_rows: Math.max(1, Math.min(30, Number(e.target.value) || 1)) })}
+                        className="h-8 w-20 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <span className="text-muted-foreground">Rótulos fixos das linhas (opcional, um por linha)</span>
+                      <Textarea
+                        rows={3}
+                        value={(field.table_row_labels || []).join("\n")}
+                        onChange={(e) => {
+                          const labels = e.target.value.split("\n");
+                          updateField(globalIdx, { table_row_labels: labels.some((l) => l.trim()) ? labels : undefined });
+                        }}
+                        className="text-xs"
+                        placeholder={"PA\nFC\nGlicemia"}
+                      />
+                      {field.table_row_labels && field.table_row_labels.length > 0 && (
+                        <Input
+                          value={field.table_row_header || ""}
+                          onChange={(e) => updateField(globalIdx, { table_row_header: e.target.value })}
+                          className="h-8 text-xs"
+                          placeholder="Título da coluna dos rótulos (ex.: Parâmetro)"
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

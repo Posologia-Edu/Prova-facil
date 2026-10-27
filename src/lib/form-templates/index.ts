@@ -1,4 +1,5 @@
 import { pharmacyTemplates } from "./pharmacy";
+import { anamneseFarmaceuticaTemplate } from "./pharmacy-anamnese-farmaceutica";
 import { nursingTemplates } from "./nursing";
 import { nutritionTemplates } from "./nutrition";
 import { dentistryTemplates } from "./dentistry";
@@ -16,6 +17,7 @@ export type NativeTemplate = {
 };
 
 export const allNativeTemplates: NativeTemplate[] = [
+  anamneseFarmaceuticaTemplate,
   ...pharmacyTemplates,
   ...nursingTemplates,
   ...nutritionTemplates,

@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
@@ -47,6 +49,16 @@ export function PatientScriptGuide({ local }: { local?: string }) {
 
 export default function PatientScriptView({ roteiro: r, showGuide = false, className }: { roteiro: PatientRoteiro; showGuide?: boolean; className?: string }) {
   const id = r.identidade;
+  const raiz = useRef<HTMLDivElement>(null);
+  // Imprime só este roteiro: marca a raiz, o CSS de impressão esconde o resto da página, e a marca sai depois.
+  const imprimir = () => {
+    const el = raiz.current;
+    if (!el) return;
+    el.setAttribute("data-roteiro-print", "true");
+    const limpar = () => { el.removeAttribute("data-roteiro-print"); window.removeEventListener("afterprint", limpar); };
+    window.addEventListener("afterprint", limpar);
+    window.print();
+  };
   const resumo = [
     `${id.nome} (${id.idade} anos, ${id.sexo.toLowerCase()}, ${id.ocupacao})`,
     [id.estado_civil, id.moradia].filter(Boolean).join(". "),
@@ -60,7 +72,12 @@ export default function PatientScriptView({ roteiro: r, showGuide = false, class
   const fatosPorNivel = NIVEIS.map((n) => ({ nivel: n, itens: r.fatos.filter((f) => f.nivel === n) })).filter((g) => g.itens.length);
 
   return (
-    <div className={cn("space-y-6", className)}>
+    <div ref={raiz} className={cn("space-y-6", className)}>
+      <div className="flex justify-end print:hidden">
+        <Button type="button" variant="outline" size="sm" onClick={imprimir}>
+          <Printer className="h-4 w-4" />Imprimir ou salvar em PDF
+        </Button>
+      </div>
       {showGuide && <PatientScriptGuide local={r.local} />}
       <Card className="space-y-8 p-6">
         <Secao titulo="Quem você é">

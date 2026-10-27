@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Star, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { FormField, getSections } from "./types";
+import { FormField, getSections, tableColumns, tableRowCount } from "./types";
 import HandwritingInput from "./HandwritingInput";
 
 function CopyTextButton({ text }: { text: string }) {
@@ -252,6 +252,48 @@ export default function FormRenderer({
             disabled={readOnly}
           />
         )}
+
+        {field.type === "table" && (() => {
+          const cols = tableColumns(field);
+          const rows = tableRowCount(field);
+          const fixos = field.table_row_labels && field.table_row_labels.length > 0 ? field.table_row_labels : null;
+          const matriz: string[][] = Array.isArray(answers[field.id]) ? answers[field.id] : [];
+          const setCell = (r: number, c: number, v: string) => {
+            const next = Array.from({ length: rows }, (_, i) => Array.from({ length: cols.length }, (_, j) => matriz[i]?.[j] ?? ""));
+            next[r][c] = v;
+            onChange({ ...answers, [field.id]: next });
+          };
+          return (
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="bg-muted/50 text-left">
+                    {fixos && <th className="px-3 py-2 font-medium">{field.table_row_header || ""}</th>}
+                    {cols.map((c, j) => <th key={j} className="px-3 py-2 font-medium">{c}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: rows }, (_, r) => (
+                    <tr key={r} className="border-t">
+                      {fixos && <td className="whitespace-nowrap px-3 py-1.5 text-muted-foreground">{fixos[r]}</td>}
+                      {cols.map((c, j) => (
+                        <td key={j} className="p-1">
+                          <Input
+                            value={matriz[r]?.[j] ?? ""}
+                            onChange={(e) => setCell(r, j, e.target.value)}
+                            disabled={readOnly}
+                            aria-label={`${fixos ? fixos[r] + " · " : "Linha " + (r + 1) + " · "}${c}`}
+                            className="h-8"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
 
         {field.type === "file_upload" && (
           <div className="border-2 border-dashed rounded-lg p-6 text-center text-muted-foreground text-sm">
