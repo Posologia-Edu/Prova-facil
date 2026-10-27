@@ -114,6 +114,7 @@ export default function VPResearch() {
   const [aiGrading, setAiGrading] = useState<string | null>(null); // sessionId being graded, or "bulk"
   const [editing, setEditing] = useState<{ session: SessionRow; metric: MetricRow } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [aiFilling, setAiFilling] = useState(false);
   const [onlyConsented, setOnlyConsented] = useState(true);
 
 
@@ -233,9 +234,38 @@ export default function VPResearch() {
 
 
 
+  // Lê a transcrição inteira no servidor (vp-ai-idcg) e preenche o formulário aberto com o resultado.
+  const fillWithAi = async (s: SessionRow) => {
+    setAiFilling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("vp-ai-idcg", { body: { sessionIds: [s.id] } });
+      if (error) throw new Error(error.message);
+      const errMsg = data?.errors?.[s.id];
+      if (errMsg) throw new Error(errMsg);
+      const { data: user } = await supabase.auth.getUser();
+      const { data: row } = await supabase
+        .from("vp_research_metrics").select("*")
+        .eq("session_id", s.id).eq("evaluator_id", user.user?.id || "").maybeSingle();
+      if (!row) throw new Error("A IA não devolveu a avaliação");
+      const fresh: MetricRow = {
+        ...empty(s.id), ...(row as any),
+        unsafe_conducts: Array.isArray((row as any).unsafe_conducts) ? (row as any).unsafe_conducts : [],
+      };
+      setMetrics((prev) => ({ ...prev, [s.id]: fresh }));
+      setEditing((cur) => (cur && cur.session.id === s.id ? { ...cur, metric: fresh } : cur));
+      toast.success("Formulário preenchido pela IA. Revise e salve.");
+    } catch (e: any) {
+      toast.error(e.message || "Falha na avaliação por IA");
+    } finally {
+      setAiFilling(false);
+    }
+  };
+
   const openEdit = (s: SessionRow) => {
     const cur = metrics[s.id] || empty(s.id);
     setEditing({ session: s, metric: { ...cur, unsafe_conducts: [...(cur.unsafe_conducts || [])] } });
+    // Primeira avaliação da sessão: a IA já abre o formulário preenchido.
+    if (!metrics[s.id] && s.research_consent !== false) void fillWithAi(s);
   };
 
   const saveMetric = async () => {
@@ -603,13 +633,27 @@ export default function VPResearch() {
             <DialogHeader>
               <DialogTitle className="font-heading text-xl font-medium">Avaliação científica da sessão</DialogTitle>
             </DialogHeader>
+            {aiFilling && (
+              <div className="flex items-center gap-2 rounded-md bg-brand-soft px-3 py-2 text-sm text-brand-text">
+                <Loader2 className="h-4 w-4 animate-spin" /> A IA está lendo a conversa do aluno e preenchendo a avaliação (pode levar cerca de um minuto)…
+              </div>
+            )}
             <EvaluationForm
               value={editing.metric}
               onChange={(v) => setEditing({ ...editing, metric: v })}
             />
             <DialogFooter>
+              <Button
+                variant="outline"
+                className="sm:mr-auto"
+                onClick={() => fillWithAi(editing.session)}
+                disabled={aiFilling || editing.session.research_consent === false}
+                title="Relê toda a conversa e substitui os valores do formulário"
+              >
+                <Bot className="h-4 w-4" /> {metrics[editing.session.id] ? "Reavaliar com IA" : "Preencher com IA"}
+              </Button>
               <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
-              <Button onClick={saveMetric} disabled={saving}>
+              <Button onClick={saveMetric} disabled={saving || aiFilling}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Salvar avaliação
               </Button>
