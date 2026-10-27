@@ -673,8 +673,8 @@ function EvaluationForm({ value, onChange }: {
 }) {
   const upd = (patch: Partial<MetricRow>) => onChange({ ...value, ...patch });
   const numField = (label: string, key: keyof MetricRow, min = 1, max = 5, step = 0.5) => (
-    <div>
-      <Label className="text-xs">{label}</Label>
+    <div className="flex flex-col justify-end gap-1.5">
+      <Label className="text-xs leading-tight">{label}</Label>
       <Input
         type="number" min={min} max={max} step={step}
         value={(value[key] as number | null) ?? ""}
