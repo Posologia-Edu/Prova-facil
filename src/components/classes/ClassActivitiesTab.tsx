@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3, Check, Copy, FileText, HeartPulse, KeyRound, Loader2, Pencil, Plus, Tag,
-  ToggleLeft, ToggleRight, Trash2, Upload, UserCog, UserPlus, UsersRound, X,
+  ToggleLeft, ToggleRight, Trash2, UserCog, UsersRound, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,11 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -127,7 +123,6 @@ export function ClassActivitiesTab({ classId, onChanged }: { classId: string; on
   const { entries: vpCatalog } = useVpCatalog();
 
   const [students, setStudents] = useState<StudentItem[]>([]);
-  const [studentsLoading, setStudentsLoading] = useState(true);
   const [classExams, setClassExams] = useState<ExamItem[]>([]);
   const [classVPs, setClassVPs] = useState<ClassVirtualPatient[]>([]);
   const [profileName, setProfileName] = useState("");
@@ -149,14 +144,6 @@ export function ClassActivitiesTab({ classId, onChanged }: { classId: string; on
   const [editingLabelVPId, setEditingLabelVPId] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
 
-  const [manageStudentsOpen, setManageStudentsOpen] = useState(false);
-  const [studentAddMode, setStudentAddMode] = useState<"single" | "batch">("single");
-  const [newStudentName, setNewStudentName] = useState("");
-  const [newStudentEmail, setNewStudentEmail] = useState("");
-  const [newStudentReg, setNewStudentReg] = useState("");
-  const [batchText, setBatchText] = useState("");
-  const [batchLoading, setBatchLoading] = useState(false);
-
   const loadClassExams = async () => {
     const { data: examsData, error } = await supabase
       .from("exams")
@@ -176,11 +163,6 @@ export function ClassActivitiesTab({ classId, onChanged }: { classId: string; on
       .order("created_at", { ascending: false });
     const publicationMap = buildPublicationMap(publicationRows);
     setClassExams(examsData.map((exam) => ({ ...exam, publication: publicationMap[exam.id] ?? null })));
-  };
-
-  const loadStudents = async () => {
-    const { data } = await supabase.from("class_students").select("*").eq("class_id", classId).order("student_name");
-    setStudents(data || []);
   };
 
   const loadVPAssignments = async () => {
@@ -210,7 +192,6 @@ export function ClassActivitiesTab({ classId, onChanged }: { classId: string; on
   useEffect(() => {
     let active = true;
     (async () => {
-      setStudentsLoading(true);
       const { data: user } = await supabase.auth.getUser();
       if (user.user) {
         setProfileEmail(user.user.email || "");
@@ -228,64 +209,10 @@ export function ClassActivitiesTab({ classId, onChanged }: { classId: string; on
       void loadGroupRoles();
       void loadVpMode();
       await loadVPAssignments();
-      if (active) setStudentsLoading(false);
     })();
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classId]);
-
-  // ───────── alunos ─────────
-  const openManageStudents = () => {
-    setStudentAddMode("single");
-    setBatchText("");
-    setManageStudentsOpen(true);
-    loadStudents();
-  };
-
-  const addStudent = async () => {
-    if (!newStudentName.trim()) { toast.error("Informe o nome do aluno."); return; }
-    const { error } = await supabase.from("class_students").insert({
-      class_id: classId,
-      student_name: newStudentName.trim(),
-      student_email: newStudentEmail.trim() || null,
-      student_registration: newStudentReg.trim() || null,
-    });
-    if (error) { toast.error("Erro ao adicionar aluno."); return; }
-    setNewStudentName(""); setNewStudentEmail(""); setNewStudentReg("");
-    toast.success("Aluno adicionado!");
-    loadStudents();
-    onChanged?.();
-  };
-
-  const addBatchStudents = async () => {
-    if (!batchText.trim()) { toast.error("Cole os dados dos alunos."); return; }
-    setBatchLoading(true);
-    const lines = batchText.trim().split("\n").filter((l) => l.trim());
-    const inserts = lines.map((line) => {
-      const parts = line.includes(";") ? line.split(";") : line.split("\t");
-      return {
-        class_id: classId,
-        student_name: (parts[0] || "").trim(),
-        student_email: (parts[1] || "").trim() || null,
-        student_registration: (parts[2] || "").trim() || null,
-      };
-    }).filter((s) => s.student_name);
-    if (inserts.length === 0) { toast.error("Nenhum aluno válido encontrado."); setBatchLoading(false); return; }
-    const { error } = await supabase.from("class_students").insert(inserts);
-    setBatchLoading(false);
-    if (error) { toast.error("Erro ao importar alunos."); return; }
-    setBatchText("");
-    toast.success(`${inserts.length} aluno(s) importado(s) com sucesso!`);
-    loadStudents();
-    onChanged?.();
-  };
-
-  const removeStudent = async (studentId: string) => {
-    await supabase.from("class_students").delete().eq("id", studentId);
-    toast.success("Aluno removido.");
-    loadStudents();
-    onChanged?.();
-  };
 
   // ───────── pacientes virtuais ─────────
   const linkVirtualPatient = async (patientId: string) => {
@@ -672,38 +599,6 @@ export function ClassActivitiesTab({ classId, onChanged }: { classId: string; on
         )}
       </section>
 
-      {/* Integrantes */}
-      <section>
-        <SectionHeader
-          icon={UsersRound}
-          title="Integrantes"
-          count={students.length}
-          action={<Button variant="outline" size="sm" onClick={openManageStudents}><UserPlus className="h-4 w-4" />Gerenciar alunos</Button>}
-        />
-        {studentsLoading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-        ) : students.length === 0 ? (
-          <Card className="shadow-none"><CardContent className="py-10 text-center text-sm text-muted-foreground">Nenhum aluno cadastrado nesta turma.</CardContent></Card>
-        ) : (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow><TableHead>Matrícula</TableHead><TableHead>Nome</TableHead><TableHead>E-mail</TableHead></TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-mono text-xs">{s.student_registration || "—"}</TableCell>
-                    <TableCell className="font-medium">{s.student_name}</TableCell>
-                    <TableCell className="text-muted-foreground">{s.student_email || "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        )}
-      </section>
-
       {/* OSCE, simulações e formulários */}
       <ClassLinkedActivities classId={classId} onChanged={onChanged} />
 
@@ -898,65 +793,6 @@ export function ClassActivitiesTab({ classId, onChanged }: { classId: string; on
         </DialogContent>
       </Dialog>
 
-      {/* Gerenciar alunos */}
-      <Dialog open={manageStudentsOpen} onOpenChange={setManageStudentsOpen}>
-        <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto">
-          <DialogHeader><DialogTitle>Gerenciar alunos</DialogTitle></DialogHeader>
-          <Tabs value={studentAddMode} onValueChange={(v) => setStudentAddMode(v as "single" | "batch")}>
-            <TabsList className="w-full">
-              <TabsTrigger value="single" className="flex-1 gap-1.5"><UserPlus className="h-3.5 w-3.5" />Discente avulso</TabsTrigger>
-              <TabsTrigger value="batch" className="flex-1 gap-1.5"><Upload className="h-3.5 w-3.5" />Discente em lote</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="single" className="space-y-4 pt-2">
-              <div className="grid grid-cols-3 gap-2">
-                <Input placeholder="Nome *" value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} />
-                <Input placeholder="E-mail" value={newStudentEmail} onChange={(e) => setNewStudentEmail(e.target.value)} />
-                <Input placeholder="Matrícula" value={newStudentReg} onChange={(e) => setNewStudentReg(e.target.value)} />
-              </div>
-              <Button size="sm" onClick={addStudent} className="w-full"><UserPlus className="h-4 w-4" />Adicionar aluno</Button>
-            </TabsContent>
-
-            <TabsContent value="batch" className="space-y-4 pt-2">
-              <p className="text-xs text-muted-foreground">
-                Cole os dados dos alunos, um por linha. Separe os campos com <strong>;</strong> ou <strong>Tab</strong>.<br />
-                Formato: <code>Nome; E-mail; Matrícula</code> (e-mail e matrícula são opcionais).
-              </p>
-              <Textarea
-                placeholder={"João Silva; joao@email.com; 2024001\nMaria Santos; maria@email.com; 2024002\nPedro Souza"}
-                value={batchText}
-                onChange={(e) => setBatchText(e.target.value)}
-                rows={8}
-                className="font-mono text-xs"
-              />
-              <Button size="sm" onClick={addBatchStudents} disabled={batchLoading} className="w-full">
-                {batchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                Importar {batchText.trim().split("\n").filter((l) => l.trim()).length} aluno(s)
-              </Button>
-            </TabsContent>
-          </Tabs>
-
-          <Separator />
-          <h4 className="text-sm font-semibold">Alunos cadastrados ({students.length})</h4>
-          {students.length === 0 ? (
-            <p className="py-4 text-center text-sm italic text-muted-foreground">Nenhum aluno cadastrado.</p>
-          ) : (
-            <div className="max-h-[30vh] space-y-2 overflow-y-auto">
-              {students.map((s) => (
-                <div key={s.id} className="flex items-center justify-between rounded border p-2 text-sm">
-                  <div>
-                    <p className="font-medium">{s.student_name}</p>
-                    <p className="text-xs text-muted-foreground">{s.student_registration || "—"} · {s.student_email || "—"}</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeStudent(s.id)} aria-label="Remover aluno">
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
