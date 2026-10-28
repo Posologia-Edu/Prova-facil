@@ -11,6 +11,9 @@ import type { NativeTemplate } from "./index";
 // Rótulos dos campos de retorno ao aluno-paciente (sem nota); o e-mail de retorno os localiza por eles.
 export const LABEL_SEGUIU_ROTEIRO = "O paciente revelou as informações no momento certo, de acordo com o roteiro?";
 export const LABEL_OBS_PACIENTE = "Observações sobre o desempenho do aluno-paciente";
+// Campos do professor que alimentam o botão "Escrever feedback com IA".
+export const LABEL_PONTOS_FORTES = "Pontos fortes do aluno";
+export const LABEL_OPORTUNIDADES = "Oportunidades de melhoria";
 
 let seq = 0;
 const nid = (p: string) => `${p}-${++seq}`;
@@ -159,8 +162,8 @@ function buildProfessor(): FormField[] {
     nota("O resumo final foi preciso, englobando os pontos críticos da consulta sem causar alarme?", 1.0),
 
     secao("pe2", "Feedback do professor"),
-    livre("pe2", "Pontos fortes do aluno"),
-    livre("pe2", "Oportunidades de melhoria"),
+    livre("pe2", LABEL_PONTOS_FORTES),
+    livre("pe2", LABEL_OPORTUNIDADES),
   ];
 }
 

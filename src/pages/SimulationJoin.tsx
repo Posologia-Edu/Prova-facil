@@ -18,7 +18,7 @@ import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle, Trash2, UserRound, PauseCircle, PlayCircle, UserCog, SkipForward } from "lucide-react";
+import { Sparkles, Clock, FileText, Users, Stethoscope, Eye, GraduationCap, Send, Play, Square, ChevronRight, RefreshCw, BookOpen, CheckCircle, Trash2, UserRound, PauseCircle, PlayCircle, UserCog, SkipForward } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { generateRounds } from "@/lib/simulation-distribution";
@@ -58,6 +58,7 @@ export default function SimulationJoin() {
   const [forms, setForms] = useState<any[]>([]);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [feedback, setFeedback] = useState("");
+  const [feedbackAiLoading, setFeedbackAiLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [allRounds, setAllRounds] = useState<any[]>([]);
@@ -414,6 +415,36 @@ export default function SimulationJoin() {
     simDraft.saveDraft({ answers, feedback });
   }, [answers, feedback, simDraftKey, simDraft.loaded, submitted]);
 
+
+  // Feedback geral escrito pela IA a partir dos pontos fortes e das oportunidades de melhoria que o professor anotou
+  const escreverFeedbackComIa = async (fields: FormField[]) => {
+    const { LABEL_PONTOS_FORTES, LABEL_OPORTUNIDADES } = await import("@/lib/form-templates/pharmacy-avaliacao-anamnese-v2");
+    const texto = (rotulo: string) => {
+      const f = fields.find((x) => x.label === rotulo);
+      const v = f ? answers[f.id] : "";
+      return typeof v === "string" ? v.trim() : "";
+    };
+    const pontos_fortes = texto(LABEL_PONTOS_FORTES);
+    const oportunidades = texto(LABEL_OPORTUNIDADES);
+    if (!pontos_fortes && !oportunidades) {
+      toast({ title: "Escreva antes os pontos fortes ou as oportunidades de melhoria", variant: "destructive" });
+      return;
+    }
+    if (feedback.trim() && !window.confirm("Já existe um feedback escrito. Substituir pelo texto da IA?")) return;
+    setFeedbackAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("write-professor-feedback", {
+        body: { room_id: room?.id, access_code: room?.access_code, participant_id: participant?.id, pontos_fortes, oportunidades },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Falha ao chamar a IA");
+      setFeedback(data.feedback);
+      toast({ title: "Feedback escrito pela IA", description: "Leia, ajuste o que quiser e envie." });
+    } catch (e) {
+      toast({ title: "Não foi possível escrever o feedback com a IA", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+    } finally {
+      setFeedbackAiLoading(false);
+    }
+  };
 
   const submitForm = async () => {
     if (!window.confirm("Tem certeza que deseja enviar o formulário? Após o envio não será possível editar.")) return;
@@ -1748,12 +1779,18 @@ export default function SimulationJoin() {
 
                 {/* Feedback field */}
                 <div className="space-y-2 border-t pt-4">
-                  <Label className="font-medium">{t("sim_feedback_label")}</Label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label className="font-medium">{t("sim_feedback_label")}</Label>
+                    <Button type="button" size="sm" variant="outline" className="gap-1.5" disabled={feedbackAiLoading} onClick={() => escreverFeedbackComIa(fields)}>
+                      <Sparkles className="h-3.5 w-3.5" />{feedbackAiLoading ? "Escrevendo..." : "Escrever feedback com IA"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">A IA escreve a partir dos pontos fortes e das oportunidades de melhoria acima. Você revisa antes de enviar.</p>
                   <Textarea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     placeholder={t("sim_feedback_placeholder")}
-                    rows={4}
+                    rows={6}
                   />
                 </div>
 
