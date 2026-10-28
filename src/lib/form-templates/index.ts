@@ -1,5 +1,6 @@
 import { pharmacyTemplates } from "./pharmacy";
 import { anamneseFarmaceuticaTemplate } from "./pharmacy-anamnese-farmaceutica";
+import { observadorV2Template, professorV2Template } from "./pharmacy-avaliacao-anamnese-v2";
 import { nursingTemplates } from "./nursing";
 import { nutritionTemplates } from "./nutrition";
 import { dentistryTemplates } from "./dentistry";
@@ -18,6 +19,8 @@ export type NativeTemplate = {
 
 export const allNativeTemplates: NativeTemplate[] = [
   anamneseFarmaceuticaTemplate,
+  observadorV2Template,
+  professorV2Template,
   ...pharmacyTemplates,
   ...nursingTemplates,
   ...nutritionTemplates,
