@@ -1,52 +1,99 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  BookOpen, Brain, FileText, BarChart3, Shield, Zap,
-  ArrowRight, Star, GraduationCap, Globe,
-  Stethoscope, Store, MonitorPlay, Sparkles, ArrowUpRight,
-  CircleDot, Layers, Waves, Trophy
+  Activity, Apple, ArrowRight, Check, ClipboardList, Gavel, Globe, GraduationCap, HeartHandshake, HeartPulse, LayoutGrid,
+  Menu, MessagesSquare, Microscope, Pill, Plug, ShieldCheck, Smile, Sparkles, Stethoscope, Store, Accessibility, FileText, type LucideIcon,
 } from "lucide-react";
 import FloatingAuth from "@/components/FloatingAuth";
 import { LandingFooter } from "@/components/LandingFooter";
 import { SalesAgent } from "@/components/SalesAgent";
 import { useLanguage, LANGUAGE_FLAGS, LANGUAGE_LABELS, type Language } from "@/i18n/LanguageContext";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { LANDING_CONTENT, type LandingContent } from "@/lib/landing-content";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring, type Variants } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+// Hero e faixa de IA são sempre marinho, nos dois temas; o resto da página segue os tokens do sistema.
+const NAVY_BG = "linear-gradient(160deg, #0c1a38 0%, #14264d 60%, #1b3470 100%)";
 
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 32 },
-  show: (i: number = 0) => ({
-    opacity: 1, y: 0,
-    transition: { duration: 0.7, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }
-  })
-};
+const AREA_ICONS: LucideIcon[] = [Pill, HeartPulse, Stethoscope, Smile, Apple, Activity, Microscope];
+const MODULE_ICONS: LucideIcon[] = [ClipboardList, MessagesSquare, Stethoscope, FileText, Gavel, LayoutGrid];
+const TRUST_ICONS: LucideIcon[] = [ShieldCheck, Accessibility, Plug, Store];
+
+function Reveal({ children, delay = 0, className }: { children: ReactNode; delay?: number; className?: string }) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      className={className}
+      initial={reduce ? false : { opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.6, delay, ease: EASE }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function Eyebrow({ children, light = false }: { children: ReactNode; light?: boolean }) {
+  return <span className={`font-mono text-xs uppercase tracking-[0.18em] ${light ? "text-highlight" : "text-accent-ink dark:text-highlight"}`}>{children}</span>;
+}
+
+function SectionHead({ eyebrow, title, sub, light = false, center = false }: { eyebrow: string; title: string; sub?: string; light?: boolean; center?: boolean }) {
+  return (
+    <Reveal className={`flex max-w-3xl flex-col gap-4 ${center ? "mx-auto items-center text-center" : ""}`}>
+      <Eyebrow light={light}>{eyebrow}</Eyebrow>
+      <h2 className={`font-heading text-4xl font-semibold leading-[1.1] tracking-tight [text-wrap:balance] md:text-5xl ${light ? "text-white" : ""}`}>{title}</h2>
+      {sub && <p className={`text-lg leading-relaxed ${light ? "text-white/70" : "text-muted-foreground"}`}>{sub}</p>}
+    </Reveal>
+  );
+}
+
+/** Cartões do produto (conteúdo de exemplo, sempre marcado como exemplo). */
+function HeroCards({ c }: { c: LandingContent["cards"] }) {
+  const reduce = useReducedMotion();
+  const enter = (i: number) => ({
+    initial: reduce ? false : { opacity: 0, y: 28 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.7, delay: 0.25 + i * 0.12, ease: EASE },
+  });
+  return (
+    <div className="flex min-w-0 flex-col gap-3" aria-label={c.example}>
+      <motion.div {...enter(0)} className="flex flex-col gap-2.5 rounded-xl bg-[#eaf0ff] p-4 text-[13px] text-[#0c1a38] shadow-3">
+        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#55627f]">{c.debrief} · {c.example}</span>
+        <div className="flex flex-wrap gap-2">
+          <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl">4/5</b>{c.found}</div>
+          <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl">4/4</b>{c.essential}</div>
+        </div>
+        <div className="rounded-r-lg border-l-[3px] border-[#e08a1e] bg-[#fdf0dc] px-3 py-1.5"><b>{c.improveLabel}</b> {c.improveText}</div>
+      </motion.div>
+      <motion.div {...enter(1)} className="flex flex-col gap-2.5 rounded-xl bg-[#eaf0ff] p-4 text-[13px] text-[#0c1a38] shadow-3 sm:ml-8">
+        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#55627f]">{c.grade} · {c.example}</span>
+        <div className="flex flex-wrap gap-2">
+          <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl">7,9</b>{c.gradeSub}</div>
+          <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl">{c.naCount}</b>{c.naSub}</div>
+        </div>
+      </motion.div>
+      <motion.div {...enter(2)} className="flex flex-col gap-2.5 rounded-xl bg-[#eaf0ff] p-4 text-[13px] text-[#0c1a38] shadow-3">
+        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#55627f]">{c.feedback} · {c.example}</span>
+        <div className="rounded-r-lg border-l-[3px] border-[#1d7a4f] bg-[#def3e7] px-3 py-1.5">{c.feedbackText}</div>
+        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-[#0c1a38] px-3 py-1 text-xs font-semibold text-[#f7b93b]">
+          <Sparkles className="h-3 w-3" />{c.aiBadge}
+        </span>
+      </motion.div>
+    </div>
+  );
+}
 
 const Index = () => {
   const navigate = useNavigate();
-  const { t, language, setLanguage } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const languages: Language[] = ["pt", "en", "es"];
-
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll();
-  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "40%"]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
-
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const smx = useSpring(mx, { stiffness: 60, damping: 20 });
-  const smy = useSpring(my, { stiffness: 60, damping: 20 });
-
-  const rotatingWords = ["profissionais", "pesquisadores", "examinadores", "orientadores", "preceptores", "professores"];
-  const [wordIndex, setWordIndex] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setWordIndex((i) => (i + 1) % rotatingWords.length), 3600);
-    return () => clearInterval(id);
-  }, []);
+  const c = LANDING_CONTENT[language] ?? LANDING_CONTENT.pt;
+  const reduce = useReducedMotion();
+  const [role, setRole] = useState<"teacher" | "student">("teacher");
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -58,529 +105,303 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const onMouseMove = (e: React.MouseEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    mx.set(((e.clientX - rect.left) / rect.width - 0.5) * 20);
-    my.set(((e.clientY - rect.top) / rect.height - 0.5) * 20);
-  };
+  // Tema claro/escuro segue o aparelho só nesta página (o resto do app não tem alternância); restaura ao sair.
+  useEffect(() => {
+    const html = document.documentElement;
+    const tinhaEscuro = html.classList.contains("dark");
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    // ?tema=escuro ou ?tema=claro força o tema (útil para conferir e compartilhar)
+    const forcado = new URLSearchParams(window.location.search).get("tema");
+    const apply = () => html.classList.toggle("dark", forcado === "escuro" ? true : forcado === "claro" ? false : mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => {
+      mq.removeEventListener("change", apply);
+      html.classList.toggle("dark", tinhaEscuro);
+    };
+  }, []);
 
-  const features = [
-    { icon: Brain, tag: "01", title: t("landing_feat_ai_title"), description: t("landing_feat_ai_desc") },
-    { icon: Stethoscope, tag: "02", title: t("landing_feat_osce_title"), description: t("landing_feat_osce_desc") },
-    { icon: MonitorPlay, tag: "03", title: t("landing_feat_online_title"), description: t("landing_feat_online_desc") },
-    { icon: FileText, tag: "04", title: t("landing_feat_wysiwyg_title"), description: t("landing_feat_wysiwyg_desc") },
-    { icon: BookOpen, tag: "05", title: t("landing_feat_bank_title"), description: t("landing_feat_bank_desc") },
-    { icon: BarChart3, tag: "06", title: t("landing_feat_analytics_title"), description: t("landing_feat_analytics_desc") },
-    { icon: Store, tag: "07", title: t("landing_feat_marketplace_title"), description: t("landing_feat_marketplace_desc") },
-    { icon: Shield, tag: "08", title: t("landing_feat_security_title"), description: t("landing_feat_security_desc") },
-    { icon: Zap, tag: "09", title: t("landing_feat_fast_title"), description: t("landing_feat_fast_desc") },
+  const navLinks = [
+    { href: "#plataforma", label: c.nav.platform },
+    { href: "#areas", label: c.nav.areas },
+    { href: "#como-funciona", label: c.nav.how },
   ];
-
-  const stats = [
-    { value: "9+", label: t("landing_stats_questions") },
-    { value: "4", label: t("landing_stats_teachers") },
-    { value: "3", label: t("landing_stats_time") },
-    { value: "100%", label: t("landing_stats_rating") },
+  const pageLinks = [
+    { to: "/funcionalidades", label: c.nav.features },
+    { to: "/planos", label: c.nav.plans },
+    { to: "/documentacao", label: c.nav.docs },
   ];
-
-  const marqueeItems = [
-    "IA Generativa", "OSCE Digital", "Paciente Virtual", "SOAP", "Reconciliação",
-    "Documentação Clínica", "Marketplace", "Analytics", "QR Check-in", "Cronograma Inteligente",
-  ];
+  const rolePoints = role === "teacher" ? c.roles.teacher.points : c.roles.student.points;
 
   return (
-    <div className="landing-root min-h-screen relative overflow-x-hidden">
-      {/* Navbar */}
-      <motion.nav
-        initial={{ y: -80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#0c1a38]/70 backdrop-blur-xl"
-      >
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2.5">
-            <div className="relative">
-              <div className="absolute inset-0 bg-amber-500 blur-md opacity-60 animate-[landing-pulse-glow_3s_ease-in-out_infinite]" />
-              <GraduationCap className="h-7 w-7 relative" style={{ color: "#f7b93b" }} />
-            </div>
-            <span className="text-xl font-bold font-display tracking-tight">ProvaFácil</span>
+    <div className="landing-root min-h-screen overflow-x-hidden bg-background text-foreground">
+      {/* Barra de navegação */}
+      <nav className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+        <div className="container mx-auto flex h-16 items-center justify-between gap-3 px-4">
+          <a href="#" className="flex items-center gap-2" aria-label="ProvaFácil">
+            <GraduationCap className="h-7 w-7 text-highlight" />
+            <span className="font-heading text-xl font-semibold tracking-tight">ProvaFácil</span>
+          </a>
+          <div className="hidden items-center gap-1 lg:flex">
+            {navLinks.map((l) => (
+              <a key={l.href} href={l.href} className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">{l.label}</a>
+            ))}
+            {pageLinks.map((l) => (
+              <Link key={l.to} to={l.to} className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">{l.label}</Link>
+            ))}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1.5 text-white/80 hover:text-white hover:bg-white/5">
-                  <Globe className="h-4 w-4" />
-                  {LANGUAGE_FLAGS[language]}
+                <Button variant="ghost" size="sm" className="gap-1.5 lg:hidden" aria-label={c.nav.menu}>
+                  <Menu className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#14264d] border-white/10 text-white">
+              <DropdownMenuContent align="end">
+                {navLinks.map((l) => (
+                  <DropdownMenuItem key={l.href} asChild><a href={l.href}>{l.label}</a></DropdownMenuItem>
+                ))}
+                {pageLinks.map((l) => (
+                  <DropdownMenuItem key={l.to} asChild><Link to={l.to}>{l.label}</Link></DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1.5">
+                  <Globe className="h-4 w-4" />{LANGUAGE_FLAGS[language]}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
                 {languages.map((lang) => (
-                  <DropdownMenuItem key={lang} onClick={() => setLanguage(lang)}
-                    className={`focus:bg-white/10 focus:text-white ${language === lang ? "bg-white/5" : ""}`}>
+                  <DropdownMenuItem key={lang} onClick={() => setLanguage(lang)} className={language === lang ? "bg-accent" : ""}>
                     {LANGUAGE_FLAGS[lang]} {LANGUAGE_LABELS[lang]}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Link to="/student/auth">
-              <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/5 gap-1.5">
-                <GraduationCap className="h-4 w-4" />
-                {t("auth_student")}
-              </Button>
+            <Link to="/student/auth" className="hidden sm:block">
+              <Button variant="ghost" size="sm" className="gap-1.5"><GraduationCap className="h-4 w-4" />{c.nav.student}</Button>
             </Link>
             <FloatingAuth />
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
-      {/* HERO */}
-      <section
-        ref={heroRef}
-        onMouseMove={onMouseMove}
-        className="relative pt-40 pb-32 md:pt-52 md:pb-40 overflow-hidden"
-      >
-        {/* Background stack */}
-        <motion.div style={{ y: bgY }} className="absolute inset-0 -z-10">
-          <div className="absolute inset-0 landing-aurora" />
-          <div className="absolute inset-0 landing-grid-bg opacity-40" />
-          <div className="absolute inset-0 landing-noise opacity-[0.04] mix-blend-overlay" />
-        </motion.div>
-
-        {/* Orbiting orbs */}
-        <motion.div
-          style={{ x: smx, y: smy }}
-          className="absolute top-1/4 left-1/2 -translate-x-1/2 -z-10 pointer-events-none"
-        >
-          <div className="relative w-[600px] h-[600px]">
-            <div className="absolute inset-0 rounded-full border border-white/5 animate-[landing-orbit_60s_linear_infinite]">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_30px_10px_rgba(247,185,59,0.6)]" />
-            </div>
-            <div className="absolute inset-8 rounded-full border border-white/5 animate-[landing-orbit_40s_linear_infinite_reverse]">
-              <div className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/2 w-2 h-2 rounded-full bg-white shadow-[0_0_20px_6px_rgba(255,255,255,0.5)]" />
-            </div>
-            <div className="absolute inset-20 rounded-full border border-white/5" />
-          </div>
-        </motion.div>
-
-        <motion.div style={{ opacity: heroOpacity }} className="container mx-auto px-4 relative">
-          <motion.div
-            variants={fadeUp} initial="hidden" animate="show" custom={0}
-            className="flex justify-center mb-8"
-          >
-            <div className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md px-4 py-1.5 text-xs text-white/70">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
-              </span>
-              <span className="font-mono-alt tracking-wide uppercase">v2.0 · {t("landing_ai_badge")}</span>
-              <ArrowUpRight className="h-3 w-3 opacity-60 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </div>
-          </motion.div>
-
-          <motion.h1
-            variants={fadeUp} initial="hidden" animate="show" custom={1}
-            className="mx-auto max-w-5xl text-center text-5xl md:text-7xl lg:text-8xl font-display font-semibold leading-[0.95]"
-          >
-            {t("landing_hero_title_1")}
-            <span className="relative mx-2 inline-grid min-w-[15ch] items-baseline align-baseline overflow-visible px-[0.35em]">
-              <span aria-hidden className="invisible col-start-1 row-start-1 whitespace-nowrap">pesquisadores</span>
-              <span className="col-start-1 row-start-1 flex items-baseline justify-center overflow-visible">
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={rotatingWords[wordIndex]}
-                    className="whitespace-nowrap overflow-visible px-[0.18em]"
-                    style={{ color: "#ffd37a" }}
-                    initial="hidden"
-                    animate="show"
-                    exit="exit"
-                    variants={{
-                      hidden: {},
-                      show: { transition: { staggerChildren: 0.09 } },
-                      exit: { transition: { staggerChildren: 0.05, staggerDirection: -1 } },
-                    }}
-                  >
-                    {rotatingWords[wordIndex].split("").map((ch, i) => (
-                      <motion.span
-                        key={i}
-                        className="inline-block overflow-visible bg-clip-text text-transparent pb-[0.08em]"
-                        style={{ backgroundImage: "linear-gradient(120deg, #f7b93b 0%, #e39500 50%, #ffd37a 100%)" }}
-                        variants={{
-                          hidden: { opacity: 0, y: "0.4em", filter: "blur(6px)" },
-                          show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
-                          exit: { opacity: 0, y: "-0.4em", filter: "blur(6px)", transition: { duration: 0.35, ease: "easeIn" } },
-                        }}
-                      >
-                        {ch}
-                      </motion.span>
-                    ))}
-                  </motion.span>
-                </AnimatePresence>
-              </span>
-            </span>
-            {t("landing_hero_title_3")}
-          </motion.h1>
-
-          <motion.p
-            variants={fadeUp} initial="hidden" animate="show" custom={2}
-            className="mx-auto mt-8 max-w-2xl text-center text-lg md:text-xl text-white/60 leading-relaxed"
-          >
-            {t("landing_hero_subtitle")}
-          </motion.p>
-
-          <motion.div
-            variants={fadeUp} initial="hidden" animate="show" custom={3}
-            className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
-          >
-            <Link to="/planos">
-              <Button
-                size="lg"
-                className="relative overflow-hidden group text-base px-8 py-6 rounded-full border-0"
-                style={{
-                  background: "linear-gradient(135deg, #e39500 0%, #f7b93b 100%)",
-                  boxShadow: "0 10px 40px -10px rgba(227,149,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)"
-                }}
-              >
-                <span className="absolute inset-0 landing-shine opacity-0 group-hover:opacity-100 transition-opacity" />
-                <span className="relative flex items-center gap-2 text-[#1a1200] font-medium">
-                  {t("landing_start_free")}
-                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </Button>
-            </Link>
-            <a href="#features">
-              <Button
-                size="lg" variant="ghost"
-                className="text-base px-8 py-6 rounded-full border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] text-white/90 backdrop-blur-md gap-2"
-              >
-                <Sparkles className="h-4 w-4 opacity-70" />
-                {t("landing_see_features")}
-              </Button>
-            </a>
-          </motion.div>
-
-          {/* Floating stats card */}
-          <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="mx-auto mt-24 max-w-4xl relative"
-          >
-            <div
-              className="absolute -inset-px rounded-2xl opacity-60 blur-xl"
-              style={{ background: "linear-gradient(120deg, #e39500, transparent 40%, #f7b93b)" }}
-            />
-            <div className="relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] backdrop-blur-2xl p-8 md:p-10">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-4 divide-x divide-white/5">
-                {stats.map((s, i) => (
-                  <motion.div
-                    key={s.label}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.8 + i * 0.1 }}
-                    className="text-center px-4 first:pl-0"
-                  >
-                    <div className="font-display text-4xl md:text-5xl font-semibold bg-clip-text text-transparent"
-                      style={{ backgroundImage: "linear-gradient(180deg, #ffffff, #b9c3d9)" }}>
-                      {s.value}
-                    </div>
-                    <div className="mt-2 text-xs md:text-sm uppercase tracking-wider text-white/50 font-mono-alt">
-                      {s.label}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* Marquee */}
-      <section className="relative py-6 border-y border-white/5 bg-[#08122a] overflow-hidden">
-        <div className="flex landing-marquee-track whitespace-nowrap">
-          {[...marqueeItems, ...marqueeItems].map((item, i) => (
-            <div key={i} className="flex items-center gap-6 px-6 text-white/40 text-sm uppercase tracking-widest font-mono-alt">
-              <CircleDot className="h-3 w-3 text-amber-400" />
-              {item}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* FEATURES — Magazine grid */}
-      <section id="features" className="relative py-32 overflow-hidden">
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute top-0 left-0 w-[500px] h-[500px] rounded-full blur-3xl opacity-30"
-            style={{ background: "radial-gradient(circle, #e39500, transparent 70%)" }} />
-        </div>
-
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
-            className="max-w-3xl mb-20"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-px w-12 bg-amber-400" />
-              <span className="text-xs uppercase tracking-[0.3em] text-amber-400 font-mono-alt">Recursos</span>
-            </div>
-            <h2 className="text-4xl md:text-6xl font-display font-semibold leading-tight">
-              {t("landing_features_heading")}
-            </h2>
-            <p className="mt-6 text-lg text-white/60 max-w-xl">{t("landing_features_sub")}</p>
-          </motion.div>
-
-          {/* Magazine layout: 1 hero + grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Feature spotlight */}
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.8 }}
-              className="lg:col-span-7 lg:row-span-2 group relative overflow-hidden rounded-3xl border border-white/10 p-10 min-h-[420px]"
-              style={{
-                background: "linear-gradient(135deg, rgba(227,149,0,0.18) 0%, rgba(20,38,77,0.4) 60%)"
-              }}
+      {/* Hero */}
+      <section className="relative overflow-hidden pb-20 pt-32 text-white md:pb-28 md:pt-40" style={{ background: NAVY_BG }}>
+        <div className="pointer-events-none absolute -right-40 -top-40 h-[480px] w-[480px] rounded-full opacity-20 blur-3xl" style={{ background: "radial-gradient(circle, #f7b93b, transparent 70%)" }} />
+        <div className="container relative mx-auto grid items-center gap-12 px-4 lg:grid-cols-[1.05fr_1fr]">
+          <div className="flex flex-col gap-6">
+            <motion.span
+              initial={reduce ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}
+              className="inline-flex items-center gap-2 self-start rounded-full border border-white/15 bg-white/5 px-3 py-1 font-mono text-xs uppercase tracking-wide text-white/80"
             >
-              <div className="absolute -right-20 -top-20 w-96 h-96 rounded-full blur-3xl opacity-40"
-                style={{ background: "radial-gradient(circle, #f7b93b, transparent 70%)" }} />
-              <div className="relative h-full flex flex-col justify-between">
-                <div>
-                  <div className="inline-flex items-center gap-2 text-xs font-mono-alt uppercase tracking-widest text-amber-300 mb-8">
-                    <span>01</span>
-                    <span className="h-px w-8 bg-amber-400/40" />
-                    <span>Destaque</span>
-                  </div>
-                  <Brain className="h-14 w-14 text-amber-300 mb-6" strokeWidth={1.2} />
-                  <h3 className="font-display text-3xl md:text-4xl font-semibold leading-tight max-w-lg">
-                    {features[0].title}
-                  </h3>
-                  <p className="mt-4 text-white/60 text-lg max-w-md leading-relaxed">
-                    {features[0].description}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-amber-300 group-hover:gap-3 transition-all">
-                  <span>Explorar recurso</span>
-                  <ArrowUpRight className="h-4 w-4" />
-                </div>
-              </div>
+              <Sparkles className="h-3.5 w-3.5 text-highlight" />{c.hero.badge}
+            </motion.span>
+            <motion.div initial={reduce ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.08, ease: EASE }} className="flex flex-col gap-5">
+              <Eyebrow light>{c.hero.eyebrow}</Eyebrow>
+              <h1 className="font-heading text-5xl font-semibold leading-[1.05] tracking-tight [text-wrap:balance] md:text-6xl">
+                {c.hero.title1}<em className="italic text-highlight">{c.hero.titleEm}</em>
+              </h1>
+              <p className="max-w-xl text-lg leading-relaxed text-white/70">{c.hero.subtitle}</p>
             </motion.div>
-
-            {/* Small tiles */}
-            {features.slice(1, 5).map((f, i) => (
-              <motion.div
-                key={f.title}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.6, delay: i * 0.08 }}
-                className="lg:col-span-5 group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] backdrop-blur-sm p-6 transition-all"
-                style={{ minHeight: i < 2 ? "200px" : undefined }}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <f.icon className="h-8 w-8 text-amber-300" strokeWidth={1.4} />
-                  <span className="text-xs font-mono-alt text-white/30">{f.tag}</span>
-                </div>
-                <h3 className="font-display text-lg font-semibold mb-2">{f.title}</h3>
-                <p className="text-white/50 text-sm leading-relaxed line-clamp-2">{f.description}</p>
-                <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                  style={{ background: "linear-gradient(135deg, rgba(227,149,0,0.1), transparent 50%)" }} />
-              </motion.div>
-            )).slice(0, 2)}
-
-            {/* Remaining features - bottom row */}
-            {features.slice(5).map((f, i) => (
-              <motion.div
-                key={f.title}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.6, delay: i * 0.06 }}
-                className="lg:col-span-3 group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] backdrop-blur-sm p-6 transition-all"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <f.icon className="h-7 w-7 text-amber-300" strokeWidth={1.4} />
-                  <span className="text-xs font-mono-alt text-white/30">{f.tag}</span>
-                </div>
-                <h3 className="font-display text-base font-semibold mb-2 leading-snug">{f.title}</h3>
-                <p className="text-white/50 text-sm leading-relaxed line-clamp-2">{f.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS — Split animated */}
-      <section className="relative py-32 border-t border-white/5 overflow-hidden">
-        <div className="absolute inset-0 landing-grid-bg opacity-20 -z-10" />
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center max-w-3xl mx-auto mb-20"
-          >
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="h-px w-12 bg-amber-400" />
-              <span className="text-xs uppercase tracking-[0.3em] text-amber-400 font-mono-alt">Processo</span>
-              <div className="h-px w-12 bg-amber-400" />
-            </div>
-            <h2 className="text-4xl md:text-5xl font-display font-semibold">{t("landing_how_heading")}</h2>
-          </motion.div>
-
-          <div className="relative max-w-5xl mx-auto">
-            {/* Vertical line */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-amber-500/30 to-transparent hidden md:block" />
-
-            {[
-              { step: "01", title: t("landing_step1_title"), desc: t("landing_step1_desc"), icon: Layers },
-              { step: "02", title: t("landing_step2_title"), desc: t("landing_step2_desc"), icon: Waves },
-              { step: "03", title: t("landing_step3_title"), desc: t("landing_step3_desc"), icon: Trophy },
-            ].map((item, i) => (
-              <motion.div
-                key={item.step}
-                initial={{ opacity: 0, x: i % 2 === 0 ? -40 : 40 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.7, delay: i * 0.1 }}
-                className={`relative flex flex-col md:flex-row items-center gap-8 md:gap-16 mb-16 last:mb-0 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}
-              >
-                <div className="flex-1 text-center md:text-left">
-                  <div className={`inline-flex items-center gap-3 mb-4 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}>
-                    <span className="font-mono-alt text-xs text-amber-400 tracking-widest">STEP {item.step}</span>
-                    <div className="h-px w-8 bg-amber-400/40" />
-                  </div>
-                  <h3 className="font-display text-2xl md:text-3xl font-semibold mb-3">{item.title}</h3>
-                  <p className="text-white/60 leading-relaxed">{item.desc}</p>
-                </div>
-
-                {/* Center node */}
-                <div className="relative shrink-0">
-                  <div className="absolute inset-0 blur-2xl opacity-60 animate-[landing-pulse-glow_3s_ease-in-out_infinite]"
-                    style={{ background: "#e39500", borderRadius: "50%" }} />
-                  <div className="relative w-20 h-20 rounded-full border border-white/10 bg-gradient-to-br from-[#1d3a73] to-[#0c1a38] flex items-center justify-center backdrop-blur-lg">
-                    <item.icon className="h-8 w-8 text-amber-300" strokeWidth={1.5} />
-                  </div>
-                </div>
-
-                <div className="flex-1 hidden md:block" />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* TESTIMONIALS / Value cards */}
-      <section className="relative py-32 border-t border-white/5">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="max-w-3xl mb-16"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-px w-12 bg-amber-400" />
-              <span className="text-xs uppercase tracking-[0.3em] text-amber-400 font-mono-alt">Por que escolher</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-display font-semibold">{t("landing_testimonials_heading")}</h2>
-          </motion.div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              { icon: "🧠", title: "IA em cada módulo", text: "Geração de questões, correção automática, paciente virtual e tutor de IA — tudo integrado sem configuração extra." },
-              { icon: "🔄", title: "Fluxo pedagógico completo", text: "Simulação → SOAP → Reconciliação → Documentação: um ciclo integrado que acompanha o aluno do início ao fim." },
-              { icon: "👥", title: "Individual ou em grupo", text: "Aplique avaliações individuais ou em grupo com notas sincronizadas. Ideal para atividades práticas colaborativas." },
-            ].map((c, i) => (
-              <motion.div
-                key={c.title}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.6, delay: i * 0.1 }}
-                whileHover={{ y: -6 }}
-                className="group relative rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-8 backdrop-blur-sm overflow-hidden"
-              >
-                <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full blur-3xl opacity-0 group-hover:opacity-40 transition-opacity"
-                  style={{ background: "#e39500" }} />
-                <div className="relative">
-                  <div className="text-4xl mb-6">{c.icon}</div>
-                  <h3 className="font-display text-xl font-semibold mb-3">{c.title}</h3>
-                  <p className="text-white/60 leading-relaxed">{c.text}</p>
-                  <div className="mt-6 flex gap-1">
-                    {[...Array(5)].map((_, s) => (
-                      <Star key={s} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="relative py-32 overflow-hidden">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mx-auto max-w-5xl rounded-[2rem] overflow-hidden border border-white/10"
-          >
-            <div className="absolute inset-0"
-              style={{ background: "radial-gradient(120% 100% at 50% 0%, #e39500 0%, #1d3a73 40%, #0c1a38 100%)" }} />
-            <div className="absolute inset-0 landing-grid-bg opacity-30" />
-            <div className="absolute inset-0 landing-noise opacity-10 mix-blend-overlay" />
-
-            {/* animated orbs */}
-            <motion.div
-              animate={{ x: [0, 40, 0], y: [0, -20, 0] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute top-10 right-10 w-40 h-40 rounded-full blur-3xl opacity-50"
-              style={{ background: "#f7b93b" }}
-            />
-            <motion.div
-              animate={{ x: [0, -30, 0], y: [0, 30, 0] }}
-              transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute bottom-10 left-10 w-52 h-52 rounded-full blur-3xl opacity-40"
-              style={{ background: "#e39500" }}
-            />
-
-            <div className="relative p-12 md:p-20 text-center">
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
-                className="text-4xl md:text-6xl font-display font-semibold leading-tight max-w-3xl mx-auto"
-              >
-                {t("landing_cta_heading")}
-              </motion.h2>
-              <p className="mt-6 text-white/70 text-lg max-w-xl mx-auto">{t("landing_cta_sub")}</p>
-              <Link to="/auth?tab=signup" className="inline-block mt-10">
-                <Button
-                  size="lg"
-                  className="relative overflow-hidden group text-base px-10 py-7 rounded-full border-0 bg-white text-[#0c1a38] hover:bg-white/90"
-                  style={{ boxShadow: "0 20px 60px -20px rgba(255,255,255,0.5)" }}
-                >
-                  <span className="relative flex items-center gap-2 font-semibold">
-                    {t("landing_cta_button")}
-                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </Button>
+            <motion.div initial={reduce ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.16, ease: EASE }} className="flex flex-wrap gap-3">
+              <Link to="/planos">
+                <Button size="lg" className="gap-2 bg-highlight text-[#1a1303] hover:brightness-95">{c.hero.primary}<ArrowRight className="h-4 w-4" /></Button>
               </Link>
-            </div>
-          </motion.div>
+              <a href="#como-funciona">
+                <Button size="lg" variant="outline" className="border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white">{c.hero.secondary}</Button>
+              </a>
+            </motion.div>
+          </div>
+          <HeroCards c={c.cards} />
         </div>
       </section>
 
-      <LandingFooter />
+      {/* Áreas */}
+      <section id="areas" className="border-b border-border py-20 md:py-28">
+        <div className="container mx-auto flex flex-col gap-12 px-4">
+          <SectionHead eyebrow={c.areas.eyebrow} title={c.areas.heading} sub={c.areas.sub} />
+          <Reveal className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+            {c.areas.items.map((name, i) => {
+              const Icon = AREA_ICONS[i];
+              return (
+                <div key={name} className={`relative flex flex-col items-start gap-3 rounded-xl border p-4 ${i === 0 ? "border-highlight bg-accent-soft/40" : "border-border bg-card"}`}>
+                  <Icon className={`h-6 w-6 ${i === 0 ? "text-accent-ink dark:text-highlight" : "text-brand-text"}`} strokeWidth={1.6} />
+                  <span className="font-medium">{name}</span>
+                  {i === 0 && <span className="font-mono text-[10px] uppercase tracking-wide text-accent-ink dark:text-highlight">{c.areas.mostComplete}</span>}
+                </div>
+              );
+            })}
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Módulos */}
+      <section id="plataforma" className="py-20 md:py-28">
+        <div className="container mx-auto flex flex-col gap-12 px-4">
+          <SectionHead eyebrow={c.modules.eyebrow} title={c.modules.heading} sub={c.modules.sub} />
+          <div className="grid gap-4 lg:grid-cols-12">
+            {c.modules.items.map((m, i) => {
+              const Icon = MODULE_ICONS[i];
+              const span = ["lg:col-span-7 lg:row-span-2", "lg:col-span-5", "lg:col-span-5", "lg:col-span-4", "lg:col-span-4", "lg:col-span-4"][i];
+              return (
+                <Reveal key={m.title} delay={(i % 3) * 0.06} className={span}>
+                  <div className={`flex h-full flex-col justify-between gap-6 rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-2 ${i === 0 ? "md:p-9" : ""}`}>
+                    <div className="flex flex-col gap-3">
+                      <Icon className={`${i === 0 ? "h-11 w-11" : "h-7 w-7"} text-accent-ink dark:text-highlight`} strokeWidth={1.4} />
+                      <h3 className={`font-heading font-semibold tracking-tight ${i === 0 ? "text-3xl" : "text-xl"}`}>{m.title}</h3>
+                      <p className={`leading-relaxed text-muted-foreground ${i === 0 ? "max-w-lg text-base" : "text-sm"}`}>{m.desc}</p>
+                    </div>
+                    {i === 0 && (
+                      <div className="flex flex-col gap-2 rounded-xl border border-border bg-sunken p-4" aria-hidden="true">
+                        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{c.modules.sim.tag}</span>
+                        {c.modules.sim.rows.map((label, r) => {
+                          const level = [4, 2, null][r];
+                          return (
+                            <div key={label} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-sm">
+                              <span className="min-w-0">{label}</span>
+                              {level === null ? (
+                                <span className="rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">{c.modules.sim.na}</span>
+                              ) : (
+                                <span className="flex items-center gap-1">
+                                  {[1, 2, 3, 4].map((n) => <span key={n} className={`h-2 w-7 rounded-full ${n <= level ? "bg-highlight" : "bg-border"}`} />)}
+                                  <span className="ml-1 font-mono text-xs text-muted-foreground">{level}/4</span>
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {m.tags.map((t) => <span key={t} className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs text-brand-text">{t}</span>)}
+                    </div>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* IA: o professor decide */}
+      <section className="py-20 text-white md:py-28" style={{ background: NAVY_BG }}>
+        <div className="container mx-auto flex flex-col gap-12 px-4">
+          <SectionHead eyebrow={c.ai.eyebrow} title={c.ai.heading} sub={c.ai.sub} light />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {c.ai.items.map((it, i) => (
+              <Reveal key={it.title} delay={(i % 2) * 0.08}>
+                <div className="flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+                  <Sparkles className="h-5 w-5 text-highlight" />
+                  <h3 className="font-heading text-xl font-semibold">{it.title}</h3>
+                  <p className="text-sm leading-relaxed text-white/70">{it.desc}</p>
+                  <span className="mt-auto inline-flex self-start rounded-md bg-white/10 px-2.5 py-1 font-mono text-xs text-white/85">{it.sample}</span>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal><p className="font-heading text-2xl italic text-highlight md:text-3xl">“{c.ai.quote}”</p></Reveal>
+        </div>
+      </section>
+
+      {/* Professor e aluno */}
+      <section className="border-b border-border py-20 md:py-28">
+        <div className="container mx-auto flex flex-col gap-10 px-4">
+          <SectionHead eyebrow={c.roles.eyebrow} title={c.roles.heading} />
+          <Reveal className="flex flex-col gap-6">
+            <div role="tablist" className="inline-flex self-start rounded-lg border border-border bg-sunken p-1">
+              {(["teacher", "student"] as const).map((r) => (
+                <button
+                  key={r} type="button" role="tab" aria-selected={role === r} onClick={() => setRole(r)}
+                  className={`rounded-md px-5 py-2 text-sm font-medium transition-colors ${role === r ? "bg-card text-foreground shadow-1" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {r === "teacher" ? c.roles.teacher.label : c.roles.student.label}
+                </button>
+              ))}
+            </div>
+            <ul className="grid gap-3 md:grid-cols-2">
+              {rolePoints.map((p) => (
+                <li key={p} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success-soft text-success"><Check className="h-3.5 w-3.5" /></span>
+                  <span>{p}</span>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Como funciona */}
+      <section id="como-funciona" className="bg-sunken py-20 md:py-28">
+        <div className="container mx-auto flex flex-col gap-12 px-4">
+          <SectionHead eyebrow={c.how.eyebrow} title={c.how.heading} />
+          <div className="grid gap-6 md:grid-cols-3">
+            {c.how.steps.map((s, i) => (
+              <Reveal key={s.title} delay={i * 0.08}>
+                <div className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-6">
+                  <span className="font-heading text-5xl font-semibold text-highlight">{i + 1}</span>
+                  <h3 className="font-heading text-xl font-semibold">{s.title}</h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{s.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Confiança */}
+      <section className="py-20 md:py-28">
+        <div className="container mx-auto flex flex-col gap-12 px-4">
+          <SectionHead eyebrow={c.trust.eyebrow} title={c.trust.heading} />
+          <Reveal className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3">
+            {c.trust.stats.map((s) => (
+              <div key={s.label} className="flex flex-col gap-1 bg-card p-6">
+                <span className="font-heading text-5xl font-semibold tabular-nums text-brand-text">{s.value}</span>
+                <span className="text-sm text-muted-foreground">{s.label}</span>
+              </div>
+            ))}
+          </Reveal>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {c.trust.items.map((it, i) => {
+              const Icon = TRUST_ICONS[i] ?? HeartHandshake;
+              return (
+                <Reveal key={it.title} delay={i * 0.06}>
+                  <div className="flex h-full flex-col gap-2 rounded-xl border border-border bg-card p-5">
+                    <Icon className="h-6 w-6 text-brand-text" strokeWidth={1.5} />
+                    <h3 className="font-semibold">{it.title}</h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{it.desc}</p>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Chamada final */}
+      <section className="pb-20 md:pb-28">
+        <div className="container mx-auto px-4">
+          <Reveal>
+            <div className="relative mx-auto max-w-5xl overflow-hidden rounded-3xl p-10 text-center text-white md:p-16" style={{ background: NAVY_BG }}>
+              <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full opacity-20 blur-3xl" style={{ background: "radial-gradient(circle, #f7b93b, transparent 70%)" }} />
+              <h2 className="relative mx-auto max-w-3xl font-heading text-4xl font-semibold leading-[1.1] tracking-tight [text-wrap:balance] md:text-5xl">{c.cta.heading}</h2>
+              <p className="relative mx-auto mt-5 max-w-xl text-lg text-white/70">{c.cta.sub}</p>
+              <div className="relative mt-8 flex flex-wrap justify-center gap-3">
+                <Link to="/auth?tab=signup">
+                  <Button size="lg" className="gap-2 bg-highlight text-[#1a1303] hover:brightness-95">{c.cta.primary}<ArrowRight className="h-4 w-4" /></Button>
+                </Link>
+                <Link to="/planos">
+                  <Button size="lg" variant="outline" className="border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white">{c.cta.secondary}</Button>
+                </Link>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      <LandingFooter description={c.footer} />
       <SalesAgent />
     </div>
   );

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { GraduationCap } from "lucide-react";
 
-export function LandingFooter() {
+export function LandingFooter({ description = "Plataforma de avaliação para as ciências da saúde: provas, OSCE, pacientes virtuais e simulações clínicas." }: { description?: string }) {
   return (
     <footer className="border-t bg-card/80">
       <div className="container mx-auto px-4 py-12">
@@ -9,11 +9,11 @@ export function LandingFooter() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <GraduationCap className="h-6 w-6 text-secondary" />
+              <GraduationCap className="h-6 w-6 text-highlight" />
               <span className="text-lg font-bold text-foreground">ProvaFácil</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Plataforma de criação e aplicação de provas para professores, educadores e instituições de ensino.
+              {description}
             </p>
           </div>
 
