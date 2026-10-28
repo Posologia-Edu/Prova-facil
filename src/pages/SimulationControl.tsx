@@ -1,3 +1,5 @@
+import FormAnswersView, { formatAnswerText } from "@/components/forms/FormAnswersView";
+import type { FormField } from "@/components/forms/types";
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -458,16 +460,7 @@ export default function SimulationControl() {
 
     return (
       <div className="space-y-2">
-        {fields.map((field: any) => (
-          <div key={field.id} className="space-y-1">
-            <p className="text-xs font-medium text-foreground">{field.label}</p>
-            <p className="text-xs text-muted-foreground bg-muted p-1.5 rounded">
-              {Array.isArray(answersData[field.id])
-                ? answersData[field.id].join(", ")
-                : answersData[field.id] || "—"}
-            </p>
-          </div>
-        ))}
+        <FormAnswersView fields={fields as FormField[]} answers={answersData} />
         {answersData._feedback && (
           <div className="space-y-1 border-t pt-2">
             <p className="text-xs font-medium text-foreground">{t("sim_feedback_label")}</p>
@@ -535,11 +528,18 @@ export default function SimulationControl() {
                 
                 // Add anamnesis answers if available
                 if (ra.anamnesisResponse?.answers_json) {
-                  Object.entries(ra.anamnesisResponse.answers_json as Record<string, any>)
-                    .filter(([k]) => k !== "_feedback")
-                    .forEach(([k, v]) => {
-                      items.push({ label: k, value: String(v || "—") });
-                    });
+                  const anamneseForm = forms.find((f: any) => f.form_type === "anamnesis");
+                  const campos: FormField[] = Array.isArray(anamneseForm?.content_json) ? (anamneseForm!.content_json as unknown as FormField[]) : [];
+                  const respostas = ra.anamnesisResponse.answers_json as Record<string, any>;
+                  if (campos.length > 0) {
+                    campos
+                      .filter((f) => f.type !== "section_header" && f.type !== "image_block" && f.type !== "video_block")
+                      .forEach((f) => items.push({ label: f.label, value: formatAnswerText(f, respostas[f.id]) }));
+                  } else {
+                    Object.entries(respostas)
+                      .filter(([k]) => k !== "_feedback")
+                      .forEach(([k, v]) => items.push({ label: k, value: String(v || "—") }));
+                  }
                 }
                 return { title: `Rodada ${ra.round.round_number} — Paciente: ${ra.patientName}`, items };
               });

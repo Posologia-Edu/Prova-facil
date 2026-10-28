@@ -1,3 +1,4 @@
+import FormAnswersView from "@/components/forms/FormAnswersView";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import FormRenderer from "@/components/forms/FormRenderer";
@@ -901,16 +902,7 @@ export default function SimulationJoin() {
 
     return (
       <div className="space-y-3">
-        {fields.map((field) => (
-          <div key={field.id} className="space-y-1">
-            <p className="text-sm font-medium text-foreground">{field.label}</p>
-            <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
-              {Array.isArray(answersData[field.id])
-                ? answersData[field.id].join(", ")
-                : answersData[field.id] || "—"}
-            </p>
-          </div>
-        ))}
+        <FormAnswersView fields={fields} answers={answersData} />
         {answersData._feedback && (
           <div className="space-y-1 border-t pt-2">
             <p className="text-sm font-medium text-foreground">{t("sim_feedback_label")}</p>
