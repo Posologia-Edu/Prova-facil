@@ -457,9 +457,15 @@ export default function SimulationControl() {
     if (!response || !form) return null;
     const fields = Array.isArray(form.content_json) ? form.content_json : [];
     const answersData = response.answers_json || {};
+    const naCount = (fields as FormField[]).filter((f) => f.allow_na && answersData[f.id] === "__na__").length;
 
     return (
       <div className="space-y-2">
+        {naCount > 0 && (
+          <p className="text-xs text-warning-ink bg-warning/10 rounded px-2 py-1">
+            {naCount} {naCount === 1 ? "critério marcado" : "critérios marcados"} como “Não se aplica”: a nota foi recalculada sem {naCount === 1 ? "ele" : "eles"}.
+          </p>
+        )}
         <FormAnswersView fields={fields as FormField[]} answers={answersData} />
         {answersData._feedback && (
           <div className="space-y-1 border-t pt-2">

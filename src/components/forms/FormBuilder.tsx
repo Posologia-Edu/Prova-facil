@@ -662,6 +662,16 @@ export default function FormBuilder({ fields, onChange, showScores = false, scor
                     checked={field.required || false}
                     onCheckedChange={(v) => updateField(globalIdx, { required: v })}
                   />
+                  {showScores && (field.max_score || 0) > 0 && (
+                    <>
+                      <Label htmlFor={`na-${field.id}`} className="text-xs text-muted-foreground ml-3">Permitir “Não se aplica”</Label>
+                      <Switch
+                        id={`na-${field.id}`}
+                        checked={field.allow_na || false}
+                        onCheckedChange={(v) => updateField(globalIdx, { allow_na: v })}
+                      />
+                    </>
+                  )}
                 </div>
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); duplicateField(globalIdx); }} title="Duplicar">
                   <Copy className="h-3.5 w-3.5" />

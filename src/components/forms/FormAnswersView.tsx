@@ -1,7 +1,8 @@
-import { FormField, tableColumns, tableRowCount } from "./types";
+import { FormField, isNotApplicable, tableColumns, tableRowCount } from "./types";
 
 /** Resposta de um campo como texto (relatórios e exportações). Tabelas viram uma linha por linha preenchida. */
 export function formatAnswerText(field: FormField, value: any): string {
+  if (isNotApplicable(value)) return "Não se aplica";
   if (field.type === "table") {
     const cols = tableColumns(field);
     const matriz: string[][] = Array.isArray(value) ? value : [];

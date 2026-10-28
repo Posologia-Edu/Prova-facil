@@ -23,6 +23,7 @@ const sim = (label: string, peso: number, description?: string): FormField => ({
   option_scores: { "0": peso, "1": peso / 2 },
   correct_answer: "0",
   required: false,
+  allow_na: true,
   ...(description ? { description } : {}),
 });
 
@@ -37,6 +38,7 @@ const nota = (label: string, peso: number, description?: string): FormField => (
   max_score: peso,
   correct_answer: "4",
   required: false,
+  allow_na: true,
   ...(description ? { description } : {}),
 });
 

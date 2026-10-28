@@ -205,6 +205,60 @@ export default function PatientScriptView({ roteiro, showGuide = false, classNam
   );
 }
 
+/**
+ * Pontos-chave do roteiro para quem observa: o que o paciente sabe e quando deve contar, para julgar se ele seguiu o roteiro.
+ * Fica de fora o que é orientação de atuação ao paciente (falas prontas, dicas).
+ */
+export function ObserverScriptSummary({ caseItem }: { caseItem: { title?: string; script: string; roteiro?: unknown } }) {
+  const r = isPatientRoteiro(caseItem.roteiro) ? caseItem.roteiro : null;
+  return (
+    <details open className="rounded-lg border bg-sunken p-4 text-sm">
+      <summary className="cursor-pointer font-medium">Roteiro do paciente: pontos-chave para você julgar se ele seguiu o roteiro</summary>
+      <div className="mt-3 space-y-4">
+        {!r ? (
+          <div className="whitespace-normal"><ClinicalCaseContent content={caseItem.script} /></div>
+        ) : (
+          <>
+            <p>
+              <strong>{r.identidade.nome}</strong> ({r.identidade.idade} anos, {r.identidade.sexo.toLowerCase()}, {r.identidade.ocupacao}). {r.motivo_da_vinda}
+            </p>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">O que sabe e quando conta</p>
+              {r.fatos.map((f) => (
+                <p key={f.id} className="flex flex-wrap items-baseline gap-x-2">
+                  <StatusBadge tone={NIVEL_TONE[f.nivel]}>{NIVEL_SELO[f.nivel]}</StatusBadge>
+                  <span>{f.conteudo}</span>
+                  <span className="text-muted-foreground">Quando: {f.quando}</span>
+                </p>
+              ))}
+            </div>
+            {r.medicamentos.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary">Medicamentos (prescrito × uso real)</p>
+                <ul className="list-disc space-y-1 pl-5">
+                  {r.medicamentos.map((m, i) => (
+                    <li key={i}><strong>{m.como_chama}</strong>: prescrito {m.prescrito}; usa {m.uso_real}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {r.achados.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary">Achados (só se o farmacêutico pedir ou aferir)</p>
+                <ul className="list-disc space-y-1 pl-5">
+                  {r.achados.map((a, i) => (
+                    <li key={i}>{a.titulo}: {a.conteudo}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </details>
+  );
+}
+
 /** Um caso do roteiro da simulação: mostra o roteiro estruturado (importado de paciente virtual) ou o texto simples. */
 export function CaseScriptContent({ caseItem, showGuide = false }: { caseItem: { script: string; roteiro?: unknown }; showGuide?: boolean }) {
   if (isPatientRoteiro(caseItem.roteiro)) return <PatientScriptView roteiro={caseItem.roteiro} showGuide={showGuide} />;

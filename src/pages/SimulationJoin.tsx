@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
-import { CaseScriptContent } from "@/components/simulation/PatientScriptView";
+import { CaseScriptContent, ObserverScriptSummary } from "@/components/simulation/PatientScriptView";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -424,12 +424,8 @@ export default function SimulationJoin() {
     let score = 0;
     if (form.form_type === "observer_eval" || form.form_type === "professor_eval") {
       const fields = form.content_json as FormField[];
-      const { computeFieldScore } = await import("@/components/forms/types");
-      fields.forEach((field) => {
-        if (field.max_score && answers[field.id]) {
-          score += computeFieldScore(field, answers[field.id]);
-        }
-      });
+      const { computeFormScore } = await import("@/components/forms/types");
+      score = computeFormScore(fields, answers);
     }
 
     const { error } = await supabase.from("simulation_responses").insert({
@@ -810,7 +806,7 @@ export default function SimulationJoin() {
       assignments: [
         { participantId: soloProfessionalId, role: "professional", pairIndex: 0, caseIndex: soloCaseIndex },
         { participantId: soloPatientId, role: "patient", pairIndex: 0, caseIndex: soloCaseIndex },
-        { participantId: soloObserverId, role: "observer", pairIndex: 1 },
+        { participantId: soloObserverId, role: "observer", pairIndex: 1, caseIndex: soloCaseIndex },
       ],
     }];
     setLocalRounds(rounds);
@@ -1416,6 +1412,7 @@ export default function SimulationJoin() {
                 <CardContent className="space-y-4">
                   {observerForm ? (
                     <div className="border rounded-lg p-4 space-y-2">
+                      {clinicalCases[caseIdx] && <ObserverScriptSummary caseItem={clinicalCases[caseIdx]} />}
                       <p className="text-sm font-semibold">{observerForm.title || "Formulário do Observador"}</p>
                       <FormRenderer
                         fields={(observerForm.content_json as FormField[])}
@@ -1761,11 +1758,8 @@ export default function SimulationJoin() {
                 </div>
 
                 <Button onClick={async () => {
-                  let score = 0;
-                  const { computeFieldScore } = await import("@/components/forms/types");
-                  fields.forEach((field) => {
-                    if (field.max_score && answers[field.id]) score += computeFieldScore(field, answers[field.id]);
-                  });
+                  const { computeFormScore } = await import("@/components/forms/types");
+                  const score = computeFormScore(fields, answers);
                   const { error } = await supabase.from("simulation_responses").insert({
                     round_id: activeRound.id,
                     participant_id: participant.id,
@@ -1826,6 +1820,10 @@ export default function SimulationJoin() {
               </div>
             ) : (
               <>
+                {assignment?.assigned_role === "observer" && (() => {
+                  const observedCase = clinicalCases[assignment?.case_index ?? 0];
+                  return observedCase ? <ObserverScriptSummary caseItem={observedCase} /> : null;
+                })()}
                 <FormRenderer
                   fields={(form.content_json as FormField[])}
                   answers={answers}

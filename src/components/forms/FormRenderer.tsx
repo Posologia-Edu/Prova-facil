@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Star, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { FormField, getSections, tableColumns, tableRowCount } from "./types";
+import { FormField, NA_ANSWER, getSections, tableColumns, tableRowCount } from "./types";
 import HandwritingInput from "./HandwritingInput";
 
 function CopyTextButton({ text }: { text: string }) {
@@ -211,7 +211,7 @@ export default function FormRenderer({
               )}
               <div className="flex items-center gap-4">
                 <Slider
-                  value={[answers[field.id] || 0]}
+                  value={[answers[field.id] === NA_ANSWER ? 0 : answers[field.id] || 0]}
                   onValueChange={([v]) => onChange({ ...answers, [field.id]: v })}
                   max={scaleMax}
                   step={1}
@@ -219,12 +219,29 @@ export default function FormRenderer({
                   disabled={readOnly}
                 />
                 <span className="font-mono text-sm w-12 text-right">
-                  {answers[field.id] || 0}/{scaleMax}
+                  {answers[field.id] === NA_ANSWER ? "N/A" : `${answers[field.id] || 0}/${scaleMax}`}
                 </span>
               </div>
             </div>
           );
         })()}
+
+        {field.allow_na && (
+          <div className="flex items-center gap-2 pt-0.5">
+            <Checkbox
+              id={`${idPrefix}${field.id}-na`}
+              checked={answers[field.id] === NA_ANSWER}
+              onCheckedChange={(checked) => {
+                const next = { ...answers };
+                if (checked) next[field.id] = NA_ANSWER;
+                else delete next[field.id];
+                onChange(next);
+              }}
+              disabled={readOnly}
+            />
+            <Label htmlFor={`${idPrefix}${field.id}-na`} className="text-sm font-normal text-muted-foreground">Não se aplica a este caso</Label>
+          </div>
+        )}
 
         {field.type === "rating" && (
           <div className="flex gap-1">

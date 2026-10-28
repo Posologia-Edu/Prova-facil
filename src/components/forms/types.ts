@@ -46,7 +46,40 @@ export type FormField = {
   feedback_correct?: string;
   /** Feedback shown when answer is incorrect */
   feedback_incorrect?: string;
+  /** Mostra "Não se aplica" ao responder: o item sai da conta e a nota é recalculada sobre o que se aplicava. */
+  allow_na?: boolean;
 };
+
+/** Valor gravado na resposta de um campo marcado como "Não se aplica". */
+export const NA_ANSWER = "__na__";
+
+export function isNotApplicable(answerValue: any): boolean {
+  return answerValue === NA_ANSWER;
+}
+
+/**
+ * Nota total do formulário. Os campos marcados "Não se aplica" saem da conta e a nota é recalculada sobre o total do
+ * que se aplicava (ex.: 6 de 9 pontos aplicáveis num formulário de 10 vale 6,67). Sem nenhum "Não se aplica", é a soma simples.
+ */
+export function computeFormScore(fields: FormField[], answers: Record<string, any>): number {
+  let earned = 0;
+  let maxAll = 0;
+  let maxApplicable = 0;
+  let anyNa = false;
+  for (const field of fields) {
+    if (!field.max_score) continue;
+    maxAll += field.max_score;
+    if (field.allow_na && isNotApplicable(answers[field.id])) {
+      anyNa = true;
+      continue;
+    }
+    maxApplicable += field.max_score;
+    if (answers[field.id]) earned += computeFieldScore(field, answers[field.id]);
+  }
+  if (!anyNa) return earned;
+  if (maxApplicable === 0) return 0;
+  return Math.round((earned / maxApplicable) * maxAll * 100) / 100;
+}
 
 /** Compute the proportional score for a field given the answer value.
  * For scale/rating fields, the score is proportional to the position on the scale.
