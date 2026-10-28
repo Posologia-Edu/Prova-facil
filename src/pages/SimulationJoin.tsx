@@ -59,6 +59,7 @@ export default function SimulationJoin() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [feedback, setFeedback] = useState("");
   const [feedbackAiLoading, setFeedbackAiLoading] = useState(false);
+  const [feedbackAiNotas, setFeedbackAiNotas] = useState<{ acrescentado: string[]; divergencias: string[] } | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [allRounds, setAllRounds] = useState<any[]>([]);
@@ -431,13 +432,18 @@ export default function SimulationJoin() {
       return;
     }
     if (feedback.trim() && !window.confirm("Já existe um feedback escrito. Substituir pelo texto da IA?")) return;
+    // Notas marcadas nos critérios (sem os "Não se aplica" e sem os não respondidos): a IA usa só os destaques
+    const criterios = fields
+      .filter((f) => f.type === "scale" && (f.max_score || 0) > 0 && typeof answers[f.id] === "number")
+      .map((f) => ({ criterio: f.label, nota: answers[f.id] as number, ancoras: f.description || "" }));
     setFeedbackAiLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("write-professor-feedback", {
-        body: { room_id: room?.id, access_code: room?.access_code, participant_id: participant?.id, pontos_fortes, oportunidades },
+        body: { room_id: room?.id, access_code: room?.access_code, participant_id: participant?.id, pontos_fortes, oportunidades, criterios },
       });
       if (error || data?.error) throw new Error(data?.error || error?.message || "Falha ao chamar a IA");
       setFeedback(data.feedback);
+      setFeedbackAiNotas({ acrescentado: data.acrescentado || [], divergencias: data.divergencias || [] });
       toast({ title: "Feedback escrito pela IA", description: "Leia, ajuste o que quiser e envie." });
     } catch (e) {
       toast({ title: "Não foi possível escrever o feedback com a IA", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
@@ -1785,13 +1791,25 @@ export default function SimulationJoin() {
                       <Sparkles className="h-3.5 w-3.5" />{feedbackAiLoading ? "Escrevendo..." : "Escrever feedback com IA"}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">A IA escreve a partir dos pontos fortes e das oportunidades de melhoria acima. Você revisa antes de enviar.</p>
+                  <p className="text-xs text-muted-foreground">A IA escreve a partir dos pontos fortes e das oportunidades de melhoria acima, e complementa com os destaques das notas que você marcou. Você revisa antes de enviar.</p>
                   <Textarea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     placeholder={t("sim_feedback_placeholder")}
                     rows={6}
                   />
+                  {feedbackAiNotas && feedbackAiNotas.acrescentado.length > 0 && (
+                    <div className="rounded-md bg-sunken p-3 text-xs space-y-1">
+                      <p className="font-medium">A IA acrescentou a partir das notas (não estava nos seus textos):</p>
+                      <ul className="list-disc pl-5">{feedbackAiNotas.acrescentado.map((a, i) => <li key={i}>{a}</li>)}</ul>
+                    </div>
+                  )}
+                  {feedbackAiNotas && feedbackAiNotas.divergencias.length > 0 && (
+                    <div className="rounded-md bg-warning/10 p-3 text-xs space-y-1 text-warning-ink">
+                      <p className="font-medium">Atenção: notas e anotações não batem</p>
+                      <ul className="list-disc pl-5">{feedbackAiNotas.divergencias.map((a, i) => <li key={i}>{a}</li>)}</ul>
+                    </div>
+                  )}
                 </div>
 
                 <Button onClick={async () => {
