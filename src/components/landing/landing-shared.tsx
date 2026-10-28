@@ -1,7 +1,7 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { GraduationCap, Globe, Menu } from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
+import { animate, motion, useInView, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import FloatingAuth from "@/components/FloatingAuth";
@@ -26,6 +26,63 @@ export function Reveal({ children, delay = 0, className }: { children: ReactNode
     >
       {children}
     </motion.div>
+  );
+}
+
+/**
+ * Conta de zero até o número que abre o texto ("4/5", "7,9", "13") quando entra na tela.
+ * Em repouso (e com movimento reduzido) mostra exatamente o texto original.
+ */
+export function CountUp({ text, duration = 1.2, delay = 0 }: { text: string; duration?: number; delay?: number }) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const m = /^(d+(?:[.,]d+)?)(.*)$/.exec(text);
+  const [value, setValue] = useState<number | null>(m && !reduce ? 0 : null);
+
+  useEffect(() => {
+    if (!m || reduce) { setValue(null); return; }
+    if (!inView) return;
+    const target = parseFloat(m[1].replace(",", "."));
+    const controls = animate(0, target, { duration, delay, ease: EASE, onUpdate: setValue, onComplete: () => setValue(null) });
+    return () => controls.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView, reduce, text, duration, delay]);
+
+  if (!m || value === null) return <span ref={ref}>{text}</span>;
+  const decimals = (m[1].split(/[.,]/)[1] ?? "").length;
+  const sep = m[1].includes(",") ? "," : ".";
+  return <span ref={ref}>{value.toFixed(decimals).replace(".", sep)}{m[2]}</span>;
+}
+
+/** Escreve o texto letra a letra quando entra na tela; o espaço do texto inteiro fica reservado, sem pulo de layout. */
+export function Typewriter({ text, delay = 0, cps = 60 }: { text: string; delay?: number; cps?: number }) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true });
+  const [n, setN] = useState(reduce ? text.length : 0);
+
+  useEffect(() => {
+    if (reduce) { setN(text.length); return; }
+    if (!inView) return;
+    let raf = 0;
+    const timer = window.setTimeout(() => {
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const k = Math.min(text.length, Math.floor(((now - t0) / 1000) * cps));
+        setN(k);
+        if (k < text.length) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }, delay * 1000);
+    return () => { window.clearTimeout(timer); cancelAnimationFrame(raf); };
+  }, [inView, reduce, text, delay, cps]);
+
+  return (
+    <span ref={ref}>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true">{text.slice(0, n)}<span className="opacity-0">{text.slice(n)}</span></span>
+    </span>
   );
 }
 

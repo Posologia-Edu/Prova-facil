@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -24,10 +25,22 @@ export default function Features() {
   const { language } = useLanguage();
   const c = FEATURES_PAGE[language] ?? FEATURES_PAGE.pt;
   const reduce = useReducedMotion();
+  const [active, setActive] = useState<string | null>(null);
   useLandingTheme();
 
+  // Scroll spy: o atalho do grupo que ocupa a faixa de leitura da tela fica destacado.
+  useEffect(() => {
+    const sections = c.groups.map((g) => document.getElementById(g.id)).filter((el): el is HTMLElement => !!el);
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach((e) => { if (e.isIntersecting) setActive(e.target.id); }),
+      { rootMargin: "-30% 0px -60% 0px" },
+    );
+    sections.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [c.groups]);
+
   return (
-    <div className="landing-root min-h-screen overflow-x-hidden bg-background text-foreground">
+    <div className="landing-root min-h-screen overflow-x-clip bg-background text-foreground">
       <LandingNav />
 
       {/* Topo */}
@@ -41,21 +54,28 @@ export default function Features() {
             </h1>
             <p className="text-lg leading-relaxed text-white/70">{c.sub}</p>
           </motion.div>
-          <motion.nav initial={reduce ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.12, ease: EASE }} aria-label={c.jump} className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 font-mono text-xs uppercase tracking-wide text-white/50">{c.jump}</span>
-            {c.groups.map((g) => (
-              <a key={g.id} href={`#${g.id}`} className="rounded-full border border-white/20 px-3.5 py-1.5 text-sm text-white/85 transition-colors hover:bg-white/10">{g.label}</a>
-            ))}
-          </motion.nav>
         </div>
       </section>
+
+      {/* Atalhos: barra fixa que acompanha o grupo visível */}
+      <nav aria-label={c.jump} className="sticky top-16 z-40 border-b border-border bg-background/85 backdrop-blur-xl">
+        <div className="container mx-auto flex items-center gap-2 overflow-x-auto px-4 py-2.5 [scrollbar-width:none]">
+          <span className="mr-1 shrink-0 font-mono text-xs uppercase tracking-wide text-muted-foreground">{c.jump}</span>
+          {c.groups.map((g) => (
+            <a
+              key={g.id} href={`#${g.id}`} aria-current={active === g.id ? "true" : undefined}
+              className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm transition-colors ${active === g.id ? "border-highlight bg-highlight text-[#1a1303] font-medium" : "border-border text-muted-foreground hover:bg-sunken hover:text-foreground"}`}
+            >{g.label}</a>
+          ))}
+        </div>
+      </nav>
 
       {/* Grupos */}
       <div>
         {c.groups.map((g, gi) => (
-          <section key={g.id} id={g.id} className={`border-b border-border py-16 md:py-20 ${gi % 2 === 1 ? "bg-sunken" : ""}`}>
+          <section key={g.id} id={g.id} className={`scroll-mt-28 border-b border-border py-16 md:py-20 ${gi % 2 === 1 ? "bg-sunken" : ""}`}>
             <div className="container mx-auto grid gap-10 px-4 lg:grid-cols-[280px_1fr]">
-              <Reveal className="flex flex-col gap-3 lg:sticky lg:top-24 lg:self-start">
+              <Reveal className="flex flex-col gap-3 lg:sticky lg:top-36 lg:self-start">
                 <Eyebrow>{String(gi + 1).padStart(2, "0")}</Eyebrow>
                 <h2 className="font-heading text-3xl font-semibold leading-tight tracking-tight [text-wrap:balance] md:text-4xl">{g.label}</h2>
                 <p className="text-muted-foreground">{g.intro}</p>

@@ -15,7 +15,7 @@ export type LandingContent = {
   areas: { eyebrow: string; heading: string; sub: string; items: string[]; mostComplete: string };
   modules: { eyebrow: string; heading: string; sub: string; sim: { tag: string; rows: string[]; na: string }; items: { title: string; premium?: boolean; desc: string; tags: string[] }[] };
   ai: {
-    eyebrow: string; heading: string; sub: string; quote: string;
+    eyebrow: string; heading: string; sub: string; quote: string; confirm: string;
     items: { title: string; desc: string; sample: string }[];
   };
   roles: { eyebrow: string; heading: string; teacher: { label: string; points: string[] }; student: { label: string; points: string[] } };
@@ -72,6 +72,7 @@ const pt: LandingContent = {
     heading: "A IA sugere, o professor decide",
     sub: "Ela faz o trabalho repetitivo e deixa à vista o que sugeriu. Nada vira nota sem a sua confirmação.",
     quote: "A nota final é sempre do professor.",
+    confirm: "Professor confirma",
     items: [
       { title: "Gera questões e casos", desc: "Múltipla escolha, V/F e dissertativas por tópico e nível de Bloom, prontas para revisar.", sample: "10 questões de farmacologia, Bloom 3" },
       { title: "Sugere a pontuação do registro", desc: "Compara o registro do aluno com o roteiro do paciente e justifica cada critério. Você ajusta e confirma.", sample: "Plano de cuidado: sugestão 3 de 4 · você confirma" },
@@ -152,6 +153,7 @@ const en: LandingContent = {
     heading: "AI suggests, the teacher decides",
     sub: "It does the repetitive work and shows what it suggested. Nothing becomes a grade without your confirmation.",
     quote: "The final grade is always the teacher's.",
+    confirm: "Teacher confirms",
     items: [
       { title: "Generates questions and cases", desc: "Multiple choice, true/false and essay questions by topic and Bloom level, ready to review.", sample: "10 pharmacology questions, Bloom 3" },
       { title: "Suggests the write-up score", desc: "Compares the student's record with the patient script and explains each criterion. You adjust and confirm.", sample: "Care plan: suggested 3 of 4 · you confirm" },
@@ -232,6 +234,7 @@ const es: LandingContent = {
     heading: "La IA sugiere, el profesor decide",
     sub: "Hace el trabajo repetitivo y deja a la vista lo que sugirió. Nada se vuelve nota sin su confirmación.",
     quote: "La nota final es siempre del profesor.",
+    confirm: "Profesor confirma",
     items: [
       { title: "Genera preguntas y casos", desc: "Opción múltiple, V/F y de desarrollo por tema y nivel de Bloom, listas para revisar.", sample: "10 preguntas de farmacología, Bloom 3" },
       { title: "Sugiere la puntuación del registro", desc: "Compara el registro del alumno con el guion del paciente y justifica cada criterio. Usted ajusta y confirma.", sample: "Plan de cuidado: sugerido 3 de 4 · usted confirma" },

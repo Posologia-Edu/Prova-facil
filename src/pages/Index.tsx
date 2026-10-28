@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +10,8 @@ import { SalesAgent } from "@/components/SalesAgent";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { LANDING_CONTENT, type LandingContent } from "@/lib/landing-content";
 import { supabase } from "@/integrations/supabase/client";
-import { motion, useReducedMotion } from "framer-motion";
-import { EASE, NAVY_BG, Reveal, Eyebrow, SectionHead, LandingNav, useLandingTheme } from "@/components/landing/landing-shared";
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import { EASE, NAVY_BG, Reveal, Eyebrow, SectionHead, LandingNav, CountUp, Typewriter, useLandingTheme } from "@/components/landing/landing-shared";
 
 const AREA_ICONS: LucideIcon[] = [Pill, HeartPulse, Stethoscope, Smile, Apple, Activity, Microscope];
 const MODULE_ICONS: LucideIcon[] = [ClipboardList, MessagesSquare, Stethoscope, FileText, Gavel, LayoutGrid];
@@ -30,25 +30,67 @@ function HeroCards({ c }: { c: LandingContent["cards"] }) {
       <motion.div {...enter(0)} className="flex flex-col gap-2.5 rounded-xl bg-[#eaf0ff] p-4 text-[13px] text-[#0c1a38] shadow-3">
         <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#55627f]">{c.debrief} · {c.example}</span>
         <div className="flex flex-wrap gap-2">
-          <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl">4/5</b>{c.found}</div>
-          <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl">4/4</b>{c.essential}</div>
+          <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl tabular-nums"><CountUp text="4/5" delay={0.9} /></b>{c.found}</div>
+          <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl tabular-nums"><CountUp text="4/4" delay={1} /></b>{c.essential}</div>
         </div>
-        <div className="rounded-r-lg border-l-[3px] border-[#e08a1e] bg-[#fdf0dc] px-3 py-1.5"><b>{c.improveLabel}</b> {c.improveText}</div>
+        <motion.div
+          initial={reduce ? false : { opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 1.3, ease: EASE }}
+          className="rounded-r-lg border-l-[3px] border-[#e08a1e] bg-[#fdf0dc] px-3 py-1.5"
+        ><b>{c.improveLabel}</b> {c.improveText}</motion.div>
       </motion.div>
       <motion.div {...enter(1)} className="flex flex-col gap-2.5 rounded-xl bg-[#eaf0ff] p-4 text-[13px] text-[#0c1a38] shadow-3 sm:ml-8">
         <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#55627f]">{c.grade} · {c.example}</span>
         <div className="flex flex-wrap gap-2">
-          <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl">7,9</b>{c.gradeSub}</div>
+          <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl tabular-nums"><CountUp text="7,9" delay={1.1} /></b>{c.gradeSub}</div>
           <div className="min-w-[110px] flex-1 rounded-lg bg-[#dbe5fb] px-3 py-2"><b className="block font-heading text-2xl">{c.naCount}</b>{c.naSub}</div>
         </div>
       </motion.div>
       <motion.div {...enter(2)} className="flex flex-col gap-2.5 rounded-xl bg-[#eaf0ff] p-4 text-[13px] text-[#0c1a38] shadow-3">
         <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#55627f]">{c.feedback} · {c.example}</span>
-        <div className="rounded-r-lg border-l-[3px] border-[#1d7a4f] bg-[#def3e7] px-3 py-1.5">{c.feedbackText}</div>
+        <div className="rounded-r-lg border-l-[3px] border-[#1d7a4f] bg-[#def3e7] px-3 py-1.5"><Typewriter text={c.feedbackText} delay={1.4} /></div>
         <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-[#0c1a38] px-3 py-1 text-xs font-semibold text-[#f7b93b]">
           <Sparkles className="h-3 w-3" />{c.aiBadge}
         </span>
       </motion.div>
+    </div>
+  );
+}
+
+/** Ponto da linha dos passos: acende quando o traço chega nele. */
+function RailDot({ progress, at, reduce, className }: { progress: MotionValue<number>; at: number; reduce: boolean | null; className: string }) {
+  const opacity = useTransform(progress, [at - 0.05, at], [0, 1]);
+  return (
+    <span className={`absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border-2 border-border bg-sunken ${className}`}>
+      <motion.span style={{ opacity: reduce ? 1 : opacity }} className="absolute -inset-0.5 rounded-full bg-highlight" />
+    </span>
+  );
+}
+
+/** Como funciona: a linha se desenha ligando os passos 1, 2 e 3 conforme a rolagem (só em telas largas). */
+function HowSteps({ steps }: { steps: { title: string; desc: string }[] }) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 85%", "start 35%"] });
+  return (
+    <div ref={ref} className="relative md:pt-9">
+      <div aria-hidden="true" className="pointer-events-none absolute left-[16.67%] right-[16.67%] top-2 hidden h-0.5 md:block">
+        <div className="absolute inset-0 rounded-full bg-border" />
+        <motion.div className="absolute inset-0 origin-left rounded-full bg-highlight" style={{ scaleX: reduce ? 1 : scrollYProgress }} />
+        <RailDot progress={scrollYProgress} at={0} reduce={reduce} className="left-0 -translate-x-1/2" />
+        <RailDot progress={scrollYProgress} at={0.5} reduce={reduce} className="left-1/2 -translate-x-1/2" />
+        <RailDot progress={scrollYProgress} at={1} reduce={reduce} className="left-full -translate-x-1/2" />
+      </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        {steps.map((s, i) => (
+          <Reveal key={s.title} delay={i * 0.08}>
+            <div className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-6">
+              <span className="font-heading text-5xl font-semibold text-highlight">{i + 1}</span>
+              <h3 className="font-heading text-xl font-semibold">{s.title}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">{s.desc}</p>
+            </div>
+          </Reveal>
+        ))}
+      </div>
     </div>
   );
 }
@@ -138,7 +180,10 @@ const Index = () => {
               const span = ["lg:col-span-7 lg:row-span-2", "lg:col-span-5", "lg:col-span-5", "lg:col-span-4", "lg:col-span-4", "lg:col-span-4"][i];
               return (
                 <Reveal key={m.title} delay={(i % 3) * 0.06} className={span}>
-                  <div className={`flex h-full flex-col justify-between gap-6 rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-2 ${i === 0 ? "md:p-9" : ""}`}>
+                  <motion.div
+                    whileHover={reduce ? undefined : { y: -4 }} transition={{ duration: 0.25, ease: EASE }}
+                    className={`flex h-full flex-col justify-between gap-6 rounded-2xl border border-border bg-card p-6 transition-[box-shadow,border-color] duration-300 hover:border-highlight/60 hover:shadow-[0_14px_36px_-14px_rgba(247,185,59,0.5)] ${i === 0 ? "md:p-9" : ""}`}
+                  >
                     <div className="flex flex-col gap-3">
                       <Icon className={`${i === 0 ? "h-11 w-11" : "h-7 w-7"} text-accent-ink dark:text-highlight`} strokeWidth={1.4} />
                       <div className="flex flex-wrap items-center gap-2.5">
@@ -156,10 +201,24 @@ const Index = () => {
                             <div key={label} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-sm">
                               <span className="min-w-0">{label}</span>
                               {level === null ? (
-                                <span className="rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">{c.modules.sim.na}</span>
+                                <motion.span
+                                  initial={reduce ? false : { opacity: 0, scale: 0.85 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
+                                  transition={{ duration: 0.4, delay: 1.9, ease: EASE }}
+                                  className="rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground"
+                                >{c.modules.sim.na}</motion.span>
                               ) : (
                                 <span className="flex items-center gap-1">
-                                  {[1, 2, 3, 4].map((n) => <span key={n} className={`h-2 w-7 rounded-full ${n <= level ? "bg-highlight" : "bg-border"}`} />)}
+                                  {[1, 2, 3, 4].map((n) => (
+                                    <span key={n} className="relative h-2 w-7 overflow-hidden rounded-full bg-border">
+                                      {n <= level && (
+                                        <motion.span
+                                          initial={reduce ? false : { scaleX: 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true }}
+                                          transition={{ duration: 0.4, delay: 0.5 + r * 0.5 + n * 0.12, ease: EASE }}
+                                          className="absolute inset-0 origin-left rounded-full bg-highlight"
+                                        />
+                                      )}
+                                    </span>
+                                  ))}
                                   <span className="ml-1 font-mono text-xs text-muted-foreground">{level}/4</span>
                                 </span>
                               )}
@@ -171,7 +230,7 @@ const Index = () => {
                     <div className="flex flex-wrap gap-1.5">
                       {m.tags.map((t) => <span key={t} className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs text-brand-text">{t}</span>)}
                     </div>
-                  </div>
+                  </motion.div>
                 </Reveal>
               );
             })}
@@ -190,7 +249,14 @@ const Index = () => {
                   <Sparkles className="h-5 w-5 text-highlight" />
                   <h3 className="font-heading text-xl font-semibold">{it.title}</h3>
                   <p className="text-sm leading-relaxed text-white/70">{it.desc}</p>
-                  <span className="mt-auto inline-flex self-start rounded-md bg-white/10 px-2.5 py-1 font-mono text-xs text-white/85">{it.sample}</span>
+                  <div className="mt-auto flex flex-wrap items-center gap-2">
+                    <span className="inline-flex rounded-md bg-white/10 px-2.5 py-1 font-mono text-xs text-white/85">{it.sample}</span>
+                    <motion.span
+                      initial={reduce ? false : { opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: 1 + (i % 2) * 0.15, ease: EASE }}
+                      className="inline-flex items-center gap-1 rounded-full bg-[#1d7a4f]/25 px-2.5 py-1 text-xs font-medium text-[#7fe0ae]"
+                    ><Check className="h-3 w-3" />{c.ai.confirm}</motion.span>
+                  </div>
                 </div>
               </Reveal>
             ))}
@@ -214,14 +280,23 @@ const Index = () => {
                 </button>
               ))}
             </div>
-            <ul className="grid gap-3 md:grid-cols-2">
-              {rolePoints.map((p) => (
-                <li key={p} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.ul
+                key={role} className="grid gap-3 md:grid-cols-2"
+                initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -6 }}
+                transition={{ duration: 0.22, ease: EASE }}
+              >
+              {rolePoints.map((p, pi) => (
+                <motion.li
+                  key={p} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4"
+                  initial={reduce ? false : { opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35, delay: 0.06 + pi * 0.06, ease: EASE }}
+                >
                   <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success-soft text-success"><Check className="h-3.5 w-3.5" /></span>
                   <span>{p}</span>
-                </li>
+                </motion.li>
               ))}
-            </ul>
+              </motion.ul>
+            </AnimatePresence>
           </Reveal>
         </div>
       </section>
@@ -230,17 +305,7 @@ const Index = () => {
       <section id="como-funciona" className="bg-sunken py-20 md:py-28">
         <div className="container mx-auto flex flex-col gap-12 px-4">
           <SectionHead eyebrow={c.how.eyebrow} title={c.how.heading} />
-          <div className="grid gap-6 md:grid-cols-3">
-            {c.how.steps.map((s, i) => (
-              <Reveal key={s.title} delay={i * 0.08}>
-                <div className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-6">
-                  <span className="font-heading text-5xl font-semibold text-highlight">{i + 1}</span>
-                  <h3 className="font-heading text-xl font-semibold">{s.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{s.desc}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+          <HowSteps steps={c.how.steps} />
         </div>
       </section>
 
@@ -251,7 +316,7 @@ const Index = () => {
           <Reveal className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3">
             {c.trust.stats.map((s) => (
               <div key={s.label} className="flex flex-col gap-1 bg-card p-6">
-                <span className="font-heading text-5xl font-semibold tabular-nums text-brand-text">{s.value}</span>
+                <span className="font-heading text-5xl font-semibold tabular-nums text-brand-text"><CountUp text={s.value} /></span>
                 <span className="text-sm text-muted-foreground">{s.label}</span>
               </div>
             ))}
