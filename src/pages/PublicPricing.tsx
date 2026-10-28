@@ -1,44 +1,53 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, Check, Crown, Loader2, X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LandingFooter } from "@/components/LandingFooter";
 import { FREE_LIMITS } from "@/hooks/use-subscription";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import {
-  GraduationCap, ArrowLeft, ArrowRight, Check, X, Crown, Zap, Loader2
-} from "lucide-react";
+import { useLanguage } from "@/i18n/LanguageContext";
+import { PLANS_PAGE } from "@/lib/landing-pages-content";
+import { EASE, NAVY_BG, Reveal, Eyebrow, LandingNav, useLandingTheme } from "@/components/landing/landing-shared";
 
-const features = [
-  { name: "Questões por mês", free: `${FREE_LIMITS.questionsPerMonth}`, premium: "Ilimitado" },
-  { name: "Provas por mês", free: `${FREE_LIMITS.examsPerMonth}`, premium: "Ilimitado" },
-  { name: "Exportação em PDF", free: false, premium: true },
-  { name: "Provas online", free: false, premium: true },
-  { name: "Alunos por prova", free: `${FREE_LIMITS.studentsPerExam}`, premium: "Ilimitado" },
-  { name: "Correção com IA", free: false, premium: true },
-  { name: "Monitoramento em tempo real", free: false, premium: true },
-  { name: "Suporte prioritário", free: false, premium: true },
+// Valores de cada recurso por plano, na mesma ordem dos nomes em PLANS_PAGE[idioma].rows.
+// "unlimited" vira o texto "Ilimitado" do idioma. Dados dos planos inalterados.
+const PLAN_VALUES: { free: string | boolean; premium: string | boolean }[] = [
+  { free: `${FREE_LIMITS.questionsPerMonth}`, premium: "unlimited" },
+  { free: `${FREE_LIMITS.examsPerMonth}`, premium: "unlimited" },
+  { free: false, premium: true },
+  { free: false, premium: true },
+  { free: `${FREE_LIMITS.studentsPerExam}`, premium: "unlimited" },
+  { free: false, premium: true },
+  { free: false, premium: true },
+  { free: false, premium: true },
 ];
-
-const renderValue = (value: string | boolean) => {
-  if (typeof value === "boolean") {
-    return value ? <Check className="h-4 w-4 text-success" /> : <X className="h-4 w-4 text-muted-foreground/40" />;
-  }
-  return <span className="text-sm font-medium">{value}</span>;
-};
 
 export default function PublicPricing() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { language } = useLanguage();
+  const c = PLANS_PAGE[language] ?? PLANS_PAGE.pt;
+  const reduce = useReducedMotion();
   const [loadingCheckout, setLoadingCheckout] = useState(false);
+  useLandingTheme();
+
+  const renderValue = (value: string | boolean) => {
+    if (typeof value === "boolean") {
+      return value
+        ? <Check className="h-4 w-4 text-success" aria-label="✓" />
+        : <X className="h-4 w-4 text-muted-foreground/40" aria-label="—" />;
+    }
+    return <span className="text-sm font-medium">{value === "unlimited" ? c.unlimited : value}</span>;
+  };
 
   const handleSubscribe = async () => {
     setLoadingCheckout(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        // User not logged in — redirect to auth with return intent
+        // Usuário sem login: vai ao cadastro com a intenção de assinar
         navigate("/auth?tab=signup&redirect=premium");
         return;
       }
@@ -48,105 +57,80 @@ export default function PublicPricing() {
         window.open(data.url, "_blank");
       }
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message || "Não foi possível iniciar o checkout.", variant: "destructive" });
+      toast({ title: c.errorTitle, description: err.message || c.errorFallback, variant: "destructive" });
     } finally {
       setLoadingCheckout(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <GraduationCap className="h-7 w-7 text-primary" />
-            <span className="text-lg font-heading font-medium text-primary">ProvaFácil</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="gap-1">
-                <ArrowLeft className="h-4 w-4" />
-                Voltar
-              </Button>
-            </Link>
-            <Link to="/auth">
-              <Button variant="outline" size="sm">Entrar</Button>
-            </Link>
-          </div>
+    <div className="landing-root min-h-screen overflow-x-hidden bg-background text-foreground">
+      <LandingNav />
+
+      <section className="relative overflow-hidden pb-24 pt-32 text-white md:pt-40" style={{ background: NAVY_BG }}>
+        <div className="pointer-events-none absolute -left-40 -top-40 h-[480px] w-[480px] rounded-full opacity-20 blur-3xl" style={{ background: "radial-gradient(circle, #f7b93b, transparent 70%)" }} />
+        <div className="container relative mx-auto flex max-w-3xl flex-col items-center gap-5 px-4 text-center">
+          <motion.div initial={reduce ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE }} className="flex flex-col items-center gap-5">
+            <Eyebrow light>{c.eyebrow}</Eyebrow>
+            <h1 className="font-heading text-5xl font-semibold leading-[1.05] tracking-tight [text-wrap:balance] md:text-6xl">{c.title}</h1>
+            <p className="text-lg leading-relaxed text-white/70">{c.sub}</p>
+          </motion.div>
         </div>
-      </header>
+      </section>
 
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-4xl text-center">
-          <h1 className="text-4xl font-heading font-medium mb-4 tracking-tight">Planos e Preços</h1>
-          <p className="text-muted-foreground mb-12 text-lg">
-            Comece gratuitamente e faça upgrade quando precisar de mais recursos.
-          </p>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {/* Free */}
-            <Card className="border-2">
-              <CardHeader>
-                <CardTitle className="font-heading text-xl font-medium flex items-center gap-2"><Zap className="h-5 w-5" /> Gratuito</CardTitle>
-                <CardDescription>Para experimentar o ProvaFácil</CardDescription>
-                <p className="font-heading text-4xl font-medium mt-2">R$ 0<span className="text-sm text-muted-foreground font-normal">/mês</span></p>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {features.map((f) => (
-                    <li key={f.name} className="flex items-center justify-between text-sm">
-                      <span>{f.name}</span>
-                      {renderValue(f.free)}
+      {/* Cartões dos planos sobem sobre a faixa do topo */}
+      <section className="pb-20 md:pb-28">
+        <div className="container relative z-10 mx-auto -mt-14 px-4">
+          <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-2">
+            <Reveal>
+              <div className="flex h-full flex-col gap-6 rounded-2xl border border-border bg-card p-7 shadow-2">
+                <div className="flex flex-col gap-1.5">
+                  <h2 className="flex items-center gap-2 font-heading text-2xl font-semibold"><Zap className="h-5 w-5 text-brand-text" />{c.free.name}</h2>
+                  <p className="text-sm text-muted-foreground">{c.free.desc}</p>
+                  <p className="mt-2 font-heading text-5xl font-semibold tracking-tight">R$ 0<span className="text-base font-normal text-muted-foreground">{c.perMonth}</span></p>
+                </div>
+                <ul className="flex flex-col gap-3">
+                  {c.rows.map((name, i) => (
+                    <li key={name} className="flex items-center justify-between gap-4 border-b border-border/60 pb-3 text-sm last:border-0 last:pb-0">
+                      <span>{name}</span>
+                      {renderValue(PLAN_VALUES[i].free)}
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-              <CardFooter>
-                <Link to="/auth?tab=signup" className="w-full">
-                  <Button variant="outline" className="w-full gap-2">
-                    Começar Grátis
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+                <Link to="/auth?tab=signup" className="mt-auto">
+                  <Button variant="outline" className="w-full gap-2">{c.free.cta}<ArrowRight className="h-4 w-4" /></Button>
                 </Link>
-              </CardFooter>
-            </Card>
+              </div>
+            </Reveal>
 
-            {/* Premium */}
-            <Card className="border-2 border-secondary shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-heading text-xl font-medium flex items-center gap-2"><Crown className="h-5 w-5 text-brand-text" /> Premium</CardTitle>
-                <CardDescription>Para professores que precisam de mais</CardDescription>
-                <p className="font-heading text-4xl font-medium mt-2">
-                  R$ 29,90<span className="text-sm text-muted-foreground font-normal">/mês</span>
-                </p>
-                <p className="text-xs text-success font-medium mt-1">🎉 7 dias grátis para testar • Cancele quando quiser</p>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {features.map((f) => (
-                    <li key={f.name} className="flex items-center justify-between text-sm">
-                      <span>{f.name}</span>
-                      {renderValue(f.premium)}
+            <Reveal delay={0.08}>
+              <div className="flex h-full flex-col gap-6 rounded-2xl border-2 border-highlight bg-card p-7 shadow-3">
+                <div className="flex flex-col gap-1.5">
+                  <h2 className="flex items-center gap-2 font-heading text-2xl font-semibold"><Crown className="h-5 w-5 text-accent-ink dark:text-highlight" />{c.premium.name}</h2>
+                  <p className="text-sm text-muted-foreground">{c.premium.desc}</p>
+                  <p className="mt-2 font-heading text-5xl font-semibold tracking-tight">R$ 29,90<span className="text-base font-normal text-muted-foreground">{c.perMonth}</span></p>
+                  <p className="text-xs font-medium text-success">{c.premium.trial}</p>
+                </div>
+                <ul className="flex flex-col gap-3">
+                  {c.rows.map((name, i) => (
+                    <li key={name} className="flex items-center justify-between gap-4 border-b border-border/60 pb-3 text-sm last:border-0 last:pb-0">
+                      <span>{name}</span>
+                      {renderValue(PLAN_VALUES[i].premium)}
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-              <CardFooter>
-                <Button
-                  onClick={handleSubscribe}
-                  disabled={loadingCheckout}
-                  className="w-full gap-2"
-                >
-                  {loadingCheckout ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Crown className="h-4 w-4" />
-                  )}
-                  {loadingCheckout ? "Redirecionando..." : "Assinar Premium"}
+                <Button onClick={handleSubscribe} disabled={loadingCheckout} className="mt-auto w-full gap-2 bg-highlight text-[#1a1303] hover:brightness-95">
+                  {loadingCheckout ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
+                  {loadingCheckout ? c.premium.loading : c.premium.cta}
                 </Button>
-              </CardFooter>
-            </Card>
+              </div>
+            </Reveal>
           </div>
+
+          <Reveal className="mt-10 text-center text-muted-foreground">
+            {c.featuresLink}{" "}
+            <Link to="/funcionalidades" className="font-medium text-foreground underline underline-offset-4 hover:text-accent-ink dark:hover:text-highlight">{c.featuresLinkCta}</Link>
+          </Reveal>
         </div>
       </section>
 

@@ -1,55 +1,21 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Activity, Apple, ArrowRight, Check, ClipboardList, Gavel, Globe, GraduationCap, HeartHandshake, HeartPulse, LayoutGrid,
-  Menu, MessagesSquare, Microscope, Pill, Plug, ShieldCheck, Smile, Sparkles, Stethoscope, Store, Accessibility, FileText, type LucideIcon,
+  Activity, Apple, ArrowRight, Check, ClipboardList, Gavel, HeartHandshake, HeartPulse, LayoutGrid,
+  MessagesSquare, Microscope, Pill, Plug, ShieldCheck, Smile, Sparkles, Stethoscope, Store, Accessibility, FileText, type LucideIcon,
 } from "lucide-react";
-import FloatingAuth from "@/components/FloatingAuth";
 import { LandingFooter } from "@/components/LandingFooter";
 import { SalesAgent } from "@/components/SalesAgent";
-import { useLanguage, LANGUAGE_FLAGS, LANGUAGE_LABELS, type Language } from "@/i18n/LanguageContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { LANDING_CONTENT, type LandingContent } from "@/lib/landing-content";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, useReducedMotion } from "framer-motion";
-
-const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
-// Hero e faixa de IA são sempre marinho, nos dois temas; o resto da página segue os tokens do sistema.
-const NAVY_BG = "linear-gradient(160deg, #0c1a38 0%, #14264d 60%, #1b3470 100%)";
+import { EASE, NAVY_BG, Reveal, Eyebrow, SectionHead, LandingNav, useLandingTheme } from "@/components/landing/landing-shared";
 
 const AREA_ICONS: LucideIcon[] = [Pill, HeartPulse, Stethoscope, Smile, Apple, Activity, Microscope];
 const MODULE_ICONS: LucideIcon[] = [ClipboardList, MessagesSquare, Stethoscope, FileText, Gavel, LayoutGrid];
 const TRUST_ICONS: LucideIcon[] = [ShieldCheck, Accessibility, Plug, Store];
-
-function Reveal({ children, delay = 0, className }: { children: ReactNode; delay?: number; className?: string }) {
-  const reduce = useReducedMotion();
-  return (
-    <motion.div
-      className={className}
-      initial={reduce ? false : { opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.6, delay, ease: EASE }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function Eyebrow({ children, light = false }: { children: ReactNode; light?: boolean }) {
-  return <span className={`font-mono text-xs uppercase tracking-[0.18em] ${light ? "text-highlight" : "text-accent-ink dark:text-highlight"}`}>{children}</span>;
-}
-
-function SectionHead({ eyebrow, title, sub, light = false, center = false }: { eyebrow: string; title: string; sub?: string; light?: boolean; center?: boolean }) {
-  return (
-    <Reveal className={`flex max-w-3xl flex-col gap-4 ${center ? "mx-auto items-center text-center" : ""}`}>
-      <Eyebrow light={light}>{eyebrow}</Eyebrow>
-      <h2 className={`font-heading text-4xl font-semibold leading-[1.1] tracking-tight [text-wrap:balance] md:text-5xl ${light ? "text-white" : ""}`}>{title}</h2>
-      {sub && <p className={`text-lg leading-relaxed ${light ? "text-white/70" : "text-muted-foreground"}`}>{sub}</p>}
-    </Reveal>
-  );
-}
 
 /** Cartões do produto (conteúdo de exemplo, sempre marcado como exemplo). */
 function HeroCards({ c }: { c: LandingContent["cards"] }) {
@@ -89,8 +55,7 @@ function HeroCards({ c }: { c: LandingContent["cards"] }) {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { language, setLanguage } = useLanguage();
-  const languages: Language[] = ["pt", "en", "es"];
+  const { language } = useLanguage();
   const c = LANDING_CONTENT[language] ?? LANDING_CONTENT.pt;
   const reduce = useReducedMotion();
   const [role, setRole] = useState<"teacher" | "student">("teacher");
@@ -105,88 +70,13 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  // Tema claro/escuro segue o aparelho só nesta página (o resto do app não tem alternância); restaura ao sair.
-  useEffect(() => {
-    const html = document.documentElement;
-    const tinhaEscuro = html.classList.contains("dark");
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    // ?tema=escuro ou ?tema=claro força o tema (útil para conferir e compartilhar)
-    const forcado = new URLSearchParams(window.location.search).get("tema");
-    const apply = () => html.classList.toggle("dark", forcado === "escuro" ? true : forcado === "claro" ? false : mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => {
-      mq.removeEventListener("change", apply);
-      html.classList.toggle("dark", tinhaEscuro);
-    };
-  }, []);
+  useLandingTheme();
 
-  const navLinks = [
-    { href: "#plataforma", label: c.nav.platform },
-    { href: "#areas", label: c.nav.areas },
-    { href: "#como-funciona", label: c.nav.how },
-  ];
-  const pageLinks = [
-    { to: "/funcionalidades", label: c.nav.features },
-    { to: "/planos", label: c.nav.plans },
-    { to: "/documentacao", label: c.nav.docs },
-  ];
   const rolePoints = role === "teacher" ? c.roles.teacher.points : c.roles.student.points;
 
   return (
     <div className="landing-root min-h-screen overflow-x-hidden bg-background text-foreground">
-      {/* Barra de navegação */}
-      <nav className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between gap-3 px-4">
-          <a href="#" className="flex items-center gap-2" aria-label="ProvaFácil">
-            <GraduationCap className="h-7 w-7 text-highlight" />
-            <span className="font-heading text-xl font-semibold tracking-tight">ProvaFácil</span>
-          </a>
-          <div className="hidden items-center gap-1 lg:flex">
-            {navLinks.map((l) => (
-              <a key={l.href} href={l.href} className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">{l.label}</a>
-            ))}
-            {pageLinks.map((l) => (
-              <Link key={l.to} to={l.to} className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">{l.label}</Link>
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1.5 lg:hidden" aria-label={c.nav.menu}>
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {navLinks.map((l) => (
-                  <DropdownMenuItem key={l.href} asChild><a href={l.href}>{l.label}</a></DropdownMenuItem>
-                ))}
-                {pageLinks.map((l) => (
-                  <DropdownMenuItem key={l.to} asChild><Link to={l.to}>{l.label}</Link></DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1.5">
-                  <Globe className="h-4 w-4" />{LANGUAGE_FLAGS[language]}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {languages.map((lang) => (
-                  <DropdownMenuItem key={lang} onClick={() => setLanguage(lang)} className={language === lang ? "bg-accent" : ""}>
-                    {LANGUAGE_FLAGS[lang]} {LANGUAGE_LABELS[lang]}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Link to="/student/auth" className="hidden sm:block">
-              <Button variant="ghost" size="sm" className="gap-1.5"><GraduationCap className="h-4 w-4" />{c.nav.student}</Button>
-            </Link>
-            <FloatingAuth />
-          </div>
-        </div>
-      </nav>
+      <LandingNav home />
 
       {/* Hero */}
       <section className="relative overflow-hidden pb-20 pt-32 text-white md:pb-28 md:pt-40" style={{ background: NAVY_BG }}>
