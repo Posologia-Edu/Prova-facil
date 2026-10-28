@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
+import { isPatientRoteiro, roteiroToText } from "@/lib/vp-patient-roteiro";
 import { CaseScriptContent, ObserverScriptSummary } from "@/components/simulation/PatientScriptView";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -436,10 +437,18 @@ export default function SimulationJoin() {
     const criterios = fields
       .filter((f) => f.type === "scale" && (f.max_score || 0) > 0 && typeof answers[f.id] === "number")
       .map((f) => ({ criterio: f.label, nota: answers[f.id] as number, ancoras: f.description || "" }));
+    // Roteiro do paciente que o aluno atendeu nesta rodada (sem as dicas de atuação, que são para quem faz o paciente)
+    const pacienteDaRodada = allAssignments.find((a: any) => a.round_id === activeRound?.id && a.assigned_role === "patient");
+    const casoAtendido = clinicalCases[pacienteDaRodada?.case_index ?? 0];
+    const roteiro_texto = casoAtendido
+      ? isPatientRoteiro(casoAtendido.roteiro)
+        ? roteiroToText({ ...casoAtendido.roteiro, dicas_de_atuacao: [] })
+        : casoAtendido.script
+      : "";
     setFeedbackAiLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("write-professor-feedback", {
-        body: { room_id: room?.id, access_code: room?.access_code, participant_id: participant?.id, pontos_fortes, oportunidades, criterios },
+        body: { room_id: room?.id, access_code: room?.access_code, participant_id: participant?.id, pontos_fortes, oportunidades, criterios, roteiro_texto },
       });
       if (error || data?.error) throw new Error(data?.error || error?.message || "Falha ao chamar a IA");
       setFeedback(data.feedback);
@@ -1791,7 +1800,7 @@ export default function SimulationJoin() {
                       <Sparkles className="h-3.5 w-3.5" />{feedbackAiLoading ? "Escrevendo..." : "Escrever feedback com IA"}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">A IA escreve a partir dos pontos fortes e das oportunidades de melhoria acima, e complementa com os destaques das notas que você marcou. Você revisa antes de enviar.</p>
+                  <p className="text-xs text-muted-foreground">A IA escreve a partir dos pontos fortes e das oportunidades de melhoria acima, complementa com os destaques das notas que você marcou e dá exemplos do paciente que o aluno atendeu. Você revisa antes de enviar.</p>
                   <Textarea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
