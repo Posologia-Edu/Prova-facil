@@ -15,16 +15,16 @@ describe("avaliação da anamnese v2", () => {
     expect(somaPesos(prof)).toBe(10);
   });
 
-  it("observador: 14 critérios, Sim = peso cheio, Parcial = metade exata, Não = zero", () => {
-    expect(pontuaveis(obs)).toHaveLength(14);
+  it("observador: 15 critérios, Sim = peso cheio, Parcial = metade exata, Não = zero", () => {
+    expect(pontuaveis(obs)).toHaveLength(15);
     expect(soma(obs, () => "Sim")).toBeCloseTo(10, 10);
     expect(soma(obs, () => "Parcial")).toBeCloseTo(5, 10);
     expect(soma(obs, () => "Não")).toBe(0);
   });
 
-  it("professor: 9 critérios, escala de 0 a 4 em que 0 vale 0%", () => {
+  it("professor: 11 critérios, escala de 0 a 4 em que 0 vale 0%", () => {
     const itens = pontuaveis(prof);
-    expect(itens).toHaveLength(9);
+    expect(itens).toHaveLength(11);
     expect(itens.every((f) => f.type === "scale" && f.scale_max === 4)).toBe(true);
     expect(soma(prof, () => 4)).toBeCloseTo(10, 10);
     expect(soma(prof, () => 2)).toBeCloseTo(5, 10);
@@ -52,5 +52,25 @@ describe("avaliação da anamnese v2", () => {
     expect(titulos).toContain("Formulário de avaliação | Observador (v2)");
     expect(titulos).toContain("Instrumento de Avaliação Docente (v2)");
     expect(titulos).toContain("Formulário de avaliação | Observador"); // o antigo continua disponível
+  });
+
+  it("cada critério mede uma coisa só: adesão, chás e barreiras são três critérios separados", () => {
+    const rotulos = pontuaveis(prof).map((f) => f.label.toLowerCase());
+    expect(rotulos.filter((r) => /adesão/.test(r))).toHaveLength(1);
+    expect(rotulos.filter((r) => /chás/.test(r))).toHaveLength(1);
+    expect(rotulos.filter((r) => /barreiras de acesso/.test(r))).toHaveLength(1);
+    // nenhum critério junta adesão com chás ou barreiras
+    expect(rotulos.some((r) => /adesão/.test(r) && /(chás|barreiras)/.test(r))).toBe(false);
+  });
+
+  it("os critérios que pedem julgamento trazem âncoras (o que significa cada nota)", () => {
+    const comAncora = (re: RegExp) => pontuaveis(prof).find((f) => re.test(f.label))!.description || "";
+    for (const re of [/adesão/i, /uso real/i, /sinais de alerta/i, /plano e as orientações/i]) {
+      const d = comAncora(re);
+      expect(d).toMatch(/0:/);
+      expect(d).toMatch(/4:/);
+    }
+    const adesaoObs = pontuaveis(obs).find((f) => /adesão/i.test(f.label))!;
+    expect(adesaoObs.description).toMatch(/Sim:.*Parcial:.*Não:/);
   });
 });
