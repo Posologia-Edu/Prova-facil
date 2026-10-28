@@ -1,5 +1,8 @@
 import FormAnswersView, { formatAnswerText } from "@/components/forms/FormAnswersView";
 import type { FormField } from "@/components/forms/types";
+import { notaDaRodada, notaDoRegistro } from "@/lib/anamnese-registro";
+import { RegistroScoring } from "@/components/simulation/RegistroScoring";
+import { montarRetornos } from "@/lib/anamnese-retorno-paciente";
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -392,6 +395,64 @@ export default function SimulationControl() {
     return cases.map((c: any, index: number) => ({ index, title: c?.title || `Caso ${index + 1}` }));
   }, [forms]);
 
+  // Casos completos (roteiro estruturado ou texto) para os pontos-chave na pontuação do registro
+  const fullCases = useMemo(() => {
+    const patientScriptForm = forms.find((f: any) => f.form_type === "patient_script");
+    const content = patientScriptForm?.content_json as any;
+    return Array.isArray(content) && content[0]?.cases ? (content[0].cases as { title?: string; script: string; roteiro?: unknown }[]) : [];
+  }, [forms]);
+
+  // Retorno do observador ao aluno-paciente, por e-mail (revisado e disparado pelo professor)
+  const [sendingFeedback, setSendingFeedback] = useState(false);
+  const retornosPaciente = useMemo(() => {
+    const obsForm = forms.find((f: any) => f.form_type === "observer_eval");
+    const observerFields: FormField[] = Array.isArray(obsForm?.content_json) ? (obsForm!.content_json as unknown as FormField[]) : [];
+    const caseTitles = fullCases.map((c, i) => c?.title || `Caso ${i + 1}`);
+    return montarRetornos(
+      rounds
+        .filter((r: any) => r.status === "completed")
+        .map((round: any) => {
+          const patientAssign = assignments.find((a: any) => a.round_id === round.id && a.assigned_role === "patient");
+          const observerAssign = assignments.find((a: any) => a.round_id === round.id && a.assigned_role === "observer");
+          const patient = patientAssign ? participants.find((p: any) => p.id === patientAssign.participant_id) : null;
+          const obsResponse = observerAssign
+            ? responses.find((r: any) => r.round_id === round.id && r.participant_id === observerAssign.participant_id && r.form_id === obsForm?.id)
+            : null;
+          return {
+            round_number: round.round_number,
+            patient: patient ? { email: patient.student_email, name: patient.student_name } : null,
+            caso: patientAssign ? caseTitles[patientAssign.case_index ?? 0] : undefined,
+            observerFields,
+            observerAnswers: obsResponse?.answers_json as Record<string, any> | undefined,
+          };
+        }),
+    );
+  }, [rounds, assignments, participants, responses, forms, fullCases]);
+
+  const enviarRetornoPacientes = async () => {
+    if (retornosPaciente.length === 0) return;
+    if (!window.confirm(`Enviar por e-mail o retorno do observador a ${retornosPaciente.length} aluno(s) que fizeram o paciente? O e-mail não leva nota, só a resposta sobre o roteiro e as observações.`)) return;
+    setSendingFeedback(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-patient-feedback", {
+        body: { room_id: roomId, room_title: room?.title || "", itens: retornosPaciente },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Falha ao enviar");
+      const results = (data?.results || []) as { email: string; success: boolean; error?: string }[];
+      const ok = results.filter((r) => r.success).length;
+      const falhas = results.filter((r) => !r.success);
+      toast({
+        title: `Retorno enviado a ${ok} de ${results.length} aluno(s)`,
+        description: falhas.length ? falhas.map((f) => `${f.email}: ${f.error}`).join("; ") : undefined,
+        variant: falhas.length ? "destructive" : undefined,
+      });
+    } catch (e) {
+      toast({ title: "Erro ao enviar o retorno", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+    } finally {
+      setSendingFeedback(false);
+    }
+  };
+
   const analyticsData = useMemo(() => {
     const completedRounds = rounds.filter((r: any) => r.status === "completed");
     const profForm = forms.find((f: any) => f.form_type === "professor_eval");
@@ -415,8 +476,12 @@ export default function SimulationControl() {
 
       const profScore = profResponse?.score || 0;
       const obsScore = obsResponse?.score || 0;
-      const scoresAvailable = (profResponse?.score != null ? 1 : 0) + (obsResponse?.score != null ? 1 : 0);
-      const totalScore = scoresAvailable > 0 ? (profScore + obsScore) / scoresAvailable : 0;
+      const registroScore = notaDoRegistro(anamnesisResponse);
+      const { nota: totalScore, comRegistro } = notaDaRodada(
+        profResponse?.score != null ? profScore : null,
+        obsResponse?.score != null ? obsScore : null,
+        registroScore,
+      );
 
       return {
         round,
@@ -425,6 +490,9 @@ export default function SimulationControl() {
         observerName: observerAssign ? getParticipantName(observerAssign.participant_id) : "—",
         profScore,
         obsScore,
+        registroScore,
+        comRegistro,
+        caseIndex: patientAssign?.case_index ?? 0,
         totalScore,
         profFeedback: (profResponse?.answers_json as any)?._feedback || null,
         obsFeedback: (obsResponse?.answers_json as any)?._feedback || null,
@@ -527,7 +595,8 @@ export default function SimulationControl() {
                 const items: { label: string; value: string; score?: string }[] = [
                   { label: "Nota do Professor", value: ra.profScore.toFixed(1), score: `${ra.profScore.toFixed(1)}/10` },
                   { label: "Nota do Observador", value: ra.obsScore.toFixed(1), score: `${ra.obsScore.toFixed(1)}/10` },
-                  { label: "Média da Rodada", value: ra.totalScore.toFixed(1), score: `${ra.totalScore.toFixed(1)}/10` },
+                  ...(ra.registroScore != null ? [{ label: "Nota do Registro Escrito", value: ra.registroScore.toFixed(1), score: `${ra.registroScore.toFixed(1)}/10` }] : []),
+                  { label: ra.comRegistro ? "Nota da Rodada (70% avaliações + 30% registro)" : "Média da Rodada (registro ainda não pontuado)", value: ra.totalScore.toFixed(1), score: `${ra.totalScore.toFixed(1)}/10` },
                 ];
                 if (ra.profFeedback) items.push({ label: "Feedback do Professor", value: ra.profFeedback });
                 if (ra.obsFeedback) items.push({ label: "Feedback do Observador", value: ra.obsFeedback });
@@ -543,7 +612,7 @@ export default function SimulationControl() {
                       .forEach((f) => items.push({ label: f.label, value: formatAnswerText(f, respostas[f.id]) }));
                   } else {
                     Object.entries(respostas)
-                      .filter(([k]) => k !== "_feedback")
+                      .filter(([k]) => !k.startsWith("_"))
                       .forEach(([k, v]) => items.push({ label: k, value: String(v || "—") }));
                   }
                 }
@@ -851,6 +920,17 @@ export default function SimulationControl() {
         <TabsContent value="analytics" className="mt-6 space-y-6">
           {analyticsData.studentSummaries.length > 0 ? (
             <>
+              {retornosPaciente.length > 0 && (
+                <Card className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-1">
+                    <p className="font-medium">Retorno aos alunos-pacientes</p>
+                    <p className="text-sm text-muted-foreground">
+                      {retornosPaciente.length} aluno(s) têm retorno do observador (seguiu o roteiro e observações). Revise nas rodadas abaixo e envie por e-mail, sem nota.
+                    </p>
+                  </div>
+                  <Button onClick={enviarRetornoPacientes} disabled={sendingFeedback}>{sendingFeedback ? "Enviando..." : "Enviar retorno por e-mail"}</Button>
+                </Card>
+              )}
               <Card className="p-6">
                 <h3 className="font-heading text-lg font-medium mb-4">{t("sim_analytics_avg")} — {t("sim_analytics_student")}</h3>
                 <Table>
@@ -885,6 +965,7 @@ export default function SimulationControl() {
                             <Stethoscope className="h-3 w-3" />{ra.professionalName}
                           </StatusBadge>
                           <span className="font-mono font-medium">{ra.totalScore.toFixed(1)}/10</span>
+                          {ra.anamnesisResponse && !ra.comRegistro && <StatusBadge tone="warn">registro a pontuar</StatusBadge>}
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="space-y-4">
@@ -903,7 +984,7 @@ export default function SimulationControl() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                           <div className="rounded-lg bg-sunken p-3">
                             <p className="label-mono">{t("sim_form_professor_eval")}</p>
                             <p className="mt-2 font-heading text-2xl font-medium tabular-nums">{ra.profScore.toFixed(1)}<span className="text-sm text-muted-foreground">/10</span></p>
@@ -912,8 +993,12 @@ export default function SimulationControl() {
                             <p className="label-mono">{t("sim_form_observer_eval")}</p>
                             <p className="mt-2 font-heading text-2xl font-medium tabular-nums">{ra.obsScore.toFixed(1)}<span className="text-sm text-muted-foreground">/10</span></p>
                           </div>
+                          <div className="rounded-lg bg-sunken p-3">
+                            <p className="label-mono">Registro escrito</p>
+                            <p className="mt-2 font-heading text-2xl font-medium tabular-nums">{ra.registroScore != null ? ra.registroScore.toFixed(1) : "—"}<span className="text-sm text-muted-foreground">/10</span></p>
+                          </div>
                           <div className="rounded-lg bg-brand-soft p-3">
-                            <p className="label-mono">{t("sim_score_average_label")}</p>
+                            <p className="label-mono">{ra.comRegistro ? "Nota da rodada" : t("sim_score_average_label")}</p>
                             <p className="mt-2 font-heading text-2xl font-medium tabular-nums text-brand-text">{ra.totalScore.toFixed(1)}<span className="text-sm">/10</span></p>
                           </div>
                         </div>
@@ -925,6 +1010,20 @@ export default function SimulationControl() {
                             </p>
                             {renderFormResponseReadOnly(ra.anamnesisResponse, forms.find((f: any) => f.form_type === "anamnesis"))}
                           </div>
+                        )}
+
+                        {ra.anamnesisResponse && (
+                          <RegistroScoring
+                            key={`${ra.anamnesisResponse.id}-${ra.comRegistro}`}
+                            roomId={roomId!}
+                            response={ra.anamnesisResponse}
+                            anamneseFields={(() => {
+                              const f = forms.find((x: any) => x.form_type === "anamnesis");
+                              return Array.isArray(f?.content_json) ? (f!.content_json as unknown as FormField[]) : [];
+                            })()}
+                            caseItem={fullCases[ra.caseIndex] || fullCases[0]}
+                            onSaved={() => queryClient.invalidateQueries({ queryKey: ["simulation-responses", roomId] })}
+                          />
                         )}
 
                         {ra.profResponse && (

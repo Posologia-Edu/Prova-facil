@@ -8,6 +8,10 @@ import type { NativeTemplate } from "./index";
 // Cada critério mede UMA coisa (nada de "A, B e C" numa nota só). Os critérios que mais pedem julgamento trazem âncoras:
 // o que significa cada nota (professor) ou cada resposta (observador).
 
+// Rótulos dos campos de retorno ao aluno-paciente (sem nota); o e-mail de retorno os localiza por eles.
+export const LABEL_SEGUIU_ROTEIRO = "O paciente revelou as informações no momento certo, de acordo com o roteiro?";
+export const LABEL_OBS_PACIENTE = "Observações sobre o desempenho do aluno-paciente";
+
 let seq = 0;
 const nid = (p: string) => `${p}-${++seq}`;
 
@@ -98,13 +102,13 @@ function buildObservador(): FormField[] {
     secao("oe2", "Feedback ao aluno-paciente (sem nota)", "Não vale pontos. Serve de retorno a quem representou o paciente."),
     {
       id: nid("oe2"),
-      label: "O paciente revelou as informações no momento certo, de acordo com o roteiro?",
+      label: LABEL_SEGUIU_ROTEIRO,
       type: "radio",
       options: ["Seguiu o roteiro", "Seguiu em parte", "Não seguiu o roteiro"],
       max_score: 0,
       required: false,
     },
-    livre("oe2", "Observações sobre o desempenho do aluno-paciente"),
+    livre("oe2", LABEL_OBS_PACIENTE),
   ];
 }
 

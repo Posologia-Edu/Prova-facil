@@ -1,3 +1,4 @@
+import { notaDaRodada, notaDoRegistro } from "@/lib/anamnese-registro";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -129,17 +130,22 @@ export default function SimulationAggregator() {
       if (!completedRoundIds.length) return [];
       const { data: assignments } = await supabase.from("simulation_round_assignments").select("round_id, participant_id, assigned_role").in("round_id", completedRoundIds);
       const { data: allForms } = await supabase.from("simulation_forms").select("id, form_type, room_id").in("room_id", roomIds);
-      const { data: responses } = await supabase.from("simulation_responses").select("round_id, score, form_id, submitted_at").in("round_id", completedRoundIds);
+      const { data: responses } = await (supabase.from("simulation_responses") as any).select("round_id, score, form_id, submitted_at, registro:answers_json->_avaliacao_registro").in("round_id", completedRoundIds);
       if (!assignments || !allForms || !responses) return [];
-      const evalFormIds = new Set(allForms.filter(f => f.form_type === "professor_eval" || f.form_type === "observer_eval").map(f => f.id));
+      const profFormIds = new Set(allForms.filter(f => f.form_type === "professor_eval").map(f => f.id));
+      const obsFormIds = new Set(allForms.filter(f => f.form_type === "observer_eval").map(f => f.id));
+      const anamnesisFormIds = new Set(allForms.filter(f => f.form_type === "anamnesis").map(f => f.id));
       const professionalScores = new Map<string, number[]>();
       completedRoundIds.forEach(roundId => {
         const roundAssigns = assignments.filter(a => a.round_id === roundId);
         const professionalAssign = roundAssigns.find(a => a.assigned_role === "professional");
         if (!professionalAssign) return;
-        const roundResponses = responses.filter(r => r.round_id === roundId && evalFormIds.has(r.form_id) && r.submitted_at);
-        if (roundResponses.length === 0) return;
-        const avgScore = roundResponses.reduce((sum, r) => sum + (Number(r.score) || 0), 0) / roundResponses.length;
+        const roundResponses = (responses as any[]).filter(r => r.round_id === roundId && r.submitted_at);
+        const prof = roundResponses.find(r => profFormIds.has(r.form_id));
+        const obs = roundResponses.find(r => obsFormIds.has(r.form_id));
+        if (!prof && !obs) return;
+        const registro = notaDoRegistro(roundResponses.find(r => anamnesisFormIds.has(r.form_id)));
+        const avgScore = notaDaRodada(prof ? Number(prof.score) || 0 : null, obs ? Number(obs.score) || 0 : null, registro).nota;
         if (!professionalScores.has(professionalAssign.participant_id)) professionalScores.set(professionalAssign.participant_id, []);
         professionalScores.get(professionalAssign.participant_id)!.push(avgScore);
       });
