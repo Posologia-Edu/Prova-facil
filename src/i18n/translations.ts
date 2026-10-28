@@ -190,6 +190,9 @@ type TranslationKeys = {
   pricing_students_exam: string;
   pricing_ai_grading: string;
   pricing_realtime_monitor: string;
+  pricing_clinical_sims: string;
+  pricing_osce: string;
+  pricing_virtual_patient: string;
   pricing_priority_support: string;
   pricing_back: string;
 
@@ -716,6 +719,9 @@ const pt: TranslationKeys = {
   pricing_students_exam: "Alunos por prova",
   pricing_ai_grading: "Correção por IA",
   pricing_realtime_monitor: "Monitoramento em tempo real",
+  pricing_clinical_sims: "Simulações clínicas",
+  pricing_osce: "OSCE",
+  pricing_virtual_patient: "Paciente Virtual",
   pricing_priority_support: "Suporte prioritário",
   pricing_back: "Voltar",
 
@@ -1230,6 +1236,9 @@ const en: TranslationKeys = {
   pricing_students_exam: "Students per exam",
   pricing_ai_grading: "AI Grading",
   pricing_realtime_monitor: "Real-time monitoring",
+  pricing_clinical_sims: "Clinical simulations",
+  pricing_osce: "OSCE",
+  pricing_virtual_patient: "Virtual Patient",
   pricing_priority_support: "Priority support",
   pricing_back: "Back",
 
@@ -1744,6 +1753,9 @@ const es: TranslationKeys = {
   pricing_students_exam: "Alumnos por examen",
   pricing_ai_grading: "Corrección por IA",
   pricing_realtime_monitor: "Monitoreo en tiempo real",
+  pricing_clinical_sims: "Simulaciones clínicas",
+  pricing_osce: "OSCE",
+  pricing_virtual_patient: "Paciente Virtual",
   pricing_priority_support: "Soporte prioritario",
   pricing_back: "Volver",
 

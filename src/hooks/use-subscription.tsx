@@ -16,6 +16,8 @@ interface SubscriptionState {
   isLoading: boolean;
   isPremium: boolean;
   isAdmin: boolean;
+  /** Acesso aos módulos clínicos (simulação, OSCE, paciente virtual): assinante Premium, convidado do admin ou admin. */
+  hasClinicalAccess: boolean;
   plan: PlanType;
   subscriptionEnd: string | null;
   checkSubscription: () => Promise<void>;
@@ -25,6 +27,7 @@ const SubscriptionContext = createContext<SubscriptionState>({
   isLoading: true,
   isPremium: false,
   isAdmin: false,
+  hasClinicalAccess: false,
   plan: "free",
   subscriptionEnd: null,
   checkSubscription: async () => {},
@@ -78,7 +81,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
 
       const isInvitedPremium = data?.is_invited === true;
-      const hasPremium = isInvitedPremium || (data?.subscribed === true && data?.product_id === PREMIUM_PRODUCT_ID);
+      const subscribed = data?.subscribed === true && data?.product_id === PREMIUM_PRODUCT_ID;
+      const hasPremium = isInvitedPremium || subscribed;
       setIsPremium(hasPremium);
       setPlan(hasPremium ? "premium" : "free");
       setSubscriptionEnd(data?.subscription_end || null);
@@ -106,7 +110,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [checkSubscription]);
 
   return (
-    <SubscriptionContext.Provider value={{ isLoading, isPremium, isAdmin, plan, subscriptionEnd, checkSubscription }}>
+    <SubscriptionContext.Provider value={{ isLoading, isPremium, isAdmin, hasClinicalAccess: isPremium, plan, subscriptionEnd, checkSubscription }}>
       {children}
     </SubscriptionContext.Provider>
   );

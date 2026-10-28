@@ -13,7 +13,7 @@ export type LandingContent = {
     feedback: string; feedbackText: string; aiBadge: string;
   };
   areas: { eyebrow: string; heading: string; sub: string; items: string[]; mostComplete: string };
-  modules: { eyebrow: string; heading: string; sub: string; sim: { tag: string; rows: string[]; na: string }; items: { title: string; desc: string; tags: string[] }[] };
+  modules: { eyebrow: string; heading: string; sub: string; sim: { tag: string; rows: string[]; na: string }; items: { title: string; premium?: boolean; desc: string; tags: string[] }[] };
   ai: {
     eyebrow: string; heading: string; sub: string; quote: string;
     items: { title: string; desc: string; sample: string }[];
@@ -59,9 +59,9 @@ const pt: LandingContent = {
     sub: "Cada módulo funciona sozinho e todos conversam entre si, com turmas e boletim no centro.",
     sim: { tag: "Ficha do professor · exemplo", rows: ["Investigou o uso real dos medicamentos", "Reconheceu os sinais de alerta do caso", "Investigou chás, plantas e produtos sem prescrição"], na: "Não se aplica" },
     items: [
-      { title: "Simulação realística", desc: "Dois alunos atendem e um observa. O paciente segue um roteiro padronizado, o professor e o observador avaliam, e o registro escrito é pontuado.", tags: ["Anamnese", "SOAP", "Reconciliação", "Documentação", "Roteiro do paciente"] },
-      { title: "Paciente Virtual", desc: "O aluno conversa com um paciente simulado por IA e recebe o debriefing passo a passo, com avaliação entre pares.", tags: ["Casos por área", "Debriefing", "Pares"] },
-      { title: "OSCE", desc: "Estações, checklists, rodízio e paciente virtual com áudio em tempo real.", tags: ["QR", "Rodízio", "Áudio"] },
+      { title: "Simulação realística", premium: true, desc: "Dois alunos atendem e um observa. O paciente segue um roteiro padronizado, o professor e o observador avaliam, e o registro escrito é pontuado.", tags: ["Anamnese", "SOAP", "Reconciliação", "Documentação", "Roteiro do paciente"] },
+      { title: "Paciente Virtual", premium: true, desc: "O aluno conversa com um paciente simulado por IA e recebe o debriefing passo a passo, com avaliação entre pares.", tags: ["Casos por área", "Debriefing", "Pares"] },
+      { title: "OSCE", premium: true, desc: "Estações, checklists, rodízio e paciente virtual com áudio em tempo real.", tags: ["QR", "Rodízio", "Áudio"] },
       { title: "Provas e banco de questões", desc: "Questões por tópico e Bloom, geração por IA, compositor A4 e prova online com monitoramento.", tags: ["IA", "A4", "Online"] },
       { title: "Júri simulado", desc: "Argumentação em grupo, com avaliação entre pares e correção assistida por IA.", tags: ["Pares", "IA"] },
       { title: "Turmas e boletim", desc: "Disciplinas, semestres, atividades vinculadas à turma, competências e portfólio do aluno.", tags: ["Turmas", "Boletim", "Portfólio"] },
@@ -139,9 +139,9 @@ const en: LandingContent = {
     sub: "Each module works on its own and they all talk to each other, with classes and gradebook at the center.",
     sim: { tag: "Teacher form · example", rows: ["Explored real medication use", "Recognized the case's red flags", "Asked about teas, herbs and non-prescription products"], na: "Not applicable" },
     items: [
-      { title: "Realistic simulation", desc: "Two students run the encounter and one observes. The patient follows a standardized script, the teacher and the observer assess, and the written record is scored.", tags: ["Medical history", "SOAP", "Reconciliation", "Documentation", "Patient script"] },
-      { title: "Virtual Patient", desc: "Students talk to an AI-simulated patient and get a step-by-step debriefing, with peer assessment.", tags: ["Cases by field", "Debriefing", "Peers"] },
-      { title: "OSCE", desc: "Stations, checklists, rotation and a virtual patient with real-time audio.", tags: ["QR", "Rotation", "Audio"] },
+      { title: "Realistic simulation", premium: true, desc: "Two students run the encounter and one observes. The patient follows a standardized script, the teacher and the observer assess, and the written record is scored.", tags: ["Medical history", "SOAP", "Reconciliation", "Documentation", "Patient script"] },
+      { title: "Virtual Patient", premium: true, desc: "Students talk to an AI-simulated patient and get a step-by-step debriefing, with peer assessment.", tags: ["Cases by field", "Debriefing", "Peers"] },
+      { title: "OSCE", premium: true, desc: "Stations, checklists, rotation and a virtual patient with real-time audio.", tags: ["QR", "Rotation", "Audio"] },
       { title: "Exams and question bank", desc: "Questions by topic and Bloom level, AI generation, A4 composer and online exams with monitoring.", tags: ["AI", "A4", "Online"] },
       { title: "Mock trial", desc: "Group argumentation with peer assessment and AI-assisted grading.", tags: ["Peers", "AI"] },
       { title: "Classes and gradebook", desc: "Courses, terms, activities linked to the class, competencies and the student's portfolio.", tags: ["Classes", "Gradebook", "Portfolio"] },
@@ -219,9 +219,9 @@ const es: LandingContent = {
     sub: "Cada módulo funciona solo y todos se conectan, con cursos y boletín en el centro.",
     sim: { tag: "Ficha del profesor · ejemplo", rows: ["Investigó el uso real de los medicamentos", "Reconoció las señales de alarma del caso", "Preguntó por tés, plantas y productos sin receta"], na: "No aplica" },
     items: [
-      { title: "Simulación realística", desc: "Dos alumnos atienden y uno observa. El paciente sigue un guion estandarizado, el profesor y el observador evalúan, y el registro escrito se puntúa.", tags: ["Anamnesis", "SOAP", "Conciliación", "Documentación", "Guion del paciente"] },
-      { title: "Paciente Virtual", desc: "El alumno conversa con un paciente simulado por IA y recibe el debriefing paso a paso, con evaluación entre pares.", tags: ["Casos por área", "Debriefing", "Pares"] },
-      { title: "OSCE", desc: "Estaciones, listas de verificación, rotación y paciente virtual con audio en tiempo real.", tags: ["QR", "Rotación", "Audio"] },
+      { title: "Simulación realística", premium: true, desc: "Dos alumnos atienden y uno observa. El paciente sigue un guion estandarizado, el profesor y el observador evalúan, y el registro escrito se puntúa.", tags: ["Anamnesis", "SOAP", "Conciliación", "Documentación", "Guion del paciente"] },
+      { title: "Paciente Virtual", premium: true, desc: "El alumno conversa con un paciente simulado por IA y recibe el debriefing paso a paso, con evaluación entre pares.", tags: ["Casos por área", "Debriefing", "Pares"] },
+      { title: "OSCE", premium: true, desc: "Estaciones, listas de verificación, rotación y paciente virtual con audio en tiempo real.", tags: ["QR", "Rotación", "Audio"] },
       { title: "Exámenes y banco de preguntas", desc: "Preguntas por tema y Bloom, generación por IA, compositor A4 y examen en línea con monitoreo.", tags: ["IA", "A4", "En línea"] },
       { title: "Juicio simulado", desc: "Argumentación en grupo, con evaluación entre pares y corrección asistida por IA.", tags: ["Pares", "IA"] },
       { title: "Cursos y boletín", desc: "Asignaturas, semestres, actividades vinculadas al curso, competencias y portafolio del alumno.", tags: ["Cursos", "Boletín", "Portafolio"] },

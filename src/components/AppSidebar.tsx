@@ -5,6 +5,7 @@ import {
   ChevronsUpDown,
   Crown,
   Globe,
+  Lock,
   LogOut,
   MessageSquare,
   Settings,
@@ -14,6 +15,7 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/use-admin";
+import { useSubscription } from "@/hooks/use-subscription";
 import { useLanguage, LANGUAGE_LABELS, LANGUAGE_FLAGS, type Language } from "@/i18n/LanguageContext";
 import { buildNav, pathMatches, type NavItem } from "@/lib/app-nav";
 import { cn } from "@/lib/utils";
@@ -50,6 +52,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { isAdmin } = useAdmin();
+  const { hasClinicalAccess, isLoading: subLoading } = useSubscription();
   const { t, language, setLanguage } = useLanguage();
   const [userName, setUserName] = useState<string>("");
   const [formsOpen, setFormsOpen] = useState(false);
@@ -121,6 +124,12 @@ export function AppSidebar() {
         >
           <item.icon className="h-4 w-4" />
           <span>{item.title}</span>
+          {item.premium && !hasClinicalAccess && !subLoading && (
+            <span className="ml-auto flex items-center gap-1 rounded-full bg-highlight/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-highlight">
+              <Lock className="h-2.5 w-2.5" />
+              Premium
+            </span>
+          )}
         </NavLink>
       </SidebarMenuItem>
     );

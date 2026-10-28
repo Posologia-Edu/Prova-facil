@@ -3,6 +3,7 @@ import { BarChart3, PieChart, TrendingUp, Users, Award, AlertTriangle, ArrowDown
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { ClinicalGate } from "@/components/PremiumGate";
 import { Tabs, TabsContent, TabsListLine, TabsTriggerLine } from "@/components/ui/tabs";
 import VPAnalytics from "@/pages/VPAnalytics";
 import { OverviewTab, OsceTab, FormsTab, type AnalyticsTab } from "@/components/analytics/AnalyticsExtraTabs";
@@ -403,8 +404,8 @@ export default function AnalyticsPage({ initialTab = "overview" }: { initialTab?
         </TabsListLine>
         <TabsContent value="overview" className="mt-6"><OverviewTab classId={classId} onGo={setTab} /></TabsContent>
         <TabsContent value="exams" className="mt-6"><ExamsAnalyticsTab selectedClass={classId} /></TabsContent>
-        <TabsContent value="vp" className="mt-6 min-w-0"><VPAnalytics embedded classId={classId === "all" ? undefined : classId} /></TabsContent>
-        <TabsContent value="osce" className="mt-6"><OsceTab classId={classId} /></TabsContent>
+        <TabsContent value="vp" className="mt-6 min-w-0"><ClinicalGate feature="Paciente Virtual"><VPAnalytics embedded classId={classId === "all" ? undefined : classId} /></ClinicalGate></TabsContent>
+        <TabsContent value="osce" className="mt-6"><ClinicalGate feature="OSCE"><OsceTab classId={classId} /></ClinicalGate></TabsContent>
         <TabsContent value="forms" className="mt-6"><FormsTab classId={classId} /></TabsContent>
       </Tabs>
     </div>

@@ -69,7 +69,7 @@ export default function Features() {
                       <div className="flex h-full flex-col gap-4 rounded-2xl border border-border bg-card p-6">
                         <Icon className="h-7 w-7 text-accent-ink dark:text-highlight" strokeWidth={1.4} />
                         <div className="flex flex-col gap-2">
-                          <h3 className="font-heading text-xl font-semibold tracking-tight">{it.title}</h3>
+                          <h3 className="font-heading text-xl font-semibold tracking-tight">{it.title}{it.premium && <span className="ml-2.5 align-middle rounded-full bg-highlight/15 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-accent-ink dark:text-highlight">Premium</span>}</h3>
                           <p className="text-sm leading-relaxed text-muted-foreground">{it.desc}</p>
                         </div>
                         <ul className="mt-auto flex flex-wrap gap-1.5">

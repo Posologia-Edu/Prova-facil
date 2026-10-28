@@ -3,7 +3,7 @@ import type { Language } from "@/i18n/LanguageContext";
 // Textos das páginas Funcionalidades e Planos (pt, en, es). Só descreve o que existe no sistema.
 // Os planos mantêm exatamente os dados anteriores (preço, limites e recursos); só o visual e o idioma mudaram.
 
-export type FeatureItem = { title: string; desc: string; highlights: string[] };
+export type FeatureItem = { title: string; premium?: boolean; desc: string; highlights: string[] };
 export type FeatureGroup = { id: string; label: string; intro: string; items: FeatureItem[] };
 
 export type FeaturesPageContent = {
@@ -17,7 +17,7 @@ export type PlansPageContent = {
   perMonth: string; unlimited: string;
   free: { name: string; desc: string; cta: string };
   premium: { name: string; desc: string; trial: string; cta: string; loading: string };
-  rows: string[]; // 8 nomes, na ordem dos dados dos planos
+  rows: string[]; // 11 nomes, na ordem dos dados dos planos
   featuresLink: string; featuresLinkCta: string;
   errorTitle: string; errorFallback: string;
 };
@@ -41,15 +41,15 @@ const featuresPt: FeaturesPageContent = {
     {
       id: "clinica", label: "Prática clínica", intro: "Atividades presenciais e em sala, com avaliação por critérios.",
       items: [
-        { title: "OSCE", desc: "Monte circuitos com estações, checklists e rodízio, use o QR para o avaliador e inclua um paciente virtual com áudio em tempo real.", highlights: ["Estações e checklists", "Rodízio automático", "Paciente virtual com áudio"] },
-        { title: "Simulação realística de anamnese", desc: "Dois alunos atendem e um observa. O paciente segue um roteiro padronizado, o registro vai em um formulário na tela ou em PDF, e professor e observador avaliam por critérios.", highlights: ["Roteiro do paciente em PDF", "Formulário com tabelas", "Critérios com “Não se aplica”"] },
+        { title: "OSCE", premium: true, desc: "Monte circuitos com estações, checklists e rodízio, use o QR para o avaliador e inclua um paciente virtual com áudio em tempo real.", highlights: ["Estações e checklists", "Rodízio automático", "Paciente virtual com áudio"] },
+        { title: "Simulação realística de anamnese", premium: true, desc: "Dois alunos atendem e um observa. O paciente segue um roteiro padronizado, o registro vai em um formulário na tela ou em PDF, e professor e observador avaliam por critérios.", highlights: ["Roteiro do paciente em PDF", "Formulário com tabelas", "Critérios com “Não se aplica”"] },
         { title: "SOAP, reconciliação, documentação e observação clínica", desc: "Salas para treinar o registro profissional: notas SOAP, reconciliação de medicamentos, documentação clínica e observação clínica avaliada.", highlights: ["SOAP", "Reconciliação", "Documentação clínica"] },
       ],
     },
     {
       id: "virtual", label: "Paciente virtual e júri", intro: "Prática com IA e com colegas, sem precisar de ator.",
       items: [
-        { title: "Paciente Virtual", desc: "O aluno conversa com um paciente simulado por IA, recebe um debriefing passo a passo com o raciocínio por trás de cada fala e pode ser avaliado por colegas.", highlights: ["Casos por área", "Debriefing passo a passo", "Avaliação entre pares"] },
+        { title: "Paciente Virtual", premium: true, desc: "O aluno conversa com um paciente simulado por IA, recebe um debriefing passo a passo com o raciocínio por trás de cada fala e pode ser avaliado por colegas.", highlights: ["Casos por área", "Debriefing passo a passo", "Avaliação entre pares"] },
         { title: "Júri simulado", desc: "Atividade de argumentação em grupo, com avaliação entre pares por critérios e correção assistida por IA.", highlights: ["Avaliação entre pares", "Correção assistida por IA", "Grupos de alunos"] },
       ],
     },
@@ -98,15 +98,15 @@ const featuresEn: FeaturesPageContent = {
     {
       id: "clinica", label: "Clinical practice", intro: "In-person and classroom activities, assessed by criteria.",
       items: [
-        { title: "OSCE", desc: "Build circuits with stations, checklists and rotation, use the QR code for the examiner and add a virtual patient with real-time audio.", highlights: ["Stations and checklists", "Automatic rotation", "Virtual patient with audio"] },
-        { title: "Realistic medical history simulation", desc: "Two students run the encounter and one observes. The patient follows a standardized script, the record goes in an on-screen or PDF form, and the teacher and observer assess by criteria.", highlights: ["Patient script as PDF", "Form with tables", "Criteria with “Not applicable”"] },
+        { title: "OSCE", premium: true, desc: "Build circuits with stations, checklists and rotation, use the QR code for the examiner and add a virtual patient with real-time audio.", highlights: ["Stations and checklists", "Automatic rotation", "Virtual patient with audio"] },
+        { title: "Realistic medical history simulation", premium: true, desc: "Two students run the encounter and one observes. The patient follows a standardized script, the record goes in an on-screen or PDF form, and the teacher and observer assess by criteria.", highlights: ["Patient script as PDF", "Form with tables", "Criteria with “Not applicable”"] },
         { title: "SOAP, reconciliation, documentation and clinical observation", desc: "Rooms to practice professional records: SOAP notes, medication reconciliation, clinical documentation and assessed clinical observation.", highlights: ["SOAP", "Reconciliation", "Clinical documentation"] },
       ],
     },
     {
       id: "virtual", label: "Virtual patient and mock trial", intro: "Practice with AI and with peers, no actor needed.",
       items: [
-        { title: "Virtual Patient", desc: "Students talk to an AI-simulated patient, get a step-by-step debriefing with the reasoning behind each line and can be assessed by peers.", highlights: ["Cases by field", "Step-by-step debriefing", "Peer assessment"] },
+        { title: "Virtual Patient", premium: true, desc: "Students talk to an AI-simulated patient, get a step-by-step debriefing with the reasoning behind each line and can be assessed by peers.", highlights: ["Cases by field", "Step-by-step debriefing", "Peer assessment"] },
         { title: "Mock trial", desc: "Group argumentation activity, with peer assessment by criteria and AI-assisted grading.", highlights: ["Peer assessment", "AI-assisted grading", "Student groups"] },
       ],
     },
@@ -155,15 +155,15 @@ const featuresEs: FeaturesPageContent = {
     {
       id: "clinica", label: "Práctica clínica", intro: "Actividades presenciales y en el aula, evaluadas por criterios.",
       items: [
-        { title: "OSCE", desc: "Arme circuitos con estaciones, listas de verificación y rotación, use el QR para el evaluador e incluya un paciente virtual con audio en tiempo real.", highlights: ["Estaciones y listas", "Rotación automática", "Paciente virtual con audio"] },
-        { title: "Simulación realística de anamnesis", desc: "Dos alumnos atienden y uno observa. El paciente sigue un guion estandarizado, el registro va en un formulario en pantalla o en PDF, y el profesor y el observador evalúan por criterios.", highlights: ["Guion del paciente en PDF", "Formulario con tablas", "Criterios con “No aplica”"] },
+        { title: "OSCE", premium: true, desc: "Arme circuitos con estaciones, listas de verificación y rotación, use el QR para el evaluador e incluya un paciente virtual con audio en tiempo real.", highlights: ["Estaciones y listas", "Rotación automática", "Paciente virtual con audio"] },
+        { title: "Simulación realística de anamnesis", premium: true, desc: "Dos alumnos atienden y uno observa. El paciente sigue un guion estandarizado, el registro va en un formulario en pantalla o en PDF, y el profesor y el observador evalúan por criterios.", highlights: ["Guion del paciente en PDF", "Formulario con tablas", "Criterios con “No aplica”"] },
         { title: "SOAP, conciliación, documentación y observación clínica", desc: "Salas para practicar el registro profesional: notas SOAP, conciliación de medicamentos, documentación clínica y observación clínica evaluada.", highlights: ["SOAP", "Conciliación", "Documentación clínica"] },
       ],
     },
     {
       id: "virtual", label: "Paciente virtual y juicio", intro: "Práctica con IA y con compañeros, sin necesidad de actor.",
       items: [
-        { title: "Paciente Virtual", desc: "El alumno conversa con un paciente simulado por IA, recibe un debriefing paso a paso con el razonamiento detrás de cada frase y puede ser evaluado por compañeros.", highlights: ["Casos por área", "Debriefing paso a paso", "Evaluación entre pares"] },
+        { title: "Paciente Virtual", premium: true, desc: "El alumno conversa con un paciente simulado por IA, recibe un debriefing paso a paso con el razonamiento detrás de cada frase y puede ser evaluado por compañeros.", highlights: ["Casos por área", "Debriefing paso a paso", "Evaluación entre pares"] },
         { title: "Juicio simulado", desc: "Actividad de argumentación en grupo, con evaluación entre pares por criterios y corrección asistida por IA.", highlights: ["Evaluación entre pares", "Corrección asistida por IA", "Grupos de alumnos"] },
       ],
     },
@@ -200,7 +200,7 @@ const plansPt: PlansPageContent = {
   perMonth: "/mês", unlimited: "Ilimitado",
   free: { name: "Gratuito", desc: "Para experimentar o ProvaFácil", cta: "Começar grátis" },
   premium: { name: "Premium", desc: "Para professores que precisam de mais", trial: "7 dias grátis para testar · Cancele quando quiser", cta: "Assinar Premium", loading: "Redirecionando..." },
-  rows: ["Questões por mês", "Provas por mês", "Exportação em PDF", "Provas online", "Alunos por prova", "Correção com IA", "Monitoramento em tempo real", "Suporte prioritário"],
+  rows: ["Questões por mês", "Provas por mês", "Exportação em PDF", "Provas online", "Alunos por prova", "Correção com IA", "Monitoramento em tempo real", "Simulações clínicas", "OSCE", "Paciente Virtual", "Suporte prioritário"],
   featuresLink: "Quer ver tudo o que a plataforma faz?", featuresLinkCta: "Veja as funcionalidades",
   errorTitle: "Erro", errorFallback: "Não foi possível iniciar o checkout.",
 };
@@ -212,7 +212,7 @@ const plansEn: PlansPageContent = {
   perMonth: "/month", unlimited: "Unlimited",
   free: { name: "Free", desc: "To try ProvaFácil", cta: "Start free" },
   premium: { name: "Premium", desc: "For teachers who need more", trial: "7-day free trial · Cancel anytime", cta: "Subscribe to Premium", loading: "Redirecting..." },
-  rows: ["Questions per month", "Exams per month", "PDF export", "Online exams", "Students per exam", "AI grading", "Real-time monitoring", "Priority support"],
+  rows: ["Questions per month", "Exams per month", "PDF export", "Online exams", "Students per exam", "AI grading", "Real-time monitoring", "Clinical simulations", "OSCE", "Virtual Patient", "Priority support"],
   featuresLink: "Want to see everything the platform does?", featuresLinkCta: "See the features",
   errorTitle: "Error", errorFallback: "Could not start checkout.",
 };
@@ -224,7 +224,7 @@ const plansEs: PlansPageContent = {
   perMonth: "/mes", unlimited: "Ilimitado",
   free: { name: "Gratis", desc: "Para probar ProvaFácil", cta: "Empezar gratis" },
   premium: { name: "Premium", desc: "Para profesores que necesitan más", trial: "7 días gratis para probar · Cancele cuando quiera", cta: "Suscribirse a Premium", loading: "Redirigiendo..." },
-  rows: ["Preguntas por mes", "Exámenes por mes", "Exportación en PDF", "Exámenes en línea", "Alumnos por examen", "Corrección con IA", "Monitoreo en tiempo real", "Soporte prioritario"],
+  rows: ["Preguntas por mes", "Exámenes por mes", "Exportación en PDF", "Exámenes en línea", "Alumnos por examen", "Corrección con IA", "Monitoreo en tiempo real", "Simulaciones clínicas", "OSCE", "Paciente Virtual", "Soporte prioritario"],
   featuresLink: "¿Quiere ver todo lo que hace la plataforma?", featuresLinkCta: "Vea las funcionalidades",
   errorTitle: "Error", errorFallback: "No se pudo iniciar el pago.",
 };

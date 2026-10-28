@@ -36,6 +36,9 @@ export default function Pricing({ embedded = false }: { embedded?: boolean } = {
     { name: t("pricing_students_exam"), free: `${FREE_LIMITS.studentsPerExam}`, premium: t("pricing_unlimited") },
     { name: t("pricing_ai_grading"), free: false, premium: true },
     { name: t("pricing_realtime_monitor"), free: false, premium: true },
+    { name: t("pricing_clinical_sims"), free: false, premium: true },
+    { name: t("pricing_osce"), free: false, premium: true },
+    { name: t("pricing_virtual_patient"), free: false, premium: true },
     { name: t("pricing_priority_support"), free: false, premium: true },
   ];
 

@@ -48,6 +48,36 @@ export function PremiumGate({ feature, children, inline }: PremiumGateProps) {
   return upgradeBlock;
 }
 
+/** Trava de rota dos módulos clínicos (lado do professor): só assinante Premium ou admin. Telas de aluno ficam fora. */
+export function ClinicalGate({ feature, children }: { feature: string; children: React.ReactNode }) {
+  const { hasClinicalAccess, isLoading } = useSubscription();
+  const navigate = useNavigate();
+
+  if (isLoading || hasClinicalAccess) return <>{children}</>;
+
+  return (
+    <div className="mx-auto max-w-xl py-12">
+      <Alert className="border-primary/30 bg-primary/5">
+        <Lock className="h-4 w-4 text-primary" />
+        <AlertTitle className="flex items-center gap-2">
+          <Crown className="h-4 w-4 text-primary" />
+          Recurso Premium
+        </AlertTitle>
+        <AlertDescription className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            <strong>{feature}</strong> está disponível apenas no plano Premium. Os alunos continuam podendo entrar nas
+            atividades que você já aplicou, mas criar, editar e controlar exige a assinatura.
+          </p>
+          <Button size="sm" onClick={() => navigate("/pricing")}>
+            <Crown className="h-3.5 w-3.5 mr-1.5" />
+            Ver Planos
+          </Button>
+        </AlertDescription>
+      </Alert>
+    </div>
+  );
+}
+
 interface UsageLimitGateProps {
   current: number;
   limit: number;

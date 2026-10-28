@@ -141,7 +141,10 @@ const Index = () => {
                   <div className={`flex h-full flex-col justify-between gap-6 rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-2 ${i === 0 ? "md:p-9" : ""}`}>
                     <div className="flex flex-col gap-3">
                       <Icon className={`${i === 0 ? "h-11 w-11" : "h-7 w-7"} text-accent-ink dark:text-highlight`} strokeWidth={1.4} />
-                      <h3 className={`font-heading font-semibold tracking-tight ${i === 0 ? "text-3xl" : "text-xl"}`}>{m.title}</h3>
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <h3 className={`font-heading font-semibold tracking-tight ${i === 0 ? "text-3xl" : "text-xl"}`}>{m.title}</h3>
+                        {m.premium && <span className="rounded-full bg-highlight/15 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-accent-ink dark:text-highlight">Premium</span>}
+                      </div>
                       <p className={`leading-relaxed text-muted-foreground ${i === 0 ? "max-w-lg text-base" : "text-sm"}`}>{m.desc}</p>
                     </div>
                     {i === 0 && (

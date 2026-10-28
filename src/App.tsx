@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ClinicalGate } from "@/components/PremiumGate";
 import { SubscriptionProvider } from "@/hooks/use-subscription";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -297,7 +298,7 @@ const App = () => (
               path="/osce"
               element={
                 <ProtectedRoute>
-                  <AppLayout><OsceExams /></AppLayout>
+                  <AppLayout><ClinicalGate feature="OSCE"><OsceExams /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -305,7 +306,7 @@ const App = () => (
               path="/osce/:id/edit"
               element={
                 <ProtectedRoute>
-                  <AppLayout><OsceEditor /></AppLayout>
+                  <AppLayout><ClinicalGate feature="OSCE"><OsceEditor /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -313,7 +314,7 @@ const App = () => (
               path="/osce/:circuitId/control"
               element={
                 <ProtectedRoute>
-                  <AppLayout><OsceCircuitControl /></AppLayout>
+                  <AppLayout><ClinicalGate feature="OSCE"><OsceCircuitControl /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -321,7 +322,7 @@ const App = () => (
               path="/osce/:id/results"
               element={
                 <ProtectedRoute>
-                  <AppLayout><OsceResults /></AppLayout>
+                  <AppLayout><ClinicalGate feature="OSCE"><OsceResults /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -330,7 +331,7 @@ const App = () => (
               path="/simulations"
               element={
                 <ProtectedRoute>
-                  <AppLayout><Simulations /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><Simulations /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -338,7 +339,7 @@ const App = () => (
               path="/simulations/:roomId/edit"
               element={
                 <ProtectedRoute>
-                  <AppLayout><SimulationEditor /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><SimulationEditor /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -346,7 +347,7 @@ const App = () => (
               path="/simulations/:roomId/control"
               element={
                 <ProtectedRoute>
-                  <AppLayout><SimulationControl /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><SimulationControl /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -355,7 +356,7 @@ const App = () => (
               path="/simulations/soap"
               element={
                 <ProtectedRoute>
-                  <AppLayout><SoapRooms /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><SoapRooms /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -363,7 +364,7 @@ const App = () => (
               path="/simulations/soap/editor/:roomId"
               element={
                 <ProtectedRoute>
-                  <AppLayout><SoapEditor /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><SoapEditor /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -371,7 +372,7 @@ const App = () => (
               path="/simulations/soap/control/:roomId"
               element={
                 <ProtectedRoute>
-                  <AppLayout><SoapControl /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><SoapControl /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -392,7 +393,7 @@ const App = () => (
               path="/simulations/reconciliation"
               element={
                 <ProtectedRoute>
-                  <AppLayout><ReconciliationRooms /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><ReconciliationRooms /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -400,7 +401,7 @@ const App = () => (
               path="/simulations/reconciliation/editor/:roomId"
               element={
                 <ProtectedRoute>
-                  <AppLayout><ReconciliationEditor /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><ReconciliationEditor /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -408,7 +409,7 @@ const App = () => (
               path="/simulations/reconciliation/control/:roomId"
               element={
                 <ProtectedRoute>
-                  <AppLayout><ReconciliationControl /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><ReconciliationControl /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -417,7 +418,7 @@ const App = () => (
               path="/simulations/documentation"
               element={
                 <ProtectedRoute>
-                  <AppLayout><DocumentationRooms /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><DocumentationRooms /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -425,7 +426,7 @@ const App = () => (
               path="/simulations/documentation/editor/:roomId"
               element={
                 <ProtectedRoute>
-                  <AppLayout><DocumentationEditor /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><DocumentationEditor /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -433,7 +434,7 @@ const App = () => (
               path="/simulations/documentation/control/:roomId"
               element={
                 <ProtectedRoute>
-                  <AppLayout><DocumentationControl /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><DocumentationControl /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -441,53 +442,53 @@ const App = () => (
               path="/simulations/aggregator"
               element={
                 <ProtectedRoute>
-                  <AppLayout><SimulationAggregator /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Simulações clínicas"><SimulationAggregator /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
             {/* Nursing routes */}
-            <Route path="/nursing" element={<ProtectedRoute><AppLayout><NursingSimulations /></AppLayout></ProtectedRoute>} />
-            <Route path="/nursing/aggregator" element={<ProtectedRoute><AppLayout><NursingAggregator /></AppLayout></ProtectedRoute>} />
-            <Route path="/nursing/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><NursingEditor /></AppLayout></ProtectedRoute>} />
-            <Route path="/nursing/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><NursingControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/nursing" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NursingSimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/nursing/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NursingAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/nursing/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NursingEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/nursing/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NursingControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
             {/* Public Nursing route */}
             <Route path="/nursing/join" element={<StudentA11yShell><NursingJoin /></StudentA11yShell>} />
             {/* Nutrition routes */}
-            <Route path="/nutrition" element={<ProtectedRoute><AppLayout><NutritionSimulations /></AppLayout></ProtectedRoute>} />
-            <Route path="/nutrition/aggregator" element={<ProtectedRoute><AppLayout><NutritionAggregator /></AppLayout></ProtectedRoute>} />
-            <Route path="/nutrition/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><NutritionEditor /></AppLayout></ProtectedRoute>} />
-            <Route path="/nutrition/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><NutritionControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/nutrition" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NutritionSimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/nutrition/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NutritionAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/nutrition/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NutritionEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/nutrition/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NutritionControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
             <Route path="/nutrition/join" element={<StudentA11yShell><NutritionJoin /></StudentA11yShell>} />
             {/* Dentistry routes */}
-            <Route path="/dentistry" element={<ProtectedRoute><AppLayout><DentistrySimulations /></AppLayout></ProtectedRoute>} />
-            <Route path="/dentistry/aggregator" element={<ProtectedRoute><AppLayout><DentistryAggregator /></AppLayout></ProtectedRoute>} />
-            <Route path="/dentistry/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><DentistryEditor /></AppLayout></ProtectedRoute>} />
-            <Route path="/dentistry/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><DentistryControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/dentistry" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><DentistrySimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/dentistry/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><DentistryAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/dentistry/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><DentistryEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/dentistry/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><DentistryControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
             <Route path="/dentistry/join" element={<StudentA11yShell><DentistryJoin /></StudentA11yShell>} />
             {/* Medicine routes */}
-            <Route path="/medicine" element={<ProtectedRoute><AppLayout><MedicineSimulations /></AppLayout></ProtectedRoute>} />
-            <Route path="/medicine/aggregator" element={<ProtectedRoute><AppLayout><MedicineAggregator /></AppLayout></ProtectedRoute>} />
-            <Route path="/medicine/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><MedicineEditor /></AppLayout></ProtectedRoute>} />
-            <Route path="/medicine/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><MedicineControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/medicine" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><MedicineSimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/medicine/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><MedicineAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/medicine/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><MedicineEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/medicine/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><MedicineControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
             <Route path="/medicine/join" element={<StudentA11yShell><MedicineJoin /></StudentA11yShell>} />
             {/* Physiotherapy routes */}
-            <Route path="/physiotherapy" element={<ProtectedRoute><AppLayout><PhysiotherapySimulations /></AppLayout></ProtectedRoute>} />
-            <Route path="/physiotherapy/aggregator" element={<ProtectedRoute><AppLayout><PhysiotherapyAggregator /></AppLayout></ProtectedRoute>} />
-            <Route path="/physiotherapy/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><PhysiotherapyEditor /></AppLayout></ProtectedRoute>} />
-            <Route path="/physiotherapy/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><PhysiotherapyControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/physiotherapy" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><PhysiotherapySimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/physiotherapy/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><PhysiotherapyAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/physiotherapy/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><PhysiotherapyEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/physiotherapy/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><PhysiotherapyControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
             <Route path="/physiotherapy/join" element={<StudentA11yShell><PhysiotherapyJoin /></StudentA11yShell>} />
             {/* Biomedicine routes */}
-            <Route path="/biomedicine" element={<ProtectedRoute><AppLayout><BiomedicineSimulations /></AppLayout></ProtectedRoute>} />
-            <Route path="/biomedicine/aggregator" element={<ProtectedRoute><AppLayout><BiomedicineAggregator /></AppLayout></ProtectedRoute>} />
-            <Route path="/biomedicine/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><BiomedicineEditor /></AppLayout></ProtectedRoute>} />
-            <Route path="/biomedicine/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><BiomedicineControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/biomedicine" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><BiomedicineSimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/biomedicine/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><BiomedicineAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/biomedicine/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><BiomedicineEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+            <Route path="/biomedicine/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><BiomedicineControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
             <Route path="/biomedicine/join" element={<StudentA11yShell><BiomedicineJoin /></StudentA11yShell>} />
             {/* Virtual Patients */}
             <Route
               path="/virtual-patients"
               element={
                 <ProtectedRoute>
-                  <AppLayout><VirtualPatients /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Paciente Virtual"><VirtualPatients /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -495,7 +496,7 @@ const App = () => (
               path="/virtual-patients/case/:id"
               element={
                 <ProtectedRoute>
-                  <AppLayout><VirtualPatientCaseEditor /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Paciente Virtual"><VirtualPatientCaseEditor /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -503,7 +504,7 @@ const App = () => (
               path="/virtual-patients/chat/:patientId"
               element={
                 <ProtectedRoute>
-                  <AppLayout><VirtualPatientChat /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Paciente Virtual"><VirtualPatientChat /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -511,7 +512,7 @@ const App = () => (
               path="/virtual-patients/analytics"
               element={
                 <ProtectedRoute>
-                  <AppLayout><Analytics initialTab="vp" /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Paciente Virtual"><Analytics initialTab="vp" /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -519,7 +520,7 @@ const App = () => (
               path="/virtual-patients/research"
               element={
                 <ProtectedRoute>
-                  <AppLayout><VPResearch /></AppLayout>
+                  <AppLayout><ClinicalGate feature="Paciente Virtual"><VPResearch /></ClinicalGate></AppLayout>
                 </ProtectedRoute>
               }
             />

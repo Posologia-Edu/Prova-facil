@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 export interface NavChild { title: string; url: string }
-export interface NavItem { title: string; url: string; icon: LucideIcon; children?: NavChild[]; flat?: boolean }
+export interface NavItem { title: string; url: string; icon: LucideIcon; children?: NavChild[]; flat?: boolean; premium?: boolean }
 export interface NavGroup { label: string; items: NavItem[] }
 
 type T = (key: any) => string;
@@ -55,9 +55,9 @@ export function buildNav(t: T): NavGroup[] {
     {
       label: t("sidebar_practice"),
       items: [
-        { title: "Pacientes Virtuais", url: "/virtual-patients", icon: UserRound },
-        { title: t("sim_nav"), url: "/simulations", icon: HeartPulse },
-        { title: "OSCE", url: "/osce", icon: Stethoscope },
+        { title: "Pacientes Virtuais", url: "/virtual-patients", icon: UserRound, premium: true },
+        { title: t("sim_nav"), url: "/simulations", icon: HeartPulse, premium: true },
+        { title: "OSCE", url: "/osce", icon: Stethoscope, premium: true },
         { title: "Júri Simulado", url: "/mock-trials", icon: Gavel },
       ],
     },
@@ -67,7 +67,7 @@ export function buildNav(t: T): NavGroup[] {
         { title: t("nav_classes"), url: "/classes", icon: GraduationCap },
         { title: t("nav_calendar"), url: "/calendar", icon: CalendarDays },
         { title: t("nav_analytics"), url: "/analytics", icon: BarChart3 },
-        { title: "Análises VP", url: "/virtual-patients/analytics", icon: BarChart3 },
+        { title: "Análises VP", url: "/virtual-patients/analytics", icon: BarChart3, premium: true },
         { title: "Marketplace", url: "/marketplace", icon: Store },
         { title: "Competências", url: "/competency-analysis", icon: Brain },
         { title: "Integração LMS", url: "/lms-integration", icon: Link2 },

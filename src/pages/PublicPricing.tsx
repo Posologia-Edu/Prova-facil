@@ -22,6 +22,9 @@ const PLAN_VALUES: { free: string | boolean; premium: string | boolean }[] = [
   { free: false, premium: true },
   { free: false, premium: true },
   { free: false, premium: true },
+  { free: false, premium: true },
+  { free: false, premium: true },
+  { free: false, premium: true },
 ];
 
 export default function PublicPricing() {
