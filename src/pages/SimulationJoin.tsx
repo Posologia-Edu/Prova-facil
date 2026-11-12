@@ -979,22 +979,22 @@ export default function SimulationJoin() {
             const isReady = participantData?.status === "ready";
             const canSwap = isProfessor && !isCompleted && (a.assigned_role === "patient" || a.assigned_role === "observer");
             return (
-              <div key={a.id} className="flex items-center gap-2 text-sm flex-wrap">
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{getParticipantName(a.participant_id)}</span>
-                <Badge variant="outline" className={`text-xs ${roleBadgeColors[a.assigned_role] || ""}`}>
+              <div key={a.id} className="flex items-center gap-2 text-sm flex-nowrap">
+                <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="font-medium min-w-0 flex-1 truncate" title={getParticipantName(a.participant_id)}>{getParticipantName(a.participant_id)}</span>
+                <Badge variant="outline" className={`text-xs shrink-0 whitespace-nowrap ${roleBadgeColors[a.assigned_role] || ""}`}>
                   {roleLabels[a.assigned_role] || a.assigned_role}
                 </Badge>
                 {isProfessor && cycleMaterialsReleased && !isActive && (
                   isReady ? (
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-4 w-4 text-success shrink-0" />
                   ) : (
-                    <Clock className="h-4 w-4 text-muted-foreground/50" />
+                    <Clock className="h-4 w-4 text-muted-foreground/50 shrink-0" />
                   )
                 )}
                 {canSwap && swapCandidates.length > 0 && (
                   <Select onValueChange={(val) => swapAssignmentParticipant(a.id, val)}>
-                    <SelectTrigger className="h-7 w-auto text-xs gap-1 border-dashed ml-1">
+                    <SelectTrigger className="h-7 w-auto shrink-0 text-xs gap-1 border-dashed">
                       <UserCog className="h-3 w-3" />
                       <SelectValue placeholder="Substituir" />
                     </SelectTrigger>
