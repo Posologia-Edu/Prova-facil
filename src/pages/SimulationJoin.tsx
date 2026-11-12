@@ -422,7 +422,9 @@ export default function SimulationJoin() {
   const escreverFeedbackComIa = async (fields: FormField[]) => {
     const { LABEL_PONTOS_FORTES, LABEL_OPORTUNIDADES } = await import("@/lib/form-templates/pharmacy-avaliacao-anamnese-v2");
     const texto = (rotulo: string) => {
-      const f = fields.find((x) => x.label === rotulo);
+      // Compara sem diferenciar maiúsculas e acentos: modelos antigos usam "Pontos Fortes do Aluno"
+      const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+      const f = fields.find((x) => norm(x.label || "") === norm(rotulo));
       const v = f ? answers[f.id] : "";
       return typeof v === "string" ? v.trim() : "";
     };
