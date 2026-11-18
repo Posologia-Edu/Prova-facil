@@ -18,6 +18,9 @@ import { SimulationReportGenerator, type PairReport } from "@/components/Simulat
 import { ModuleControlHeader } from "@/components/simulation/ModuleControlHeader";
 import { Pill } from "lucide-react";
 import ReconV2Painel from "@/components/reconciliation/ReconV2Painel";
+import ReconV2Grading from "@/components/reconciliation/ReconV2Grading";
+import ReconV2Lote from "@/components/reconciliation/ReconV2Lote";
+import ReconV2Panorama from "@/components/reconciliation/ReconV2Panorama";
 
 type FormField = {
   id: string;
@@ -183,10 +186,7 @@ export default function ReconciliationControl() {
   };
 
   const gradeWithAI = async () => {
-    if (isV2) {
-      toast({ title: "Correção por IA ainda não disponível na v2", description: "Corrija pelo painel ao lado e dê a nota manualmente. A IA da v2 chega na próxima etapa." });
-      return;
-    }
+    if (isV2) return;
     if (!selectedResponse || !answerKeyForm) {
       toast({ title: "Espelho necessário", description: "Cadastre um espelho de respostas primeiro.", variant: "destructive" });
       return;
@@ -327,6 +327,7 @@ export default function ReconciliationControl() {
           <TabsTriggerLine value="participants"><Users className="h-4 w-4" />Participantes</TabsTriggerLine>
           <TabsTriggerLine value="responses"><FileText className="h-4 w-4" />Respostas</TabsTriggerLine>
           <TabsTriggerLine value="grading"><BarChart3 className="h-4 w-4" />Avaliação</TabsTriggerLine>
+          {isV2 && <TabsTriggerLine value="panorama"><BarChart3 className="h-4 w-4" />Panorama da turma</TabsTriggerLine>}
         </TabsListLine>
 
         {/* Participants */}
@@ -476,6 +477,14 @@ export default function ReconciliationControl() {
 
         {/* Grading */}
         <TabsContent value="grading" className="mt-6 space-y-4">
+          {isV2 && (
+            <ReconV2Lote
+              roomId={roomId!}
+              respostas={Array.from(new Map(responses.map((r: any) => [r.pair_index, r])).values()).map((r: any) => ({ id: r.id, pair_index: r.pair_index }))}
+              nomeDe={pairNames}
+              onFeito={() => queryClient.invalidateQueries({ queryKey: ["reconciliation-responses", roomId] })}
+            />
+          )}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Pair selector */}
             <div className="space-y-2">
@@ -514,16 +523,20 @@ export default function ReconciliationControl() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="font-heading text-lg font-medium">{pairNames(selectedPairIndex!)}</CardTitle>
-                      <Button onClick={gradeWithAI} disabled={gradingAI || isV2} variant="outline" title={isV2 ? "A correção por IA da v2 chega na próxima etapa" : undefined}>
+                      {!isV2 && <Button onClick={gradeWithAI} disabled={gradingAI} variant="outline">
                         {gradingAI ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Bot className="h-4 w-4 mr-1" />}
                         Corrigir com IA
-                      </Button>
+                      </Button>}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {isV2 && (
-                      <ReconV2Painel response={selectedResponse} caso={(clinicalCases.find((c: any) => c.id === selectedResponse.clinical_case_id) as any)?.caso_json || null} fields={formFields as any} mostrarRespostas={false} />
-                    )}
+                    {isV2 ? (
+                      <>
+                        <ReconV2Painel response={selectedResponse} caso={(clinicalCases.find((c: any) => c.id === selectedResponse.clinical_case_id) as any)?.caso_json || null} fields={formFields as any} mostrarRespostas={false} />
+                        <ReconV2Grading roomId={roomId!} response={selectedResponse} onSaved={() => queryClient.invalidateQueries({ queryKey: ["reconciliation-responses", roomId] })} />
+                      </>
+                    ) : (
+                    <>
                     {/* Show AI feedback per item if available */}
                     {selectedResponse.ai_feedback_json && (
                       <div className="p-3 bg-brand-soft rounded border border-primary/20 space-y-2">
@@ -554,6 +567,8 @@ export default function ReconciliationControl() {
                       <Textarea value={adminFeedback} onChange={e => setAdminFeedback(e.target.value)} rows={4} placeholder="Feedback para a dupla..." />
                     </div>
                     <Button onClick={saveAdminEvaluation}>Salvar Avaliação</Button>
+                    </>
+                    )}
                   </CardContent>
                 </Card>
               ) : (
@@ -566,6 +581,11 @@ export default function ReconciliationControl() {
             </div>
           </div>
         </TabsContent>
+        {isV2 && (
+          <TabsContent value="panorama" className="mt-6 space-y-4">
+            <ReconV2Panorama roomId={roomId!} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

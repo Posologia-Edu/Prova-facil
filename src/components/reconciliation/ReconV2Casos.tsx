@@ -68,6 +68,21 @@ export default function ReconV2Casos({ roomId }: { roomId: string }) {
   }, [roomId]);
   useEffect(() => { void carregar(); }, [carregar]);
 
+  // Tempo sugerido por etapa (minutos). Só avisa o aluno, não bloqueia. Vazio = sem cronômetro.
+  const [tempo, setTempo] = useState("");
+  useEffect(() => {
+    supabase.from("reconciliation_rooms").select("*").eq("id", roomId).maybeSingle()
+      .then(({ data }) => setTempo((data as any)?.tempo_etapa_min ? String((data as any).tempo_etapa_min) : ""));
+  }, [roomId]);
+  const salvarTempo = async () => {
+    const n = Math.round(Number(tempo.replace(",", ".")));
+    const valor = Number.isFinite(n) && n > 0 ? Math.min(n, 240) : null;
+    const { error } = await supabase.from("reconciliation_rooms").update({ tempo_etapa_min: valor } as any).eq("id", roomId);
+    if (error) { toast({ title: "Erro ao salvar o tempo", description: error.message, variant: "destructive" }); return; }
+    setTempo(valor ? String(valor) : "");
+    toast({ title: valor ? `Tempo sugerido: ${valor} min por etapa` : "Cronômetro desligado" });
+  };
+
   const avisos = useMemo(() => (rascunho ? validarCaso(rascunho) : []), [rascunho]);
   const erros = avisos.filter((a) => a.nivel === "erro");
 
@@ -139,6 +154,16 @@ export default function ReconV2Casos({ roomId }: { roomId: string }) {
   if (!rascunho) {
     return (
       <div className="space-y-4">
+        <Card>
+          <CardContent className="flex flex-wrap items-end gap-3 py-4">
+            <div>
+              <Label htmlFor="tempo-etapa">Tempo sugerido por etapa (minutos, opcional)</Label>
+              <Input id="tempo-etapa" inputMode="numeric" value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="Sem cronômetro" className="w-48" />
+            </div>
+            <Button variant="outline" onClick={salvarTempo}>Salvar</Button>
+            <p className="text-xs text-muted-foreground">O aluno vê uma contagem regressiva em cada etapa. Ela só avisa, não bloqueia nada.</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader><CardTitle className="font-heading text-lg font-medium">Novo caso</CardTitle></CardHeader>
           <CardContent className="space-y-4">

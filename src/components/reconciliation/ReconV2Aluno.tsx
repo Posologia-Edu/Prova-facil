@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import FormRenderer from "@/components/forms/FormRenderer";
 import FormAnswersView from "@/components/forms/FormAnswersView";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+import ReconV2Devolutiva from "@/components/reconciliation/ReconV2Devolutiva";
 import { getSections, type FormField } from "@/components/forms/types";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { RECON_V2 } from "@/lib/form-templates/pharmacy-reconciliation-v2";
@@ -84,7 +85,6 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
   const [painel, setPainel] = useState<"dossie" | "prescricao">("dossie");
   const [enviando, setEnviando] = useState(false);
   const [finalizada, setFinalizada] = useState(false);
-  const [contagem, setContagem] = useState(15);
   const prefeito = useRef(false);
 
   const carregar = useCallback(async () => {
@@ -184,12 +184,18 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
     }
   };
 
+  // Cronômetro sugerido por etapa (só avisa; não bloqueia). O professor define os minutos na sala.
+  const tempoMin = Number(room?.tempo_etapa_min) > 0 ? Number(room.tempo_etapa_min) : 0;
+  const [inicioPasso, setInicioPasso] = useState(() => Date.now());
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => { setInicioPasso(Date.now()); setAgora(Date.now()); }, [passo]);
   useEffect(() => {
-    if (!finalizada) return;
-    if (contagem <= 0) { window.location.href = "/"; return; }
-    const t = setTimeout(() => setContagem((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [finalizada, contagem]);
+    if (!tempoMin || finalizada) return;
+    const t = setInterval(() => setAgora(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [tempoMin, finalizada]);
+  const restanteS = tempoMin ? Math.max(0, tempoMin * 60 - Math.floor((agora - inicioPasso) / 1000)) : 0;
+  const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   if (carregando) return <div className="flex min-h-screen items-center justify-center bg-background p-4 text-muted-foreground">Carregando o caso...</div>;
   if (erro || !estado || !caso || !form) {
@@ -205,13 +211,15 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
   }
   if (finalizada) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md text-center"><CardContent className="py-12">
-          <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-success" />
-          <h2 className="mb-2 font-heading text-xl font-medium">Resposta enviada!</h2>
-          <p className="text-muted-foreground">Sua reconciliação foi enviada. Aguarde a avaliação do professor.</p>
-          <p className="mt-4 text-sm text-muted-foreground">Redirecionando em {contagem}s...</p>
-        </CardContent></Card>
+      <div className="flex min-h-screen items-start justify-center bg-background p-4">
+        <div className="w-full max-w-3xl space-y-4 py-6">
+          <Card className="text-center"><CardContent className="py-10">
+            <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-success" />
+            <h2 className="mb-2 font-heading text-xl font-medium">Resposta enviada!</h2>
+            <p className="text-muted-foreground">Sua reconciliação foi enviada. Aguarde a avaliação do professor e volte aqui para ver a devolutiva quando ela for liberada.</p>
+          </CardContent></Card>
+          <ReconV2Devolutiva accessCode={accessCode} email={email} />
+        </div>
       </div>
     );
   }
@@ -318,6 +326,9 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <CardTitle className="font-heading text-lg font-medium">{secao?.header?.label}</CardTitle>
+                {tempoMin > 0 && !travado && (
+                  <Badge variant={restanteS === 0 ? "destructive" : "outline"}>{restanteS === 0 ? "Tempo sugerido da etapa esgotado" : `Tempo sugerido: ${mmss(restanteS)}`}</Badge>
+                )}
                 <DraftStatusBadge status={draftStatus} lastSavedAt={lastSavedAt} />
               </div>
             </CardHeader>
