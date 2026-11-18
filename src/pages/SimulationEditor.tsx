@@ -179,7 +179,7 @@ export default function SimulationEditor() {
   const activeForm = forms.find((f: any) => f.form_type === activeFormType);
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [formTitle, setFormTitle] = useState("");
-  const [clinicalCases, setClinicalCases] = useState<{ id: string; title: string; script: string; roteiro?: PatientRoteiro }[]>([]);
+  const [clinicalCases, setClinicalCases] = useState<{ id: string; title: string; script: string; roteiro?: PatientRoteiro; source_vp_id?: string }[]>([]);
   const lastSavedFormSnapshotRef = useRef("");
   const skipNextAutoSaveRef = useRef(true);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);

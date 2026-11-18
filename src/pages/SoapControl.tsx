@@ -20,6 +20,8 @@ import { ModuleControlHeader } from "@/components/simulation/ModuleControlHeader
 import { ClipboardList } from "lucide-react";
 import { calculateSoapStudentGrade } from "@/lib/soap-grades";
 import FormAnswersView from "@/components/forms/FormAnswersView";
+import { SoapV2Grading } from "@/components/soap/SoapV2Grading";
+import { PESO_RUBRICA_V2, respostaEhSoapV2 } from "@/lib/soap-v2-rubrica";
 
 export default function SoapControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -497,9 +499,11 @@ export default function SoapControl() {
           if (isSolo && peerScore == null && aiSc != null) {
             peerScore = aiSc;
           }
-          // Final score = média entre Professor e Pares (AI não entra no relatório)
+          // Final score = média entre Professor e Pares (AI não entra no relatório); no SOAP v2, 80% professor e 20% pares
           const finalScores = [peerScore, adminSc].filter((s): s is number => s != null);
-          const finalScore = finalScores.length > 0 ? finalScores.reduce((a, b) => a + b, 0) / finalScores.length : 0;
+          const finalScore = respostaEhSoapV2(soapResp?.answers_json)
+            ? (adminSc == null ? 0 : peerScore == null ? adminSc : PESO_RUBRICA_V2 * adminSc + (1 - PESO_RUBRICA_V2) * peerScore)
+            : finalScores.length > 0 ? finalScores.reduce((a, b) => a + b, 0) / finalScores.length : 0;
 
           return {
             pairIndex: idx,
@@ -706,6 +710,13 @@ export default function SoapControl() {
                 <CardContent className="space-y-4">
                   {selectedResponse ? (
                     <>
+                      {(room as any)?.schema_version === 2 ? (
+                        <SoapV2Grading
+                          response={selectedResponse}
+                          soapFields={(forms.find((f: any) => f.id === selectedResponse.form_id)?.content_json as FormField[]) || []}
+                          onSaved={() => queryClient.invalidateQueries({ queryKey: ["soap-responses", roomId] })}
+                        />
+                      ) : (<>
                       <div className="space-y-2">
                         <Label>Resposta SOAP</Label>
                         {renderAnswerEntries(selectedResponse.answers_json)}
@@ -720,10 +731,11 @@ export default function SoapControl() {
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={saveAdminScore}>Salvar Nota</Button>
-                        <Button variant="outline" onClick={gradeWithAI} disabled={gradingAI || (room as any)?.schema_version === 2} title={(room as any)?.schema_version === 2 ? "A correção por IA do SOAP v2 chega na próxima etapa" : undefined}>
+                        <Button variant="outline" onClick={gradeWithAI} disabled={gradingAI}>
                           {gradingAI ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Corrigindo...</> : <><Bot className="h-4 w-4 mr-1" />Corrigir com IA</>}
                         </Button>
                       </div>
+                      </>)}
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground">Selecione uma resposta para começar a avaliação.</p>

@@ -1,4 +1,5 @@
 import { computeFieldScore, type FormField } from "@/components/forms/types";
+import { PESO_RUBRICA_V2, respostaEhSoapV2 } from "@/lib/soap-v2-rubrica";
 
 type SoapResponseLike = {
   answers_json?: unknown;
@@ -58,6 +59,12 @@ export function calculateSoapStudentGrade({
   );
   const adminScore = toNumberOrNull(soapResponse?.admin_score);
   const aiScore = toNumberOrNull(soapResponse?.ai_score);
+  // SOAP v2: 80% rubrica confirmada pelo professor + 20% revisão por pares. Sem a nota do professor, a nota ainda não existe.
+  if (respostaEhSoapV2(soapResponse?.answers_json)) {
+    const par = rawPeerScore;
+    const finalV2 = adminScore == null ? null : par == null ? adminScore : PESO_RUBRICA_V2 * adminScore + (1 - PESO_RUBRICA_V2) * par;
+    return { peerScore: par, peerMaxScore, adminScore, finalScore: finalV2 };
+  }
   const peerScore = isSolo && rawPeerScore == null && aiScore != null ? aiScore : rawPeerScore;
   const scores = [peerScore, adminScore].filter((score): score is number => score != null);
   const finalScore = scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null;

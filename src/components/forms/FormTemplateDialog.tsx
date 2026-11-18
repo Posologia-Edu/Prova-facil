@@ -25,7 +25,7 @@ type FormTemplateDialogProps = {
   moduleType: string;
   onApply: (title: string, formType: string, fields: FormField[]) => void;
   /** Só no roteiro do paciente da simulação: habilita a aba "Pacientes virtuais" (casos v2 de Farmácia do professor). */
-  virtualPatients?: { onApplyCase: (c: { title: string; script: string; roteiro: PatientRoteiro }) => void };
+  virtualPatients?: { onApplyCase: (c: { title: string; script: string; roteiro: PatientRoteiro; source_vp_id?: string }) => void };
 };
 
 export default function FormTemplateDialog({ open, onOpenChange, area, moduleType, onApply, virtualPatients }: FormTemplateDialogProps) {
@@ -113,10 +113,10 @@ export default function FormTemplateDialog({ open, onOpenChange, area, moduleTyp
     enabled: open && !!virtualPatients,
   });
 
-  const applyVpCase = (vp: { name: string; data: VpCaseData }) => {
+  const applyVpCase = (vp: { id: string; name: string; data: VpCaseData }) => {
     const roteiro = buildPatientRoteiro(vp.data, "farmaceutico");
     if (!roteiro || !virtualPatients) return;
-    virtualPatients.onApplyCase({ title: roteiroTitle(roteiro), script: roteiroToText(roteiro), roteiro });
+    virtualPatients.onApplyCase({ title: roteiroTitle(roteiro), script: roteiroToText(roteiro), roteiro, source_vp_id: vp.id });
     onOpenChange(false);
     toast({ title: "Caso adicionado!", description: `"${vp.name}" entrou na lista de casos da sala.` });
   };
