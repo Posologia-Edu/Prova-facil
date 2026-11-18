@@ -17,6 +17,7 @@ import { ArrowLeft, Users, FileText, BarChart3, Bot, CheckCircle, Loader2, Chevr
 import { SimulationReportGenerator, type PairReport } from "@/components/SimulationReportGenerator";
 import { ModuleControlHeader } from "@/components/simulation/ModuleControlHeader";
 import { Pill } from "lucide-react";
+import ReconV2Painel from "@/components/reconciliation/ReconV2Painel";
 
 type FormField = {
   id: string;
@@ -60,7 +61,7 @@ export default function ReconciliationControl() {
     refetchInterval: 5000,
   });
 
-  const { data: responses = [] } = useQuery({
+  const { data: allResponses = [] } = useQuery({
     queryKey: ["reconciliation-responses", roomId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -73,6 +74,10 @@ export default function ReconciliationControl() {
     enabled: !!roomId,
     refetchInterval: 5000,
   });
+
+  // Reconciliação v2: a resposta nasce no envio da BPMH. Só aparece como resposta quando a dupla envia a final.
+  const isV2 = (room as any)?.schema_version === 2;
+  const responses = isV2 ? allResponses.filter((r: any) => r.submitted_at) : allResponses;
 
   const { data: forms = [] } = useQuery({
     queryKey: ["reconciliation-forms", roomId],
@@ -178,6 +183,10 @@ export default function ReconciliationControl() {
   };
 
   const gradeWithAI = async () => {
+    if (isV2) {
+      toast({ title: "Correção por IA ainda não disponível na v2", description: "Corrija pelo painel ao lado e dê a nota manualmente. A IA da v2 chega na próxima etapa." });
+      return;
+    }
     if (!selectedResponse || !answerKeyForm) {
       toast({ title: "Espelho necessário", description: "Cadastre um espelho de respostas primeiro.", variant: "destructive" });
       return;
@@ -397,6 +406,9 @@ export default function ReconciliationControl() {
                     {caseData && <p className="text-sm text-muted-foreground">Caso: {caseData.title}</p>}
                   </CardHeader>
                   <CardContent>
+                    {isV2 ? (
+                      <ReconV2Painel response={resp} caso={(caseData as any)?.caso_json || null} fields={formFields as any} />
+                    ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Student answers */}
                       <div>
@@ -436,6 +448,7 @@ export default function ReconciliationControl() {
                         )}
                       </div>
                     </div>
+                    )}
 
                     {/* AI Feedback if available */}
                     {resp.ai_feedback_json && (
@@ -501,13 +514,16 @@ export default function ReconciliationControl() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="font-heading text-lg font-medium">{pairNames(selectedPairIndex!)}</CardTitle>
-                      <Button onClick={gradeWithAI} disabled={gradingAI} variant="outline">
+                      <Button onClick={gradeWithAI} disabled={gradingAI || isV2} variant="outline" title={isV2 ? "A correção por IA da v2 chega na próxima etapa" : undefined}>
                         {gradingAI ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Bot className="h-4 w-4 mr-1" />}
                         Corrigir com IA
                       </Button>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {isV2 && (
+                      <ReconV2Painel response={selectedResponse} caso={(clinicalCases.find((c: any) => c.id === selectedResponse.clinical_case_id) as any)?.caso_json || null} fields={formFields as any} mostrarRespostas={false} />
+                    )}
                     {/* Show AI feedback per item if available */}
                     {selectedResponse.ai_feedback_json && (
                       <div className="p-3 bg-brand-soft rounded border border-primary/20 space-y-2">

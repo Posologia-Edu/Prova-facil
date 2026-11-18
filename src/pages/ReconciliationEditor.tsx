@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, FileText, Play, Copy, BookOpen, CheckSquare, RotateCcw, Download, Star, BookmarkPlus, FileDown, Pencil, Save } from "lucide-react";
 import ClinicalCaseBankDialog from "@/components/ClinicalCaseBankDialog";
 import ClinicalCaseContent from "@/components/ClinicalCaseContent";
+import ReconV2Casos from "@/components/reconciliation/ReconV2Casos";
 import ParticipantEditDialog from "@/components/ParticipantEditDialog";
 import { exportFormToPDF } from "@/lib/form-pdf-export";
 import FormBuilder from "@/components/forms/FormBuilder";
@@ -811,6 +812,10 @@ export default function ReconciliationEditor() {
 
         {/* Clinical Cases Tab */}
         <TabsContent value="cases" className="mt-6 space-y-4">
+          {(room as any).schema_version === 2 ? (
+            <ReconV2Casos roomId={roomId!} />
+          ) : (
+          <>
           {clinicalCases.map((cc: any, i: number) => (
             <div key={cc.id} className="border rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
@@ -926,6 +931,8 @@ export default function ReconciliationEditor() {
               refetchCases();
             }}
           />
+                  </>
+          )}
         </TabsContent>
       </Tabs>
       <FormTemplateDialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen} area="pharmacy" moduleType="reconciliacao" onApply={(title, ft, fields) => { setEditingFormId(null); setFormTitle(title); setFormType(ft as any); setFormFields(fields); setAnswerKeyByCaseId({}); }} />

@@ -13,6 +13,7 @@ import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+import ReconV2Aluno from "@/components/reconciliation/ReconV2Aluno";
 
 
 
@@ -118,7 +119,7 @@ export default function ReconciliationJoin() {
 
   // Autosave draft for reconciliation form
   const draftKey =
-    room && participant && form
+    room && participant && form && room.schema_version !== 2
       ? `reconciliation:${room.id}:${participant.id}:${form.id}`
       : null;
   const {
@@ -193,6 +194,11 @@ export default function ReconciliationJoin() {
   }, [phase, countdown]);
 
   // Form rendering delegated to FormRenderer
+
+  // Reconciliação v2: a tela inteira é outra (dossiê, BPMH travada, prescrição entregue pelo servidor).
+  if (phase !== "login" && room?.schema_version === 2 && participant) {
+    return <ReconV2Aluno room={room} participant={participant} accessCode={room.access_code} email={participant.student_email || email} />;
+  }
 
   if (phase === "login") {
     return (

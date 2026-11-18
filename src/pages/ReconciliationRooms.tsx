@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Users, Settings, Play, Trash2, FileText, GraduationCap, Handshake, Copy, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { getNativeTemplates } from "@/lib/form-templates";
 import ShareRoomDialog from "@/components/ShareRoomDialog";
 import EditableRoomTitle from "@/components/EditableRoomTitle";
 import SimulationRoomCard from "@/components/SimulationRoomCard";
@@ -26,6 +27,7 @@ export default function ReconciliationRooms() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [soapRoomId, setSoapRoomId] = useState<string>("");
+  const [reconVersion, setReconVersion] = useState<"1" | "2">("1");
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["reconciliation-rooms"],
@@ -95,10 +97,17 @@ export default function ReconciliationRooms() {
           title,
           description,
           soap_room_id: soapRoomId && soapRoomId !== "none" ? soapRoomId : null,
-        })
+          // Só a v2 grava a versão: criar sala v1 não depende da coluna nova existir no banco.
+          ...(reconVersion === "2" ? { schema_version: 2 } : {}),
+        } as any)
         .select()
         .single();
       if (error) throw error;
+      // Reconciliação v2: a sala já nasce com o formulário v2.
+      if (reconVersion === "2") {
+        const v2 = getNativeTemplates("pharmacy", "reconciliacao", "reconciliation").find((t) => t.content_json.some((f: any) => f.id === "r2-bpmh"));
+        if (v2) await supabase.from("reconciliation_forms").insert({ room_id: data.id, form_type: v2.form_type, title: v2.title, content_json: v2.content_json } as any);
+      }
       return data;
     },
     onSuccess: (data) => {
@@ -107,6 +116,7 @@ export default function ReconciliationRooms() {
       setTitle("");
       setDescription("");
       setSoapRoomId("");
+      setReconVersion("1");
       navigate(`/simulations/reconciliation/editor/${data.id}`);
     },
     onError: () => {
@@ -133,7 +143,8 @@ export default function ReconciliationRooms() {
         title: `${original.title} (cópia)`,
         description: original.description,
         soap_room_id: original.soap_room_id,
-      }).select().single();
+        ...((original as any).schema_version === 2 ? { schema_version: 2 } : {}),
+      } as any).select().single();
       if (error) throw error;
 
       // Duplicate cases first so we can build old→new ID map
@@ -141,10 +152,17 @@ export default function ReconciliationRooms() {
       const caseIdMap: Record<string, string> = {};
       if (cases?.length) {
         const { data: newCases } = await supabase.from("reconciliation_clinical_cases")
-          .insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position })))
+          .insert(cases.map(c => ({ room_id: newRoom.id, title: c.title, content: c.content, position: c.position, caso_json: (c as any).caso_json ?? null })) as any)
           .select("id");
         if (newCases) {
           cases.forEach((oldCase, i) => { caseIdMap[oldCase.id] = newCases[i].id; });
+        }
+        // Reconciliação v2: a prescrição e o gabarito (tabela privada) acompanham o caso copiado.
+        if ((original as any).schema_version === 2) {
+          const { data: privados } = await supabase.from("reconciliation_v2_privado" as any).select("*").eq("room_id", roomId);
+          if ((privados as any[])?.length) {
+            await supabase.from("reconciliation_v2_privado" as any).insert((privados as any[]).filter((x) => caseIdMap[x.case_id]).map((x) => ({ case_id: caseIdMap[x.case_id], room_id: newRoom.id, prescricao: x.prescricao, gabarito: x.gabarito })) as any);
+          }
         }
       }
 
@@ -217,6 +235,19 @@ export default function ReconciliationRooms() {
               <div>
                 <Label>Descrição</Label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+              </div>
+              <div>
+                <Label>Versão da Reconciliação</Label>
+                <Select value={reconVersion} onValueChange={(v) => setReconVersion(v as "1" | "2")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Versão 1 (atual)</SelectItem>
+                    <SelectItem value="2">Versão 2 (dossiê com fontes, BPMH e conciliação por tabelas)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {reconVersion === "2" && (
+                  <p className="text-xs text-muted-foreground mt-1">A sala já vem com o formulário v2. Os casos v2 são criados no editor da sala, na aba Casos Clínicos.</p>
+                )}
               </div>
               <div>
                 <Label>Sala SOAP de origem (opcional)</Label>
