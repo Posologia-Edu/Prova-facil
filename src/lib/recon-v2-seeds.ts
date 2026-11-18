@@ -76,6 +76,22 @@ export const CASOS_SEMENTE: CasoCompleto[] = [
         "Dipirona em paciente com alergia relatada: confirmar a reação (tipo e data) com a filha e registrar no prontuário.",
         "Diazepam em idosa com queda é medicamento potencialmente inapropriado (critérios de Beers).",
       ],
+      prescritor: {
+        nome: "Dr. Henrique Matos",
+        perfil: "Clínico do pronto-socorro, plantão de 12 horas, 14 pacientes aguardando. Atende o telefone entre dois atendimentos.",
+        temperamento: "Direto e apressado, mas respeita quem traz dado. Não gosta de ouvir “acho que” e pede números.",
+        resistencias: [
+          "“A creatinina deve ser de desidratação, vai melhorar com hidratação; não vou mexer na pressão agora.”",
+          "“A alergia à dipirona não consta no prontuário, quem garante que é verdadeira?”",
+          "“Não tenho tempo para discutir diazepam agora, isso é problema da UBS.”",
+        ],
+        criterios_para_ceder: [
+          "O farmacêutico cita a creatinina (0,9 para 1,9), o ibuprofeno em uso e a associação com losartana e hidroclorotiazida, e propõe suspender temporariamente os dois.",
+          "O farmacêutico relata a fonte da alergia (a filha, com urticária) e propõe paracetamol no lugar da dipirona.",
+          "O farmacêutico calcula o clearance (cerca de 23 mL/min) e propõe enoxaparina 20 mg em vez de 40 mg.",
+          "Sobre o diazepam, aceita registrar e planejar a retirada gradual se o farmacêutico explicar o risco de abstinência e a queda.",
+        ],
+      },
     },
   },
 
@@ -149,6 +165,22 @@ export const CASOS_SEMENTE: CasoCompleto[] = [
         "Meropenem 1 g 8/8 h: com clearance de cerca de 59 mL/min não precisa de ajuste; reavaliar o descalonamento conforme as culturas.",
         "Glicemias persistentemente acima de 180 mg/dL depois da suspensão da insulina em bomba.",
       ],
+      prescritor: {
+        nome: "Dra. Camila Rocha",
+        perfil: "Médica da enfermaria clínica que recebeu o paciente hoje, ainda se familiarizando com o caso.",
+        temperamento: "Cordial e cautelosa, mas defende a própria prescrição. Aceita rápido quando o risco é claro, resiste a mudanças que não entende.",
+        resistencias: [
+          "“Prescrevi insulina de correção, achei que bastava, ele estava com insulina na UTI.”",
+          "“O pantoprazol é para proteção gástrica na internação, o omeprazol de casa eu só copiei.”",
+          "“Não quero voltar o AAS agora, ele pode precisar de procedimento.”",
+        ],
+        criterios_para_ceder: [
+          "O farmacêutico mostra que a insulina basal domiciliar (NPH, 20 UI de manhã e 10 UI à noite) não foi prescrita, cita as glicemias de 198 a 260 após suspender a bomba e propõe retomar a basal com monitorização.",
+          "O farmacêutico pede um esquema de correção explícito, com faixas de glicemia e doses, no lugar de “conforme glicemia”.",
+          "O farmacêutico propõe manter só um inibidor de bomba de prótons, por via oral.",
+          "O farmacêutico lembra o stent de 2021 e propõe retomar o AAS, aceitando discutir a suspensão se houver procedimento marcado.",
+        ],
+      },
     },
   },
 
@@ -221,6 +253,22 @@ export const CASOS_SEMENTE: CasoCompleto[] = [
         "Com clearance de cerca de 49 mL/min não há ajuste de dose, mas é preciso monitorar potássio e creatinina em 1 semana.",
         "Orientar pesagem diária, restrição de sal e sinais de piora (ganho de peso acima de 2 kg em 3 dias).",
       ],
+      prescritor: {
+        nome: "Dr. Paulo Andrade",
+        perfil: "Cardiologista assistente da paciente, que está assinando a alta e tem a prescrição pronta.",
+        temperamento: "Experiente e seguro, um pouco impaciente com interferência. Ouve argumento técnico e fica atento a risco de segurança.",
+        resistencias: [
+          "“O sacubitril/valsartana foi uma decisão minha, não vou mexer. A paciente só precisa entender que o enalapril acabou.”",
+          "“Deixei o potássio porque a paciente estava hipocalêmica, isso é rotina na alta.”",
+          "“O carvedilol eu ia reintroduzir na consulta de retorno.”",
+        ],
+        criterios_para_ceder: [
+          "O farmacêutico informa que a paciente tem enalapril em casa, retirado há 12 dias, e pretende continuar tomando junto com o sacubitril/valsartana, e propõe suspender formalmente o enalapril, avisar a UBS e orientar a retirada da cartela.",
+          "O farmacêutico cita o potássio de 5,1 mEq/L, o uso de espironolactona e de sacubitril/valsartana, e propõe suspender o cloreto de potássio com nova dosagem em uma semana.",
+          "O farmacêutico mostra que a paciente está compensada (PA 104/66, FC 78) e pergunta se o carvedilol pode voltar em dose baixa agora.",
+          "O farmacêutico alerta que a paciente pretende tomar sinvastatina junto com a atorvastatina e propõe orientar e avisar a UBS.",
+        ],
+      },
     },
   },
 ];

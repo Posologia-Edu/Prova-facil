@@ -69,7 +69,13 @@ export type Discrepancia = {
   acao_esperada: string;
 };
 export type ItemBpmhGabarito = { medicamento: string; uso_real: string; fontes: string[] };
-export type Gabarito = { discrepancias: Discrepancia[]; bpmh: ItemBpmhGabarito[]; outros_problemas: string[] };
+/** Persona do prescritor virtual (o médico que recebe o SBAR). Privada, como o resto do gabarito. */
+export type PersonaPrescritor = { nome: string; perfil: string; temperamento: string; resistencias: string[]; criterios_para_ceder: string[] };
+export type Gabarito = { discrepancias: Discrepancia[]; bpmh: ItemBpmhGabarito[]; outros_problemas: string[]; prescritor?: PersonaPrescritor };
+
+export type DecisaoPrescritor = "aceita" | "adia" | "recusa" | "em_aberto";
+export const ROTULO_DECISAO: Record<DecisaoPrescritor, string> = { aceita: "Aceitou", adia: "Adiou", recusa: "Recusou", em_aberto: "Não discutida" };
+export const MAX_TURNOS_PRESCRITOR = 8;
 
 export type CasoCompleto = { caso: CasoV2; prescricao: ItemPrescricao[]; gabarito: Gabarito };
 
@@ -143,6 +149,11 @@ export function validarCaso({ caso, prescricao, gabarito }: CasoCompleto): Aviso
     if (d.tipo === "ajuste_renal" && !(p?.creatinina_mg_dl && p.creatinina_mg_dl > 0)) erro(`A discrepância ${d.id} depende da função renal, mas o paciente não tem creatinina.`);
     if (d.tipo === "alergia" && !(p?.alergias_registradas ?? "").toString().trim()) aviso(`A discrepância ${d.id} é de alergia: confirme o que consta como alergia registrada ("nenhuma" também vale).`);
     if (d.critica && d.risco !== "grave" && d.risco !== "moderado") aviso(`A discrepância ${d.id} é crítica, mas o risco é baixo.`);
+  }
+
+  const pr = gabarito?.prescritor;
+  if (!pr || !pr.nome?.trim() || !(pr.resistencias || []).length || !(pr.criterios_para_ceder || []).length) {
+    aviso("O caso não tem persona completa do prescritor (nome, resistências e critérios para ceder): o prescritor virtual usará uma persona genérica.");
   }
 
   for (const b of gabarito?.bpmh || []) {
@@ -297,7 +308,7 @@ export function casoEmBranco(): CasoCompleto {
       ],
     },
     prescricao: [{ medicamento: "", dose: "", via: "", frequencia: "" }],
-    gabarito: { discrepancias: [], bpmh: [{ medicamento: "", uso_real: "", fontes: [] }], outros_problemas: [] },
+    gabarito: { discrepancias: [], bpmh: [{ medicamento: "", uso_real: "", fontes: [] }], outros_problemas: [], prescritor: { nome: "", perfil: "", temperamento: "", resistencias: [], criterios_para_ceder: [] } },
   };
 }
 

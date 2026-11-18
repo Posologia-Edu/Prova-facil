@@ -133,7 +133,7 @@ export default function ReconV2Casos({ roomId }: { roomId: string }) {
         id = data.id;
       }
       const { error: e2 } = await supabase.from("reconciliation_v2_privado" as any).upsert({
-        case_id: id, room_id: roomId, prescricao: rascunho.prescricao, gabarito: { ...rascunho.gabarito, outros_problemas: rascunho.gabarito.outros_problemas.map((t) => t.trim()).filter(Boolean) }, updated_at: new Date().toISOString(),
+        case_id: id, room_id: roomId, prescricao: rascunho.prescricao, gabarito: { ...rascunho.gabarito, outros_problemas: rascunho.gabarito.outros_problemas.map((t) => t.trim()).filter(Boolean), ...(rascunho.gabarito.prescritor ? { prescritor: { ...rascunho.gabarito.prescritor, resistencias: rascunho.gabarito.prescritor.resistencias.map((t) => t.trim()).filter(Boolean), criterios_para_ceder: rascunho.gabarito.prescritor.criterios_para_ceder.map((t) => t.trim()).filter(Boolean) } } : {}) }, updated_at: new Date().toISOString(),
       } as any);
       if (e2) throw e2;
       toast({ title: "Caso salvo" });
@@ -383,6 +383,26 @@ export default function ReconV2Casos({ roomId }: { roomId: string }) {
             <CardHeader><CardTitle className="text-base">Gabarito: outros problemas de segurança (privado, um por linha)</CardTitle></CardHeader>
             <CardContent>
               <Textarea aria-label="Outros problemas de segurança" rows={3} value={gabarito.outros_problemas.join("\n")} onChange={(e) => editar((d) => { d.gabarito.outros_problemas = e.target.value.split("\n"); })} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Prescritor virtual (privado): o médico que recebe a ligação da dupla</CardTitle></CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              {(() => {
+                const pr = gabarito.prescritor || { nome: "", perfil: "", temperamento: "", resistencias: [], criterios_para_ceder: [] };
+                const set = (campo: "nome" | "perfil" | "temperamento", v: string) => editar((d) => { d.gabarito.prescritor = { ...(d.gabarito.prescritor || pr), [campo]: v }; });
+                const setLista = (campo: "resistencias" | "criterios_para_ceder", v: string) => editar((d) => { d.gabarito.prescritor = { ...(d.gabarito.prescritor || pr), [campo]: v.split("\n") }; });
+                return (
+                  <>
+                    <div><Label htmlFor="pr-nome">Nome</Label><Input id="pr-nome" value={pr.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Dr. Henrique Matos" /></div>
+                    <div><Label htmlFor="pr-temp">Temperamento</Label><Input id="pr-temp" value={pr.temperamento} onChange={(e) => set("temperamento", e.target.value)} placeholder="Direto e apressado, respeita quem traz dado" /></div>
+                    <div className="sm:col-span-2"><Label htmlFor="pr-perfil">Perfil e situação</Label><Textarea id="pr-perfil" rows={2} value={pr.perfil} onChange={(e) => set("perfil", e.target.value)} /></div>
+                    <div><Label htmlFor="pr-res">Resistências (uma por linha)</Label><Textarea id="pr-res" rows={5} value={pr.resistencias.join("\n")} onChange={(e) => setLista("resistencias", e.target.value)} /></div>
+                    <div><Label htmlFor="pr-ced">O que o faz ceder (uma por linha)</Label><Textarea id="pr-ced" rows={5} value={pr.criterios_para_ceder.join("\n")} onChange={(e) => setLista("criterios_para_ceder", e.target.value)} /></div>
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
         </>

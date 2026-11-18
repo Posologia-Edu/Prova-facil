@@ -104,6 +104,8 @@ export type LinhaMatriz = {
   risco_avaliado: Tri | "na";
   acao: Tri | "na";
   comentario: string;
+  /** O que o prescritor virtual decidiu sobre esta discrepância na conversa (se a dupla ligou). */
+  desfecho?: "aceita" | "adia" | "recusa" | "em_aberto";
 };
 export type LinhaBpmh = { medicamento: string; achou: Tri; comentario: string };
 

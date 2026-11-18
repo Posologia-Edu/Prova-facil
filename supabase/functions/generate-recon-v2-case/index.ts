@@ -30,7 +30,8 @@ O caso é um DOSSIÊ com FONTES QUE SE CONTRADIZEM, como a prática real. Você 
   "gabarito": {
     "discrepancias": [ { "id": "d1", "medicamento": "...", "tipo": "omissao" | "comissao" | "dose" | "duplicidade" | "interacao" | "alergia" | "ajuste_renal" | "via" | "outro", "intencionalidade": "intencional_documentada" | "intencional_sem_documentacao" | "nao_intencional", "risco": "sem_dano" | "leve" | "moderado" | "grave", "critica": true | false, "fontes": ["f2"], "descricao": "o que acontece", "acao_esperada": "o que o farmacêutico deve propor" } ],
     "bpmh": [ { "medicamento": "DCB, concentração e forma", "uso_real": "como realmente usa", "fontes": ["f1", "f2"] } ],
-    "outros_problemas": [ "problema de segurança que não é discrepância, em uma frase" ]
+    "outros_problemas": [ "problema de segurança que não é discrepância, em uma frase" ],
+    "prescritor": { "nome": "Dr(a). Nome Sobrenome", "perfil": "quem é e em que situação atende o telefone", "temperamento": "como reage a argumento", "resistencias": ["fala típica de resistência, uma por discrepância importante"], "criterios_para_ceder": ["o que o farmacêutico precisa dizer (dado do caso, risco e proposta) para o prescritor ceder, um por discrepância importante"] }
   }
 }
 
@@ -43,7 +44,8 @@ REGRAS OBRIGATÓRIAS
 6. A "prescricao" é a prescrição do serviço na transição (admissão: prescrição do hospital; transferência: do setor que recebe; alta: prescrição de alta). Ela não explica nada: só lista. A "bpmh" do gabarito é a melhor história medicamentosa possível (o que o paciente realmente usa), incluindo uso sem receita.
 7. Contexto brasileiro: UBS, farmácia popular, receita azul/amarela, caderneta, e-SUS. Português do Brasil.
 8. Quantidade de itens: o número de medicamentos na BPMH e na prescrição segue o pedido. Os ids são f1, f2... e d1, d2...
-9. "critica" = a discrepância pode causar dano importante se não for resolvida.`;
+9. "critica" = a discrepância pode causar dano importante se não for resolvida.
+10. "prescritor" é o médico que recebe a ligação do farmacêutico (SBAR). Tem resistência plausível e crítica realista a cada discrepância importante, e cede quando o argumento traz dado do caso, risco e proposta específica. Não é vilão nem é capacho.`;
 
 const SYSTEM_REVISAR = `Você revisa um caso de reconciliação medicamentosa (dossiê, prescrição e gabarito) antes de ele ser usado com alunos.
 Devolva SOMENTE um objeto JSON: { "problemas": [ { "tipo": "contradicao_involuntaria" | "nao_descobrivel" | "dado_implausivel" | "vazamento", "onde": "fonte ou discrepância", "texto": "uma frase" } ] }
@@ -122,6 +124,11 @@ function normalizar(raw: any, transicao: string, nivel: string) {
     })),
     bpmh: lista(g.bpmh).map((b: any) => ({ medicamento: txt(b?.medicamento), uso_real: txt(b?.uso_real), fontes: lista(b?.fontes).map(txt).filter(Boolean) })),
     outros_problemas: lista(g.outros_problemas).map(txt).filter(Boolean),
+    prescritor: {
+      nome: txt(g.prescritor?.nome), perfil: txt(g.prescritor?.perfil), temperamento: txt(g.prescritor?.temperamento),
+      resistencias: lista(g.prescritor?.resistencias).map(txt).filter(Boolean),
+      criterios_para_ceder: lista(g.prescritor?.criterios_para_ceder).map(txt).filter(Boolean),
+    },
   };
   return { caso, prescricao, gabarito };
 }

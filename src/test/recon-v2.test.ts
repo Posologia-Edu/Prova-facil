@@ -139,3 +139,21 @@ describe("casos-semente", () => {
     expect(clearanceCreatinina(c.idade, c.peso_kg, c.creatinina_mg_dl!, c.sexo)!).toBeCloseTo(49, 0);
   });
 });
+
+describe("persona do prescritor", () => {
+  it("o caso sem persona completa gera aviso, não erro", () => {
+    const c = base();
+    c.gabarito.prescritor = undefined;
+    const r = validarCaso(c);
+    expect(r.filter((a) => a.nivel === "erro")).toEqual([]);
+    expect(r.some((a) => a.nivel === "aviso" && /persona/.test(a.texto))).toBe(true);
+  });
+  it("todos os casos-semente trazem persona completa", () => {
+    for (const c of CASOS_SEMENTE) {
+      const p = c.gabarito.prescritor!;
+      expect(p.nome).toBeTruthy();
+      expect(p.resistencias.length).toBeGreaterThan(0);
+      expect(p.criterios_para_ceder.length).toBeGreaterThan(0);
+    }
+  });
+});

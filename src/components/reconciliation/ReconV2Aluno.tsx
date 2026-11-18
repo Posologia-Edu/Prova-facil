@@ -11,6 +11,7 @@ import FormRenderer from "@/components/forms/FormRenderer";
 import FormAnswersView from "@/components/forms/FormAnswersView";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
 import ReconV2Devolutiva from "@/components/reconciliation/ReconV2Devolutiva";
+import ReconV2Prescritor from "@/components/reconciliation/ReconV2Prescritor";
 import { getSections, type FormField } from "@/components/forms/types";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { RECON_V2 } from "@/lib/form-templates/pharmacy-reconciliation-v2";
@@ -371,6 +372,16 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
                   </ul>
                   <p className="mt-2 text-xs text-muted-foreground">Os avisos não impedem o envio. Corrija o que concordar.</p>
                 </div>
+              )}
+
+              {ultimo && (
+                <ReconV2Prescritor
+                  accessCode={accessCode}
+                  email={email}
+                  podeLigar={bpmhEnviada}
+                  sbarTexto={[["S", RECON_V2.sbarS], ["B", RECON_V2.sbarB], ["A", RECON_V2.sbarA], ["R", RECON_V2.sbarR]]
+                    .map(([l, id]) => `${l}: ${String(answers[id] ?? "").trim() || "(em branco)"}`).join("\n")}
+                />
               )}
 
               <div className="flex items-center justify-between gap-2">

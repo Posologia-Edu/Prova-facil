@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NA_ANSWER } from "@/components/forms/types";
-import { ROTULO_DISCREPANCIA, ROTULO_RISCO, type Risco, type TipoDiscrepancia } from "@/lib/recon-v2";
+import { ROTULO_DECISAO, ROTULO_DISCREPANCIA, ROTULO_RISCO, type DecisaoPrescritor, type Risco, type TipoDiscrepancia } from "@/lib/recon-v2";
 import { RECON_V2_CRITERIOS, type DevolutivaReconV2 } from "@/lib/recon-v2-rubrica";
 
 type Props = { accessCode: string; email: string };
@@ -56,7 +56,7 @@ export default function ReconV2Devolutiva({ accessCode, email }: Props) {
                   </div>
                   <p className="text-muted-foreground">{l.descricao}</p>
                   <p className="text-xs">
-                    Identificou: <span className={cor(l.achou)}>{ROT[l.achou]}</span> · Classificou: <span className={cor(l.classificou)}>{ROT[l.classificou]}</span> · Dano: <span className={cor(l.risco_avaliado)}>{ROT[l.risco_avaliado]}</span> · Ação: <span className={cor(l.acao)}>{ROT[l.acao]}</span>
+                    Identificou: <span className={cor(l.achou)}>{ROT[l.achou]}</span> · Classificou: <span className={cor(l.classificou)}>{ROT[l.classificou]}</span> · Dano: <span className={cor(l.risco_avaliado)}>{ROT[l.risco_avaliado]}</span> · Ação: <span className={cor(l.acao)}>{ROT[l.acao]}</span>{l.desfecho ? <> · Prescritor: {ROTULO_DECISAO[l.desfecho as DecisaoPrescritor]}</> : null}
                   </p>
                   {l.comentario && <p>{l.comentario}</p>}
                   <p><b>Ação esperada:</b> {l.acao_esperada}</p>

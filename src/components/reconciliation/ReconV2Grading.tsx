@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/status-badge";
 import FormRenderer from "@/components/forms/FormRenderer";
 import { computeFormScore } from "@/components/forms/types";
-import { ROTULO_DISCREPANCIA, ROTULO_RISCO, type TipoDiscrepancia, type Risco } from "@/lib/recon-v2";
+import { ROTULO_DECISAO, ROTULO_DISCREPANCIA, ROTULO_RISCO, type DecisaoPrescritor, type TipoDiscrepancia, type Risco } from "@/lib/recon-v2";
 import { RECON_V2_CRITERIOS, criticasEmRisco, type AvaliacaoReconV2 } from "@/lib/recon-v2-rubrica";
 
 type Props = {
@@ -145,9 +145,9 @@ export default function ReconV2Grading({ roomId, response, onSaved }: Props) {
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Matriz de discrepâncias</p>
           <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <tr><th className="p-2">Discrepância</th><th className="p-2">Risco</th><th className="p-2">Achou</th><th className="p-2">Classificou</th><th className="p-2">Dano</th><th className="p-2">Ação</th></tr>
+                <tr><th className="p-2">Discrepância</th><th className="p-2">Risco</th><th className="p-2">Achou</th><th className="p-2">Classificou</th><th className="p-2">Dano</th><th className="p-2">Ação</th><th className="p-2">Prescritor</th></tr>
               </thead>
               <tbody>
                 {dados.matriz.map((l) => (
@@ -162,6 +162,7 @@ export default function ReconV2Grading({ roomId, response, onSaved }: Props) {
                     <td className={`p-2 ${corTri(l.classificou)}`}>{ROT_TRI[l.classificou]}</td>
                     <td className={`p-2 ${corTri(l.risco_avaliado)}`}>{ROT_TRI[l.risco_avaliado]}</td>
                     <td className={`p-2 ${corTri(l.acao)}`}>{ROT_TRI[l.acao]}</td>
+                    <td className="p-2 whitespace-nowrap text-xs">{l.desfecho ? ROTULO_DECISAO[l.desfecho as DecisaoPrescritor] : "—"}</td>
                   </tr>
                 ))}
               </tbody>
