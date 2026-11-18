@@ -6740,6 +6740,51 @@ export type Database = {
           },
         ]
       }
+      soap_v2_avaliacoes: {
+        Row: {
+          confirmada: boolean
+          created_at: string
+          dados: Json
+          liberada: boolean
+          response_id: string
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          confirmada?: boolean
+          created_at?: string
+          dados?: Json
+          liberada?: boolean
+          response_id: string
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          confirmada?: boolean
+          created_at?: string
+          dados?: Json
+          liberada?: boolean
+          response_id?: string
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soap_v2_avaliacoes_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: true
+            referencedRelation: "soap_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soap_v2_avaliacoes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "soap_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_achievements: {
         Row: {
           achievement_id: string
