@@ -5534,6 +5534,7 @@ export type Database = {
       }
       reconciliation_clinical_cases: {
         Row: {
+          caso_json: Json | null
           content: string | null
           created_at: string
           id: string
@@ -5542,6 +5543,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          caso_json?: Json | null
           content?: string | null
           created_at?: string
           id?: string
@@ -5550,6 +5552,7 @@ export type Database = {
           title?: string
         }
         Update: {
+          caso_json?: Json | null
           content?: string | null
           created_at?: string
           id?: string
@@ -5663,8 +5666,11 @@ export type Database = {
           ai_feedback_json: Json | null
           ai_score: number | null
           answers_json: Json
+          bpmh_json: Json | null
+          bpmh_submitted_at: string | null
           clinical_case_id: string | null
           created_at: string
+          fontes_json: Json | null
           form_id: string
           id: string
           pair_index: number
@@ -5677,8 +5683,11 @@ export type Database = {
           ai_feedback_json?: Json | null
           ai_score?: number | null
           answers_json?: Json
+          bpmh_json?: Json | null
+          bpmh_submitted_at?: string | null
           clinical_case_id?: string | null
           created_at?: string
+          fontes_json?: Json | null
           form_id: string
           id?: string
           pair_index?: number
@@ -5691,8 +5700,11 @@ export type Database = {
           ai_feedback_json?: Json | null
           ai_score?: number | null
           answers_json?: Json
+          bpmh_json?: Json | null
+          bpmh_submitted_at?: string | null
           clinical_case_id?: string | null
           created_at?: string
+          fontes_json?: Json | null
           form_id?: string
           id?: string
           pair_index?: number
@@ -5732,8 +5744,10 @@ export type Database = {
           description: string | null
           id: string
           is_archived: boolean
+          schema_version: number
           soap_room_id: string | null
           status: string
+          tempo_etapa_min: number | null
           title: string
           updated_at: string
           user_id: string
@@ -5746,8 +5760,10 @@ export type Database = {
           description?: string | null
           id?: string
           is_archived?: boolean
+          schema_version?: number
           soap_room_id?: string | null
           status?: string
+          tempo_etapa_min?: number | null
           title?: string
           updated_at?: string
           user_id: string
@@ -5760,8 +5776,10 @@ export type Database = {
           description?: string | null
           id?: string
           is_archived?: boolean
+          schema_version?: number
           soap_room_id?: string | null
           status?: string
+          tempo_etapa_min?: number | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -5772,6 +5790,132 @@ export type Database = {
             columns: ["soap_room_id"]
             isOneToOne: false
             referencedRelation: "soap_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_v2_avaliacoes: {
+        Row: {
+          confirmada: boolean
+          created_at: string
+          dados: Json
+          liberada: boolean
+          response_id: string
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          confirmada?: boolean
+          created_at?: string
+          dados?: Json
+          liberada?: boolean
+          response_id: string
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          confirmada?: boolean
+          created_at?: string
+          dados?: Json
+          liberada?: boolean
+          response_id?: string
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_v2_avaliacoes_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: true
+            referencedRelation: "reconciliation_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_v2_avaliacoes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_v2_prescritor: {
+        Row: {
+          created_at: string
+          dados: Json
+          response_id: string
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dados?: Json
+          response_id: string
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dados?: Json
+          response_id?: string
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_v2_prescritor_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: true
+            referencedRelation: "reconciliation_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_v2_prescritor_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_v2_privado: {
+        Row: {
+          case_id: string
+          created_at: string
+          gabarito: Json
+          prescricao: Json
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          gabarito?: Json
+          prescricao?: Json
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          gabarito?: Json
+          prescricao?: Json
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_v2_privado_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "reconciliation_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_v2_privado_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_rooms"
             referencedColumns: ["id"]
           },
         ]

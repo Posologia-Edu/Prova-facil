@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1795015688183,
+      "tag": "0000_reconciliation_v2",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795015711280,
+      "tag": "0001_reconciliation_v2_avaliacoes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795015720024,
+      "tag": "0002_reconciliation_v2_prescritor",
+      "breakpoints": true
+    }
+  ]
+}
