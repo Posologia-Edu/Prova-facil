@@ -22,6 +22,7 @@ import { calculateSoapStudentGrade } from "@/lib/soap-grades";
 import FormAnswersView from "@/components/forms/FormAnswersView";
 import { SoapV2Grading } from "@/components/soap/SoapV2Grading";
 import SoapV2Panorama from "@/components/soap/SoapV2Panorama";
+import SoapV2Lote from "@/components/soap/SoapV2Lote";
 import { PESO_RUBRICA_V2, respostaEhSoapV2 } from "@/lib/soap-v2-rubrica";
 
 export default function SoapControl() {
@@ -658,6 +659,14 @@ export default function SoapControl() {
         </TabsContent>
 
         <TabsContent value="admin" className="mt-6 space-y-4">
+          {(room as any)?.schema_version === 2 && (
+            <SoapV2Lote
+              roomId={roomId!}
+              soaps={soapResponses}
+              nomeDe={getParticipantName}
+              onFeito={() => queryClient.invalidateQueries({ queryKey: ["soap-responses", roomId] })}
+            />
+          )}
           {soapResponses.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
@@ -714,6 +723,7 @@ export default function SoapControl() {
                     <>
                       {(room as any)?.schema_version === 2 ? (
                         <SoapV2Grading
+                          key={`${selectedResponse.id}:${selectedResponse.ai_score ?? ""}`}
                           roomId={roomId!}
                           response={selectedResponse}
                           soapFields={(forms.find((f: any) => f.id === selectedResponse.form_id)?.content_json as FormField[]) || []}
