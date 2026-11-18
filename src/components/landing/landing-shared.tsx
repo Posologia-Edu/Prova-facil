@@ -140,14 +140,14 @@ export function LandingNav({ home = false }: { home?: boolean }) {
     <nav className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="container mx-auto flex h-16 items-center justify-between gap-3 px-4">
         <Link to="/" className="flex items-center gap-2" aria-label="ProvaFácil">
-          <GraduationCap className="h-7 w-7 text-highlight" />
+          <span className={home ? "pf-brand-mark" : "contents"}><GraduationCap className="h-7 w-7 text-highlight" /></span>
           <span className="font-heading text-xl font-semibold tracking-tight">ProvaFácil</span>
         </Link>
         <div className="hidden items-center gap-1 lg:flex">
           {anchors.map((l) => (
             <a key={l.href} href={l.href} className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">{l.label}</a>
           ))}
-          {pages.map((l) => (
+          {pages.filter(l => !home || l.to === "/planos").map((l) => (
             <Link key={l.to} to={l.to} className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">{l.label}</Link>
           ))}
         </div>
@@ -163,11 +163,12 @@ export function LandingNav({ home = false }: { home?: boolean }) {
               {pages.map((l) => (
                 <DropdownMenuItem key={l.to} asChild><Link to={l.to}>{l.label}</Link></DropdownMenuItem>
               ))}
+              <DropdownMenuItem asChild className="sm:hidden"><Link to="/student/auth">{n.student}</Link></DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1.5"><Globe className="h-4 w-4" />{LANGUAGE_FLAGS[language]}</Button>
+              <Button variant="ghost" size="sm" className="gap-1.5" aria-label={LANGUAGE_LABELS[language]}><Globe className="h-4 w-4" />{language.toUpperCase()}</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {languages.map((lang) => (
@@ -177,9 +178,9 @@ export function LandingNav({ home = false }: { home?: boolean }) {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Link to="/student/auth" className="hidden sm:block">
-            <Button variant="ghost" size="sm" className="gap-1.5"><GraduationCap className="h-4 w-4" />{n.student}</Button>
-          </Link>
+          <Button asChild variant="ghost" size="sm" className="hidden gap-1.5 sm:inline-flex">
+            <Link to="/student/auth">{n.student}</Link>
+          </Button>
           <FloatingAuth />
         </div>
       </div>

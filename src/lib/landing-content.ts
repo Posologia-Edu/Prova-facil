@@ -5,7 +5,8 @@ import type { Language } from "@/i18n/LanguageContext";
 
 export type LandingContent = {
   nav: { platform: string; areas: string; how: string; plans: string; features: string; docs: string; student: string; menu: string };
-  hero: { badge: string; eyebrow: string; title1: string; titleEm: string; subtitle: string; primary: string; secondary: string };
+  demo: { instruction: string; observed: string; allFeatures: string; resources: string; skip: string };
+  hero: { photoAlt: string; caption: string; eyebrow: string; primary: string; secondary: string };
   cards: {
     example: string;
     debrief: string; found: string; essential: string; improveLabel: string; improveText: string;
@@ -31,14 +32,14 @@ export type LandingContent = {
 
 const pt: LandingContent = {
   nav: { platform: "Plataforma", areas: "Áreas", how: "Como funciona", plans: "Planos", features: "Funcionalidades", docs: "Documentação", student: "Sou aluno", menu: "Menu" },
+  demo: {
+    instruction: "Marque os critérios que observou durante o atendimento.", observed: "Critérios observados",
+    allFeatures: "Ver funcionalidades", resources: "Recursos para a sua instituição", skip: "Pular para o conteúdo",
+  },
   hero: {
-    badge: "Agora com feedback por IA nas simulações",
-    eyebrow: "Ciências da saúde · 7 áreas",
-    title1: "Avalie do papel ao ",
-    titleEm: "consultório simulado",
-    subtitle: "Provas, OSCE, pacientes virtuais e simulações clínicas em um só lugar, com IA que ajuda a corrigir e a devolver feedback. O professor decide, o aluno aprende com o retorno.",
-    primary: "Começar agora",
-    secondary: "Ver como funciona",
+    eyebrow: "Avaliação no ensino em saúde",
+    primary: "Criar minha conta", secondary: "Testar a ficha",
+    photoAlt: "Estudante de saúde ouvindo uma paciente durante uma simulação de consulta.", caption: "Simulação de atendimento",
   },
   cards: {
     example: "exemplo",
@@ -106,20 +107,20 @@ const pt: LandingContent = {
       { title: "Marketplace", desc: "Compartilhe e descubra provas criadas por outros professores." },
     ],
   },
-  cta: { heading: "Leve a avaliação da sua disciplina para o próximo nível", sub: "Crie sua conta e comece por um modelo pronto da sua área.", primary: "Criar minha conta", secondary: "Ver planos" },
+  cta: { heading: "Como você vai avaliar sua próxima turma?", sub: "Crie sua conta e comece por um modelo pronto da sua área.", primary: "Criar minha conta", secondary: "Ver planos" },
   footer: "Plataforma de avaliação para as ciências da saúde: provas, OSCE, pacientes virtuais e simulações clínicas.",
 };
 
 const en: LandingContent = {
   nav: { platform: "Platform", areas: "Fields", how: "How it works", plans: "Plans", features: "Features", docs: "Docs", student: "I'm a student", menu: "Menu" },
+  demo: {
+    instruction: "Check the criteria you observed during the consultation.", observed: "Criteria observed",
+    allFeatures: "Explore features", resources: "Resources for your institution", skip: "Skip to content",
+  },
   hero: {
-    badge: "Now with AI feedback in simulations",
-    eyebrow: "Health sciences · 7 fields",
-    title1: "Assess from paper to the ",
-    titleEm: "simulated clinic",
-    subtitle: "Exams, OSCE, virtual patients and clinical simulations in one place, with AI that helps grade and give feedback. The teacher decides, the student learns from the feedback.",
-    primary: "Get started",
-    secondary: "See how it works",
+    eyebrow: "Assessment in health education",
+    primary: "Create my account", secondary: "Try the checklist",
+    photoAlt: "A health sciences student listening to a patient during a simulated consultation.", caption: "Simulated consultation",
   },
   cards: {
     example: "example",
@@ -187,20 +188,20 @@ const en: LandingContent = {
       { title: "Marketplace", desc: "Share and discover exams created by other teachers." },
     ],
   },
-  cta: { heading: "Take your course's assessment to the next level", sub: "Create your account and start from a ready template for your field.", primary: "Create my account", secondary: "See plans" },
+  cta: { heading: "How will you assess your next class?", sub: "Create your account and start from a ready template for your field.", primary: "Create my account", secondary: "See plans" },
   footer: "Assessment platform for the health sciences: exams, OSCE, virtual patients and clinical simulations.",
 };
 
 const es: LandingContent = {
   nav: { platform: "Plataforma", areas: "Áreas", how: "Cómo funciona", plans: "Planes", features: "Funcionalidades", docs: "Documentación", student: "Soy alumno", menu: "Menú" },
+  demo: {
+    instruction: "Marque los criterios que observó durante la consulta.", observed: "Criterios observados",
+    allFeatures: "Ver funcionalidades", resources: "Recursos para su institución", skip: "Ir al contenido",
+  },
   hero: {
-    badge: "Ahora con feedback por IA en las simulaciones",
-    eyebrow: "Ciencias de la salud · 7 áreas",
-    title1: "Evalúe del papel al ",
-    titleEm: "consultorio simulado",
-    subtitle: "Exámenes, OSCE, pacientes virtuales y simulaciones clínicas en un solo lugar, con IA que ayuda a corregir y a dar feedback. El profesor decide, el alumno aprende con la devolución.",
-    primary: "Empezar ahora",
-    secondary: "Ver cómo funciona",
+    eyebrow: "Evaluación en ciencias de la salud",
+    primary: "Crear mi cuenta", secondary: "Probar la ficha",
+    photoAlt: "Estudiante de salud escuchando a una paciente durante una consulta simulada.", caption: "Consulta simulada",
   },
   cards: {
     example: "ejemplo",
@@ -268,7 +269,7 @@ const es: LandingContent = {
       { title: "Marketplace", desc: "Comparta y descubra exámenes creados por otros profesores." },
     ],
   },
-  cta: { heading: "Lleve la evaluación de su asignatura al siguiente nivel", sub: "Cree su cuenta y empiece por un modelo listo de su área.", primary: "Crear mi cuenta", secondary: "Ver planes" },
+  cta: { heading: "¿Cómo evaluará a su próximo grupo?", sub: "Cree su cuenta y empiece por un modelo listo de su área.", primary: "Crear mi cuenta", secondary: "Ver planes" },
   footer: "Plataforma de evaluación para las ciencias de la salud: exámenes, OSCE, pacientes virtuales y simulaciones clínicas.",
 };
 

@@ -1,66 +1,37 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Cookie, Settings2 } from "lucide-react";
-import { useCookieConsent } from "@/hooks/use-cookie-consent";
-import { CookiePreferencesDialog } from "./CookiePreferencesDialog";
+﻿import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useCookieConsent } from "@/hooks/use-cookie-consent";
+import { useLanguage } from "@/i18n/LanguageContext";
+import { CookiePreferencesDialog } from "./CookiePreferencesDialog";
+
+const copy = {
+  pt: { title: "Preferências de cookies", detail: "Usamos cookies para analisar o tráfego e personalizar conteúdo.", policy: "Política de cookies", accept: "Aceitar todos", essential: "Só essenciais", settings: "Personalizar" },
+  en: { title: "Cookie preferences", detail: "We use cookies to analyze traffic and personalize content.", policy: "Cookie policy", accept: "Accept all", essential: "Essential only", settings: "Customize" },
+  es: { title: "Preferencias de cookies", detail: "Usamos cookies para analizar el tráfico y personalizar el contenido.", policy: "Política de cookies", accept: "Aceptar todas", essential: "Solo esenciales", settings: "Personalizar" },
+};
 
 export function CookieBanner() {
   const { consentGiven, acceptAll, rejectNonEssential } = useCookieConsent();
   const [showPreferences, setShowPreferences] = useState(false);
-
+  const { language } = useLanguage();
+  const c = copy[language];
   if (consentGiven) return null;
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 md:p-6">
-        <div className="mx-auto max-w-4xl rounded-2xl border bg-card shadow-2xl p-5 md:p-6">
-          <div className="flex items-start gap-4">
-            <div className="hidden sm:flex shrink-0 rounded-xl bg-secondary/10 p-3">
-              <Cookie className="h-6 w-6 text-secondary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base font-semibold text-foreground mb-1">
-                🍪 Utilizamos cookies
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Usamos cookies para melhorar sua experiência, analisar o tráfego e personalizar conteúdo. 
-                Você pode aceitar todos, recusar os não essenciais ou personalizar suas preferências. 
-                Saiba mais na nossa{" "}
-                <Link to="/cookies" className="text-secondary hover:underline font-medium">
-                  Política de Cookies
-                </Link>.
-              </p>
-              <div className="flex flex-wrap items-center gap-3 mt-4">
-                <Button
-                  onClick={acceptAll}
-                  className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                  size="sm"
-                >
-                  Aceitar Todos
-                </Button>
-                <Button
-                  onClick={rejectNonEssential}
-                  variant="outline"
-                  size="sm"
-                >
-                  Apenas Essenciais
-                </Button>
-                <Button
-                  onClick={() => setShowPreferences(true)}
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                >
-                  <Settings2 className="h-4 w-4" />
-                  Personalizar
-                </Button>
-              </div>
-            </div>
-          </div>
+      <section aria-label={c.title} lang={language}
+        className="pf-cookie-notice fixed bottom-2 left-2 right-2 z-[100] rounded-xl border bg-card p-3 text-card-foreground shadow-2xl sm:bottom-4 sm:left-4 sm:right-auto sm:max-w-[415px] sm:p-4">
+        <h2 className="font-sans text-sm font-semibold">{c.title}</h2>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          {c.detail} <Link to="/cookies" className="underline underline-offset-2">{c.policy}</Link>
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <Button size="sm" variant="outline" onClick={acceptAll} className="px-2.5">{c.accept}</Button>
+          <Button size="sm" variant="outline" onClick={rejectNonEssential} className="px-2.5">{c.essential}</Button>
+          <Button size="sm" variant="ghost" onClick={() => setShowPreferences(true)} className="px-2">{c.settings}</Button>
         </div>
-      </div>
-
+      </section>
       <CookiePreferencesDialog open={showPreferences} onOpenChange={setShowPreferences} />
     </>
   );

@@ -1,0 +1,615 @@
+import { Routes, Route } from "react-router-dom";
+import { AppLayout } from "@/components/AppLayout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ClinicalGate } from "@/components/PremiumGate";
+import Dashboard from "./pages/Dashboard";
+import Questions from "./pages/Questions";
+import Composer from "./pages/Composer";
+import Exams from "./pages/Exams";
+import ExamEditor from "./pages/ExamEditor";
+import ExamView from "./pages/ExamView";
+import Classes from "./pages/Classes";
+import ClassDetail from "./pages/ClassDetail";
+import Analytics from "./pages/Analytics";
+import Admin from "./pages/Admin";
+import StudentAuth from "./pages/StudentAuth";
+import StudentCheckin from "./pages/StudentCheckin";
+import StudentDashboard from "./pages/StudentDashboard";
+import StudentExam from "./pages/StudentExam";
+import StudentResults from "./pages/StudentResults";
+import ExamMonitoring from "./pages/ExamMonitoring";
+import ExamCalendar from "./pages/ExamCalendar";
+import NotFound from "./pages/NotFound";
+import Documentation from "./pages/Documentation";
+import Settings from "./pages/Settings";
+import Trash from "./pages/Trash";
+import ResetPassword from "./pages/ResetPassword";
+import Marketplace from "./pages/Marketplace";
+import OsceExams from "./pages/OsceExams";
+import SctExams from "./pages/SctExams";
+import Forms from "./pages/Forms";
+import { StudentA11yShell } from "@/components/StudentA11yShell";
+import SctEditor from "./pages/SctEditor";
+import SctExpertPortal from "./pages/SctExpertPortal";
+import SctStudentPortal from "./pages/SctStudentPortal";
+import KfeExams from "./pages/KfeExams";
+import KfeEditor from "./pages/KfeEditor";
+import KfeStudentPortal from "./pages/KfeStudentPortal";
+import ClinicalObservations from "./pages/ClinicalObservations";
+import ClinicalObservationEditor from "./pages/ClinicalObservationEditor";
+import ClinicalObservationEval from "./pages/ClinicalObservationEval";
+import SjtExams from "./pages/SjtExams";
+import SjtEditor from "./pages/SjtEditor";
+import SjtStudentPortal from "./pages/SjtStudentPortal";
+import ProgressTests from "./pages/ProgressTests";
+import ProgressTestEditor from "./pages/ProgressTestEditor";
+import ProgressTestStudentPortal from "./pages/ProgressTestStudentPortal";
+import MockTrials from "./pages/MockTrials";
+import MockTrialEditor from "./pages/MockTrialEditor";
+import MockTrialJudge from "./pages/MockTrialJudge";
+import MockTrialStudent from "./pages/MockTrialStudent";
+import MtPeerEvaluation from "./pages/MtPeerEvaluation";
+import OsceEditor from "./pages/OsceEditor";
+import OsceCircuitControl from "./pages/OsceCircuitControl";
+import OsceEvaluator from "./pages/OsceEvaluator";
+import OsceResults from "./pages/OsceResults";
+import OsceVirtualPatient from "./pages/OsceVirtualPatient";
+import OsceStudentPortal from "./pages/OsceStudentPortal";
+import Simulations from "./pages/Simulations";
+import SimulationEditor from "./pages/SimulationEditor";
+import SimulationControl from "./pages/SimulationControl";
+import SimulationJoin from "./pages/SimulationJoin";
+import SoapRooms from "./pages/SoapRooms";
+import SoapEditor from "./pages/SoapEditor";
+import SoapJoin from "./pages/SoapJoin";
+import SoapControl from "./pages/SoapControl";
+import ReconciliationRooms from "./pages/ReconciliationRooms";
+import ReconciliationEditor from "./pages/ReconciliationEditor";
+import ReconciliationJoin from "./pages/ReconciliationJoin";
+import ReconciliationControl from "./pages/ReconciliationControl";
+import DocumentationRooms from "./pages/DocumentationRooms";
+import DocumentationEditor from "./pages/DocumentationEditor";
+import DocumentationJoin from "./pages/DocumentationJoin";
+import DocumentationControl from "./pages/DocumentationControl";
+import SimulationAggregator from "./pages/SimulationAggregator";
+import NursingSimulations from "./pages/NursingSimulations";
+import NursingEditor from "./pages/NursingEditor";
+import NursingControl from "./pages/NursingControl";
+import NursingJoin from "./pages/NursingJoin";
+import NursingAggregator from "./pages/NursingAggregator";
+import NutritionSimulations from "./pages/NutritionSimulations";
+import NutritionEditor from "./pages/NutritionEditor";
+import NutritionControl from "./pages/NutritionControl";
+import NutritionJoin from "./pages/NutritionJoin";
+import NutritionAggregator from "./pages/NutritionAggregator";
+import DentistrySimulations from "./pages/DentistrySimulations";
+import DentistryEditor from "./pages/DentistryEditor";
+import DentistryControl from "./pages/DentistryControl";
+import DentistryJoin from "./pages/DentistryJoin";
+import DentistryAggregator from "./pages/DentistryAggregator";
+import MedicineSimulations from "./pages/MedicineSimulations";
+import MedicineEditor from "./pages/MedicineEditor";
+import MedicineControl from "./pages/MedicineControl";
+import MedicineJoin from "./pages/MedicineJoin";
+import MedicineAggregator from "./pages/MedicineAggregator";
+import PhysiotherapySimulations from "./pages/PhysiotherapySimulations";
+import PhysiotherapyEditor from "./pages/PhysiotherapyEditor";
+import PhysiotherapyControl from "./pages/PhysiotherapyControl";
+import PhysiotherapyJoin from "./pages/PhysiotherapyJoin";
+import PhysiotherapyAggregator from "./pages/PhysiotherapyAggregator";
+import BiomedicineSimulations from "./pages/BiomedicineSimulations";
+import BiomedicineEditor from "./pages/BiomedicineEditor";
+import BiomedicineControl from "./pages/BiomedicineControl";
+import BiomedicineJoin from "./pages/BiomedicineJoin";
+import BiomedicineAggregator from "./pages/BiomedicineAggregator";
+import VirtualPatients from "./pages/VirtualPatients";
+import VirtualPatientChat from "./pages/VirtualPatientChat";
+import VirtualPatientCaseEditor from "./pages/VirtualPatientCaseEditor";
+import VirtualPatientRoom from "./pages/VirtualPatientRoom";
+import VirtualPatientFeedback from "./pages/VirtualPatientFeedback";
+import VpPeerEvaluation from "./pages/VpPeerEvaluation";
+import StyleGuide, { StyleGuideApp } from "./pages/StyleGuide";
+import VPAnalytics from "./pages/VPAnalytics";
+import VPResearch from "./pages/VPResearch";
+import Features from "./pages/Features";
+import PublicPricing from "./pages/PublicPricing";
+import PublicContact from "./pages/PublicContact";
+import PublicDocumentation from "./pages/PublicDocumentation";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import CookiePolicy from "./pages/CookiePolicy";
+import UpdatePipeline from "./pages/UpdatePipeline";
+import StudentGamification from "./pages/StudentGamification";
+import StudentPortfolio from "./pages/StudentPortfolio";
+import CompetencyAnalysis from "./pages/CompetencyAnalysis";
+import LmsIntegration from "./pages/LmsIntegration";
+
+export default function SystemRoutes() {
+  return (
+    <Routes>
+      {/* Student routes */}
+      <Route path="/student/auth" element={<StudentA11yShell><StudentAuth /></StudentA11yShell>} />
+      <Route path="/checkin/:token" element={<StudentCheckin />} />
+      <Route path="/student/dashboard" element={<StudentDashboard />} />
+      <Route path="/student/exam/:sessionId" element={<StudentExam />} />
+      <Route path="/student/results/:sessionId" element={<StudentA11yShell><StudentResults /></StudentA11yShell>} />
+      <Route path="/student/gamification" element={<StudentA11yShell><StudentGamification /></StudentA11yShell>} />
+      <Route path="/student/portfolio" element={<StudentA11yShell><StudentPortfolio /></StudentA11yShell>} />
+
+      {/* Teacher routes */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AppLayout><Admin /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Dashboard /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/questions"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Questions /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/composer"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Composer /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/exams"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Exams /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/exams/:examId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ExamView /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/exams/:examId/edit"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ExamEditor /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/classes"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Classes /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/classes/:classId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClassDetail /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Analytics /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/calendar"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ExamCalendar /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pricing"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Settings initialTab="plan" /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/monitoring/:publicationId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ExamMonitoring /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Settings /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trash"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Trash /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/marketplace"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Marketplace /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/updates"
+        element={
+          <ProtectedRoute>
+            <AppLayout><UpdatePipeline /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/osce"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="OSCE"><OsceExams /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/osce/:id/edit"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="OSCE"><OsceEditor /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/osce/:circuitId/control"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="OSCE"><OsceCircuitControl /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/osce/:id/results"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="OSCE"><OsceResults /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Simulation routes */}
+      <Route
+        path="/simulations"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><Simulations /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations/:roomId/edit"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><SimulationEditor /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations/:roomId/control"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><SimulationControl /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* SOAP routes */}
+      <Route
+        path="/simulations/soap"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><SoapRooms /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations/soap/editor/:roomId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><SoapEditor /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations/soap/control/:roomId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><SoapControl /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Public OSCE routes (no auth required) */}
+      <Route path="/osce/evaluate/:accessCode" element={<OsceEvaluator />} />
+      <Route path="/osce/patient/:stationId" element={<OsceVirtualPatient />} />
+      <Route path="/osce/student/:accessCode" element={<StudentA11yShell><OsceStudentPortal /></StudentA11yShell>} />
+      {/* Public Simulation route */}
+      <Route path="/simulation/join" element={<StudentA11yShell><SimulationJoin /></StudentA11yShell>} />
+      {/* Public SOAP route */}
+      <Route path="/simulation/soap/join" element={<StudentA11yShell><SoapJoin /></StudentA11yShell>} />
+      {/* Public Reconciliation route */}
+      <Route path="/simulation/reconciliation/join" element={<StudentA11yShell><ReconciliationJoin /></StudentA11yShell>} />
+      {/* Public Documentation route */}
+      <Route path="/simulation/documentation/join" element={<StudentA11yShell><DocumentationJoin /></StudentA11yShell>} />
+      {/* Reconciliation routes */}
+      <Route
+        path="/simulations/reconciliation"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><ReconciliationRooms /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations/reconciliation/editor/:roomId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><ReconciliationEditor /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations/reconciliation/control/:roomId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><ReconciliationControl /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Documentation routes */}
+      <Route
+        path="/simulations/documentation"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><DocumentationRooms /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations/documentation/editor/:roomId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><DocumentationEditor /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations/documentation/control/:roomId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><DocumentationControl /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations/aggregator"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><SimulationAggregator /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Nursing routes */}
+      <Route path="/nursing" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NursingSimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/nursing/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NursingAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/nursing/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NursingEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/nursing/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NursingControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      {/* Public Nursing route */}
+      <Route path="/nursing/join" element={<StudentA11yShell><NursingJoin /></StudentA11yShell>} />
+      {/* Nutrition routes */}
+      <Route path="/nutrition" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NutritionSimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/nutrition/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NutritionAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/nutrition/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NutritionEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/nutrition/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><NutritionControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/nutrition/join" element={<StudentA11yShell><NutritionJoin /></StudentA11yShell>} />
+      {/* Dentistry routes */}
+      <Route path="/dentistry" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><DentistrySimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/dentistry/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><DentistryAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/dentistry/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><DentistryEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/dentistry/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><DentistryControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/dentistry/join" element={<StudentA11yShell><DentistryJoin /></StudentA11yShell>} />
+      {/* Medicine routes */}
+      <Route path="/medicine" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><MedicineSimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/medicine/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><MedicineAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/medicine/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><MedicineEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/medicine/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><MedicineControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/medicine/join" element={<StudentA11yShell><MedicineJoin /></StudentA11yShell>} />
+      {/* Physiotherapy routes */}
+      <Route path="/physiotherapy" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><PhysiotherapySimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/physiotherapy/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><PhysiotherapyAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/physiotherapy/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><PhysiotherapyEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/physiotherapy/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><PhysiotherapyControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/physiotherapy/join" element={<StudentA11yShell><PhysiotherapyJoin /></StudentA11yShell>} />
+      {/* Biomedicine routes */}
+      <Route path="/biomedicine" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><BiomedicineSimulations /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/biomedicine/aggregator" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><BiomedicineAggregator /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/biomedicine/:moduleType/editor/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><BiomedicineEditor /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/biomedicine/:moduleType/control/:roomId" element={<ProtectedRoute><AppLayout><ClinicalGate feature="Simulações clínicas"><BiomedicineControl /></ClinicalGate></AppLayout></ProtectedRoute>} />
+      <Route path="/biomedicine/join" element={<StudentA11yShell><BiomedicineJoin /></StudentA11yShell>} />
+      {/* Virtual Patients */}
+      <Route
+        path="/virtual-patients"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Paciente Virtual"><VirtualPatients /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/virtual-patients/case/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Paciente Virtual"><VirtualPatientCaseEditor /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/virtual-patients/chat/:patientId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Paciente Virtual"><VirtualPatientChat /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/virtual-patients/analytics"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Paciente Virtual"><Analytics initialTab="vp" /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/virtual-patients/research"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Paciente Virtual"><VPResearch /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Public Virtual Patient Room (student access via PIN) */}
+      <Route path="/virtual-patients/room/:cvpId" element={<StudentA11yShell><VirtualPatientRoom /></StudentA11yShell>} />
+      <Route path="/virtual-patients/feedback/:cvpId" element={<StudentA11yShell><VirtualPatientFeedback /></StudentA11yShell>} />
+      <Route path="/virtual-patients/peer-eval/:token" element={<StudentA11yShell><VpPeerEvaluation /></StudentA11yShell>} />
+      <Route path="/guia-de-estilo" element={<StyleGuide />} />
+      <Route path="/guia-de-estilo/app" element={<StyleGuideApp />} />
+      <Route path="/forms" element={<ProtectedRoute><AppLayout><Forms /></AppLayout></ProtectedRoute>} />
+      {/* SCT Routes */}
+      <Route
+        path="/sct"
+        element={
+          <ProtectedRoute>
+            <AppLayout><SctExams /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sct/:id/edit"
+        element={
+          <ProtectedRoute>
+            <AppLayout><SctEditor /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Public SCT routes */}
+      <Route path="/sct/expert/:examId" element={<SctExpertPortal />} />
+      <Route path="/sct/student/:examId" element={<StudentA11yShell><SctStudentPortal /></StudentA11yShell>} />
+      {/* KFE Routes */}
+      <Route
+        path="/kfe"
+        element={
+          <ProtectedRoute>
+            <AppLayout><KfeExams /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/kfe/:id/edit"
+        element={
+          <ProtectedRoute>
+            <AppLayout><KfeEditor /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Public KFE route */}
+      <Route path="/kfe/student/:examId" element={<StudentA11yShell><KfeStudentPortal /></StudentA11yShell>} />
+      {/* Mini-CEX/DOPS Routes */}
+      <Route path="/clinical-observations" element={<ProtectedRoute><AppLayout><ClinicalObservations /></AppLayout></ProtectedRoute>} />
+      <Route path="/clinical-observations/:id/edit" element={<ProtectedRoute><AppLayout><ClinicalObservationEditor /></AppLayout></ProtectedRoute>} />
+      <Route path="/clinical-observations/eval/:obsId" element={<ClinicalObservationEval />} />
+      {/* SJT Routes */}
+      <Route path="/sjt" element={<ProtectedRoute><AppLayout><SjtExams /></AppLayout></ProtectedRoute>} />
+      <Route path="/sjt/:id/edit" element={<ProtectedRoute><AppLayout><SjtEditor /></AppLayout></ProtectedRoute>} />
+      <Route path="/sjt/student/:examId" element={<StudentA11yShell><SjtStudentPortal /></StudentA11yShell>} />
+      {/* Progress Test Routes */}
+      <Route path="/progress-test" element={<ProtectedRoute><AppLayout><ProgressTests /></AppLayout></ProtectedRoute>} />
+      <Route path="/progress-test/:id/edit" element={<ProtectedRoute><AppLayout><ProgressTestEditor /></AppLayout></ProtectedRoute>} />
+      <Route path="/progress-test/student/:testId" element={<StudentA11yShell><ProgressTestStudentPortal /></StudentA11yShell>} />
+      {/* Mock Trial Routes */}
+      <Route path="/mock-trials" element={<ProtectedRoute><AppLayout><MockTrials /></AppLayout></ProtectedRoute>} />
+      <Route path="/mock-trials/:id/edit" element={<ProtectedRoute><AppLayout><MockTrialEditor /></AppLayout></ProtectedRoute>} />
+      {/* Public Mock Trial routes — accessed via StudentAuth PIN */}
+      <Route path="/mock-trial/portal/:accessCode" element={<StudentA11yShell><MockTrialStudent /></StudentA11yShell>} />
+      <Route path="/mock-trial/judge/:accessCode" element={<MockTrialJudge />} />
+      <Route path="/mock-trial/peer-eval/:token" element={<StudentA11yShell><MtPeerEvaluation /></StudentA11yShell>} />
+      <Route path="/docs" element={<Documentation />} />
+      <Route path="/funcionalidades" element={<Features />} />
+      <Route path="/planos" element={<PublicPricing />} />
+      <Route path="/contato-publico" element={<PublicContact />} />
+      <Route path="/documentacao" element={<PublicDocumentation />} />
+      <Route path="/termos" element={<TermsOfService />} />
+      <Route path="/privacidade" element={<PrivacyPolicy />} />
+      <Route path="/cookies" element={<CookiePolicy />} />
+      <Route
+        path="/contato"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Settings initialTab="contact" /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/competency-analysis"
+        element={
+          <ProtectedRoute>
+            <AppLayout><CompetencyAnalysis /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/lms-integration"
+        element={
+          <ProtectedRoute>
+            <AppLayout><LmsIntegration /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/portfolio/:studentEmail"
+        element={
+          <ProtectedRoute>
+            <AppLayout><StudentPortfolio /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
