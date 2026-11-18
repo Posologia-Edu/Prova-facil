@@ -253,7 +253,16 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ title, content }), {
+    // O gabarito de discrepancias e uso exclusivo do professor: nunca vai dentro do texto do caso
+    // (o aluno le esse texto). Devolvido a parte, em teacher_notes.
+    let teacher_notes = "";
+    const splitMatch = content.match(/(^|\n)\s*DISCREP[ÂA]NCIAS PARA IDENTIFICA[ÇC][ÃA]O[^\n]*\n?/i);
+    if (splitMatch && splitMatch.index !== undefined) {
+      teacher_notes = content.slice(splitMatch.index + splitMatch[0].length).trim();
+      content = content.slice(0, splitMatch.index).trim();
+    }
+
+    return new Response(JSON.stringify({ title, content, teacher_notes }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

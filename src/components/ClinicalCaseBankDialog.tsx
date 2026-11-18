@@ -32,6 +32,7 @@ export default function ClinicalCaseBankDialog({ open, onOpenChange, phase, onIm
   const [aiTheme, setAiTheme] = useState("");
   const [generating, setGenerating] = useState(false);
   const [createMode, setCreateMode] = useState<"manual" | "ai">("manual");
+  const [teacherNotes, setTeacherNotes] = useState("");
 
   const { data: cases = [], isLoading } = useQuery({
     queryKey: ["clinical-case-bank", phase],
@@ -112,9 +113,10 @@ export default function ClinicalCaseBankDialog({ open, onOpenChange, phase, onIm
         throw new Error(err.error || "Erro ao gerar caso");
       }
 
-      const { title, content } = await resp.json();
+      const { title, content, teacher_notes } = await resp.json();
       setNewTitle(title || `Caso - ${aiTheme}`);
       setNewContent(content || "");
+      setTeacherNotes(teacher_notes || "");
       setCreateMode("manual");
       toast({ title: "Caso gerado! Revise e salve." });
     } catch (err: any) {
@@ -250,6 +252,18 @@ export default function ClinicalCaseBankDialog({ open, onOpenChange, phase, onIm
                   className="min-h-[18rem] font-mono text-sm leading-6"
                 />
               </div>
+              {teacherNotes.trim() && (
+                <div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-sm font-semibold">Discrepâncias para o gabarito (só para você)</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { navigator.clipboard?.writeText(teacherNotes); toast({ title: "Copiado" }); }}>
+                      Copiar
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Não são salvas no caso, para o aluno não ver. Use no Espelho de respostas; ao fechar este quadro elas se perdem.</p>
+                  <pre className="whitespace-pre-wrap text-xs leading-5">{teacherNotes}</pre>
+                </div>
+              )}
               {newContent.trim() && (
                 <div className="space-y-2">
                   <Label className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
