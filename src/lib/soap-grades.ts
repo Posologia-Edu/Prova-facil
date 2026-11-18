@@ -1,4 +1,4 @@
-import { computeFieldScore, type FormField } from "@/components/forms/types";
+import { NA_ANSWER, computeFieldScore, type FormField } from "@/components/forms/types";
 import { PESO_RUBRICA_V2, respostaEhSoapV2 } from "@/lib/soap-v2-rubrica";
 
 type SoapResponseLike = {
@@ -33,11 +33,13 @@ export function calculateSoapPeerScore(
 
   for (const field of evaluationFields) {
     if (!field.max_score) continue;
-    totalMax += field.max_score;
     const answers = peerEvaluation.answers_json;
     const answer = answers && typeof answers === "object" && !Array.isArray(answers)
       ? (answers as Record<string, unknown>)[field.id]
       : undefined;
+    // "Não se aplica" (revisão v2): o item sai da conta e a nota é calculada sobre o que se aplicava.
+    if (field.allow_na && answer === NA_ANSWER) continue;
+    totalMax += field.max_score;
     totalScore += computeFieldScore(field, answer);
   }
 

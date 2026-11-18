@@ -21,6 +21,7 @@ import { ClipboardList } from "lucide-react";
 import { calculateSoapStudentGrade } from "@/lib/soap-grades";
 import FormAnswersView from "@/components/forms/FormAnswersView";
 import { SoapV2Grading } from "@/components/soap/SoapV2Grading";
+import SoapV2Panorama from "@/components/soap/SoapV2Panorama";
 import { PESO_RUBRICA_V2, respostaEhSoapV2 } from "@/lib/soap-v2-rubrica";
 
 export default function SoapControl() {
@@ -545,6 +546,7 @@ export default function SoapControl() {
           </TabsTriggerLine>
           <TabsTriggerLine value="admin">Notas do Admin</TabsTriggerLine>
           <TabsTriggerLine value="final"><Trophy className="h-4 w-4" />Notas Finais</TabsTriggerLine>
+          {(room as any)?.schema_version === 2 && <TabsTriggerLine value="panorama">Panorama da turma</TabsTriggerLine>}
         </TabsListLine>
 
         <TabsContent value="absent" className="mt-6 space-y-3">
@@ -712,6 +714,7 @@ export default function SoapControl() {
                     <>
                       {(room as any)?.schema_version === 2 ? (
                         <SoapV2Grading
+                          roomId={roomId!}
                           response={selectedResponse}
                           soapFields={(forms.find((f: any) => f.id === selectedResponse.form_id)?.content_json as FormField[]) || []}
                           onSaved={() => queryClient.invalidateQueries({ queryKey: ["soap-responses", roomId] })}
@@ -764,6 +767,11 @@ export default function SoapControl() {
             </Card>
           )}
         </TabsContent>
+        {(room as any)?.schema_version === 2 && (
+          <TabsContent value="panorama" className="mt-6 space-y-4">
+            <SoapV2Panorama roomId={roomId!} />
+          </TabsContent>
+        )}
         <TabsContent value="final" className="mt-6 space-y-4">
           {(() => {
             // Build per-student final grades

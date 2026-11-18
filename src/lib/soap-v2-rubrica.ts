@@ -1,7 +1,9 @@
 import type { FormField } from "@/components/forms/types";
 
 // Rubrica do SOAP v2: 10 critérios, escala 0–4 (0 vale 0%, 4 vale 100%), soma 10. A IA sugere, o professor confirma.
-// A nota confirmada fica em soap_responses.admin_score; o detalhe, em ai_feedback_json.avaliacao_v2.
+// A nota confirmada fica em soap_responses.admin_score; o detalhe (justificativas, auditoria, iceberg...) fica na tabela
+// PRIVADA soap_v2_avaliacoes (coluna dados), que o navegador do aluno não lê. O aluno só recebe a devolutiva pela função
+// soap-v2-devolutiva, depois que o professor libera.
 
 /** Peso da rubrica confirmada na nota final do SOAP v2; o restante (20%) é a revisão por pares. */
 export const PESO_RUBRICA_V2 = 0.8;
@@ -91,6 +93,7 @@ export type AuditoriaSoap = {
   contradicoes: string[];
 };
 export type IcebergItem = { fato: string; nivel?: string; impacto: string };
+export type CoberturaItem = { problema: string; identificado: "sim" | "parcial" | "nao"; motivo: string };
 export type CalibracaoItem = { problema: string; confianca_aluno: string; avaliacao: string; comentario: string };
 
 export type AvaliacaoSoapV2 = {
@@ -99,6 +102,7 @@ export type AvaliacaoSoapV2 = {
   comentario?: string;
   auditoria?: AuditoriaSoap;
   iceberg?: IcebergItem[];
+  cobertura?: CoberturaItem[];
   calibracao?: CalibracaoItem[];
   gabarito_origem?: "paciente_virtual" | "deduzido" | "nenhum";
   roteiro_encontrado?: boolean;
@@ -114,8 +118,14 @@ export function respostaEhSoapV2(answers: unknown): boolean {
   return !!answers && typeof answers === "object" && Object.keys(answers as object).some((k) => k.startsWith("s2-"));
 }
 
-/** Detalhe da avaliação v2 guardado na resposta do SOAP, se houver. */
-export function avaliacaoSoapV2(response: { ai_feedback_json?: unknown } | null | undefined): AvaliacaoSoapV2 | null {
-  const av = (response?.ai_feedback_json as any)?.avaliacao_v2;
-  return av && typeof av === "object" ? (av as AvaliacaoSoapV2) : null;
-}
+/** Devolutiva que o aluno recebe (sem auditoria, cobertura nem gabarito). */
+export type DevolutivaSoapV2 = {
+  liberada: boolean;
+  nota?: number | null;
+  criterios?: Record<string, any>;
+  justificativas?: Record<string, string>;
+  comentario?: string;
+  iceberg?: IcebergItem[];
+  calibracao?: CalibracaoItem[];
+  confirmado_em?: string | null;
+};

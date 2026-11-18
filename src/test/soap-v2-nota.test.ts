@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeFormScore, NA_ANSWER } from "@/components/forms/types";
-import { SOAP_V2_CRITERIOS, avaliacaoSoapV2, respostaEhSoapV2 } from "@/lib/soap-v2-rubrica";
+import { SOAP_V2_CRITERIOS, respostaEhSoapV2 } from "@/lib/soap-v2-rubrica";
 import { calculateSoapStudentGrade } from "@/lib/soap-grades";
 import { SOAP_V2 } from "@/lib/form-templates/pharmacy-soap-v2";
 
@@ -34,10 +34,6 @@ describe("detecção e leitura do SOAP v2", () => {
     expect(respostaEhSoapV2({ "sf-55": "x" })).toBe(false);
     expect(respostaEhSoapV2(null)).toBe(false);
   });
-  it("lê a avaliação guardada em ai_feedback_json", () => {
-    expect(avaliacaoSoapV2({ ai_feedback_json: { avaliacao_v2: { confirmado: true, respostas: {} } } })?.confirmado).toBe(true);
-    expect(avaliacaoSoapV2({ ai_feedback_json: { feedback: "v1" } })).toBeNull();
-  });
 });
 
 describe("nota final do SOAP v2", () => {
@@ -61,5 +57,49 @@ describe("nota final do SOAP v2", () => {
     const v1 = { answers_json: { "sf-55": "x" }, admin_score: 6 };
     const r = calculateSoapStudentGrade({ peerEvaluation: par, soapResponse: v1, evaluationFields: campos });
     expect(r.finalScore).toBe(8);
+  });
+});
+
+import { soapV2PeerTemplate, soapV2Template } from "@/lib/form-templates/pharmacy-soap-v2";
+import { allNativeTemplates } from "@/lib/form-templates";
+import type { FormField } from "@/components/forms/types";
+
+describe("revisão por pares do SOAP v2", () => {
+  const campos = soapV2PeerTemplate.content_json as FormField[];
+  const itens = campos.filter((f) => f.type === "radio");
+
+  it("está registrada e é uma avaliação entre pares do módulo SOAP", () => {
+    expect(allNativeTemplates).toContain(soapV2PeerTemplate);
+    expect(soapV2PeerTemplate.form_type).toBe("peer_evaluation");
+    expect(soapV2PeerTemplate.module_type).toBe("soap");
+    expect(soapV2Template.form_type).toBe("soap");
+  });
+  it("tem 8 itens que somam 10 e Parcial vale exatamente metade", () => {
+    expect(itens).toHaveLength(8);
+    expect(itens.reduce((s, f) => s + (f.max_score || 0), 0)).toBe(10);
+    for (const f of itens) expect(f.option_scores!["1"]).toBe(f.option_scores!["0"] / 2);
+  });
+  it("só o item de fidelidade ao paciente aceita não se aplica, e há dois comentários obrigatórios", () => {
+    expect(itens.filter((f) => f.allow_na).map((f) => f.id)).toEqual(["sp2-2"]);
+    expect(campos.filter((f) => f.type === "textarea").every((f) => f.required)).toBe(true);
+    expect(campos.filter((f) => f.type === "textarea")).toHaveLength(2);
+  });
+  it("tudo Sim vale 10; Parcial em tudo vale 5", () => {
+    const sim = Object.fromEntries(itens.map((f) => [f.id, "Sim"]));
+    const parcial = Object.fromEntries(itens.map((f) => [f.id, "Parcial"]));
+    expect(calculateSoapStudentGrade({ peerEvaluation: { answers_json: sim }, evaluationFields: campos }).peerScore).toBe(10);
+    expect(calculateSoapStudentGrade({ peerEvaluation: { answers_json: parcial }, evaluationFields: campos }).peerScore).toBe(5);
+  });
+  it("quem não foi o paciente marca não se aplica e a nota é calculada sobre os outros itens", () => {
+    const resp = Object.fromEntries(itens.map((f) => [f.id, "Sim"]));
+    resp["sp2-2"] = NA_ANSWER;
+    expect(calculateSoapStudentGrade({ peerEvaluation: { answers_json: resp }, evaluationFields: campos }).peerScore).toBe(10);
+    resp["sp2-4"] = "Não";
+    // 10 - 2 (item 4) de 8,5 pontos aplicáveis: 6,5/8,5 de 10
+    expect(calculateSoapStudentGrade({ peerEvaluation: { answers_json: resp }, evaluationFields: campos }).peerScore).toBeCloseTo((6.5 / 8.5) * 10, 5);
+  });
+  it("a revisão v1 continua igual (sem item não se aplica)", () => {
+    const v1 = [{ id: "a", label: "x", type: "radio" as const, options: ["Sim", "Não"], max_score: 4, correct_answer: "0" }];
+    expect(calculateSoapStudentGrade({ peerEvaluation: { answers_json: { a: "Não" } }, evaluationFields: v1 }).peerScore).toBe(0);
   });
 });

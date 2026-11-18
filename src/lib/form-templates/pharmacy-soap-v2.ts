@@ -130,3 +130,40 @@ export const soapV2Template: NativeTemplate = {
   description: "SOAP estruturado: S e O pré-montados da anamnese, lista de problemas com evidências e plano por problema",
   content_json: build(),
 };
+
+// Revisão por pares do SOAP v2: 8 itens em Sim / Parcial / Não (Parcial vale metade), soma 10, mais dois comentários.
+// O item de fidelidade ao que o paciente disse só se aplica a quem foi o paciente do autor; os demais marcam "não se aplica".
+const SIM_PARC_NAO = ["Sim", "Parcial", "Não"];
+const item = (id: string, label: string, peso: number, description?: string, allowNa = false): FormField => ({
+  id,
+  label,
+  type: "radio",
+  options: SIM_PARC_NAO,
+  max_score: peso,
+  option_scores: { "0": peso, "1": peso / 2 },
+  correct_answer: "0",
+  required: false,
+  ...(description ? { description } : {}),
+  ...(allowNa ? { allow_na: true } : {}),
+});
+
+export const soapV2PeerTemplate: NativeTemplate = {
+  area: "pharmacy",
+  module_type: "soap",
+  form_type: "peer_evaluation",
+  title: "Revisão por pares do SOAP v2",
+  description: "Checklist de 8 itens (Sim, Parcial, Não) sobre o fio condutor e a coerência do SOAP, com dois comentários",
+  content_json: [
+    secao("sp2-h", "Revisão por pares do SOAP", "Leia o SOAP do colega e responda. Sim = presente e adequado. Parcial = presente, mas incompleto (vale metade). Não = ausente ou inadequado."),
+    item("sp2-1", "O subjetivo traz o relato do paciente com as palavras dele, sem interpretação?", 1),
+    item("sp2-2", "O subjetivo é fiel ao que o paciente disse na entrevista?", 1.5, "Responda só se você foi o paciente deste colega. Se não foi, marque “não se aplica”.", true),
+    item("sp2-3", "Os dados objetivos têm valor, unidade e condição da medida, e a farmacoterapia mostra o uso prescrito e o uso real?", 1),
+    item("sp2-4", "Cada problema da lista tem uma evidência do S ou do O que o sustenta?", 2),
+    item("sp2-5", "Os problemas estão classificados e priorizados de forma coerente com o risco?", 1),
+    item("sp2-6", "Cada problema tem pelo menos uma ação no plano?", 1.5),
+    item("sp2-7", "As ações têm meta mensurável, responsável e prazo, e são viáveis para o paciente?", 1.5),
+    item("sp2-8", "O texto é claro e as partes não se contradizem?", 0.5),
+    paragrafo("sp2-c1", "O que ficou claro neste SOAP", "Aponte o que está bem feito, em uma ou duas frases.", true),
+    paragrafo("sp2-c2", "Uma pergunta que o prontuário não responde", "Que informação você, como leitor, sentiu falta?", true),
+  ],
+};

@@ -131,10 +131,10 @@ export default function SoapRooms() {
       let importedStudents = 0;
       let importedForms = 0;
 
-      // SOAP v2: já nasce com o modelo v2 e a avaliação entre pares atual (a revisão v2 vem em etapa posterior).
+      // SOAP v2: já nasce com o modelo v2 e a revisão por pares v2.
       if (soapVersion === "2") {
         const v2 = getNativeTemplates("pharmacy", "soap", "soap").find((t) => t.content_json.some((f: any) => f.id === "s2-queixa"));
-        const peer = getNativeTemplates("pharmacy", "soap", "peer_evaluation")[0];
+        const peer = getNativeTemplates("pharmacy", "soap", "peer_evaluation").find((t) => t.content_json.some((f: any) => String(f.id).startsWith("sp2-")));
         const novos = [v2, peer].filter(Boolean).map((t: any) => ({ room_id: data.id, form_type: t.form_type, title: t.title, content_json: t.content_json }));
         if (novos.length) {
           const { error: fErr } = await supabase.from("soap_forms").insert(novos as any);
@@ -146,9 +146,13 @@ export default function SoapRooms() {
         // 1) Import students from the linked anamnesis room
         const { data: simParticipants } = await supabase
           .from("simulation_participants")
-          .select("id, student_name, student_email, participant_role")
+          .select("id, student_name, student_email, participant_role, pair_index, pair_position")
           .eq("room_id", linkedAnamnesisId);
         const students = (simParticipants || []).filter((p: any) => p.participant_role === "student");
+        // Só duplas completas (exatamente um A e um B com o mesmo índice) viram dupla de revisão.
+        const porDupla = new Map<number, string[]>();
+        students.forEach((p: any) => { if (p.pair_index >= 0) porDupla.set(p.pair_index, [...(porDupla.get(p.pair_index) || []), p.pair_position]); });
+        const duplasValidas = new Set<number>([...porDupla.entries()].filter(([, pos]) => pos.length === 2 && pos.includes("A") && pos.includes("B")).map(([i]) => i));
         if (students.length) {
           const { error: insErr } = await supabase.from("soap_participants").insert(
             students.map((p: any) => ({
@@ -157,6 +161,9 @@ export default function SoapRooms() {
               student_email: p.student_email || "",
               anamnesis_participant_id: p.id,
               participant_role: "student",
+              // SOAP v2: a dupla de revisão nasce igual à dupla da anamnese, para quem revisa ter sido o paciente do autor.
+              ...(soapVersion === "2" && duplasValidas.has(p.pair_index) && (p.pair_position === "A" || p.pair_position === "B")
+                ? { pair_index: p.pair_index, pair_position: p.pair_position } : {}),
             })) as any
           );
           if (!insErr) importedStudents = students.length;
@@ -316,7 +323,7 @@ export default function SoapRooms() {
                   </SelectContent>
                 </Select>
                 {soapVersion === "2" && (
-                  <p className="text-xs text-muted-foreground mt-1">Use com a anamnese v2. A sala já vem com o formulário SOAP v2 e a avaliação entre pares.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Use com a anamnese v2. A sala já vem com o formulário SOAP v2 e a revisão por pares v2. As duplas seguem as da anamnese.</p>
                 )}
               </div>
               <div>

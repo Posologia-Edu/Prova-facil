@@ -12,6 +12,7 @@ import type { FormField } from "@/components/forms/types";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
 import SoapV2Workspace from "@/components/soap/SoapV2Workspace";
+import SoapV2Devolutiva from "@/components/soap/SoapV2Devolutiva";
 
 
 type Phase = "login" | "soap" | "waiting_peer" | "evaluate" | "done";
@@ -714,7 +715,7 @@ export default function SoapJoin() {
   // Done
   const awaitingTeacher = participant?.status === "awaiting_teacher_peer";
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background p-4">
       <Card className="w-full max-w-md text-center">
         <CardContent className="py-12">
           <CheckCircle className="h-12 w-12 mx-auto text-primary mb-4" />
@@ -730,6 +731,11 @@ export default function SoapJoin() {
           )}
         </CardContent>
       </Card>
+      {room?.schema_version === 2 && participant && (
+        <div className="w-full max-w-2xl">
+          <SoapV2Devolutiva roomId={room.id} accessCode={room.access_code} participantId={participant.id} email={participant.student_email || email} />
+        </div>
+      )}
     </div>
   );
 }

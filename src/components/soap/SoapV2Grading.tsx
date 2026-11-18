@@ -3,16 +3,18 @@ import { AlertTriangle, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/status-badge";
 import FormRenderer from "@/components/forms/FormRenderer";
 import FormAnswersView from "@/components/forms/FormAnswersView";
 import { computeFormScore, type FormField } from "@/components/forms/types";
-import { SOAP_V2_CRITERIOS, avaliacaoSoapV2, type AvaliacaoSoapV2 } from "@/lib/soap-v2-rubrica";
+import { SOAP_V2_CRITERIOS, type AvaliacaoSoapV2 } from "@/lib/soap-v2-rubrica";
 
 type Props = {
-  response: { id: string; answers_json?: any; ai_feedback_json?: any; admin_score?: number | string | null; admin_feedback?: string | null };
+  roomId: string;
+  response: { id: string; answers_json?: any; admin_score?: number | string | null; admin_feedback?: string | null };
   soapFields: FormField[];
   onSaved: () => void;
 };
@@ -23,29 +25,46 @@ const ORIGEM_GABARITO: Record<string, string> = {
   nenhum: "Sem roteiro nem gabarito",
 };
 
-/** Correção do SOAP v2 pelo professor: a IA sugere a pontuação dos 10 critérios, o professor revisa e confirma. */
-export function SoapV2Grading({ response, soapFields, onSaved }: Props) {
-  const salvo = avaliacaoSoapV2(response);
-  const [respostas, setRespostas] = useState<Record<string, any>>(salvo?.respostas || {});
-  const [comentario, setComentario] = useState(salvo?.comentario || response.admin_feedback || "");
-  const [dados, setDados] = useState<AvaliacaoSoapV2 | null>(salvo);
+// A avaliação detalhada fica na tabela privada soap_v2_avaliacoes (o aluno não a lê). Ainda não está nos tipos gerados.
+const tabela = () => (supabase as any).from("soap_v2_avaliacoes");
+
+/** Correção do SOAP v2 pelo professor: a IA sugere a pontuação dos 10 critérios, o professor revisa, confirma e libera a devolutiva. */
+export function SoapV2Grading({ roomId, response, soapFields, onSaved }: Props) {
+  const [dados, setDados] = useState<AvaliacaoSoapV2 | null>(null);
+  const [respostas, setRespostas] = useState<Record<string, any>>({});
+  const [comentario, setComentario] = useState("");
+  const [confirmada, setConfirmada] = useState(false);
+  const [liberada, setLiberada] = useState(false);
+  const [lendo, setLendo] = useState(true);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
-  // Troca de aluno: recarrega o que está salvo naquela resposta.
+  // Troca de aluno: recarrega o que está salvo para aquela resposta.
   useEffect(() => {
-    const av = avaliacaoSoapV2(response);
-    setDados(av);
-    setRespostas(av?.respostas || {});
-    setComentario(av?.comentario || response.admin_feedback || "");
+    let vivo = true;
+    setLendo(true);
+    setDados(null); setRespostas({}); setComentario(response.admin_feedback || ""); setConfirmada(false); setLiberada(false);
+    tabela().select("dados, confirmada, liberada").eq("response_id", response.id).maybeSingle()
+      .then(({ data }: any) => {
+        if (!vivo) return;
+        if (data?.dados) {
+          const av = data.dados as AvaliacaoSoapV2;
+          setDados(av);
+          setRespostas(av.respostas || {});
+          setComentario(av.comentario || response.admin_feedback || "");
+          setConfirmada(!!data.confirmada);
+          setLiberada(!!data.liberada);
+        }
+      })
+      .then(() => { if (vivo) setLendo(false); }, () => { if (vivo) setLendo(false); });
+    return () => { vivo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [response.id]);
 
   const nota = computeFormScore(SOAP_V2_CRITERIOS, respostas);
-  const confirmado = !!dados?.confirmado && response.admin_score != null;
 
   const corrigir = async () => {
-    if (confirmado && !window.confirm("Esta resposta já tem nota confirmada. Corrigir de novo substitui a sugestão e pede nova confirmação. Continuar?")) return;
+    if (confirmada && !window.confirm("Esta resposta já tem nota confirmada. Corrigir de novo substitui a sugestão, tira a liberação ao aluno e pede nova confirmação. Continuar?")) return;
     setCarregando(true);
     try {
       const { data, error } = await supabase.functions.invoke("grade-soap-v2", {
@@ -60,6 +79,8 @@ export function SoapV2Grading({ response, soapFields, onSaved }: Props) {
       setDados(av);
       setRespostas(av.respostas || {});
       setComentario(av.comentario || "");
+      setConfirmada(false);
+      setLiberada(false);
       toast({ title: "Sugestão da IA pronta", description: "Revise os critérios e confirme a nota." });
       onSaved();
     } catch (e) {
@@ -80,19 +101,34 @@ export function SoapV2Grading({ response, soapFields, onSaved }: Props) {
       origem: dados?.origem === "ia" ? "ia" : "professor",
     };
     const nota2 = Math.round(nota * 100) / 100;
-    const { error } = await supabase.from("soap_responses").update({
+    const { error: e1 } = await tabela().upsert(
+      { response_id: response.id, room_id: roomId, dados: avaliacao, confirmada: true, liberada, updated_at: new Date().toISOString() },
+      { onConflict: "response_id" },
+    );
+    const { error: e2 } = e1 ? { error: null } : await supabase.from("soap_responses").update({
       admin_score: nota2,
       admin_feedback: comentario.trim() || null,
-      ai_feedback_json: { ...(response.ai_feedback_json || {}), rubric_version: "soap_v2", avaliacao_v2: avaliacao },
     } as any).eq("id", response.id);
     setSalvando(false);
-    if (error) {
-      toast({ title: "Erro ao salvar a nota", description: error.message, variant: "destructive" });
+    const erro = e1 || e2;
+    if (erro) {
+      toast({ title: "Erro ao salvar a nota", description: erro.message, variant: "destructive" });
       return;
     }
     setDados(avaliacao);
+    setConfirmada(true);
     toast({ title: "Nota do SOAP confirmada", description: `${nota2.toFixed(2).replace(".", ",")} de 10` });
     onSaved();
+  };
+
+  const alternarLiberacao = async (v: boolean) => {
+    const { error } = await tabela().update({ liberada: v, updated_at: new Date().toISOString() }).eq("response_id", response.id);
+    if (error) {
+      toast({ title: "Erro ao alterar a liberação", description: error.message, variant: "destructive" });
+      return;
+    }
+    setLiberada(v);
+    toast({ title: v ? "Devolutiva liberada ao aluno" : "Devolutiva recolhida" });
   };
 
   const auditoria = dados?.auditoria;
@@ -103,9 +139,9 @@ export function SoapV2Grading({ response, soapFields, onSaved }: Props) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium">Correção do SOAP v2 (vale 80% da nota; os outros 20% vêm da revisão por pares)</p>
-        {confirmado ? <StatusBadge tone="ok">Confirmada: {Number(response.admin_score).toFixed(2)}/10</StatusBadge>
+        {confirmada && response.admin_score != null ? <StatusBadge tone="ok">Confirmada: {Number(response.admin_score).toFixed(2)}/10</StatusBadge>
           : dados ? <StatusBadge tone="warn">Sugestão da IA, falta confirmar</StatusBadge>
-          : <StatusBadge tone="warn">Ainda não corrigido</StatusBadge>}
+          : <StatusBadge tone="warn">{lendo ? "Carregando..." : "Ainda não corrigido"}</StatusBadge>}
       </div>
 
       <details className="rounded-lg border p-3 text-sm">
@@ -148,9 +184,18 @@ export function SoapV2Grading({ response, soapFields, onSaved }: Props) {
         </div>
       )}
 
+      {dados && (dados.cobertura?.length || 0) > 0 && (
+        <details className="rounded-lg border p-3 text-sm">
+          <summary className="cursor-pointer font-medium">Problemas esperados do caso: o que este aluno identificou</summary>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {dados.cobertura!.map((c, k) => <li key={k}><b>{c.problema}</b>: {c.identificado === "sim" ? "identificou" : c.identificado === "parcial" ? "identificou em parte" : "não identificou"}{c.motivo ? ` (${c.motivo})` : ""}</li>)}
+          </ul>
+        </details>
+      )}
+
       {dados && ((dados.iceberg?.length || 0) > 0 || (dados.calibracao?.length || 0) > 0) && (
         <details className="rounded-lg border p-3 text-sm">
-          <summary className="cursor-pointer font-medium">Mapa do iceberg e calibração da confiança (para a devolutiva)</summary>
+          <summary className="cursor-pointer font-medium">Mapa do iceberg e calibração da confiança (vão para a devolutiva do aluno)</summary>
           <div className="mt-3 space-y-3">
             {(dados.iceberg?.length || 0) > 0 && (
               <div>
@@ -175,10 +220,21 @@ export function SoapV2Grading({ response, soapFields, onSaved }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-mono text-sm">Nota do SOAP: {nota.toFixed(2).replace(".", ",")}/10</span>
         <Button size="sm" onClick={confirmar} disabled={salvando || Object.keys(respostas).length === 0}>
-          {confirmado ? "Atualizar nota" : "Confirmar nota"}
+          {confirmada ? "Atualizar nota" : "Confirmar nota"}
         </Button>
+      </div>
+
+      <div className="flex items-start gap-2 rounded-lg border p-3">
+        <Checkbox id={`lib-${response.id}`} checked={liberada} disabled={!confirmada} onCheckedChange={(v) => alternarLiberacao(v === true)} />
+        <div>
+          <Label htmlFor={`lib-${response.id}`} className="text-sm font-medium">Liberar a devolutiva ao aluno</Label>
+          <p className="text-xs text-muted-foreground">
+            {confirmada
+              ? "O aluno passa a ver a nota da rubrica, as justificativas, o seu comentário, o mapa do iceberg e a calibração. Os alertas da auditoria e os problemas esperados nunca vão ao aluno."
+              : "Confirme a nota antes de liberar."}
+          </p>
+        </div>
       </div>
     </div>
   );
 }
-
