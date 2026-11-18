@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Users, Settings, Play, Trash2, FileText, GraduationCap, Copy, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { getNativeTemplates } from "@/lib/form-templates";
 import ShareRoomDialog from "@/components/ShareRoomDialog";
 import EditableRoomTitle from "@/components/EditableRoomTitle";
 import SimulationRoomCard from "@/components/SimulationRoomCard";
@@ -26,6 +27,7 @@ export default function SoapRooms() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [anamnesisRoomId, setAnamnesisRoomId] = useState<string>("");
+  const [soapVersion, setSoapVersion] = useState<"1" | "2">("1");
   const [professorName, setProfessorName] = useState("");
   const [professorEmail, setProfessorEmail] = useState("");
 
@@ -119,13 +121,26 @@ export default function SoapRooms() {
           title,
           description,
           anamnesis_room_id: linkedAnamnesisId,
-        })
+          // Só a v2 grava a versão: assim criar sala v1 não depende da coluna nova existir no banco.
+          ...(soapVersion === "2" ? { schema_version: 2 } : {}),
+        } as any)
         .select()
         .single();
       if (error) throw error;
 
       let importedStudents = 0;
       let importedForms = 0;
+
+      // SOAP v2: já nasce com o modelo v2 e a avaliação entre pares atual (a revisão v2 vem em etapa posterior).
+      if (soapVersion === "2") {
+        const v2 = getNativeTemplates("pharmacy", "soap", "soap").find((t) => t.content_json.some((f: any) => f.id === "s2-queixa"));
+        const peer = getNativeTemplates("pharmacy", "soap", "peer_evaluation")[0];
+        const novos = [v2, peer].filter(Boolean).map((t: any) => ({ room_id: data.id, form_type: t.form_type, title: t.title, content_json: t.content_json }));
+        if (novos.length) {
+          const { error: fErr } = await supabase.from("soap_forms").insert(novos as any);
+          if (!fErr) importedForms = novos.length;
+        }
+      }
 
       if (linkedAnamnesisId) {
         // 1) Import students from the linked anamnesis room
@@ -154,12 +169,14 @@ export default function SoapRooms() {
           .eq("anamnesis_room_id", linkedAnamnesisId)
           .neq("id", data.id)
           .order("created_at", { ascending: false });
-        for (const sibling of siblingRooms || []) {
+        for (const sibling of soapVersion === "2" ? [] : siblingRooms || []) {
           const { data: sourceForms } = await supabase
             .from("soap_forms")
             .select("form_type, title, content_json")
             .eq("room_id", sibling.id);
-          if (sourceForms?.length) {
+          // Não copia o SOAP v2 para uma sala v1 (a v2 tem ids próprios, que começam com "s2-").
+          const ehV2 = (sourceForms || []).some((f: any) => Array.isArray(f.content_json) && f.content_json.some((c: any) => String(c?.id).startsWith("s2-")));
+          if (sourceForms?.length && !ehV2) {
             const { error: fErr } = await supabase.from("soap_forms").insert(
               sourceForms.map((f: any) => ({
                 room_id: data.id,
@@ -182,6 +199,7 @@ export default function SoapRooms() {
       setTitle("");
       setDescription("");
       setAnamnesisRoomId("");
+      setSoapVersion("1");
       setProfessorName("");
       setProfessorEmail("");
       if (importedStudents || importedForms) {
@@ -229,7 +247,8 @@ export default function SoapRooms() {
         title: `${original.title} (cópia)`,
         description: original.description,
         anamnesis_room_id: original.anamnesis_room_id,
-      }).select().single();
+        ...((original as any).schema_version === 2 ? { schema_version: 2 } : {}),
+      } as any).select().single();
       if (error) throw error;
       const { data: forms } = await supabase.from("soap_forms").select("*").eq("room_id", roomId);
       if (forms?.length) {
@@ -286,6 +305,19 @@ export default function SoapRooms() {
               <div>
                 <Label>Descrição</Label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+              </div>
+              <div>
+                <Label>Versão do SOAP</Label>
+                <Select value={soapVersion} onValueChange={(v) => setSoapVersion(v as "1" | "2")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Versão 1 (atual)</SelectItem>
+                    <SelectItem value="2">Versão 2 (estruturada, com S e O montados da anamnese)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {soapVersion === "2" && (
+                  <p className="text-xs text-muted-foreground mt-1">Use com a anamnese v2. A sala já vem com o formulário SOAP v2 e a avaliação entre pares.</p>
+                )}
               </div>
               <div>
                 <Label>Sala de Anamnese (opcional)</Label>

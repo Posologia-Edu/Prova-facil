@@ -48,6 +48,10 @@ export type FormField = {
   feedback_incorrect?: string;
   /** Mostra "Não se aplica" ao responder: o item sai da conta e a nota é recalculada sobre o que se aplicava. */
   allow_na?: boolean;
+  /** Tabela: por coluna, opções fixas. A célula dessa coluna vira uma escolha (ex.: prioridade Alta/Média/Baixa). */
+  table_col_options?: (string[] | null)[];
+  /** Tabela: por coluna, escolha entre as linhas preenchidas de outra tabela do mesmo formulário (ex.: ação do plano → problema). */
+  table_col_ref?: ({ field: string; col: number; prefix?: string } | null)[];
 };
 
 /** Valor gravado na resposta de um campo marcado como "Não se aplica". */
@@ -194,4 +198,25 @@ export function tableColumns(field: FormField): string[] {
 export function tableRowCount(field: FormField): number {
   if (field.table_row_labels && field.table_row_labels.length > 0) return field.table_row_labels.length;
   return Math.max(1, Math.min(30, field.table_rows || 3));
+}
+
+/**
+ * Tabela: opções de escolha de uma coluna, ou null se a coluna é de texto livre.
+ * Coluna com `table_col_options` usa a lista fixa; coluna com `table_col_ref` usa as linhas preenchidas da outra tabela
+ * (valor "P1", "P2"... = número da linha, rótulo "P1 · texto"). `answers` é o conjunto de respostas do formulário.
+ */
+export function tableCellChoices(field: FormField, col: number, answers: Record<string, any>): { value: string; label: string }[] | null {
+  const fixas = field.table_col_options?.[col];
+  if (fixas && fixas.length > 0) return fixas.map((o) => ({ value: o, label: o }));
+  const ref = field.table_col_ref?.[col];
+  if (!ref) return null;
+  const matriz: string[][] = Array.isArray(answers?.[ref.field]) ? answers[ref.field] : [];
+  const prefix = ref.prefix ?? "P";
+  const out: { value: string; label: string }[] = [];
+  matriz.forEach((linha, r) => {
+    const texto = String(linha?.[ref.col] ?? "").trim();
+    if (!texto) return;
+    out.push({ value: `${prefix}${r + 1}`, label: `${prefix}${r + 1} · ${texto.length > 70 ? texto.slice(0, 70) + "…" : texto}` });
+  });
+  return out;
 }

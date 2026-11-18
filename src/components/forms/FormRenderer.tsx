@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Star, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { FormField, NA_ANSWER, getSections, tableColumns, tableRowCount } from "./types";
+import { FormField, NA_ANSWER, getSections, tableCellChoices, tableColumns, tableRowCount } from "./types";
 import HandwritingInput from "./HandwritingInput";
 
 function CopyTextButton({ text }: { text: string }) {
@@ -293,17 +293,40 @@ export default function FormRenderer({
                   {Array.from({ length: rows }, (_, r) => (
                     <tr key={r} className="border-t">
                       {fixos && <td className="whitespace-nowrap px-3 py-1.5 text-muted-foreground">{fixos[r]}</td>}
-                      {cols.map((c, j) => (
-                        <td key={j} className="p-1">
-                          <Input
-                            value={matriz[r]?.[j] ?? ""}
-                            onChange={(e) => setCell(r, j, e.target.value)}
-                            disabled={readOnly}
-                            aria-label={`${fixos ? fixos[r] + " · " : "Linha " + (r + 1) + " · "}${c}`}
-                            className="h-8"
-                          />
-                        </td>
-                      ))}
+                      {cols.map((c, j) => {
+                        const rotuloCelula = `${fixos ? fixos[r] + " · " : "Linha " + (r + 1) + " · "}${c}`;
+                        const atual = matriz[r]?.[j] ?? "";
+                        const escolhas = tableCellChoices(field, j, answers);
+                        if (escolhas) {
+                          // Valor que não está mais na lista (ex.: problema apagado) continua visível, para não sumir em silêncio.
+                          const lista = atual && !escolhas.some((o) => o.value === atual) ? [...escolhas, { value: atual, label: `${atual} (não está mais na lista)` }] : escolhas;
+                          return (
+                            <td key={j} className="p-1">
+                              <select
+                                value={atual}
+                                onChange={(e) => setCell(r, j, e.target.value)}
+                                disabled={readOnly}
+                                aria-label={rotuloCelula}
+                                className="h-8 w-full min-w-[110px] rounded-md border border-input bg-background px-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <option value="">{readOnly ? "—" : "Escolher"}</option>
+                                {lista.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                              </select>
+                            </td>
+                          );
+                        }
+                        return (
+                          <td key={j} className="p-1">
+                            <Input
+                              value={atual}
+                              onChange={(e) => setCell(r, j, e.target.value)}
+                              disabled={readOnly}
+                              aria-label={rotuloCelula}
+                              className="h-8"
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>

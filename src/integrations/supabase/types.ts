@@ -6694,6 +6694,7 @@ export type Database = {
           description: string | null
           id: string
           is_archived: boolean
+          schema_version: number
           status: string
           title: string
           updated_at: string
@@ -6708,6 +6709,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_archived?: boolean
+          schema_version?: number
           status?: string
           title?: string
           updated_at?: string
@@ -6722,6 +6724,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_archived?: boolean
+          schema_version?: number
           status?: string
           title?: string
           updated_at?: string

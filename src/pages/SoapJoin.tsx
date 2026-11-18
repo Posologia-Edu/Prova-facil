@@ -11,6 +11,7 @@ import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+import SoapV2Workspace from "@/components/soap/SoapV2Workspace";
 
 
 type Phase = "login" | "soap" | "waiting_peer" | "evaluate" | "done";
@@ -453,7 +454,8 @@ export default function SoapJoin() {
       if (isSolo) {
         await supabase.from("soap_participants").update({ status: "done" }).eq("id", participant.id);
         setPhase("done");
-        triggerAIPeerGrading(room, participant, soapForm, soapAnswers).catch(console.error);
+        // SOAP v2: a correção por IA é outra função (próxima etapa); a da v1 não entende o formulário novo.
+        if (room.schema_version !== 2) triggerAIPeerGrading(room, participant, soapForm, soapAnswers).catch(console.error);
       } else if (partnerAbsent) {
         await supabase.from("soap_participants").update({ status: "awaiting_teacher_peer" }).eq("id", participant.id);
         toast({
@@ -556,6 +558,23 @@ export default function SoapJoin() {
   }
 
   // SOAP phase
+  if (phase === "soap" && room?.schema_version === 2) {
+    return (
+      <SoapV2Workspace
+        soapForm={soapForm}
+        answers={soapAnswers}
+        setAnswers={setSoapAnswers}
+        anamnesisParticipantId={participant?.anamnesis_participant_id || null}
+        patientName={patientName}
+        draftLoaded={soapDraft.loaded}
+        draftStatus={soapDraft.status}
+        draftLastSavedAt={soapDraft.lastSavedAt}
+        submitting={submittingSoap}
+        onSubmit={submitSoap}
+      />
+    );
+  }
+
   if (phase === "soap") {
     const soapFields: FormField[] = soapForm?.content_json || [];
     return (

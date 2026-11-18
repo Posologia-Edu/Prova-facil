@@ -19,6 +19,7 @@ import { SimulationReportGenerator, type PairReport, type ReportSection } from "
 import { ModuleControlHeader } from "@/components/simulation/ModuleControlHeader";
 import { ClipboardList } from "lucide-react";
 import { calculateSoapStudentGrade } from "@/lib/soap-grades";
+import FormAnswersView from "@/components/forms/FormAnswersView";
 
 export default function SoapControl() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -204,6 +205,10 @@ export default function SoapControl() {
     setSelectedResponseId(response.id);
   };
 
+  // Campos de tabela (SOAP v2) aparecem em colunas, não como texto técnico.
+  const tableFieldsById: Record<string, any> = {};
+  forms.forEach((f: any) => (Array.isArray(f.content_json) ? f.content_json : []).forEach((fld: any) => { if (fld?.type === "table") tableFieldsById[fld.id] = fld; }));
+
   const renderAnswerEntries = (answers: Record<string, any>, showItemScores = false) => {
     const entries = Object.entries(answers || {}).filter(([key]) => key !== "_feedback");
 
@@ -224,7 +229,9 @@ export default function SoapControl() {
                 )}
               </div>
               <div className="text-muted-foreground">
-                {typeof value === "object" ? JSON.stringify(value) : String(value)}
+                {tableFieldsById[key]
+                  ? <FormAnswersView fields={[{ ...tableFieldsById[key], label: "" }]} answers={{ [key]: value }} />
+                  : typeof value === "object" ? JSON.stringify(value) : String(value)}
               </div>
             </div>
           );
@@ -713,7 +720,7 @@ export default function SoapControl() {
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={saveAdminScore}>Salvar Nota</Button>
-                        <Button variant="outline" onClick={gradeWithAI} disabled={gradingAI}>
+                        <Button variant="outline" onClick={gradeWithAI} disabled={gradingAI || (room as any)?.schema_version === 2} title={(room as any)?.schema_version === 2 ? "A correção por IA do SOAP v2 chega na próxima etapa" : undefined}>
                           {gradingAI ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Corrigindo...</> : <><Bot className="h-4 w-4 mr-1" />Corrigir com IA</>}
                         </Button>
                       </div>
