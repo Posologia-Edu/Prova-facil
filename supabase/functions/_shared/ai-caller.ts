@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 
 // ÚNICO provedor de IA do sistema: Gemini (Google), com a chave paga cadastrada em ai_api_keys (provider = 'google').
 // Não há fallback para outro provedor nem para o Lovable AI gateway: se o Google falhar, o erro dele volta ao chamador.
