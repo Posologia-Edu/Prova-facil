@@ -199,7 +199,7 @@ export function ClassActivitiesTab({ classId, onChanged }: { classId: string; on
         if (active) setProfileName(profile?.full_name || "");
       }
       const [studentsRes, vpsRes] = await Promise.all([
-        supabase.from("class_students").select("*").eq("class_id", classId).order("student_name"),
+        supabase.from("class_students").select("id, class_id, student_name, student_email, student_registration, semester_id, created_at, pin_last_sent_at").eq("class_id", classId).order("student_name"),
         supabase.from("class_virtual_patients").select("id, patient_id, access_code, status, group_label, profession").eq("class_id", classId).order("created_at"),
       ]);
       if (!active) return;

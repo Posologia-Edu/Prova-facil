@@ -312,7 +312,7 @@ export default function ClassesPage() {
   };
 
   const loadManageStudents = async (classId: string) => {
-    const { data } = await supabase.from("class_students").select("*").eq("class_id", classId).order("student_name");
+    const { data } = await supabase.from("class_students").select("id, class_id, student_name, student_email, student_registration, semester_id, created_at, pin_last_sent_at").eq("class_id", classId).order("student_name");
     setStudents(data || []);
   };
 

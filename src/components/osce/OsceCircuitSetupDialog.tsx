@@ -51,7 +51,7 @@ export function OsceCircuitSetupDialog({ open, onOpenChange, examId, stations }:
     queryFn: async () => {
       const { data, error } = await supabase
         .from("class_students")
-        .select("*")
+        .select("id, class_id, student_name, student_email, student_registration, semester_id, created_at, pin_last_sent_at")
         .eq("class_id", selectedClassId!)
         .order("student_name");
       if (error) throw error;
