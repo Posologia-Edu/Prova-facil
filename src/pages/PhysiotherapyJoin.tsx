@@ -25,34 +25,34 @@ export default function PhysiotherapyJoin() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitted, setSubmitted] = useState(false);
 
+  async function chamarArea(body: Record<string, unknown>) {
+    const { data, error } = await supabase.functions.invoke("area-aluno", { body: { modulo: "physiotherapy", ...body } });
+    if (error) {
+      let msg = error.message;
+      try { const j = await (error as any).context?.json?.(); if (j?.error) msg = j.error; } catch { /* mantém */ }
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
   const handleLogin = async () => {
     if (!pin.trim() || !email.trim()) return;
-    const { data: rooms } = await supabase.from("physiotherapy_rooms").select("*").eq("access_code", pin.trim().toLowerCase()).eq("status", "active");
-    if (!rooms?.length) { toast({ title: "Sala não encontrada", description: "Verifique o PIN ou aguarde a ativação.", variant: "destructive" }); return; }
-    const foundRoom = rooms[0];
-    setRoom(foundRoom);
-
-    const { data: parts } = await supabase.from("physiotherapy_participants").select("*").eq("room_id", foundRoom.id).eq("student_email", email.trim().toLowerCase());
-    if (!parts?.length) { toast({ title: "E-mail não encontrado", variant: "destructive" }); return; }
-    const me = parts[0];
-    setParticipant(me);
-    await supabase.from("physiotherapy_participants").update({ status: "ready" }).eq("id", me.id);
-
-    if (me.pair_index >= 0 && me.pair_position !== "S") {
-      const { data: partners } = await supabase.from("physiotherapy_participants").select("*").eq("room_id", foundRoom.id).eq("pair_index", me.pair_index).neq("id", me.id);
-      if (partners?.length) setPartner(partners[0]);
+    let r: any;
+    try {
+      r = await chamarArea({ action: "entrar", access_code: pin.trim().toLowerCase(), email: email.trim().toLowerCase() });
+    } catch (e: any) {
+      toast({ title: "Não foi possível entrar", description: e?.message, variant: "destructive" });
+      return;
     }
-
-    const { data: allForms } = await supabase.from("physiotherapy_forms").select("*").eq("room_id", foundRoom.id);
-    const sf = allForms?.find((f: any) => f.form_type === "standard");
-    if (sf) setStandardForm(sf);
-
-    const { data: cases } = await supabase.from("physiotherapy_clinical_cases").select("*").eq("room_id", foundRoom.id).order("position", { ascending: true });
-    if (cases?.length && me.pair_index >= 0) setClinicalCase(cases[me.pair_index % cases.length]);
-
-    const { data: existingResp } = await supabase.from("physiotherapy_responses").select("*").eq("room_id", foundRoom.id).eq("pair_index", me.pair_index);
-    if (existingResp?.some((r: any) => r.submitted_at)) { setSubmitted(true); setPhase("done"); } else { setPhase("active"); }
-
+    if (!r.ok && r.motivo === "sala") { toast({ title: "Sala não encontrada", description: "Verifique o PIN ou aguarde a ativação.", variant: "destructive" }); return; }
+    if (!r.ok) { toast({ title: "E-mail não encontrado", variant: "destructive" }); return; }
+    setRoom(r.sala);
+    setParticipant(r.participante);
+    if (r.parceiro) setPartner(r.parceiro);
+    if (r.formulario) setStandardForm(r.formulario);
+    if (r.caso) setClinicalCase(r.caso);
+    if (r.enviada) { setSubmitted(true); setPhase("done"); } else { setPhase("active"); }
     sessionStorage.setItem("physiotherapy_pin", pin.trim().toLowerCase());
     sessionStorage.setItem("physiotherapy_email", email.trim().toLowerCase());
   };
@@ -60,11 +60,12 @@ export default function PhysiotherapyJoin() {
   const handleSubmit = async () => {
     if (!window.confirm("Tem certeza que deseja enviar o formulário? Após o envio não será possível editar.")) return;
     if (!room || !participant || !standardForm) return;
-    await supabase.from("physiotherapy_responses").insert({
-      room_id: room.id, pair_index: participant.pair_index, form_id: standardForm.id,
-      clinical_case_id: clinicalCase?.id || null, answers_json: answers as any, submitted_at: new Date().toISOString(),
-    });
-    await supabase.from("physiotherapy_participants").update({ status: "done" }).eq("room_id", room.id).eq("pair_index", participant.pair_index);
+    try {
+      await chamarArea({ action: "enviar", access_code: (room.access_code || pin).trim().toLowerCase(), email: (participant.student_email || email).trim().toLowerCase(), answers });
+    } catch (e: any) {
+      toast({ title: "Erro ao enviar", description: e?.message || "Tente novamente.", variant: "destructive" });
+      return;
+    }
     setSubmitted(true); setPhase("done");
     toast({ title: "Enviado!", description: "Formulário enviado com sucesso." });
   };
