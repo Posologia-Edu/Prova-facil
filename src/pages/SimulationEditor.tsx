@@ -341,14 +341,8 @@ export default function SimulationEditor() {
   };
 
   const resumeSimulation = () => {
-    if (!professor?.student_email) {
-      toast({ title: "Erro", description: "Cadastre um e-mail para o professor para retomar a atividade.", variant: "destructive" });
-      return;
-    }
-
-    sessionStorage.setItem("sim_pin", room.access_code);
-    sessionStorage.setItem("sim_email", String(professor.student_email).trim().toLowerCase());
-    navigate("/simulation/join");
+    if (!room?.id) return;
+    navigate(`/simulation/join?sala=${room.id}`);
   };
 
   const restartSimulation = async () => {

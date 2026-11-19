@@ -151,8 +151,45 @@ export default function SimulationJoin() {
     setMaterialsReady(!!r.materiaisProntos);
   };
 
+  /** Professor logado abre a própria sala pelo painel (?sala=<id>), sem digitar PIN nem e-mail. */
+  const entrarComoDono = async (roomId: string) => {
+    const { data: sess } = await supabase.auth.getSession();
+    const user = sess.session?.user;
+    if (!user) {
+      navigate(`/auth?voltar=${encodeURIComponent(`/simulation/join?sala=${roomId}`)}`);
+      return;
+    }
+    const { data: sala } = await supabase.from("simulation_rooms").select("id, access_code, user_id").eq("id", roomId).maybeSingle();
+    if (!sala || sala.user_id !== user.id) {
+      toast({ title: "Sala não encontrada", description: "Esta sala não existe ou pertence a outra conta de professor.", variant: "destructive" });
+      return;
+    }
+    const { data: parts } = await supabase.from("simulation_participants").select("id, student_email, participant_role").eq("room_id", roomId);
+    const prof = (parts || []).find((p: any) => p.participant_role === "professor");
+    let emailProf = (prof?.student_email || "").trim().toLowerCase();
+    if (!emailProf) {
+      emailProf = (user.email || "").trim().toLowerCase();
+      const nome = (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || "Professor";
+      const { error } = prof
+        ? await supabase.from("simulation_participants").update({ student_email: emailProf }).eq("id", prof.id)
+        : await supabase.from("simulation_participants").insert({
+            room_id: roomId, student_name: nome, student_email: emailProf, participant_role: "professor", pair_index: -1, pair_position: "X",
+          });
+      if (error) {
+        toast({ title: "Não foi possível abrir a sala", description: error.message, variant: "destructive" });
+        return;
+      }
+    }
+    await joinRoomWithCredentials(sala.access_code, emailProf);
+  };
+
   // Auto-join if redirected from StudentAuth
   useEffect(() => {
+    const salaId = new URLSearchParams(window.location.search).get("sala");
+    if (salaId) {
+      setTimeout(() => { entrarComoDono(salaId); }, 100);
+      return;
+    }
     const savedPin = sessionStorage.getItem("sim_pin");
     const savedEmail = sessionStorage.getItem("sim_email");
     if (savedPin && savedEmail) {

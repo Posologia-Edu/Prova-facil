@@ -196,14 +196,8 @@ export default function SimulationControl() {
   }, [roomId]);
 
   const openProfessorRoom = () => {
-    if (!room?.access_code || !professor?.student_email) {
-      toast({ title: "Cadastre o e-mail do professor para abrir a sala.", variant: "destructive" });
-      return;
-    }
-
-    sessionStorage.setItem("sim_pin", room.access_code);
-    sessionStorage.setItem("sim_email", String(professor.student_email).trim().toLowerCase());
-    navigate("/simulation/join");
+    if (!room?.id) return;
+    navigate(`/simulation/join?sala=${room.id}`);
   };
 
   // Professor actions
