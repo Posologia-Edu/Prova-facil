@@ -568,6 +568,10 @@ export default function SimulationControl() {
         }
         rightSlot={
           <>
+            <Button onClick={openProfessorRoom} variant="outline" className="gap-2">
+              <Play className="h-4 w-4" />
+              Abrir sala virtual
+            </Button>
             {timeLeft !== null && (
               <div className={`flex items-center gap-2 rounded-lg px-3 py-2 font-mono text-xl font-medium tabular-nums ${
                 timeLeft <= 60 ? "bg-destructive/10 text-destructive ring-1 ring-destructive/30" : "bg-sunken"
