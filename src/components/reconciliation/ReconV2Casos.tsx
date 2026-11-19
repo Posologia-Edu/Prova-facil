@@ -53,6 +53,21 @@ export default function ReconV2Casos({ roomId }: { roomId: string }) {
   const [gTema, setGTema] = useState("");
   const [gMeds, setGMeds] = useState("6");
   const [gArm, setGArm] = useState<string[]>([]);
+  // derivar de paciente virtual
+  const [pvs, setPvs] = useState<{ id: string; name: string; idade: number; nMeds: number }[]>([]);
+  const [pvEscolhido, setPvEscolhido] = useState("");
+  const [derivando, setDerivando] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data } = await supabase.from("custom_virtual_patients").select("id, name, case_data")
+        .eq("user_id", u.user.id).eq("is_legacy", false).is("deleted_at", null).order("name", { ascending: true });
+      setPvs(((data as any[]) || []).filter((v) => v.case_data?.nucleo?.medicamentos?.length).map((v) => ({
+        id: v.id, name: v.name, idade: Number(v.case_data.nucleo.identidade?.idade) || 0, nMeds: v.case_data.nucleo.medicamentos.length,
+      })));
+    })().catch(() => { /* a lista só some; o resto funciona */ });
+  }, []);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -116,6 +131,21 @@ export default function ReconV2Casos({ roomId }: { roomId: string }) {
     } catch (e: any) {
       toast({ title: "Não foi possível gerar", description: e?.message, variant: "destructive" });
     } finally { setGerando(false); }
+  };
+
+  const derivar = async () => {
+    if (!pvEscolhido) return;
+    setDerivando(true);
+    try {
+      const r = await chamarGerador({ action: "derivar", vp_id: pvEscolhido, transicao: gTransicao, nivel: gNivel, tema: gTema });
+      abrir({ caso: r.caso, prescricao: r.prescricao, gabarito: r.gabarito }, null);
+      toast({
+        title: "Caso derivado do paciente virtual",
+        description: r.persona_do_paciente ? "O prescritor virtual veio do encontro 2 do paciente. Revise os blocos antes de salvar." : "Este paciente não tem prescritor no encontro 2; a IA criou um. Revise os blocos antes de salvar.",
+      });
+    } catch (e: any) {
+      toast({ title: "Não foi possível derivar", description: e?.message, variant: "destructive" });
+    } finally { setDerivando(false); }
   };
 
   const revisar = async () => {
@@ -199,6 +229,20 @@ export default function ReconV2Casos({ roomId }: { roomId: string }) {
               <Button variant="outline" onClick={() => abrir(casoEmBranco(), null)}><Plus className="mr-2 h-4 w-4" />Caso em branco</Button>
             </div>
             <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="mb-2 text-sm font-medium">Derivar de um paciente virtual</p>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-[16rem] flex-1">
+                  <Label htmlFor="g-pv">Paciente virtual (versão 2)</Label>
+                  <Sel id="g-pv" value={pvEscolhido} onChange={setPvEscolhido}>
+                    <option value="">{pvs.length ? "Escolha um paciente" : "Nenhum paciente virtual v2 encontrado"}</option>
+                    {pvs.map((v) => <option key={v.id} value={v.id}>{v.name}{v.idade ? `, ${v.idade} anos` : ""} · {v.nMeds} medicamentos</option>)}
+                  </Sel>
+                </div>
+                <Button onClick={derivar} disabled={!pvEscolhido || derivando}>{derivando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}{derivando ? "Derivando (até 1 minuto)..." : "Derivar caso"}</Button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Usa a transição, o nível e o tema acima. A dupla que atendeu esse paciente na anamnese recebe este caso, e o aluno pode importar o próprio SOAP na BPMH. O prescritor vem do encontro 2 do paciente, se houver.</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
               <p className="mb-2 text-sm font-medium">Casos-semente (escritos para revisão)</p>
               <div className="flex flex-wrap gap-2">
                 {CASOS_SEMENTE.map((s) => (
@@ -220,7 +264,7 @@ export default function ReconV2Casos({ roomId }: { roomId: string }) {
               <Card key={l.id}><CardContent className="flex flex-wrap items-center justify-between gap-2 py-3">
                 <div className="min-w-0">
                   <p className="font-medium">{l.titulo}</p>
-                  <p className="text-xs text-muted-foreground">{ROTULO_TRANSICAO[l.completo.caso.transicao]} · {l.completo.caso.fontes.length} fontes · {l.completo.gabarito.discrepancias.length} discrepâncias</p>
+                  <p className="text-xs text-muted-foreground">{ROTULO_TRANSICAO[l.completo.caso.transicao]} · {l.completo.caso.fontes.length} fontes · {l.completo.gabarito.discrepancias.length} discrepâncias{l.completo.caso.origem_vp_id ? " · derivado de paciente virtual" : ""}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {n > 0 ? <Badge variant="outline" className="text-warning-ink">{n} erro(s)</Badge> : <Badge variant="secondary">válido</Badge>}

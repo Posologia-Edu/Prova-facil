@@ -15,7 +15,7 @@ import ReconV2Revisao from "@/components/reconciliation/ReconV2Revisao";
 import ReconV2Prescritor from "@/components/reconciliation/ReconV2Prescritor";
 import { getSections, type FormField } from "@/components/forms/types";
 import { useFormDraft } from "@/hooks/use-form-draft";
-import { RECON_V2 } from "@/lib/form-templates/pharmacy-reconciliation-v2";
+import { RECON_V2, RECON_V2_LINHAS_BPMH } from "@/lib/form-templates/pharmacy-reconciliation-v2";
 import {
   clearanceCreatinina, medicamentosBpmh, montarConciliacao, progressoRecon, verificarCoerenciaRecon,
   ROTULO_FONTE, ROTULO_TRANSICAO, type CasoV2, type ItemPrescricao,
@@ -83,6 +83,7 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
   const [abertas, setAbertas] = useState<Aberta[]>([]);
   const [prescricao, setPrescricao] = useState<ItemPrescricao[]>([]);
   const [bpmhEnviada, setBpmhEnviada] = useState(false);
+  const [importando, setImportando] = useState(false);
   const [passo, setPasso] = useState(0);
   const [painel, setPainel] = useState<"dossie" | "prescricao">("dossie");
   const [enviando, setEnviando] = useState(false);
@@ -152,6 +153,19 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
   const abrirFonte = (id: string, aberta: boolean) => {
     if (!aberta) return;
     setAbertas((l) => (l.some((x) => x.id === id) ? l : [...l, { id, em: new Date().toISOString() }]));
+  };
+
+  const importarSoap = async () => {
+    if (!window.confirm("Importar a farmacoterapia do seu SOAP para a tabela da BPMH? As linhas atuais da tabela serão substituídas.")) return;
+    setImportando(true);
+    try {
+      const r = await chamar({ action: "importar_soap", access_code: accessCode, email });
+      const linhas: string[][] = r.linhas || [];
+      setAnswers((a) => ({ ...a, [RECON_V2.bpmh]: Array.from({ length: Math.max(RECON_V2_LINHAS_BPMH, linhas.length) }, (_, i) => linhas[i] || ["", "", "", ""]) }));
+      toast({ title: "SOAP importado", description: `${linhas.length} linha(s). Confira com as fontes do dossiê e complete as colunas de fontes e conflito.` });
+    } catch (e: any) {
+      toast({ title: "Não foi possível importar", description: e?.message, variant: "destructive" });
+    } finally { setImportando(false); }
   };
 
   const enviarBpmh = async () => {
@@ -348,7 +362,15 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
                   <FormAnswersView fields={camposDoPasso} answers={answers} />
                 </div>
               ) : (
+                <>
+                {passo === 1 && estado?.caso.caso_json.origem_vp_id && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-3 text-sm">
+                    <Button type="button" size="sm" variant="outline" onClick={importarSoap} disabled={importando}>{importando ? "Importando..." : "Importar do meu SOAP"}</Button>
+                    <span className="text-xs text-muted-foreground">Se você atendeu este paciente, traz a farmacoterapia que você registrou no SOAP. É um ponto de partida: confira com as fontes.</span>
+                  </div>
+                )}
                 <FormRenderer fields={camposDoPasso} answers={answers} onChange={setAnswers} idPrefix="reconv2-" />
+                </>
               )}
 
               {!bloqueadoSemBpmh && passo >= 1 && !travado && !bpmhEnviada && passo === 1 && (

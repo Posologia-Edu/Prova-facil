@@ -3,9 +3,12 @@
 //  - "estado": devolve o caso que cabe à dupla (dossiê), a BPMH já enviada e, SÓ se a BPMH já foi enviada, a prescrição.
 //  - "enviar_bpmh": grava e TRAVA a BPMH e só então entrega a prescrição. Depois do envio, a BPMH não muda.
 //  - "enviar_final": grava a resposta final; os campos das etapas 1 e 2 voltam a ser os da BPMH travada.
+//  - "importar_soap": devolve as linhas da farmacoterapia do SOAP v2 do aluno, no formato da BPMH, SÓ se o paciente do SOAP for o do caso.
+// Caso da dupla: se há casos derivados de paciente virtual (origem_vp_id), a dupla recebe o do paciente que a pessoa A atendeu; senão, rodízio.
 // O gabarito nunca sai daqui. A prescrição fica numa tabela privada e só passa por aqui.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { adminClient, forbidden } from "../_shared/auth-guard.ts";
+import { pacienteVirtualDoSoap } from "../_shared/soap-vp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,35 +31,50 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const { action, access_code, email, answers, fontes_abertas } = await req.json();
-    if (!["estado", "enviar_bpmh", "enviar_final"].includes(action)) return json({ error: "Ação inválida" }, 400);
+    if (!["estado", "enviar_bpmh", "enviar_final", "importar_soap"].includes(action)) return json({ error: "Ação inválida" }, 400);
     if (typeof access_code !== "string" || access_code.trim().length < 4 || typeof email !== "string" || !email.trim()) return json({ error: "Dados incompletos" }, 400);
 
     const db = adminClient();
     const { data: sala } = await db.from("reconciliation_rooms")
-      .select("id, status, schema_version, title").eq("access_code", access_code.trim().toLowerCase()).eq("status", "active").maybeSingle();
+      .select("id, status, schema_version, title, user_id").eq("access_code", access_code.trim().toLowerCase()).eq("status", "active").maybeSingle();
     if (!sala || sala.schema_version !== 2) return forbidden(corsHeaders);
 
     const { data: partes } = await db.from("reconciliation_participants")
-      .select("id, pair_index, pair_position, student_name").eq("room_id", sala.id).eq("participant_role", "student")
+      .select("id, pair_index, pair_position, student_name, soap_participant_id").eq("room_id", sala.id).eq("participant_role", "student")
       .eq("student_email", email.trim().toLowerCase());
     const eu = partes?.[0];
     if (!eu) return forbidden(corsHeaders);
     if (eu.pair_index < 0) return json({ error: "Você ainda não está em uma dupla. Avise o professor." }, 409);
 
-    // Caso da dupla: rodízio pelo índice da dupla, como na v1.
+    // Caso da dupla.
     const { data: casos } = await db.from("reconciliation_clinical_cases")
       .select("id, title, caso_json, position").eq("room_id", sala.id).order("position", { ascending: true });
     const lista = (casos || []).filter((c: any) => c.caso_json);
     if (!lista.length) return json({ error: "A sala não tem caso v2 cadastrado." }, 409);
-    const caso: any = lista[eu.pair_index % lista.length];
+
+    const { data: resp } = await db.from("reconciliation_responses")
+      .select("id, answers_json, bpmh_json, bpmh_submitted_at, fontes_json, submitted_at, clinical_case_id")
+      .eq("room_id", sala.id).eq("pair_index", eu.pair_index).maybeSingle();
+
+    // 1) Se a dupla já tem resposta, o caso gravado nela é o caso (não muda no meio do caminho).
+    let caso: any = resp?.clinical_case_id ? lista.find((c: any) => c.id === resp.clinical_case_id) : null;
+    // 2) Pelo paciente que a pessoa A da dupla atendeu (casos derivados de paciente virtual).
+    if (!caso && lista.some((c: any) => c.caso_json?.origem_vp_id)) {
+      const { data: dupla } = await db.from("reconciliation_participants")
+        .select("pair_position, soap_participant_id").eq("room_id", sala.id).eq("participant_role", "student").eq("pair_index", eu.pair_index);
+      const ordem = [...(dupla || [])].sort((a: any, b: any) => (a.pair_position === "A" ? -1 : 0) - (b.pair_position === "A" ? -1 : 0));
+      for (const m of ordem) {
+        const { vpId } = await pacienteVirtualDoSoap(db, m.soap_participant_id, sala.user_id);
+        const achado = vpId ? lista.find((c: any) => c.caso_json?.origem_vp_id === vpId) : null;
+        if (achado) { caso = achado; break; }
+      }
+    }
+    // 3) Rodízio pelo índice da dupla, como na v1.
+    if (!caso) caso = lista[eu.pair_index % lista.length];
 
     const { data: form } = await db.from("reconciliation_forms")
       .select("id").eq("room_id", sala.id).eq("form_type", "reconciliation").limit(1).maybeSingle();
     if (!form) return json({ error: "A sala não tem formulário." }, 409);
-
-    const { data: resp } = await db.from("reconciliation_responses")
-      .select("id, answers_json, bpmh_json, bpmh_submitted_at, fontes_json, submitted_at")
-      .eq("room_id", sala.id).eq("pair_index", eu.pair_index).maybeSingle();
 
     const entregarPrescricao = async () => {
       const { data: priv } = await db.from("reconciliation_v2_privado").select("prescricao").eq("case_id", caso.id).maybeSingle();
@@ -82,6 +100,28 @@ serve(async (req) => {
     }
 
     if (resp?.submitted_at) return json({ error: "A resposta desta dupla já foi enviada." }, 409);
+
+    if (action === "importar_soap") {
+      if (resp?.bpmh_submitted_at) return json({ error: "A BPMH já foi enviada e está travada." }, 409);
+      const origem = caso.caso_json?.origem_vp_id;
+      if (!origem) return json({ error: "Este caso não foi derivado de um paciente virtual, então não há SOAP correspondente." }, 409);
+      if (!eu.soap_participant_id) return json({ error: "Você não está vinculado a um SOAP nesta turma. Avise o professor." }, 409);
+      const { vpId } = await pacienteVirtualDoSoap(db, eu.soap_participant_id, sala.user_id);
+      if (vpId !== origem) return json({ error: "O paciente do seu SOAP não é o paciente deste caso." }, 409);
+      const { data: soaps } = await db.from("soap_responses").select("answers_json")
+        .eq("participant_id", eu.soap_participant_id).is("target_participant_id", null).not("submitted_at", "is", null)
+        .order("submitted_at", { ascending: false }).limit(1);
+      const tabela = (soaps?.[0]?.answers_json as any)?.["s2-farmaco"];
+      if (!Array.isArray(tabela)) return json({ error: "Seu SOAP enviado não tem a tabela de farmacoterapia preenchida." }, 409);
+      const txt = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+      // SOAP: [medicamento, prescrito, como realmente usa, discrepância]  →  BPMH: [medicamento, como realmente usa, fontes, última dose e conflito]
+      const linhas = tabela
+        .filter((r: unknown) => Array.isArray(r) && (txt(r[0]) || txt(r[2])))
+        .slice(0, 12)
+        .map((r: string[]) => [txt(r[0]), txt(r[2]), "", txt(r[3])]);
+      if (!linhas.length) return json({ error: "A tabela de farmacoterapia do seu SOAP está vazia." }, 409);
+      return json({ linhas });
+    }
 
     if (action === "enviar_bpmh") {
       if (resp?.bpmh_submitted_at) {

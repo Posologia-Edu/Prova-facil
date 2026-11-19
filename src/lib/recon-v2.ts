@@ -37,6 +37,8 @@ export type Fonte = { id: string; tipo: TipoFonte; titulo: string; texto: string
 /** O que o aluno lê. Nunca traz a prescrição nem o gabarito. */
 export type CasoV2 = {
   versao: 2;
+  /** Paciente virtual de onde o caso foi derivado (liga a dupla ao paciente que ela atendeu na anamnese e no SOAP). */
+  origem_vp_id?: string;
   titulo: string;
   resumo: string;
   transicao: Transicao;

@@ -1,12 +1,13 @@
 // Gerador de casos da Reconciliação v2. Só o professor (usuário autenticado) chama.
 // Duas ações:
 //  - "gerar": devolve { caso, prescricao, gabarito } em campos estruturados (nada de texto corrido). O front valida e o professor revisa.
+//  - "derivar": monta o mesmo caso a partir de um PACIENTE VIRTUAL v2 do professor (a mesma pessoa, os mesmos medicamentos); guarda origem_vp_id.
 //  - "revisar": recebe o caso completo e lista contradições entre as fontes que NÃO foram propositais e discrepâncias do gabarito
 //    que o aluno não conseguiria descobrir nas fontes citadas.
 // Só Gemini (ver _shared/ai-caller.ts).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
-import { getUserId, unauthorized } from "../_shared/auth-guard.ts";
+import { adminClient, getUserId, unauthorized } from "../_shared/auth-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,6 +48,15 @@ REGRAS OBRIGATÓRIAS
 9. "critica" = a discrepância pode causar dano importante se não for resolvida.
 10. "prescritor" é o médico que recebe a ligação do farmacêutico (SBAR). Tem resistência plausível e crítica realista a cada discrepância importante, e cede quando o argumento traz dado do caso, risco e proposta específica. Não é vilão nem é capacho.`;
 
+const ADENDO_DERIVAR = `
+
+MODO DERIVAÇÃO: o caso NÃO é inventado do zero. Ele é a versão de reconciliação de um paciente que os alunos já atenderam na anamnese e no SOAP. Você recebe o NÚCLEO CLÍNICO desse paciente (identidade, fatos, medicamentos com "prescrito" e "uso_real", exames, achados) e o gabarito farmacêutico dele.
+- "paciente": use EXATAMENTE a identidade do núcleo (nome, idade, sexo, peso, altura). Creatinina só se constar nos exames; senão omita. "alergias_registradas": o que o prontuário registra, que pode ser menos do que o paciente tem.
+- BPMH do gabarito: os medicamentos do núcleo com o "uso_real" verdadeiro. Não invente medicamento que não esteja no núcleo, a não ser a prescrição do serviço (regra 6) quando a transição exigir itens novos.
+- A diferença entre "prescrito" e "uso_real" do núcleo é a matéria-prima das discrepâncias. As fontes (relato, caixa, receita, retiradas, sumário, exames) devem MOSTRAR esses fatos brutos, sem entregar a conclusão.
+- Não copie falas do paciente virtual: reescreva como documentos e registros do mundo real.
+- Todas as regras obrigatórias acima continuam valendo.`;
+
 const SYSTEM_REVISAR = `Você revisa um caso de reconciliação medicamentosa (dossiê, prescrição e gabarito) antes de ele ser usado com alunos.
 Devolva SOMENTE um objeto JSON: { "problemas": [ { "tipo": "contradicao_involuntaria" | "nao_descobrivel" | "dado_implausivel" | "vazamento", "onde": "fonte ou discrepância", "texto": "uma frase" } ] }
 - "contradicao_involuntaria": duas fontes se contradizem sem que o gabarito use isso como discrepância ou como pista (erro do autor).
@@ -86,10 +96,11 @@ const txt = (v: unknown) => (typeof v === "string" ? v.trim() : v == null ? "" :
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 /** Garante a forma do que o front espera, sem inventar conteúdo. */
-function normalizar(raw: any, transicao: string, nivel: string) {
+function normalizar(raw: any, transicao: string, nivel: string, origemVpId?: string) {
   const p = raw?.paciente || {};
   const caso = {
     versao: 2,
+    ...(origemVpId ? { origem_vp_id: origemVpId } : {}),
     titulo: txt(raw?.titulo),
     resumo: txt(raw?.resumo),
     transicao: ["admissao", "transferencia", "alta"].includes(raw?.transicao) ? raw.transicao : transicao,
@@ -139,6 +150,45 @@ serve(async (req) => {
     const userId = await getUserId(req);
     if (!userId) return unauthorized(corsHeaders);
     const body = await req.json();
+
+    if (body.action === "derivar") {
+      const vpId = txt(body.vp_id);
+      if (!vpId) return json({ error: "Escolha um paciente virtual." }, 400);
+      const db = adminClient();
+      const { data: vp } = await db.from("custom_virtual_patients").select("id, name, user_id, case_data, schema_version").eq("id", vpId).maybeSingle();
+      if (!vp || vp.user_id !== userId) return json({ error: "Paciente virtual não encontrado." }, 404);
+      const cd: any = vp.case_data;
+      if (!cd?.nucleo || cd.schema_version !== 2) return json({ error: "Este paciente virtual não é da versão 2 (sem núcleo clínico)." }, 400);
+      const farm = cd.versoes?.farmaceutico;
+      const persona = (farm?.encontros || []).find((e: any) => e?.tipo === "discussao_prescritor" && e?.persona_interlocutor)?.persona_interlocutor;
+
+      const transicao = ["admissao", "transferencia", "alta"].includes(body.transicao) ? body.transicao : "admissao";
+      const nivel = ["iniciante", "intermediario", "avancado"].includes(body.nivel) ? body.nivel : "intermediario";
+      const tema = txt(body.tema).slice(0, 300);
+      const nuc = cd.nucleo;
+      const entrada = [
+        `Tipo de transição: ${transicao}. Nível: ${nivel}.`,
+        tema ? `Cenário pedido pelo professor: ${tema}.` : "",
+        `
+[NÚCLEO CLÍNICO DO PACIENTE VIRTUAL]
+${JSON.stringify({ identidade: nuc.identidade, fatos: nuc.fatos, medicamentos: nuc.medicamentos, achados: nuc.achados, exames: nuc.exames }).slice(0, 30000)}`,
+        farm?.gabarito ? `
+[GABARITO FARMACÊUTICO DO PACIENTE VIRTUAL]
+${JSON.stringify({ problemas_esperados: farm.gabarito.problemas_esperados, penalidades_criticas: farm.gabarito.penalidades_criticas }).slice(0, 8000)}` : "",
+      ].filter(Boolean).join("\n");
+
+      const raw = await chamarIa(userId, SYSTEM_GERAR + ADENDO_DERIVAR, entrada, 0.5, "derive-recon-v2-case");
+      const r = normalizar(raw, transicao, nivel, vp.id);
+      // A persona do prescritor já escrita no paciente virtual (encontro 2) vale mais que a gerada agora.
+      if (persona?.nome) {
+        r.gabarito.prescritor = {
+          nome: txt(persona.nome), perfil: txt(persona.perfil), temperamento: txt(persona.temperamento),
+          resistencias: lista(persona.resistencias).map(txt).filter(Boolean),
+          criterios_para_ceder: lista(persona.criterios_para_ceder).map(txt).filter(Boolean),
+        };
+      }
+      return json({ ...r, persona_do_paciente: !!persona?.nome });
+    }
 
     if (body.action === "revisar") {
       if (!body.caso || !body.prescricao || !body.gabarito) return json({ error: "Caso incompleto" }, 400);
