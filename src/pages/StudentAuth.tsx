@@ -49,16 +49,13 @@ export default function StudentAuth() {
       const normalizedPin = pin.trim().toLowerCase();
       const primaryEmail = assessmentType === "individual" ? email.trim().toLowerCase() : validGroupEmails[0];
 
-      // Check if PIN belongs to a simulation room first
-      const { data: simRoom } = await supabase
-        .from("simulation_rooms")
-        .select("id, access_code, status")
-        .eq("access_code", normalizedPin)
-        .limit(1)
-        .maybeSingle();
+      // Descobre se o PIN é de uma sala de Anamnese, SOAP, Reconciliação ou Documentação (a função só devolve tipo e status).
+      const { data: pinInfo } = await supabase.functions.invoke("pin-resolver", { body: { access_code: normalizedPin } });
+      const salaTipo: string | null = pinInfo?.tipo ?? null;
+      const salaStatus: string | null = pinInfo?.status ?? null;
 
-      if (simRoom) {
-        if (simRoom.status === "draft") {
+      if (salaTipo === "simulation") {
+        if (salaStatus === "draft") {
           toast({ title: "Sala não disponível", description: "Esta sala de simulação ainda não foi ativada pelo professor.", variant: "destructive" });
           setLoading(false);
           return;
@@ -69,16 +66,8 @@ export default function StudentAuth() {
         return;
       }
 
-      // Check if PIN belongs to a SOAP room
-      const { data: soapRoom } = await supabase
-        .from("soap_rooms")
-        .select("id, access_code, status")
-        .eq("access_code", normalizedPin)
-        .limit(1)
-        .maybeSingle();
-
-      if (soapRoom) {
-        if (soapRoom.status !== "active") {
+      if (salaTipo === "soap") {
+        if (salaStatus !== "active") {
           toast({ title: "Sala não disponível", description: "Esta sala SOAP ainda não foi ativada pelo professor.", variant: "destructive" });
           setLoading(false);
           return;
@@ -89,16 +78,8 @@ export default function StudentAuth() {
         return;
       }
 
-      // Check if PIN belongs to a Reconciliation room
-      const { data: reconRoom } = await supabase
-        .from("reconciliation_rooms")
-        .select("id, access_code, status")
-        .eq("access_code", normalizedPin)
-        .limit(1)
-        .maybeSingle();
-
-      if (reconRoom) {
-        if (reconRoom.status !== "active") {
+      if (salaTipo === "reconciliation") {
+        if (salaStatus !== "active") {
           toast({ title: "Sala não disponível", description: "Esta sala de reconciliação ainda não foi ativada.", variant: "destructive" });
           setLoading(false);
           return;
@@ -109,16 +90,8 @@ export default function StudentAuth() {
         return;
       }
 
-      // Check if PIN belongs to a Documentation room
-      const { data: docRoom } = await supabase
-        .from("documentation_rooms")
-        .select("id, access_code, status")
-        .eq("access_code", normalizedPin)
-        .limit(1)
-        .maybeSingle();
-
-      if (docRoom) {
-        if (docRoom.status !== "active") {
+      if (salaTipo === "documentation") {
+        if (salaStatus !== "active") {
           toast({ title: "Sala não disponível", description: "Esta sala de documentação ainda não foi ativada.", variant: "destructive" });
           setLoading(false);
           return;

@@ -90,7 +90,7 @@ serve(async (req) => {
     if (!caso) caso = lista[eu.pair_index % lista.length];
 
     const { data: form } = await db.from("reconciliation_forms")
-      .select("id").eq("room_id", sala.id).eq("form_type", "reconciliation").limit(1).maybeSingle();
+      .select("id, title, content_json").eq("room_id", sala.id).eq("form_type", "reconciliation").limit(1).maybeSingle();
     if (!form) return json({ error: "A sala não tem formulário." }, 409);
 
     const entregarPrescricao = async () => {
@@ -107,6 +107,7 @@ serve(async (req) => {
         parceiro: null,
         caso: { id: caso.id, titulo: caso.title, caso_json: caso.caso_json },
         formulario_id: form.id,
+        formulario: { id: form.id, title: form.title, content_json: form.content_json },
         bpmh_enviada: enviada,
         bpmh: enviada ? resp!.bpmh_json : null,
         fontes_abertas: resp?.fontes_json ?? null,

@@ -107,7 +107,7 @@ export default function DocumentationJoin() {
     lastSavedAt,
     saveDraft,
     clearDraft,
-  } = useFormDraft({ draftKey, module: "documentation", enabled: !submitted });
+  } = useFormDraft({ draftKey, module: "documentation", accessCode: room?.access_code, email: participant?.student_email || email, enabled: !submitted });
 
   const draftRestoredRef = useRef(false);
   useEffect(() => {

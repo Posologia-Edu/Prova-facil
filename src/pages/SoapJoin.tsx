@@ -100,6 +100,8 @@ export default function SoapJoin() {
   const soapDraft = useFormDraft({
     draftKey: soapDraftKey,
     module: "soap",
+    accessCode: pin,
+    email,
     enabled: !submittedSoap,
   });
   const soapDraftRestoredRef = useRef(false);
@@ -124,6 +126,8 @@ export default function SoapJoin() {
   const peerDraft = useFormDraft({
     draftKey: peerDraftKey,
     module: "soap_peer",
+    accessCode: pin,
+    email,
     enabled: !submittedPeer,
   });
   const peerDraftRestoredRef = useRef(false);

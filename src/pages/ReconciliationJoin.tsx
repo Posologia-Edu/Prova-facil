@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import ClinicalCaseContent from "@/components/ClinicalCaseContent";
-import { stripTeacherSection } from "@/lib/strip-teacher-section";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
@@ -32,82 +31,45 @@ export default function ReconciliationJoin() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitted, setSubmitted] = useState(false);
 
+  async function chamarRecon(body: Record<string, unknown>) {
+    const { data, error } = await supabase.functions.invoke("recon-aluno", { body });
+    if (error) {
+      let msg = error.message;
+      try { const j = await (error as any).context?.json?.(); if (j?.error) msg = j.error; } catch { /* mantém */ }
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
   const handleLogin = async () => {
     if (!pin.trim() || !email.trim()) return;
 
-    const { data: rooms } = await supabase
-      .from("reconciliation_rooms")
-      .select("*")
-      .eq("access_code", pin.trim().toLowerCase())
-      .eq("status", "active");
-
-    if (!rooms?.length) {
+    let r: any;
+    try {
+      r = await chamarRecon({ action: "entrar", access_code: pin.trim().toLowerCase(), email: email.trim().toLowerCase() });
+    } catch (e: any) {
+      toast({ title: "Não foi possível entrar", description: e?.message, variant: "destructive" });
+      return;
+    }
+    if (!r.ok && r.motivo === "sala") {
       toast({ title: "Sala não encontrada", description: "Verifique o PIN ou aguarde a ativação.", variant: "destructive" });
       return;
     }
-    const foundRoom = rooms[0];
-    setRoom(foundRoom);
-
-    const { data: parts } = await supabase
-      .from("reconciliation_participants")
-      .select("*")
-      .eq("room_id", foundRoom.id)
-      .eq("student_email", email.trim().toLowerCase());
-
-    if (!parts?.length) {
+    if (!r.ok) {
       toast({ title: "E-mail não encontrado", description: "Você não está cadastrado nesta sala.", variant: "destructive" });
       return;
     }
-    const me = parts[0];
-    setParticipant(me);
 
-    // Update status to ready
-    await supabase.from("reconciliation_participants").update({ status: "ready" }).eq("id", me.id);
+    setRoom(r.sala);
+    setParticipant(r.participante);
+    if (r.parceiro) setPartner(r.parceiro);
+    if (r.formulario) setForm(r.formulario);
+    if (r.caso) setClinicalCase(r.caso);
 
-    // Find partner (skip for solo students)
-    if (me.pair_index >= 0 && me.pair_position !== "S") {
-      const { data: partners } = await supabase
-        .from("reconciliation_participants")
-        .select("*")
-        .eq("room_id", foundRoom.id)
-        .eq("pair_index", me.pair_index)
-        .neq("id", me.id);
-      if (partners?.length) setPartner(partners[0]);
-    }
-
-    // Load reconciliation form
-    const { data: formData } = await supabase
-      .from("reconciliation_forms")
-      .select("*")
-      .eq("room_id", foundRoom.id)
-      .eq("form_type", "reconciliation")
-      .limit(1)
-      .maybeSingle();
-    if (formData) setForm(formData);
-
-    // Load clinical case (round-robin by pair_index)
-    const { data: cases } = await supabase
-      .from("reconciliation_clinical_cases")
-      .select("*")
-      .eq("room_id", foundRoom.id)
-      .order("position", { ascending: true });
-
-    if (cases?.length && me.pair_index >= 0) {
-      const caseIdx = me.pair_index % cases.length;
-      setClinicalCase(cases[caseIdx]);
-    }
-
-    // Check if already submitted
-    const { data: existingResponse } = await supabase
-      .from("reconciliation_responses")
-      .select("*")
-      .eq("room_id", foundRoom.id)
-      .eq("pair_index", me.pair_index)
-      .maybeSingle();
-
-    if (existingResponse?.submitted_at) {
+    if (r.enviada) {
       setSubmitted(true);
-      setAnswers(existingResponse.answers_json as any || {});
+      setAnswers(r.respostas || {});
       setPhase("done");
     } else {
       setPhase("active");
@@ -129,7 +91,7 @@ export default function ReconciliationJoin() {
     lastSavedAt,
     saveDraft,
     clearDraft,
-  } = useFormDraft({ draftKey, module: "reconciliation", enabled: !submitted });
+  } = useFormDraft({ draftKey, module: "reconciliation", accessCode: room?.access_code, email: participant?.student_email || email, enabled: !submitted });
 
   // Restore draft once on first load if no final submission
   const draftRestoredRef = useRef(false);
@@ -153,25 +115,12 @@ export default function ReconciliationJoin() {
     if (!window.confirm("Tem certeza que deseja enviar o formulário? Após o envio não será possível editar.")) return;
     if (!room || !participant || !form) return;
 
-    const { error } = await supabase.from("reconciliation_responses").insert({
-      room_id: room.id,
-      pair_index: participant.pair_index,
-      form_id: form.id,
-      clinical_case_id: clinicalCase?.id || null,
-      answers_json: answers as any,
-      submitted_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
+    try {
+      await chamarRecon({ action: "enviar", access_code: room.access_code, email: participant.student_email || email, answers });
+    } catch (e: any) {
+      toast({ title: "Erro ao enviar", description: e?.message, variant: "destructive" });
       return;
     }
-
-    // Update both partners status to done
-    await supabase.from("reconciliation_participants")
-      .update({ status: "done" })
-      .eq("room_id", room.id)
-      .eq("pair_index", participant.pair_index);
 
     await clearDraft();
     setSubmitted(true);
@@ -263,7 +212,7 @@ export default function ReconciliationJoin() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ClinicalCaseContent content={stripTeacherSection(clinicalCase.content)} />
+              <ClinicalCaseContent content={clinicalCase.content} />
             </CardContent>
           </Card>
         )}

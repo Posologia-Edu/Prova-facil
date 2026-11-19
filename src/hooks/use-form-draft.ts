@@ -6,6 +6,9 @@ export type DraftStatus = "idle" | "saving" | "saved" | "error";
 interface Options {
   draftKey: string | null;
   module: string;
+  /** PIN da sala e e-mail do aluno: o servidor só entrega e grava o rascunho de quem é dono da chave. */
+  accessCode?: string | null;
+  email?: string | null;
   enabled?: boolean;
   /** Debounce in ms for server saves (default 800). LocalStorage mirror is immediate. */
   debounceMs?: number;
@@ -20,7 +23,17 @@ interface Options {
  * - On mount, restore from whichever source is newest (local vs server).
  * - Flushes on pagehide / visibilitychange / beforeunload.
  */
-export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 800 }: Options) {
+async function chamarRascunho(body: Record<string, unknown>): Promise<any> {
+  const { data, error } = await supabase.functions.invoke("form-draft", { body });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export function useFormDraft({ draftKey, module: _module, accessCode, email, enabled = true, debounceMs = 800 }: Options) {
+  const acessoRef = useRef({ accessCode: accessCode || "", email: email || "" });
+  acessoRef.current = { accessCode: (accessCode || "").trim(), email: (email || "").trim() };
+  const temAcesso = !!(accessCode && email);
   const [loaded, setLoaded] = useState(false);
   const [draft, setDraft] = useState<Record<string, any> | null>(null);
   const [status, setStatus] = useState<DraftStatus>("idle");
@@ -40,6 +53,7 @@ export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 80
       setLoaded(true);
       return;
     }
+    if (!temAcesso) return; // espera o PIN e o e-mail chegarem
     setLoaded(false);
 
     // 1) Read local mirror synchronously
@@ -52,10 +66,13 @@ export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 80
     }
 
     (async () => {
-      const { data } = await (supabase.from("form_drafts") as any)
-        .select("answers_json, updated_at")
-        .eq("draft_key", draftKey)
-        .maybeSingle();
+      let data: { answers_json: Record<string, any>; updated_at: string } | null = null;
+      try {
+        const r = await chamarRascunho({ action: "load", access_code: acessoRef.current.accessCode, email: acessoRef.current.email, draft_key: draftKey });
+        data = r?.draft || null;
+      } catch (e) {
+        console.error("[useFormDraft] server load error", e); // segue só com a cópia local
+      }
       if (cancelled) return;
 
       const serverTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
@@ -80,21 +97,19 @@ export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 80
     return () => {
       cancelled = true;
     };
-  }, [draftKey, enabled, localKey]);
+  }, [draftKey, enabled, localKey, temAcesso]);
 
   const performSave = useCallback(async () => {
     if (!draftKey || !enabled) return;
     const payload = latestRef.current;
     if (!payload) return;
     setStatus("saving");
-    const { error } = await (supabase.from("form_drafts") as any).upsert(
-      {
-        draft_key: draftKey,
-        module,
-        answers_json: payload,
-      },
-      { onConflict: "draft_key" }
-    );
+    let error: unknown = null;
+    try {
+      await chamarRascunho({ action: "save", access_code: acessoRef.current.accessCode, email: acessoRef.current.email, draft_key: draftKey, answers: payload });
+    } catch (e) {
+      error = e;
+    }
     if (error) {
       console.error("[useFormDraft] server save error", error);
       setStatus("error");
@@ -102,7 +117,7 @@ export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 80
       setStatus("saved");
       setLastSavedAt(new Date());
     }
-  }, [draftKey, module, enabled]);
+  }, [draftKey, enabled]);
 
   const saveDraft = useCallback(
     (answers: Record<string, any>) => {
@@ -132,7 +147,11 @@ export function useFormDraft({ draftKey, module, enabled = true, debounceMs = 80
     } catch {
       /* ignore */
     }
-    await (supabase.from("form_drafts") as any).delete().eq("draft_key", draftKey);
+    try {
+      await chamarRascunho({ action: "clear", access_code: acessoRef.current.accessCode, email: acessoRef.current.email, draft_key: draftKey });
+    } catch (e) {
+      console.error("[useFormDraft] server clear error", e);
+    }
     setDraft(null);
     setLastSavedAt(null);
     setStatus("idle");

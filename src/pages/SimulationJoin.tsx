@@ -394,6 +394,8 @@ export default function SimulationJoin() {
   const simDraft = useFormDraft({
     draftKey: simDraftKey,
     module: "simulation",
+    accessCode: pin,
+    email,
     enabled: !submitted,
   });
   const simDraftRestoredKeyRef = useRef<string | null>(null);

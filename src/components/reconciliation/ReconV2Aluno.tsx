@@ -95,7 +95,7 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
     setErro(null);
     try {
       const est: Estado = await chamar({ action: "estado", access_code: accessCode, email });
-      const { data: f } = await supabase.from("reconciliation_forms").select("*").eq("id", est.formulario_id).maybeSingle();
+      const f = (est as any).formulario;
       if (!f) throw new Error("O formulário da sala não foi encontrado.");
       setEstado(est);
       setForm(f);
@@ -115,7 +115,7 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
 
   // Rascunho (respostas e fontes abertas). Depois do envio da BPMH, o que o servidor guardou vale mais que o rascunho.
   const draftKey = room && participant && estado ? `reconciliation-v2:${room.id}:${participant.id}` : null;
-  const { draft, loaded: draftLoaded, status: draftStatus, lastSavedAt, saveDraft, clearDraft } = useFormDraft({ draftKey, module: "reconciliation", enabled: !finalizada });
+  const { draft, loaded: draftLoaded, status: draftStatus, lastSavedAt, saveDraft, clearDraft } = useFormDraft({ draftKey, module: "reconciliation", accessCode, email, enabled: !finalizada });
   const restaurado = useRef(false);
   useEffect(() => {
     if (!draftLoaded || finalizada || restaurado.current || !estado) return;
