@@ -8,14 +8,15 @@ import FormAnswersView from "@/components/forms/FormAnswersView";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
 import { getSections, type FormField } from "@/components/forms/types";
 import type { DraftStatus } from "@/hooks/use-form-draft";
-import { carregarRegistroAnamnese, type RegistroAnamnese } from "@/lib/soap-v2-registro";
+import type { RegistroAnamnese } from "@/lib/soap-v2-registro";
 import { montarSoapV2, progressoPorParte, verificarCoerencia } from "@/lib/soap-v2";
 
 interface Props {
   soapForm: any;
   answers: Record<string, any>;
   setAnswers: (a: Record<string, any>) => void;
-  anamnesisParticipantId: string | null;
+  /** Registro da anamnese do aluno, já entregue pelo servidor (null se não há vínculo ou o aluno não enviou). */
+  registro: RegistroAnamnese | null;
   patientName: string | null;
   draftLoaded: boolean;
   draftStatus: DraftStatus;
@@ -27,24 +28,12 @@ interface Props {
 // Tela do aluno no SOAP v2: registro da anamnese à esquerda (só leitura), SOAP em quatro passos à direita,
 // S e O pré-montados a partir do registro e verificador de coerência. O roteiro do paciente nunca passa por aqui.
 export default function SoapV2Workspace({
-  soapForm, answers, setAnswers, anamnesisParticipantId, patientName, draftLoaded, draftStatus, draftLastSavedAt, submitting, onSubmit,
+  soapForm, answers, setAnswers, registro, patientName, draftLoaded, draftStatus, draftLastSavedAt, submitting, onSubmit,
 }: Props) {
   const fields: FormField[] = Array.isArray(soapForm?.content_json) ? soapForm.content_json : [];
   const secoes = useMemo(() => getSections(fields).filter((s) => s.header), [fields]);
   const [passo, setPasso] = useState(0);
-  const [registro, setRegistro] = useState<RegistroAnamnese | null>(null);
-  const [carregando, setCarregando] = useState(true);
   const montado = useRef(false);
-
-  useEffect(() => {
-    let vivo = true;
-    setCarregando(true);
-    carregarRegistroAnamnese(anamnesisParticipantId)
-      .then((r) => { if (vivo) setRegistro(r); })
-      .catch((e) => console.error("registro da anamnese", e))
-      .finally(() => { if (vivo) setCarregando(false); });
-    return () => { vivo = false; };
-  }, [anamnesisParticipantId]);
 
   // Pré-montagem: só quando o aluno ainda não tem nada escrito (um rascunho recuperado sempre vence).
   useEffect(() => {
@@ -99,9 +88,7 @@ export default function SoapV2Workspace({
               <p className="text-xs text-muted-foreground">Seu registro da anamnese, só para consulta.</p>
             </CardHeader>
             <CardContent className="max-h-[75vh] overflow-y-auto">
-              {carregando ? (
-                <p className="text-sm text-muted-foreground">Carregando o seu registro...</p>
-              ) : registro ? (
+              {registro ? (
                 <FormAnswersView fields={registro.fields} answers={registro.answers} />
               ) : (
                 <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">

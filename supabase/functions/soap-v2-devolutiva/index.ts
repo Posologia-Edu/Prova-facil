@@ -16,11 +16,25 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const { response_id, access_code, email } = await req.json();
-    if (!response_id || typeof email !== "string") return json({ error: "Dados incompletos" }, 400);
+    if (typeof email !== "string" || !email.trim()) return json({ error: "Dados incompletos" }, 400);
 
     const db = adminClient();
-    const { data: resp } = await db.from("soap_responses")
-      .select("id, room_id, participant_id, target_participant_id, admin_score").eq("id", response_id).maybeSingle();
+    let resp: any = null;
+    if (response_id) {
+      ({ data: resp } = await db.from("soap_responses")
+        .select("id, room_id, participant_id, target_participant_id, admin_score").eq("id", response_id).maybeSingle());
+    } else {
+      // Sem o id da resposta: acha o SOAP do próprio aluno pelo PIN e pelo e-mail. Sem SOAP enviado, ainda não há devolutiva.
+      if (typeof access_code !== "string" || access_code.trim().length < 4) return json({ error: "Dados incompletos" }, 400);
+      const { data: sala } = await db.from("soap_rooms").select("id").eq("access_code", access_code.trim().toLowerCase()).maybeSingle();
+      if (!sala) return forbidden(corsHeaders);
+      const { data: ps } = await db.from("soap_participants").select("id, student_email").eq("room_id", sala.id);
+      const eu = (ps || []).find((p: any) => String(p.student_email || "").trim().toLowerCase() === email.trim().toLowerCase());
+      if (!eu) return forbidden(corsHeaders);
+      ({ data: resp } = await db.from("soap_responses")
+        .select("id, room_id, participant_id, target_participant_id, admin_score").eq("room_id", sala.id).eq("participant_id", eu.id).is("target_participant_id", null).limit(1).maybeSingle());
+      if (!resp) return json({ liberada: false });
+    }
     if (!resp || resp.target_participant_id) return forbidden(corsHeaders);
     if (!(await roomCodeMatches("soap_rooms", resp.room_id, access_code))) return forbidden(corsHeaders);
 
@@ -28,7 +42,7 @@ serve(async (req) => {
     const { data: aluno } = await db.from("soap_participants").select("student_email").eq("id", resp.participant_id).maybeSingle();
     if (!aluno || String(aluno.student_email || "").trim().toLowerCase() !== email.trim().toLowerCase()) return forbidden(corsHeaders);
 
-    const { data: av } = await db.from("soap_v2_avaliacoes").select("dados, confirmada, liberada").eq("response_id", response_id).maybeSingle();
+    const { data: av } = await db.from("soap_v2_avaliacoes").select("dados, confirmada, liberada").eq("response_id", resp.id).maybeSingle();
     if (!av || !av.confirmada || !av.liberada) return json({ liberada: false });
 
     const d: any = av.dados || {};

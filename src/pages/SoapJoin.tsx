@@ -18,37 +18,29 @@ import SoapV2Devolutiva from "@/components/soap/SoapV2Devolutiva";
 type Phase = "login" | "soap" | "waiting_peer" | "evaluate" | "done";
 
 export default function SoapJoin() {
-  // Fire-and-forget AI peer grading for solo students
+  async function chamarSoap(body: Record<string, unknown>) {
+    const { data, error } = await supabase.functions.invoke("soap-aluno", { body });
+    if (error) {
+      let msg = error.message;
+      try { const j = await (error as any).context?.json?.(); if (j?.error) msg = j.error; } catch { /* mantém */ }
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
+  // Fire-and-forget AI peer grading for solo students (SOAP v1). A anamnese rotulada e o id da resposta vêm do servidor.
   const triggerAIPeerGrading = async (
     roomData: any,
     participantData: any,
     soapFormData: any,
-    answers: Record<string, any>
+    answers: Record<string, any>,
+    responseId: string | null,
+    anamAnswers: Record<string, any>,
   ) => {
     try {
-      // Get SOAP response ID (just inserted)
-      const { data: soapResps } = await supabase
-        .from("soap_responses")
-        .select("id")
-        .eq("participant_id", participantData.id)
-        .eq("room_id", roomData.id)
-        .is("target_participant_id", null)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      if (!soapResps?.length) return;
-
-      // Build anamnesis answers with labels (uses email as unique ID)
-      const { fetchAnamnesisAnswersForStudent } = await import("@/lib/soap-anamnesis-lookup");
-      const anamAnswers = await fetchAnamnesisAnswersForStudent({
-        studentEmail: participantData.student_email || "",
-        studentName: participantData.student_name || "",
-        anamnesisParticipantId: participantData.anamnesis_participant_id || null,
-        anamnesisRoomId: roomData.anamnesis_room_id || null,
-      });
-
-
+      if (!responseId) return;
       const soapFormFields = soapFormData ? (Array.isArray(soapFormData.content_json) ? soapFormData.content_json : []) : [];
-
       await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/grade-soap`,
         {
@@ -58,7 +50,7 @@ export default function SoapJoin() {
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
-            response_id: soapResps[0].id,
+            response_id: responseId,
             soap_answers: answers,
             anamnesis_answers: anamAnswers,
             soap_form_fields: soapFormFields,
@@ -82,6 +74,8 @@ export default function SoapJoin() {
   const [patientName, setPatientName] = useState<string | null>(null);
   const [anamnesisAnswers, setAnamnesisAnswers] = useState<Record<string, any>>({});
   const [anamnesisFieldLabels, setAnamnesisFieldLabels] = useState<Record<string, string>>({});
+  const [registro, setRegistro] = useState<any>(null);
+  const [anamneseRotulada, setAnamneseRotulada] = useState<Record<string, any>>({});
   const [soapForm, setSoapForm] = useState<any>(null);
   const [peerForm, setPeerForm] = useState<any>(null);
   const [soapAnswers, setSoapAnswers] = useState<Record<string, any>>({});
@@ -144,179 +138,52 @@ export default function SoapJoin() {
   }, [peerAnswers, peerDraftKey, peerDraft.loaded, submittedPeer]);
 
   const doLogin = async (usedPin: string, usedEmail: string) => {
-
-
     if (!usedPin || !usedEmail) return;
-    // Find room by access code
-    const { data: rooms, error: roomErr } = await supabase
-      .from("soap_rooms")
-      .select("*")
-      .eq("access_code", usedPin.toLowerCase())
-      .eq("status", "active");
-    if (roomErr || !rooms?.length) {
+    let r: any;
+    try {
+      r = await chamarSoap({ action: "entrar", access_code: usedPin.toLowerCase(), email: usedEmail.toLowerCase() });
+    } catch (e: any) {
+      toast({ title: "Não foi possível entrar", description: e?.message, variant: "destructive" });
+      return;
+    }
+    if (!r.ok && r.motivo === "sala") {
       toast({ title: "Sala não encontrada", description: "Verifique o PIN.", variant: "destructive" });
       return;
     }
-    const foundRoom = rooms[0];
-    setRoom(foundRoom);
-
-    // Find participant by email
-    const { data: parts } = await supabase
-      .from("soap_participants")
-      .select("*")
-      .eq("room_id", foundRoom.id)
-      .eq("student_email", usedEmail.toLowerCase());
-    if (!parts?.length) {
+    if (!r.ok) {
       toast({ title: "E-mail não encontrado", description: "Você não está cadastrado nesta sala.", variant: "destructive" });
       return;
     }
-    const me = parts[0];
+
+    setRoom(r.sala);
+    const me = r.participante;
     setParticipant(me);
     sessionStorage.setItem("soap_pin", usedPin);
     sessionStorage.setItem("soap_email", usedEmail);
+    if (r.parceiro) setPartner(r.parceiro);
+    if (r.patientName) setPatientName(r.patientName);
+    setAnamnesisAnswers(r.anamnesisAnswers || {});
+    setAnamnesisFieldLabels(r.anamnesisFieldLabels || {});
+    setRegistro(r.registro || null);
+    setAnamneseRotulada(r.anamneseRotulada || {});
+    setSoapForm(r.soapForm || null);
+    setPeerForm(r.peerForm || null);
 
-    // Mark presence: if status is still 'waiting', upgrade to 'joined' so the partner
-    // can detect that this student is in the system.
-    if (me.status === "waiting") {
-      await supabase.from("soap_participants").update({ status: "joined" }).eq("id", me.id);
-    }
-
-    // Find partner (skip for solo students)
-    const isSolo = me.pair_position === "S";
-    if (me.pair_index >= 0 && !isSolo) {
-      const { data: partners } = await supabase
-        .from("soap_participants")
-        .select("*")
-        .eq("room_id", foundRoom.id)
-        .eq("pair_index", me.pair_index)
-        .neq("id", me.id);
-      if (partners?.length) setPartner(partners[0]);
-    }
-
-    // Resolve the anamnesis participant: use the stored link when present,
-    // otherwise fall back to matching by e-mail and then by name so students
-    // added/substituted later still receive their own anamnesis answers.
-    let anamPid: string | null = me.anamnesis_participant_id || null;
-    if (!anamPid) {
-      const normalize = (s: string) =>
-        (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
-      const { data: byEmail } = await supabase
-        .from("simulation_participants")
-        .select("id, student_name, student_email, created_at")
-        .ilike("student_email", (me.student_email || "").trim())
-        .order("created_at", { ascending: false });
-      let candidates = byEmail || [];
-      if (!candidates.length && me.student_name) {
-        const { data: all } = await supabase
-          .from("simulation_participants")
-          .select("id, student_name, student_email, created_at")
-          .order("created_at", { ascending: false })
-          .limit(500);
-        candidates = (all || []).filter(
-          (p: any) => normalize(p.student_name) === normalize(me.student_name)
-        );
-      }
-      for (const c of candidates) {
-        const { data: subs } = await supabase
-          .from("simulation_responses")
-          .select("id")
-          .eq("participant_id", c.id)
-          .not("submitted_at", "is", null)
-          .limit(1);
-        if (subs?.length) { anamPid = c.id; break; }
-      }
-      if (anamPid) {
-        await supabase.from("soap_participants").update({ anamnesis_participant_id: anamPid }).eq("id", me.id);
-        me.anamnesis_participant_id = anamPid;
-      }
-    }
-
-    // Load anamnesis data and find patient name
-    if (anamPid) {
-
-      // Find the patient (partner in anamnesis pair)
-      const { data: anamnesisMe } = await supabase
-        .from("simulation_participants")
-        .select("pair_index, room_id")
-        .eq("id", anamPid)
-        .single();
-      if (anamnesisMe && anamnesisMe.pair_index >= 0) {
-        const { data: anamnesisPartner } = await supabase
-          .from("simulation_participants")
-          .select("student_name")
-          .eq("room_id", anamnesisMe.room_id)
-          .eq("pair_index", anamnesisMe.pair_index)
-          .neq("id", anamPid)
-          .limit(1)
-          .maybeSingle();
-        if (anamnesisPartner) setPatientName(anamnesisPartner.student_name);
-      }
-
-      const { data: responses } = await supabase
-        .from("simulation_responses")
-        .select("answers_json, form_id")
-        .eq("participant_id", anamPid);
-      if (responses?.length) {
-        const merged: Record<string, any> = {};
-        const formIds = [...new Set(responses.map((r) => r.form_id))];
-        responses.forEach((r) => {
-          const answers = r.answers_json as Record<string, any>;
-          Object.assign(merged, answers);
-        });
-        setAnamnesisAnswers(merged);
-
-        // Load form field labels
-        if (formIds.length > 0) {
-          const { data: simForms } = await supabase
-            .from("simulation_forms")
-            .select("content_json")
-            .in("id", formIds);
-          if (simForms?.length) {
-            const labels: Record<string, string> = {};
-            simForms.forEach((f) => {
-              const fields = f.content_json as any[];
-              if (Array.isArray(fields)) {
-                fields.forEach((field: any) => {
-                  if (field.id && field.label) {
-                    labels[field.id] = field.label;
-                  }
-                });
-              }
-            });
-            setAnamnesisFieldLabels(labels);
-          }
-        }
-      }
-    }
-
-    // Load SOAP and peer forms
-    const { data: formsList } = await supabase
-      .from("soap_forms")
-      .select("*")
-      .eq("room_id", foundRoom.id);
-    if (formsList) {
-      setSoapForm(formsList.find((f: any) => f.form_type === "soap") || null);
-      setPeerForm(formsList.find((f: any) => f.form_type === "peer_evaluation") || null);
-    }
-
-    // Check if already submitted SOAP
-    const { data: existingSoap } = await supabase
-      .from("soap_responses")
-      .select("id")
-      .eq("participant_id", me.id)
-      .eq("room_id", foundRoom.id)
-      .is("target_participant_id", null);
-    if (existingSoap?.length) {
+    if (r.soapEnviado) {
       setSubmittedSoap(true);
       // Solo students skip peer evaluation
-      if (isSolo) {
-        setPhase("done");
-      } else {
-        await checkPartnerAndPeerStatus(foundRoom.id, me);
-      }
+      if (me.pair_position === "S") setPhase("done");
+      else aplicarFasePar(r.fasePar, r.respostasParceiro);
     } else {
       setPhase("soap");
     }
+  };
+
+  /** Traduz a fase devolvida pelo servidor para a tela. */
+  const aplicarFasePar = (fase: string | null, respostasParceiro: any) => {
+    if (fase === "evaluate") { setPartnerSoapAnswers(respostasParceiro || {}); setPhase("evaluate"); }
+    else if (fase === "done") { setPartnerSoapAnswers(respostasParceiro || {}); setSubmittedPeer(true); setPhase("done"); }
+    else if (fase === "waiting_peer") setPhase("waiting_peer");
   };
 
   const handleLogin = () => doLogin(pin.trim(), email.trim());
@@ -330,45 +197,13 @@ export default function SoapJoin() {
     }
   }, []);
 
-  const checkPartnerAndPeerStatus = async (roomId: string, me: any) => {
-    // Check if partner submitted SOAP
-    if (partner || me.pair_index >= 0) {
-      const { data: partners } = await supabase
-        .from("soap_participants")
-        .select("*")
-        .eq("room_id", roomId)
-        .eq("pair_index", me.pair_index)
-        .neq("id", me.id);
-      const pt = partners?.[0];
-      if (pt) {
-        setPartner(pt);
-        const { data: partnerSoap } = await supabase
-          .from("soap_responses")
-          .select("answers_json")
-          .eq("participant_id", pt.id)
-          .eq("room_id", roomId)
-          .is("target_participant_id", null);
-        if (partnerSoap?.length) {
-          setPartnerSoapAnswers(partnerSoap[0].answers_json as Record<string, any>);
-          // Check if I already evaluated
-          const { data: existingPeer } = await supabase
-            .from("soap_responses")
-            .select("id")
-            .eq("participant_id", me.id)
-            .eq("target_participant_id", pt.id)
-            .eq("room_id", roomId);
-          if (existingPeer?.length) {
-            setSubmittedPeer(true);
-            setPhase("done");
-          } else {
-            setPhase("evaluate");
-          }
-        } else {
-          setPhase("waiting_peer");
-        }
-      } else {
-        setPhase("waiting_peer");
-      }
+  const checkPartnerAndPeerStatus = async (_roomId?: string, _me?: any) => {
+    try {
+      const r = await chamarSoap({ action: "par", access_code: pin.trim().toLowerCase(), email: email.trim().toLowerCase() });
+      if (r.parceiro) setPartner(r.parceiro);
+      aplicarFasePar(r.fase, r.respostas_parceiro);
+    } catch (e) {
+      console.error("estado do par", e);
     }
   };
 
@@ -398,83 +233,31 @@ export default function SoapJoin() {
     if (submittingSoap) return;
     setSubmittingSoap(true);
     try {
-      // Determine partner-absent status (only relevant for paired A/B students)
       const isSolo = participant.pair_position === "S";
-      let partnerAbsent = false;
-      if (!isSolo && participant.pair_index >= 0) {
-        const { data: partners } = await supabase
-          .from("soap_participants")
-          .select("id, status")
-          .eq("room_id", room.id)
-          .eq("pair_index", participant.pair_index)
-          .neq("id", participant.id);
-        const pt = partners?.[0];
-        if (!pt) {
-          partnerAbsent = true;
-        } else if (pt.status === "waiting") {
-          const { data: partnerResp } = await supabase
-            .from("soap_responses")
-            .select("id")
-            .eq("participant_id", pt.id)
-            .eq("room_id", room.id)
-            .limit(1);
-          partnerAbsent = !partnerResp?.length;
-        }
-      }
-
-      // Guard against duplicate submissions (e.g. double-click / stale state)
-      const { data: alreadySent } = await supabase
-        .from("soap_responses")
-        .select("id")
-        .eq("room_id", room.id)
-        .eq("participant_id", participant.id)
-        .is("target_participant_id", null)
-        .maybeSingle();
-      if (alreadySent?.id) {
-        setSubmittedSoap(true);
-        toast({ title: "SOAP já enviado", description: "Seu SOAP já havia sido registrado." });
-      } else {
-        const { error } = await supabase.from("soap_responses").insert({
-          room_id: room.id,
-          participant_id: participant.id,
-          form_id: soapForm.id,
-          answers_json: soapAnswers,
-          needs_teacher_peer_eval: partnerAbsent,
-        } as any);
-        if (error) {
-          if ((error as any).code === "23505") {
-            setSubmittedSoap(true);
-            toast({ title: "SOAP já enviado", description: "Seu SOAP já havia sido registrado." });
-          } else {
-            toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
-            return;
-          }
-        }
-      }
-      await supabase.from("soap_participants").update({ status: "submitted" }).eq("id", participant.id);
+      const r = await chamarSoap({ action: "enviar_soap", access_code: pin.trim().toLowerCase(), email: email.trim().toLowerCase(), answers: soapAnswers });
+      const partnerAbsent = !!r.partner_absent;
       setSubmittedSoap(true);
       await soapDraft.clearDraft();
-      toast({ title: "SOAP enviado!" });
+      toast(r.ja_enviado ? { title: "SOAP já enviado", description: "Seu SOAP já havia sido registrado." } : { title: "SOAP enviado!" });
 
       if (isSolo) {
-        await supabase.from("soap_participants").update({ status: "done" }).eq("id", participant.id);
         setPhase("done");
-        // SOAP v2: a correção por IA é outra função (próxima etapa); a da v1 não entende o formulário novo.
-        if (room.schema_version !== 2) triggerAIPeerGrading(room, participant, soapForm, soapAnswers).catch(console.error);
+        // SOAP v2: a correção por IA é outra função; a da v1 não entende o formulário novo.
+        if (room.schema_version !== 2) triggerAIPeerGrading(room, participant, soapForm, soapAnswers, r.response_id, anamneseRotulada).catch(console.error);
       } else if (partnerAbsent) {
-        await supabase.from("soap_participants").update({ status: "awaiting_teacher_peer" }).eq("id", participant.id);
+        setParticipant((p: any) => ({ ...p, status: "awaiting_teacher_peer" }));
         toast({
           title: "Par ausente",
           description: "Seu colega de dupla não está no sistema. O professor avaliará seu SOAP.",
         });
         setPhase("done");
       } else {
-        await checkPartnerAndPeerStatus(room.id, participant);
+        await checkPartnerAndPeerStatus();
       }
     } catch (err: any) {
       console.error("submitSoap error", err);
       toast({
-        title: "Erro inesperado",
+        title: "Erro ao enviar",
         description: err?.message || "Tente novamente. Suas respostas estão salvas automaticamente.",
         variant: "destructive",
       });
@@ -489,48 +272,19 @@ export default function SoapJoin() {
     if (submittingPeer) return;
     setSubmittingPeer(true);
     try {
-      const { data: alreadyPeer } = await supabase
-        .from("soap_responses")
-        .select("id")
-        .eq("room_id", room.id)
-        .eq("participant_id", participant.id)
-        .eq("target_participant_id", partner.id)
-        .maybeSingle();
-      if (alreadyPeer?.id) {
-        setSubmittedPeer(true);
-        setPhase("done");
-        toast({ title: "Avaliação já enviada" });
-        return;
-      }
-      const { error } = await supabase.from("soap_responses").insert({
-        room_id: room.id,
-        participant_id: participant.id,
-        target_participant_id: partner.id,
-        form_id: peerForm.id,
-        answers_json: peerAnswers,
-      });
-      if (error) {
-        if ((error as any).code === "23505") {
-          setSubmittedPeer(true);
-          setPhase("done");
-          toast({ title: "Avaliação já enviada" });
-          return;
-        }
-        toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
-        return;
-      }
+      const r = await chamarSoap({ action: "enviar_avaliacao", access_code: pin.trim().toLowerCase(), email: email.trim().toLowerCase(), answers: peerAnswers });
       setSubmittedPeer(true);
       setPhase("done");
+      if (r.ja_enviado) { toast({ title: "Avaliação já enviada" }); return; }
       await peerDraft.clearDraft();
       toast({ title: "Avaliação enviada!" });
     } catch (err: any) {
       console.error("submitPeerEval error", err);
-      toast({ title: "Erro inesperado", description: err?.message || "Tente novamente.", variant: "destructive" });
+      toast({ title: "Erro ao enviar", description: err?.message || "Tente novamente.", variant: "destructive" });
     } finally {
       setSubmittingPeer(false);
     }
   };
-
 
   const renderFormFields = (fields: FormField[], answers: Record<string, any>, setAnswers: (a: Record<string, any>) => void, readOnly = false) => (
     <FormRenderer fields={fields} answers={answers} onChange={setAnswers} readOnly={readOnly} />
@@ -569,7 +323,7 @@ export default function SoapJoin() {
         soapForm={soapForm}
         answers={soapAnswers}
         setAnswers={setSoapAnswers}
-        anamnesisParticipantId={participant?.anamnesis_participant_id || null}
+        registro={registro}
         patientName={patientName}
         draftLoaded={soapDraft.loaded}
         draftStatus={soapDraft.status}

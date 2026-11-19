@@ -18,11 +18,7 @@ export default function SoapV2Devolutiva({ roomId, accessCode, participantId, em
   const carregar = useCallback(async () => {
     setEstado("carregando");
     try {
-      const { data: resp } = await supabase.from("soap_responses").select("id")
-        .eq("room_id", roomId).eq("participant_id", participantId).is("target_participant_id", null).limit(1);
-      const id = resp?.[0]?.id;
-      if (!id) { setEstado("aguardando"); return; }
-      const { data, error } = await supabase.functions.invoke("soap-v2-devolutiva", { body: { response_id: id, access_code: accessCode, email } });
+      const { data, error } = await supabase.functions.invoke("soap-v2-devolutiva", { body: { access_code: accessCode, email } });
       if (error || data?.error) throw new Error(data?.error || error?.message);
       if (data?.liberada) { setDev(data as DevolutivaSoapV2); setEstado("liberada"); } else setEstado("aguardando");
     } catch (e) {
