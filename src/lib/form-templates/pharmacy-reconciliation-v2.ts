@@ -141,3 +141,46 @@ export const reconciliationV2Template: NativeTemplate = {
   description: "BPMH enviada antes da prescrição, conciliação linha a linha, problemas de segurança, SBAR e lista final ao paciente",
   content_json: build(),
 };
+
+// Revisão cruzada da Reconciliação v2: depois do envio final, cada dupla confere a conciliação de outra (o double-check das rotinas de
+// segurança). 8 itens em Sim / Parcial / Não (Parcial vale metade), soma 10, mais dois comentários. A nota da revisão que a dupla RECEBE
+// entra com 20% na nota final; a que ela faz vira feedback ao colega.
+const SIM_PARC_NAO = ["Sim", "Parcial", "Não"];
+const itemRevisao = (id: string, label: string, peso: number, description?: string): FormField => ({
+  id,
+  label,
+  type: "radio",
+  options: SIM_PARC_NAO,
+  max_score: peso,
+  option_scores: { "0": peso, "1": peso / 2 },
+  correct_answer: "0",
+  required: false,
+  ...(description ? { description } : {}),
+});
+
+export const RECON_V2_REVISAO = {
+  itens: ["rp2-1", "rp2-2", "rp2-3", "rp2-4", "rp2-5", "rp2-6", "rp2-7", "rp2-8"],
+  comentarioBem: "rp2-c1",
+  comentarioDuvida: "rp2-c2",
+} as const;
+
+export const reconciliationV2PeerTemplate: NativeTemplate = {
+  area: "pharmacy",
+  module_type: "reconciliacao",
+  form_type: "peer_evaluation",
+  title: "Revisão cruzada da Reconciliação v2",
+  description: "Checklist de 8 itens (Sim, Parcial, Não) sobre a BPMH, a conciliação e o SBAR de outra dupla, com dois comentários",
+  content_json: [
+    secao("rp2-h", "Revisão cruzada da reconciliação", "Leia o dossiê, a prescrição e a reconciliação da outra dupla e responda. Sim = presente e adequado. Parcial = presente, mas incompleto (vale metade). Não = ausente ou inadequado."),
+    itemRevisao("rp2-1", "A BPMH cruza as fontes do dossiê e aponta os conflitos entre elas?", 1.5),
+    itemRevisao("rp2-2", "A BPMH inclui todos os medicamentos que o dossiê mostra, inclusive os sem receita?", 1),
+    itemRevisao("rp2-3", "Todo medicamento da BPMH e da prescrição tem uma linha na conciliação?", 1),
+    itemRevisao("rp2-4", "A intencionalidade e o potencial de dano de cada linha são coerentes com o dossiê?", 2),
+    itemRevisao("rp2-5", "As discrepâncias mais graves foram priorizadas e têm uma ação específica?", 2),
+    itemRevisao("rp2-6", "Os problemas de segurança além da lista (duplicidade, interação, função renal, alergia, idoso) foram vistos?", 1),
+    itemRevisao("rp2-7", "O SBAR é claro, com dado do caso, risco e recomendação?", 1),
+    itemRevisao("rp2-8", "O texto é claro e as partes não se contradizem?", 0.5),
+    { ...paragrafo("rp2-c1", "O que ficou muito bem nesta reconciliação", "Em uma ou duas frases."), required: true },
+    { ...paragrafo("rp2-c2", "Uma pergunta ou dúvida sobre o que o colega fez", "Algo que você, como revisor, não entendeu ou faria diferente."), required: true },
+  ],
+};

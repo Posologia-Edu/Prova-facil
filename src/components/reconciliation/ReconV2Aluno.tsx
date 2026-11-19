@@ -11,6 +11,7 @@ import FormRenderer from "@/components/forms/FormRenderer";
 import FormAnswersView from "@/components/forms/FormAnswersView";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
 import ReconV2Devolutiva from "@/components/reconciliation/ReconV2Devolutiva";
+import ReconV2Revisao from "@/components/reconciliation/ReconV2Revisao";
 import ReconV2Prescritor from "@/components/reconciliation/ReconV2Prescritor";
 import { getSections, type FormField } from "@/components/forms/types";
 import { useFormDraft } from "@/hooks/use-form-draft";
@@ -213,12 +214,13 @@ export default function ReconV2Aluno({ room, participant, accessCode, email }: P
   if (finalizada) {
     return (
       <div className="flex min-h-screen items-start justify-center bg-background p-4">
-        <div className="w-full max-w-3xl space-y-4 py-6">
+        <div className="w-full max-w-6xl space-y-4 py-6">
           <Card className="text-center"><CardContent className="py-10">
             <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-success" />
             <h2 className="mb-2 font-heading text-xl font-medium">Resposta enviada!</h2>
             <p className="text-muted-foreground">Sua reconciliação foi enviada. Aguarde a avaliação do professor e volte aqui para ver a devolutiva quando ela for liberada.</p>
           </CardContent></Card>
+          <ReconV2Revisao accessCode={accessCode} email={email} />
           <ReconV2Devolutiva accessCode={accessCode} email={email} />
         </div>
       </div>

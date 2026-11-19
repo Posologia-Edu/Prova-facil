@@ -9,13 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/status-badge";
 import FormRenderer from "@/components/forms/FormRenderer";
-import { computeFormScore } from "@/components/forms/types";
+import { computeFormScore, type FormField } from "@/components/forms/types";
+import { notaFinalReconV2 } from "@/lib/recon-v2-nota";
+import { reconciliationV2PeerTemplate } from "@/lib/form-templates/pharmacy-reconciliation-v2";
 import { ROTULO_DECISAO, ROTULO_DISCREPANCIA, ROTULO_RISCO, type DecisaoPrescritor, type TipoDiscrepancia, type Risco } from "@/lib/recon-v2";
 import { RECON_V2_CRITERIOS, criticasEmRisco, type AvaliacaoReconV2 } from "@/lib/recon-v2-rubrica";
 
 type Props = {
   roomId: string;
-  response: { id: string; admin_score?: number | string | null; admin_feedback?: string | null };
+  response: { id: string; pair_index?: number; admin_score?: number | string | null; admin_feedback?: string | null };
   onSaved: () => void;
 };
 
@@ -54,6 +56,25 @@ export default function ReconV2Grading({ roomId, response, onSaved }: Props) {
   }, [response.id]);
 
   const nota = computeFormScore(RECON_V2_CRITERIOS, respostas);
+
+  // Revisão cruzada que esta dupla RECEBEU (de 0 a 10), para a nota final 80/20.
+  const [revisao, setRevisao] = useState<number | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    setRevisao(null);
+    if (response.pair_index == null) return;
+    (async () => {
+      const { data: rev } = await (supabase as any).from("reconciliation_v2_revisoes").select("answers_json")
+        .eq("room_id", roomId).eq("reviewed_pair", response.pair_index).not("submitted_at", "is", null).maybeSingle();
+      if (!rev || !vivo) return;
+      const { data: f } = await supabase.from("reconciliation_forms").select("content_json").eq("room_id", roomId).eq("form_type", "peer_evaluation").limit(1).maybeSingle();
+      const campos: FormField[] = Array.isArray(f?.content_json) ? (f!.content_json as any) : (reconciliationV2PeerTemplate.content_json as FormField[]);
+      const max = campos.reduce((s, c) => s + (c.type === "section_header" ? 0 : c.max_score || 0), 0);
+      if (vivo && max > 0) setRevisao((computeFormScore(campos, rev.answers_json || {}) / max) * 10);
+    })().catch(() => { /* sem revisão: vale só a rubrica */ });
+    return () => { vivo = false; };
+  }, [roomId, response.pair_index]);
+  const notaFinal = notaFinalReconV2(confirmada ? Number(response.admin_score ?? nota) : null, revisao);
   const emRisco = criticasEmRisco(dados?.matriz);
 
   const corrigir = async () => {
@@ -208,9 +229,13 @@ export default function ReconV2Grading({ roomId, response, onSaved }: Props) {
         <Textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={3} />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-mono text-sm">Nota: {nota.toFixed(2).replace(".", ",")}/10</span>
+        <span className="font-mono text-sm">Nota da rubrica: {nota.toFixed(2).replace(".", ",")}/10</span>
         <Button size="sm" onClick={confirmar} disabled={salvando || Object.keys(respostas).length === 0}>{confirmada ? "Atualizar nota" : "Confirmar nota"}</Button>
       </div>
+
+      <p className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+        Revisão cruzada recebida: {revisao == null ? "ainda não há" : `${revisao.toFixed(2).replace(".", ",")}/10`}. Nota final (80% rubrica + 20% revisão): <b className="text-foreground">{notaFinal == null ? "aparece depois de confirmar a rubrica" : `${notaFinal.toFixed(2).replace(".", ",")}/10`}</b>. Sem revisão recebida, vale só a rubrica.
+      </p>
 
       <div className="flex items-start gap-2 rounded-lg border p-3">
         <Checkbox id={`lib-${response.id}`} checked={liberada} disabled={!confirmada} onCheckedChange={(v) => alternarLiberacao(v === true)} />

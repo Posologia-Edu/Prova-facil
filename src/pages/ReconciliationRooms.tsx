@@ -106,7 +106,9 @@ export default function ReconciliationRooms() {
       // Reconciliação v2: a sala já nasce com o formulário v2.
       if (reconVersion === "2") {
         const v2 = getNativeTemplates("pharmacy", "reconciliacao", "reconciliation").find((t) => t.content_json.some((f: any) => f.id === "r2-bpmh"));
-        if (v2) await supabase.from("reconciliation_forms").insert({ room_id: data.id, form_type: v2.form_type, title: v2.title, content_json: v2.content_json } as any);
+        const rev = getNativeTemplates("pharmacy", "reconciliacao", "peer_evaluation").find((t) => t.content_json.some((f: any) => f.id === "rp2-1"));
+        const novos = [v2, rev].filter(Boolean).map((t: any) => ({ room_id: data.id, form_type: t.form_type, title: t.title, content_json: t.content_json }));
+        if (novos.length) await supabase.from("reconciliation_forms").insert(novos as any);
       }
       return data;
     },

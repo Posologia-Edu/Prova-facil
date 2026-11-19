@@ -14,6 +14,7 @@ import {
   type CasoCompleto, type Discrepancia, type Fonte,
 } from "@/lib/recon-v2";
 import { CASOS_SEMENTE } from "@/lib/recon-v2-seeds";
+import { reconciliationV2PeerTemplate } from "@/lib/form-templates/pharmacy-reconciliation-v2";
 
 type Linha = { id: string; position: number; titulo: string; completo: CasoCompleto };
 
@@ -67,6 +68,17 @@ export default function ReconV2Casos({ roomId }: { roomId: string }) {
     setCarregando(false);
   }, [roomId]);
   useEffect(() => { void carregar(); }, [carregar]);
+
+  // Salas v2 criadas antes da revisão cruzada não têm o checklist: cria uma vez, ao abrir esta aba.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("reconciliation_forms").select("id").eq("room_id", roomId).eq("form_type", "peer_evaluation").limit(1);
+      if (data && data.length === 0) {
+        const t = reconciliationV2PeerTemplate;
+        await supabase.from("reconciliation_forms").insert({ room_id: roomId, form_type: t.form_type, title: t.title, content_json: t.content_json } as any);
+      }
+    })().catch(() => { /* só tenta de novo na próxima vez */ });
+  }, [roomId]);
 
   // Tempo sugerido por etapa (minutos). Só avisa o aluno, não bloqueia. Vazio = sem cronômetro.
   const [tempo, setTempo] = useState("");

@@ -38,3 +38,32 @@ describe("discrepâncias críticas em risco", () => {
     expect(criticasEmRisco(undefined)).toEqual([]);
   });
 });
+
+import { notaFinalReconV2, parARevisar } from "@/lib/recon-v2-nota";
+import { RECON_V2_REVISAO, reconciliationV2PeerTemplate } from "@/lib/form-templates/pharmacy-reconciliation-v2";
+import { allNativeTemplates } from "@/lib/form-templates";
+
+describe("nota final e revisão cruzada", () => {
+  it("80% rubrica + 20% revisão recebida; sem revisão vale a rubrica; sem rubrica não há nota", () => {
+    expect(notaFinalReconV2(8, 6)).toBeCloseTo(7.6, 5);
+    expect(notaFinalReconV2(8, null)).toBe(8);
+    expect(notaFinalReconV2(null, 9)).toBeNull();
+  });
+  it("anel: cada dupla revisa a seguinte e a última volta à primeira", () => {
+    expect(parARevisar(0, [0, 1, 2])).toBe(1);
+    expect(parARevisar(2, [0, 1, 2])).toBe(0);
+    expect(parARevisar(3, [3, 0, 7])).toBe(7);
+  });
+  it("uma dupla sozinha, ou fora da lista, não tem quem revisar", () => {
+    expect(parARevisar(0, [0])).toBeNull();
+    expect(parARevisar(5, [0, 1])).toBeNull();
+    expect(parARevisar(0, [-1, 0])).toBeNull();
+  });
+  it("o checklist da revisão está registrado, soma 10 e tem 8 itens e 2 comentários", () => {
+    expect(allNativeTemplates).toContain(reconciliationV2PeerTemplate);
+    const c = reconciliationV2PeerTemplate.content_json as any[];
+    expect(c.filter((f) => f.type === "radio")).toHaveLength(8);
+    expect(c.filter((f) => f.type === "radio").reduce((s, f) => s + f.max_score, 0)).toBeCloseTo(10, 5);
+    expect(c.map((f) => f.id)).toEqual(expect.arrayContaining([...RECON_V2_REVISAO.itens, RECON_V2_REVISAO.comentarioBem, RECON_V2_REVISAO.comentarioDuvida]));
+  });
+});

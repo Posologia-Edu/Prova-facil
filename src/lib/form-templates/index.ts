@@ -2,7 +2,7 @@ import { pharmacyTemplates } from "./pharmacy";
 import { anamneseFarmaceuticaTemplate } from "./pharmacy-anamnese-farmaceutica";
 import { observadorV2Template, professorV2Template } from "./pharmacy-avaliacao-anamnese-v2";
 import { soapV2Template, soapV2PeerTemplate } from "./pharmacy-soap-v2";
-import { reconciliationV2Template } from "./pharmacy-reconciliation-v2";
+import { reconciliationV2Template, reconciliationV2PeerTemplate } from "./pharmacy-reconciliation-v2";
 import { nursingTemplates } from "./nursing";
 import { nutritionTemplates } from "./nutrition";
 import { dentistryTemplates } from "./dentistry";
@@ -26,6 +26,7 @@ export const allNativeTemplates: NativeTemplate[] = [
   soapV2Template,
   soapV2PeerTemplate,
   reconciliationV2Template,
+  reconciliationV2PeerTemplate,
   ...pharmacyTemplates,
   ...nursingTemplates,
   ...nutritionTemplates,
