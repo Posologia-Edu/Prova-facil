@@ -5920,6 +5920,64 @@ export type Database = {
           },
         ]
       }
+      reconciliation_v2_revisoes: {
+        Row: {
+          answers_json: Json
+          created_at: string
+          form_id: string | null
+          id: string
+          reviewed_pair: number
+          reviewed_response_id: string
+          reviewer_pair: number
+          room_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          answers_json?: Json
+          created_at?: string
+          form_id?: string | null
+          id?: string
+          reviewed_pair: number
+          reviewed_response_id: string
+          reviewer_pair: number
+          room_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          answers_json?: Json
+          created_at?: string
+          form_id?: string | null
+          id?: string
+          reviewed_pair?: number
+          reviewed_response_id?: string
+          reviewer_pair?: number
+          room_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_v2_revisoes_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_v2_revisoes_reviewed_response_id_fkey"
+            columns: ["reviewed_response_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_v2_revisoes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sct_exams: {
         Row: {
           class_id: string | null
