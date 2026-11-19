@@ -32,60 +32,51 @@ export default function DocumentationJoin() {
   const [medRows, setMedRows] = useState<Record<string, string>[]>([]);
   const [submitted, setSubmitted] = useState(false);
 
+  async function chamarDoc(body: Record<string, unknown>) {
+    const { data, error } = await supabase.functions.invoke("doc-aluno", { body });
+    if (error) {
+      let msg = error.message;
+      try { const j = await (error as any).context?.json?.(); if (j?.error) msg = j.error; } catch { /* mantém */ }
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
   const handleLogin = async () => {
     if (!pin.trim() || !email.trim()) return;
 
-    const { data: rooms } = await supabase.from("documentation_rooms").select("*").eq("access_code", pin.trim().toLowerCase()).eq("status", "active");
-    if (!rooms?.length) {
+    let r: any;
+    try {
+      r = await chamarDoc({ action: "entrar", access_code: pin.trim().toLowerCase(), email: email.trim().toLowerCase() });
+    } catch (e: any) {
+      toast({ title: "Não foi possível entrar", description: e?.message, variant: "destructive" });
+      return;
+    }
+    if (!r.ok && r.motivo === "sala") {
       toast({ title: "Sala não encontrada", description: "Verifique o PIN ou aguarde a ativação.", variant: "destructive" });
       return;
     }
-    const foundRoom = rooms[0];
-    setRoom(foundRoom);
-
-    const { data: parts } = await supabase.from("documentation_participants").select("*").eq("room_id", foundRoom.id).eq("student_email", email.trim().toLowerCase());
-    if (!parts?.length) {
+    if (!r.ok) {
       toast({ title: "E-mail não encontrado", variant: "destructive" });
       return;
     }
-    const me = parts[0];
-    setParticipant(me);
 
-    await supabase.from("documentation_participants").update({ status: "ready" }).eq("id", me.id);
+    setRoom(r.sala);
+    setParticipant(r.participante);
+    if (r.parceiro) setPartner(r.parceiro);
+    if (r.formularioEncaminhamento) setReferralForm(r.formularioEncaminhamento);
+    if (r.formularioMedicamentos) setMedForm(r.formularioMedicamentos);
+    if (r.caso) setClinicalCase(r.caso);
 
-    if (me.pair_index >= 0 && me.pair_position !== "S") {
-      const { data: partners } = await supabase.from("documentation_participants").select("*").eq("room_id", foundRoom.id).eq("pair_index", me.pair_index).neq("id", me.id);
-      if (partners?.length) setPartner(partners[0]);
-    }
-
-    // Load forms
-    const { data: allForms } = await supabase.from("documentation_forms").select("*").eq("room_id", foundRoom.id);
-    const rf = allForms?.find((f: any) => f.form_type === "referral");
-    const mf = allForms?.find((f: any) => f.form_type === "medication_summary");
-    if (rf) setReferralForm(rf);
-    if (mf) setMedForm(mf);
-
-    // Load clinical case
-    const { data: cases } = await supabase.from("documentation_clinical_cases").select("*").eq("room_id", foundRoom.id).order("position", { ascending: true });
-    if (cases?.length && me.pair_index >= 0) setClinicalCase(cases[me.pair_index % cases.length]);
-
-    // Check existing submissions
-    const { data: existingResp } = await supabase.from("documentation_responses").select("*").eq("room_id", foundRoom.id).eq("pair_index", me.pair_index);
-    if (existingResp?.some((r: any) => r.submitted_at)) {
+    if (r.enviada) {
       setSubmitted(true);
       setPhase("done");
     } else {
-      // If a response row exists without submitted_at, the teacher has reopened the activity.
-      // Pre-populate the form with previously sent data so students can adjust and resend.
-      if (existingResp?.length) {
-        const prevReferral = existingResp.find((r: any) => r.form_id === rf?.id);
-        const prevMed = existingResp.find((r: any) => r.form_id === mf?.id);
-        if (prevReferral?.answers_json && typeof prevReferral.answers_json === "object") {
-          setReferralAnswers(prevReferral.answers_json as any);
-        }
-        if (prevMed?.answers_json && (prevMed.answers_json as any).rows) {
-          setMedRows((prevMed.answers_json as any).rows);
-        }
+      // Se o professor reabriu a atividade, vêm as respostas anteriores para a dupla ajustar e reenviar.
+      if (r.anteriores) {
+        if (r.anteriores.referral) setReferralAnswers(r.anteriores.referral);
+        if (r.anteriores.medRows) setMedRows(r.anteriores.medRows);
         toast({ title: "Atividade reaberta", description: "Suas respostas anteriores foram carregadas. Ajuste e reenvie." });
       }
       setPhase("active");
@@ -133,53 +124,18 @@ export default function DocumentationJoin() {
     if (!window.confirm("Tem certeza que deseja enviar o formulário? Após o envio não será possível editar.")) return;
     if (!room || !participant) return;
 
-    // Look up any existing (possibly reopened) response rows for this pair
-    const { data: existing } = await supabase
-      .from("documentation_responses")
-      .select("id, form_id")
-      .eq("room_id", room.id)
-      .eq("pair_index", participant.pair_index);
-
-    const findExistingId = (formId: string) =>
-      existing?.find((r: any) => r.form_id === formId)?.id as string | undefined;
-
-    // Submit referral response
-    if (referralForm) {
-      const existingId = findExistingId(referralForm.id);
-      const payload = {
-        room_id: room.id,
-        pair_index: participant.pair_index,
-        form_id: referralForm.id,
-        clinical_case_id: clinicalCase?.id || null,
-        answers_json: referralAnswers as any,
-        submitted_at: new Date().toISOString(),
-      };
-      if (existingId) {
-        await supabase.from("documentation_responses").update(payload).eq("id", existingId);
-      } else {
-        await supabase.from("documentation_responses").insert(payload);
-      }
+    try {
+      await chamarDoc({
+        action: "enviar",
+        access_code: (room.access_code || pin).trim().toLowerCase(),
+        email: (participant.student_email || email).trim().toLowerCase(),
+        referral_answers: referralForm ? referralAnswers : null,
+        med_rows: medForm ? medRows : null,
+      });
+    } catch (e: any) {
+      toast({ title: "Erro ao enviar", description: e?.message || "Tente novamente. Suas respostas estão salvas automaticamente.", variant: "destructive" });
+      return;
     }
-
-    // Submit medication summary response
-    if (medForm) {
-      const existingId = findExistingId(medForm.id);
-      const payload = {
-        room_id: room.id,
-        pair_index: participant.pair_index,
-        form_id: medForm.id,
-        clinical_case_id: clinicalCase?.id || null,
-        answers_json: { rows: medRows } as any,
-        submitted_at: new Date().toISOString(),
-      };
-      if (existingId) {
-        await supabase.from("documentation_responses").update(payload).eq("id", existingId);
-      } else {
-        await supabase.from("documentation_responses").insert(payload);
-      }
-    }
-
-    await supabase.from("documentation_participants").update({ status: "done" }).eq("room_id", room.id).eq("pair_index", participant.pair_index);
 
     await clearDraft();
     setSubmitted(true);
