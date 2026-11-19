@@ -46,6 +46,18 @@ const shouldMarkParticipantAsJoined = (participantStatus: string, rounds: any[])
   participantStatus === "waiting" &&
   !rounds.some((round: any) => round.materials_released || round.status === "active" || round.status === "completed");
 
+/** Chama a função do aluno da anamnese (PIN + e-mail). Lança Error com a mensagem do servidor. */
+async function chamarSim(body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke("sim-aluno", { body });
+  if (error) {
+    let msg = error.message;
+    try { const j = await (error as any).context?.json?.(); if (j?.error) msg = j.error; } catch { /* mantém */ }
+    throw new Error(msg);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export default function SimulationJoin() {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -125,6 +137,20 @@ export default function SimulationJoin() {
     };
   };
 
+  /** Aplica na tela o estado que a função devolve para o aluno (entrada e atualização periódica). */
+  const aplicarEstadoAluno = (r: any) => {
+    setRoom(r.sala);
+    setParticipant(r.participante);
+    setForms(r.formularios || []);
+    setAllParticipants([r.participante]);
+    setAllRounds(r.rodadas || []);
+    setAllAssignments(r.atribuicoes || []);
+    setActiveRound(r.rodadaAtiva || null);
+    setAssignment(r.minhaAtribuicao || null);
+    setSubmitted(!!r.enviou);
+    setMaterialsReady(!!r.materiaisProntos);
+  };
+
   // Auto-join if redirected from StudentAuth
   useEffect(() => {
     const savedPin = sessionStorage.getItem("sim_pin");
@@ -141,6 +167,31 @@ export default function SimulationJoin() {
   const joinRoomWithCredentials = async (pinVal: string, emailVal: string) => {
     const normalizedPin = normalizeAccessCode(pinVal);
     const normalizedEmail = normalizeParticipantEmail(emailVal);
+
+    // Aluno: tudo vem da função, que só entrega o que o papel dele pode ver.
+    // Professor da sala e PIN que não é de simulação (paciente virtual) seguem o fluxo abaixo.
+    let r: any;
+    try {
+      r = await chamarSim({ action: "entrar", access_code: normalizedPin, email: normalizedEmail });
+    } catch (e: any) {
+      toast({ title: t("student_error"), description: e?.message || t("student_connection_error"), variant: "destructive" });
+      return;
+    }
+    if (r?.ok && !r.professor) {
+      setPin(normalizedPin);
+      setEmail(normalizedEmail);
+      aplicarEstadoAluno(r);
+      setJoined(true);
+      return;
+    }
+    if (r && !r.ok && r.motivo === "email") {
+      toast({ title: t("student_access_denied"), description: t("sim_not_registered"), variant: "destructive" });
+      return;
+    }
+    if (r && !r.ok && r.motivo === "rascunho") {
+      toast({ title: t("student_error"), description: "Esta sala de simulação ainda não foi ativada pelo professor.", variant: "destructive" });
+      return;
+    }
 
     const { data: roomData, error: roomErr } = await supabase
       .from("simulation_rooms")
@@ -256,9 +307,25 @@ export default function SimulationJoin() {
 
   const isProfessor = participant?.participant_role === "professor";
 
-  // Poll for active round, all rounds, and participants
+  // Aluno: atualiza o estado pela função a cada 5 s (a entrada já trouxe o primeiro estado)
   useEffect(() => {
-    if (!joined || !room) return;
+    if (!joined || isProfessor || !participant?.id) return;
+    let vivo = true;
+    const atualizar = async () => {
+      try {
+        const r = await chamarSim({ action: "estado", access_code: pin, email });
+        if (vivo && r?.ok) aplicarEstadoAluno(r);
+      } catch (e) {
+        console.error("estado da sala", e);
+      }
+    };
+    const interval = setInterval(atualizar, 5000);
+    return () => { vivo = false; clearInterval(interval); };
+  }, [joined, isProfessor, participant?.id, pin, email]);
+
+  // Professor: poll for active round, all rounds, and participants
+  useEffect(() => {
+    if (!joined || !room || !isProfessor) return;
     const poll = async () => {
       const { data: roundsAll } = await supabase
         .from("simulation_rounds")
@@ -471,31 +538,15 @@ export default function SimulationJoin() {
     const form = getFormForRole();
     if (!form) return;
 
-    let score = 0;
-    if (form.form_type === "observer_eval" || form.form_type === "professor_eval") {
-      const fields = form.content_json as FormField[];
-      const { computeFormScore } = await import("@/components/forms/types");
-      score = computeFormScore(fields, answers);
-    }
-
-    const { error } = await supabase.from("simulation_responses").insert({
-      round_id: activeRound.id,
-      participant_id: participant.id,
-      form_id: form.id,
-      answers_json: { ...answers, _feedback: feedback },
-      score,
-      submitted_at: new Date().toISOString(),
-      is_makeup: !!activeRound.is_makeup,
-    } as any);
-
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
+    // A nota do observador é calculada pelo servidor
+    try {
+      const r = await chamarSim({ action: "enviar", access_code: pin, email, answers, feedback });
       setSubmitted(true);
       await simDraft.clearDraft();
-      toast({ title: t("sim_submitted") });
+      toast(r?.ja_enviado ? { title: "Formulário já enviado" } : { title: t("sim_submitted") });
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message || "Tente novamente.", variant: "destructive" });
     }
-
   };
 
   // Determine if current round is first round of its cycle
@@ -727,10 +778,11 @@ export default function SimulationJoin() {
     if (!participant) return;
     setMaterialsReady(true);
     setParticipant((previousParticipant: any) => previousParticipant ? { ...previousParticipant, status: "ready" } : previousParticipant);
-    await supabase
-      .from("simulation_participants")
-      .update({ status: "ready" })
-      .eq("id", participant.id);
+    try {
+      await chamarSim({ action: "pronto", access_code: pin, email });
+    } catch (e) {
+      console.error("pronto", e);
+    }
   };
 
   const [generatingRounds, setGeneratingRounds] = useState(false);
