@@ -64,7 +64,9 @@ const Auth = () => {
         await supabase.auth.signOut();
         return;
       }
-      navigate("/dashboard");
+      // "voltar" só aceita caminho interno (ex.: a simulação que pediu o login do professor)
+      const voltar = searchParams.get("voltar");
+      navigate(voltar && voltar.startsWith("/") && !voltar.startsWith("//") ? voltar : "/dashboard");
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {

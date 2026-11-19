@@ -190,11 +190,11 @@ export default function SimulationJoin() {
       const { data: sess } = await supabase.auth.getSession();
       professorId = sess.session?.user?.id ?? null;
       if (!professorId) {
-        toast({
-          title: "Entre com a sua conta de professor",
-          description: "Para conduzir a simulação, faça login como professor (em /auth) e abra esta sala de novo.",
-          variant: "destructive",
-        });
+        // Guarda o PIN e o e-mail e leva ao login; ao voltar, a entrada na sala é automática
+        sessionStorage.setItem("sim_pin", normalizedPin);
+        sessionStorage.setItem("sim_email", normalizedEmail);
+        toast({ title: "Entre com a sua conta de professor", description: "Para conduzir a simulação é preciso fazer login. Levando você ao login." });
+        navigate("/auth?voltar=/simulation/join");
         return;
       }
     }
