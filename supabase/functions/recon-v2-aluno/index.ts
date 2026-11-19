@@ -27,6 +27,23 @@ const soCampos = (answers: any, ids: string[]) => {
   return out;
 };
 
+/** Vínculo com o SOAP: o gravado na importação ou, na falta dele (aluno adicionado à mão ou pela turma), o do mesmo e-mail nas salas SOAP v2 do professor. */
+async function soapParticipanteDe(db: any, sala: any, m: { soap_participant_id?: string | null; student_email?: string | null }): Promise<string | null> {
+  if (m.soap_participant_id) return m.soap_participant_id;
+  const email = (m.student_email || "").trim();
+  if (!email) return null;
+  let salaIds: string[] = [];
+  if (sala.soap_room_id) salaIds = [sala.soap_room_id];
+  else {
+    const { data: salas } = await db.from("soap_rooms").select("id").eq("user_id", sala.user_id).eq("schema_version", 2);
+    salaIds = (salas || []).map((r: any) => r.id);
+  }
+  if (!salaIds.length) return null;
+  const { data } = await db.from("soap_participants").select("id").in("room_id", salaIds).eq("participant_role", "student")
+    .ilike("student_email", email).order("created_at", { ascending: false }).limit(1);
+  return data?.[0]?.id || null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -36,7 +53,7 @@ serve(async (req) => {
 
     const db = adminClient();
     const { data: sala } = await db.from("reconciliation_rooms")
-      .select("id, status, schema_version, title, user_id").eq("access_code", access_code.trim().toLowerCase()).eq("status", "active").maybeSingle();
+      .select("id, status, schema_version, title, user_id, soap_room_id").eq("access_code", access_code.trim().toLowerCase()).eq("status", "active").maybeSingle();
     if (!sala || sala.schema_version !== 2) return forbidden(corsHeaders);
 
     const { data: partes } = await db.from("reconciliation_participants")
@@ -61,10 +78,10 @@ serve(async (req) => {
     // 2) Pelo paciente que a pessoa A da dupla atendeu (casos derivados de paciente virtual).
     if (!caso && lista.some((c: any) => c.caso_json?.origem_vp_id)) {
       const { data: dupla } = await db.from("reconciliation_participants")
-        .select("pair_position, soap_participant_id").eq("room_id", sala.id).eq("participant_role", "student").eq("pair_index", eu.pair_index);
+        .select("pair_position, soap_participant_id, student_email").eq("room_id", sala.id).eq("participant_role", "student").eq("pair_index", eu.pair_index);
       const ordem = [...(dupla || [])].sort((a: any, b: any) => (a.pair_position === "A" ? -1 : 0) - (b.pair_position === "A" ? -1 : 0));
       for (const m of ordem) {
-        const { vpId } = await pacienteVirtualDoSoap(db, m.soap_participant_id, sala.user_id);
+        const { vpId } = await pacienteVirtualDoSoap(db, await soapParticipanteDe(db, sala, m), sala.user_id);
         const achado = vpId ? lista.find((c: any) => c.caso_json?.origem_vp_id === vpId) : null;
         if (achado) { caso = achado; break; }
       }
@@ -105,11 +122,12 @@ serve(async (req) => {
       if (resp?.bpmh_submitted_at) return json({ error: "A BPMH já foi enviada e está travada." }, 409);
       const origem = caso.caso_json?.origem_vp_id;
       if (!origem) return json({ error: "Este caso não foi derivado de um paciente virtual, então não há SOAP correspondente." }, 409);
-      if (!eu.soap_participant_id) return json({ error: "Você não está vinculado a um SOAP nesta turma. Avise o professor." }, 409);
-      const { vpId } = await pacienteVirtualDoSoap(db, eu.soap_participant_id, sala.user_id);
+      const meuSoap = await soapParticipanteDe(db, sala, { soap_participant_id: eu.soap_participant_id, student_email: email });
+      if (!meuSoap) return json({ error: "Não encontrei o seu SOAP nesta turma. Avise o professor." }, 409);
+      const { vpId } = await pacienteVirtualDoSoap(db, meuSoap, sala.user_id);
       if (vpId !== origem) return json({ error: "O paciente do seu SOAP não é o paciente deste caso." }, 409);
       const { data: soaps } = await db.from("soap_responses").select("answers_json")
-        .eq("participant_id", eu.soap_participant_id).is("target_participant_id", null).not("submitted_at", "is", null)
+        .eq("participant_id", meuSoap).is("target_participant_id", null).not("submitted_at", "is", null)
         .order("submitted_at", { ascending: false }).limit(1);
       const tabela = (soaps?.[0]?.answers_json as any)?.["s2-farmaco"];
       if (!Array.isArray(tabela)) return json({ error: "Seu SOAP enviado não tem a tabela de farmacoterapia preenchida." }, 409);
