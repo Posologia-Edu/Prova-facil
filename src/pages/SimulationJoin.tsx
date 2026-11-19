@@ -169,6 +169,7 @@ export default function SimulationJoin() {
     const normalizedEmail = normalizeParticipantEmail(emailVal);
 
     // Aluno: tudo vem da função, que só entrega o que o papel dele pode ver.
+    // O professor conduz a sala com a própria conta (dono da sala); o PIN e o e-mail dele sozinhos não bastam.
     // Professor da sala e PIN que não é de simulação (paciente virtual) seguem o fluxo abaixo.
     let r: any;
     try {
@@ -183,6 +184,19 @@ export default function SimulationJoin() {
       aplicarEstadoAluno(r);
       setJoined(true);
       return;
+    }
+    let professorId: string | null = null;
+    if (r?.ok && r.professor) {
+      const { data: sess } = await supabase.auth.getSession();
+      professorId = sess.session?.user?.id ?? null;
+      if (!professorId) {
+        toast({
+          title: "Entre com a sua conta de professor",
+          description: "Para conduzir a simulação, faça login como professor (em /auth) e abra esta sala de novo.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
     if (r && !r.ok && r.motivo === "email") {
       toast({ title: t("student_access_denied"), description: t("sim_not_registered"), variant: "destructive" });
@@ -235,6 +249,11 @@ export default function SimulationJoin() {
       }
 
       toast({ title: t("student_error"), description: t("sim_room_not_found"), variant: "destructive" });
+      return;
+    }
+
+    if (professorId && roomData.user_id !== professorId) {
+      toast({ title: t("student_access_denied"), description: "Esta sala pertence a outra conta de professor.", variant: "destructive" });
       return;
     }
 
