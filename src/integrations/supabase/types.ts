@@ -2399,6 +2399,54 @@ export type Database = {
           },
         ]
       }
+      documentation_v2_revisoes: {
+        Row: {
+          answers_json: Json
+          created_at: string
+          id: string
+          reviewed_pair: number
+          reviewed_response_id: string | null
+          reviewer_pair: number
+          room_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          answers_json?: Json
+          created_at?: string
+          id?: string
+          reviewed_pair: number
+          reviewed_response_id?: string | null
+          reviewer_pair: number
+          room_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          answers_json?: Json
+          created_at?: string
+          id?: string
+          reviewed_pair?: number
+          reviewed_response_id?: string | null
+          reviewer_pair?: number
+          room_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_v2_revisoes_reviewed_response_id_fkey"
+            columns: ["reviewed_response_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_v2_respostas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_v2_revisoes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_audit_logs: {
         Row: {
           created_at: string
