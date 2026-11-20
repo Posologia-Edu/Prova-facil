@@ -102,7 +102,7 @@ export default function DocumentationJoin() {
 
   const draftRestoredRef = useRef(false);
   useEffect(() => {
-    if (!draftLoaded || submitted || draftRestoredRef.current) return;
+    if (!draftKey || !draftLoaded || submitted || draftRestoredRef.current) return;
     if (draft) {
       const r = (draft as any).referralAnswers;
       const m = (draft as any).medRows;
@@ -113,7 +113,7 @@ export default function DocumentationJoin() {
       }
     }
     draftRestoredRef.current = true;
-  }, [draft, draftLoaded, submitted]);
+  }, [draft, draftLoaded, draftKey, submitted]);
 
   useEffect(() => {
     if (!draftKey || submitted || !draftLoaded) return;

@@ -34,7 +34,12 @@ export function useFormDraft({ draftKey, module: _module, accessCode, email, ena
   const acessoRef = useRef({ accessCode: accessCode || "", email: email || "" });
   acessoRef.current = { accessCode: (accessCode || "").trim(), email: (email || "").trim() };
   const temAcesso = !!(accessCode && email);
-  const [loaded, setLoaded] = useState(false);
+  // Chave cujo carregamento terminou. `loaded` só vale para a chave ATUAL: sem isso, quando a chave aparece (depois do login)
+  // o valor antigo "true" (de quando a chave ainda era nula) faz a tela marcar o rascunho como restaurado antes de ele chegar,
+  // e o primeiro salvamento grava o formulário vazio por cima do rascunho.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const semChave = !enabled || !draftKey;
+  const loaded = semChave ? true : loadedKey === draftKey;
   const [draft, setDraft] = useState<Record<string, any> | null>(null);
   const [status, setStatus] = useState<DraftStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -49,12 +54,8 @@ export function useFormDraft({ draftKey, module: _module, accessCode, email, ena
   // Load existing draft (local first, then server; pick newest)
   useEffect(() => {
     let cancelled = false;
-    if (!enabled || !draftKey || !localKey) {
-      setLoaded(true);
-      return;
-    }
+    if (!enabled || !draftKey || !localKey) return;
     if (!temAcesso) return; // espera o PIN e o e-mail chegarem
-    setLoaded(false);
 
     // 1) Read local mirror synchronously
     let localPayload: { answers: Record<string, any>; ts: number } | null = null;
@@ -88,11 +89,9 @@ export function useFormDraft({ draftKey, module: _module, accessCode, email, ena
         chosenTs = serverTs;
       }
 
-      if (chosen) {
-        setDraft(chosen);
-        if (chosenTs) setLastSavedAt(new Date(chosenTs));
-      }
-      setLoaded(true);
+      setDraft(chosen);
+      if (chosen && chosenTs) setLastSavedAt(new Date(chosenTs));
+      setLoadedKey(draftKey);
     })();
     return () => {
       cancelled = true;

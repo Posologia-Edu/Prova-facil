@@ -96,13 +96,13 @@ export default function ReconciliationJoin() {
   // Restore draft once on first load if no final submission
   const draftRestoredRef = useRef(false);
   useEffect(() => {
-    if (!draftLoaded || submitted || draftRestoredRef.current) return;
+    if (!draftKey || !draftLoaded || submitted || draftRestoredRef.current) return;
     if (draft && Object.keys(draft).length > 0) {
       setAnswers(draft);
       toast({ title: "Rascunho recuperado", description: "Suas respostas anteriores foram restauradas." });
     }
     draftRestoredRef.current = true;
-  }, [draft, draftLoaded, submitted]);
+  }, [draft, draftLoaded, draftKey, submitted]);
 
   // Trigger debounced autosave on answers change
   useEffect(() => {

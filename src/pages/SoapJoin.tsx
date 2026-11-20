@@ -100,13 +100,13 @@ export default function SoapJoin() {
   });
   const soapDraftRestoredRef = useRef(false);
   useEffect(() => {
-    if (!soapDraft.loaded || submittedSoap || soapDraftRestoredRef.current) return;
+    if (!soapDraftKey || !soapDraft.loaded || submittedSoap || soapDraftRestoredRef.current) return;
     if (soapDraft.draft && Object.keys(soapDraft.draft).length > 0) {
       setSoapAnswers(soapDraft.draft);
       toast({ title: "Rascunho recuperado", description: "Suas respostas anteriores do SOAP foram restauradas." });
     }
     soapDraftRestoredRef.current = true;
-  }, [soapDraft.draft, soapDraft.loaded, submittedSoap]);
+  }, [soapDraft.draft, soapDraft.loaded, soapDraftKey, submittedSoap]);
   useEffect(() => {
     if (!soapDraftKey || submittedSoap || !soapDraft.loaded) return;
     soapDraft.saveDraft(soapAnswers);
@@ -126,12 +126,12 @@ export default function SoapJoin() {
   });
   const peerDraftRestoredRef = useRef(false);
   useEffect(() => {
-    if (!peerDraft.loaded || submittedPeer || peerDraftRestoredRef.current) return;
+    if (!peerDraftKey || !peerDraft.loaded || submittedPeer || peerDraftRestoredRef.current) return;
     if (peerDraft.draft && Object.keys(peerDraft.draft).length > 0) {
       setPeerAnswers(peerDraft.draft);
     }
     peerDraftRestoredRef.current = true;
-  }, [peerDraft.draft, peerDraft.loaded, submittedPeer]);
+  }, [peerDraft.draft, peerDraft.loaded, peerDraftKey, submittedPeer]);
   useEffect(() => {
     if (!peerDraftKey || submittedPeer || !peerDraft.loaded) return;
     peerDraft.saveDraft(peerAnswers);
