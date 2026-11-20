@@ -252,38 +252,32 @@ export default function SimulationJoin() {
 
     if (roomErr || !roomData) {
       // Check if PIN belongs to a virtual patient room and redirect
-      const { data: vpRoom } = await supabase
-        .from("class_virtual_patients")
-        .select("id, class_id, patient_id, status")
-        .eq("access_code", normalizedPin)
-        .limit(1)
-        .maybeSingle();
+      // O PIN pode ser de um paciente virtual: a conferência é feita pela função vp-aluno
+      const { data: vp } = await supabase.functions.invoke("vp-aluno", {
+        body: { action: "verificar", pin: normalizedPin, email: normalizedEmail, modo: "individual", group_emails: [] },
+      });
 
-      if (vpRoom) {
-        if (vpRoom.status !== "active") {
-          toast({ title: t("student_error"), description: "Este paciente virtual ainda não foi ativado pelo professor.", variant: "destructive" });
+      if (vp?.encontrado) {
+        if (vp.erro) {
+          toast({ title: vp.erro.title, description: vp.erro.description, variant: "destructive" });
           return;
         }
-        const { data: studentInClass } = await supabase
-          .from("class_students")
-          .select("id, student_name")
-          .eq("class_id", vpRoom.class_id)
-          .ilike("student_email", normalizedEmail)
-          .limit(1)
-          .maybeSingle();
-
-        if (!studentInClass) {
-          toast({ title: t("student_access_denied"), description: "Seu e-mail não está cadastrado na turma vinculada a este paciente virtual.", variant: "destructive" });
-          return;
-        }
-
-        sessionStorage.setItem("vp_email", normalizedEmail);
-
         sessionStorage.setItem("vp_pin", normalizedPin);
-        sessionStorage.setItem("vp_student_name", studentInClass.student_name || "");
-        sessionStorage.removeItem("vp_group_emails");
-        sessionStorage.removeItem("vp_group_names");
-        navigate(`/virtual-patients/room/${vpRoom.id}`);
+        sessionStorage.setItem("vp_email", vp.email);
+        if (vp.destino === "feedback") {
+          navigate(`/virtual-patients/feedback/${vp.cvp_id}`);
+          return;
+        }
+        if (vp.aviso) toast({ title: vp.aviso.title, description: vp.aviso.description });
+        sessionStorage.setItem("vp_student_name", vp.nome || "");
+        if (vp.grupo) {
+          sessionStorage.setItem("vp_group_emails", JSON.stringify(vp.grupo.emails));
+          sessionStorage.setItem("vp_group_names", JSON.stringify(vp.grupo.nomes));
+        } else {
+          sessionStorage.removeItem("vp_group_emails");
+          sessionStorage.removeItem("vp_group_names");
+        }
+        navigate(`/virtual-patients/room/${vp.cvp_id}`);
         return;
       }
 

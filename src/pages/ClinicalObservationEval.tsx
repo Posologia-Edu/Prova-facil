@@ -43,7 +43,9 @@ export default function ClinicalObservationEval() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from("clinical_observations").select("*").eq("id", obsId!).single();
+      // A ficha vem da função obs-clinica (só título, tipo e domínios; nunca dados do professor)
+      const { data: r } = await supabase.functions.invoke("obs-clinica", { body: { action: "exame", obs_id: obsId } });
+      const data = r?.ok ? r.observacao : null;
       if (data) {
         setObs(data);
         const d = (data.competency_domains_json as unknown as Domain[]) || [];
@@ -64,21 +66,15 @@ export default function ClinicalObservationEval() {
     }
     setSubmitting(true);
 
-    const { error } = await supabase.from("clinical_observation_sessions").insert({
-      observation_id: obsId!,
-      evaluator_name: evaluatorName.trim(),
-      evaluator_email: evaluatorEmail.trim(),
-      student_name: studentName.trim(),
-      student_email: studentEmail.trim(),
-      scores_json: scores,
-      global_score: globalScore,
-      feedback: feedback.trim(),
-      complexity,
-      setting: setting.trim(),
-      duration_minutes: duration,
+    const { data: res, error } = await supabase.functions.invoke("obs-clinica", {
+      body: {
+        action: "enviar", obs_id: obsId,
+        evaluator_name: evaluatorName.trim(), evaluator_email: evaluatorEmail.trim(),
+        student_name: studentName.trim(), student_email: studentEmail.trim(),
+        scores, global_score: globalScore, feedback: feedback.trim(), complexity, setting: setting.trim(), duration,
+      },
     });
-
-    if (error) { toast.error("Erro ao enviar"); setSubmitting(false); return; }
+    if (error || !res?.ok) { toast.error("Erro ao enviar"); setSubmitting(false); return; }
     setSubmitted(true);
     setSubmitting(false);
   };
