@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,6 @@ import { useOsceAudio } from "@/hooks/use-osce-audio";
 
 export default function OsceStudentPortal() {
   const { accessCode } = useParams<{ accessCode: string }>();
-  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
@@ -24,67 +23,27 @@ export default function OsceStudentPortal() {
   const [timeUp, setTimeUp] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch circuit
-  const { data: circuit, isLoading: circuitLoading } = useQuery({
-    queryKey: ["osce-student-circuit", accessCode],
+  // Tudo vem da função osce-aluno (circuito, registro do aluno, estação e materiais) e é consultado a cada 3 s,
+  // no lugar do realtime. A estação chega sem roteiro do paciente, prompt nem gabarito.
+  const { data: estado, isLoading } = useQuery({
+    queryKey: ["osce-aluno", accessCode, email.trim().toLowerCase()],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("osce_circuits")
-        .select("*, osce_exams(*)")
-        .eq("access_code", accessCode!)
-        .single();
-      if (error) throw error;
-      return data;
+      const { data, error } = await supabase.functions.invoke("osce-aluno", {
+        body: { action: "estado", access_code: accessCode, email: email.trim() },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "erro");
+      return data as any;
     },
-    enabled: !!accessCode && authenticated,
-  });
-
-  // Fetch student record
-  const { data: myStudent, isLoading: studentLoading, refetch: refetchStudent } = useQuery({
-    queryKey: ["osce-my-student", circuit?.id, email],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("osce_circuit_students")
-        .select("*")
-        .eq("circuit_id", circuit!.id)
-        .eq("student_email", email.toLowerCase())
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!circuit?.id && !!email && authenticated,
+    enabled: !!accessCode && authenticated && !!email.trim(),
     refetchInterval: 3000,
   });
-
-  // Fetch current station details
-  const { data: currentStation } = useQuery({
-    queryKey: ["osce-student-station", myStudent?.current_station_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("osce_stations")
-        .select("*")
-        .eq("id", myStudent!.current_station_id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!myStudent?.current_station_id,
-  });
-
-  // Fetch materials for current station
-  const { data: materials } = useQuery({
-    queryKey: ["osce-student-materials", myStudent?.current_station_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("osce_station_materials")
-        .select("*")
-        .eq("station_id", myStudent!.current_station_id)
-        .order("position");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!myStudent?.current_station_id,
-  });
+  const circuitLoading = isLoading;
+  const studentLoading = false;
+  // "circuito" = código inexistente; "email" = o circuito existe, mas o e-mail não está nele
+  const circuit: any = estado?.ok ? estado.circuito : estado?.motivo === "email" ? {} : null;
+  const myStudent: any = estado?.ok ? estado.aluno : null;
+  const currentStation: any = estado?.ok ? estado.estacao : null;
+  const materials: any[] | undefined = estado?.ok ? estado.materiais : undefined;
 
   // Audio hook
   const isInStation = myStudent?.status === "in_station" && !timeUp;
@@ -94,21 +53,6 @@ export default function OsceStudentPortal() {
     role: "student",
     enabled: isInStation && !!circuit?.id && !!myStudent?.current_station_id,
   });
-
-  // Realtime subscription for circuit and student updates
-  useEffect(() => {
-    if (!circuit?.id) return;
-    const channel = supabase
-      .channel(`student-circuit-${circuit.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "osce_circuits", filter: `id=eq.${circuit.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ["osce-student-circuit", accessCode] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "osce_circuit_students", filter: `circuit_id=eq.${circuit.id}` }, () => {
-        refetchStudent();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [circuit?.id]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -133,13 +77,9 @@ export default function OsceStudentPortal() {
   const persistMessage = async (role: string, content: string) => {
     if (!circuit?.id || !myStudent?.current_station_id || !myStudent?.id) return;
     try {
-      await supabase.from("osce_chat_messages" as any).insert([{
-        circuit_id: circuit.id,
-        station_id: myStudent.current_station_id,
-        student_id: myStudent.id,
-        role,
-        content,
-      }]);
+      await supabase.functions.invoke("osce-aluno", {
+        body: { action: "mensagem", access_code: accessCode, email: email.trim(), role, content },
+      });
     } catch (e) {
       console.error("Failed to persist chat message", e);
     }

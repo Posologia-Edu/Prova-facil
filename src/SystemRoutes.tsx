@@ -357,7 +357,7 @@ export default function SystemRoutes() {
       />
       {/* Public OSCE routes (no auth required) */}
       <Route path="/osce/evaluate/:accessCode" element={<OsceEvaluator />} />
-      <Route path="/osce/patient/:stationId" element={<OsceVirtualPatient />} />
+      <Route path="/osce/patient/:stationId" element={<ProtectedRoute><OsceVirtualPatient /></ProtectedRoute>} />
       <Route path="/osce/student/:accessCode" element={<StudentA11yShell><OsceStudentPortal /></StudentA11yShell>} />
       {/* Public Simulation route */}
       <Route path="/simulation/join" element={<StudentA11yShell><SimulationJoin /></StudentA11yShell>} />

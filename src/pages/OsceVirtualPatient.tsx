@@ -51,13 +51,15 @@ export default function OsceVirtualPatient() {
     let assistantContent = "";
 
     try {
+      // Rota só para professor logado: a função recebe o token da sessão
+      const { data: sessao } = await supabase.auth.getSession();
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/osce-virtual-patient`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${sessao.session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
             stationId,

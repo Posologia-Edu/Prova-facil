@@ -181,14 +181,12 @@ export default function StudentAuth() {
         return;
       }
 
-      const { data: osceCircuit } = await supabase
-        .from("osce_circuits")
-        .select("id, access_code")
-        .eq("access_code", normalizedPin)
-        .limit(1)
-        .maybeSingle();
+      // Circuito OSCE: a função só diz se o código existe (a conferência do e-mail é feita no portal)
+      const { data: osceCircuit } = await supabase.functions.invoke("osce-aluno", {
+        body: { action: "estado", access_code: normalizedPin, email: primaryEmail },
+      });
 
-      if (osceCircuit) {
+      if (osceCircuit && osceCircuit.motivo !== "circuito" && !osceCircuit.error) {
         navigate(`/osce/student/${normalizedPin}`);
         return;
       }

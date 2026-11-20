@@ -43,14 +43,14 @@ serve(async (req) => {
     if (!authedUserId) {
       const { data: stationRow } = await adminClient()
         .from("osce_stations").select("osce_exam_id").eq("id", stationId).maybeSingle();
-      let circuitQuery = adminClient()
+      // O aluno anônimo precisa provar o código do circuito (antes bastava haver um circuito em andamento da mesma prova)
+      if (typeof accessCode !== "string" || !accessCode.trim()) return unauthorized(corsHeaders);
+      const { data: circuits } = await adminClient()
         .from("osce_circuits").select("id, access_code")
         .eq("osce_exam_id", stationRow?.osce_exam_id ?? "")
-        .in("status", ["running", "active", "in_progress"]);
-      if (typeof accessCode === "string" && accessCode.trim()) {
-        circuitQuery = circuitQuery.eq("access_code", accessCode.trim());
-      }
-      const { data: circuits } = await circuitQuery.limit(1);
+        .in("status", ["running", "active", "in_progress"])
+        .eq("access_code", accessCode.trim())
+        .limit(1);
       if (!circuits || circuits.length === 0) return unauthorized(corsHeaders);
     }
 
