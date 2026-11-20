@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { normalizarRespostas, resumoDocumentos, verificarTudo, type ItemReferencia } from "@/lib/doc-v2";
+import { ITENS_CHECKLIST, resumoCompreensao } from "@/lib/doc-v2-paciente";
 import { criteriosAplicaveis, notaRubricaDoc, type AvaliacaoDoc } from "@/lib/doc-v2-rubrica";
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
   usaPaciente: boolean;
   response: { id: string; respostas: any };
   referencia: ItemReferencia[];
+  totalBarreiras?: number;
   onSaved: () => void;
 };
 
@@ -22,7 +24,17 @@ type Props = {
 const tabela = () => (supabase as any).from("documentation_v2_avaliacoes");
 
 /** Correção da Documentação v2 pelo professor: a IA sugere os critérios; o professor revisa, confirma e libera. */
-export default function DocV2Correcao({ roomId, usaPaciente, response, referencia, onSaved }: Props) {
+export default function DocV2Correcao({ roomId, usaPaciente, response, referencia, totalBarreiras = 0, onSaved }: Props) {
+  // Conversa com o paciente virtual (privada): o professor lê tudo, inclusive a medida de compreensão e o checklist do observador.
+  const [conversa, setConversa] = useState<any>(null);
+  useEffect(() => {
+    if (!usaPaciente) return;
+    let vivo = true;
+    (supabase as any).from("documentation_v2_paciente").select("dados").eq("response_id", response.id).maybeSingle()
+      .then(({ data }: any) => { if (vivo) setConversa(data?.dados || null); });
+    return () => { vivo = false; };
+  }, [usaPaciente, response.id]);
+  const comp = conversa ? resumoCompreensao(conversa.entendimento || [], conversa.barreiras_reveladas || [], totalBarreiras) : null;
   const [dados, setDados] = useState<AvaliacaoDoc | null>(null);
   const [respostas, setRespostas] = useState<Record<string, any>>({});
   const [comentario, setComentario] = useState("");
@@ -116,6 +128,18 @@ export default function DocV2Correcao({ roomId, usaPaciente, response, referenci
       <details className="rounded border bg-background p-2"><summary className="cursor-pointer text-sm font-medium">Ler os documentos da dupla</summary>
         <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap text-xs">{resumoDocumentos(docs)}</pre>
       </details>
+
+      {usaPaciente && (
+        <details className="rounded border bg-background p-2"><summary className="cursor-pointer text-sm font-medium">Aconselhamento ao paciente virtual {conversa ? `(${(conversa.transcript || []).filter((t: any) => t.role === "aluno").length} fala(s))` : "(não realizado)"}</summary>
+          {conversa && comp && (
+            <div className="mt-2 space-y-2 text-xs">
+              <p>Mensagens-chave: <b>{comp.abordadas}</b> de {comp.total} abordadas · <b>{comp.corretas}</b> entendidas corretamente, {comp.parciais} em parte · teach-back em {comp.comTeachback}. Barreiras reveladas: <b>{comp.barreiras}</b> de {comp.totalBarreiras}.</p>
+              <div className="max-h-64 space-y-1 overflow-auto rounded border p-2">{(conversa.transcript || []).map((t: any, i: number) => <p key={i}><b>{t.role === "aluno" ? "Farmacêutico" : "Paciente"}:</b> {t.texto}</p>)}</div>
+              {conversa.checklist ? <p>Checklist do observador: {ITENS_CHECKLIST.map((i) => `${i.texto.split(" ").slice(0, 4).join(" ")}… ${conversa.checklist.respostas?.[i.id] ?? "—"}`).join(" · ")}{conversa.checklist.comentario ? ` — “${conversa.checklist.comentario}”` : ""}</p> : <p>Checklist do observador: não enviado.</p>}
+            </div>
+          )}
+        </details>
+      )}
 
       {avisos.length > 0 && (
         <details className="rounded border bg-background p-2"><summary className="cursor-pointer text-sm font-medium">Conferência automática ({avisos.length} aviso(s))</summary>

@@ -26,7 +26,7 @@ serve(async (req) => {
 
     const db = adminClient();
     const { data: sala } = await db.from("documentation_rooms")
-      .select("id, title, status, schema_version, base_conciliacao, tempo_sugerido_min")
+      .select("id, title, status, schema_version, base_conciliacao, tempo_sugerido_min, usa_paciente")
       .eq("access_code", access_code.trim().toLowerCase()).eq("status", "active").maybeSingle();
     if (!sala || sala.schema_version !== 2) return forbidden(corsHeaders);
 
@@ -45,7 +45,7 @@ serve(async (req) => {
     if (!lista.length) return json({ error: "A sala não tem caso v2 cadastrado." }, 409);
 
     const { data: resp } = await db.from("documentation_v2_respostas")
-      .select("id, clinical_case_id, respostas, submitted_at").eq("room_id", sala.id).eq("pair_index", eu.pair_index).maybeSingle();
+      .select("id, clinical_case_id, respostas, submitted_at, aconselhamento_concluido_at").eq("room_id", sala.id).eq("pair_index", eu.pair_index).maybeSingle();
     // O caso gravado na resposta é o caso; senão, rodízio pelo índice da dupla.
     const caso = (resp?.clinical_case_id ? lista.find((c: any) => c.id === resp.clinical_case_id) : null) || lista[eu.pair_index % lista.length];
 
@@ -59,6 +59,9 @@ serve(async (req) => {
         referencia: Array.isArray(priv?.referencia) ? priv!.referencia : [],
         enviada: !!resp?.submitted_at,
         respostas: resp?.submitted_at ? resp.respostas : null,
+        // Com o paciente virtual, a atividade só termina depois do aconselhamento (conversa encerrada + checklist do observador).
+        usa_paciente: !!sala.usa_paciente,
+        aconselhamento_concluido: !!resp?.aconselhamento_concluido_at,
       });
     }
 
@@ -80,7 +83,8 @@ serve(async (req) => {
       });
       if (error) return json({ error: error.message }, 500);
     }
-    await db.from("documentation_participants").update({ status: "done" }).eq("room_id", sala.id).eq("pair_index", eu.pair_index);
+    // Com o paciente virtual, a dupla só fica "concluída" quando o aconselhamento terminar (função doc-v2-paciente).
+    if (!sala.usa_paciente) await db.from("documentation_participants").update({ status: "done" }).eq("room_id", sala.id).eq("pair_index", eu.pair_index);
     return json({ ok: true });
   } catch (e) {
     console.error("doc-v2-aluno error:", e);

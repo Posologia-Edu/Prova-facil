@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import type { ItemReferencia } from "@/lib/doc-v2";
 import DocV2Correcao from "@/components/documentation/DocV2Correcao";
+import DocV2PersonaEditor from "@/components/documentation/DocV2PersonaEditor";
+import { validarPersona } from "@/lib/doc-v2-paciente";
 
 type Conduta = ItemReferencia["conduta"];
 const CONDUTAS: { v: Conduta; r: string }[] = [{ v: "mantido", r: "Mantido" }, { v: "alterado", r: "Alterado" }, { v: "novo", r: "Novo" }, { v: "suspenso", r: "Suspenso" }];
@@ -33,7 +35,7 @@ export default function DocumentationV2Sala() {
   });
   const { data: privados } = useQuery({
     queryKey: ["doc-v2-privados", roomId],
-    queryFn: async () => (await supabase.from("documentation_v2_privado" as any).select("case_id, referencia").eq("room_id", roomId!)).data as any[] || [],
+    queryFn: async () => (await supabase.from("documentation_v2_privado" as any).select("case_id, referencia, gabarito").eq("room_id", roomId!)).data as any[] || [],
     enabled: !!roomId,
   });
   const { data: partes } = useQuery({
@@ -43,7 +45,7 @@ export default function DocumentationV2Sala() {
   });
   const { data: respostas } = useQuery({
     queryKey: ["doc-v2-respostas", roomId],
-    queryFn: async () => (await supabase.from("documentation_v2_respostas" as any).select("id, pair_index, clinical_case_id, respostas, submitted_at").eq("room_id", roomId!)).data as any[] || [],
+    queryFn: async () => (await supabase.from("documentation_v2_respostas" as any).select("id, pair_index, clinical_case_id, respostas, submitted_at, aconselhamento_concluido_at").eq("room_id", roomId!)).data as any[] || [],
     enabled: !!roomId,
     refetchInterval: 15000,
   });
@@ -56,7 +58,8 @@ export default function DocumentationV2Sala() {
 
   const [tempo, setTempo] = useState("");
   const [base, setBase] = useState("validada");
-  useEffect(() => { if (sala) { setTempo(sala.tempo_sugerido_min ? String(sala.tempo_sugerido_min) : ""); setBase(sala.base_conciliacao || "validada"); } }, [sala]);
+  const [usa, setUsa] = useState(false);
+  useEffect(() => { if (sala) { setTempo(sala.tempo_sugerido_min ? String(sala.tempo_sugerido_min) : ""); setBase(sala.base_conciliacao || "validada"); setUsa(!!sala.usa_paciente); } }, [sala]);
 
   const [refs, setRefs] = useState<Record<string, ItemReferencia[]>>({});
   useEffect(() => {
@@ -69,7 +72,7 @@ export default function DocumentationV2Sala() {
   const salvarConfig = async () => {
     const t = tempo.trim() ? Number(tempo) : null;
     if (t !== null && (!Number.isFinite(t) || t <= 0)) { toast({ title: "Tempo inválido", variant: "destructive" }); return; }
-    const { error } = await supabase.from("documentation_rooms").update({ tempo_sugerido_min: t, base_conciliacao: base } as any).eq("id", roomId!);
+    const { error } = await supabase.from("documentation_rooms").update({ tempo_sugerido_min: t, base_conciliacao: base, usa_paciente: usa } as any).eq("id", roomId!);
     if (error) toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     else { toast({ title: "Configuração salva" }); qc.invalidateQueries({ queryKey: ["doc-v2-sala", roomId] }); }
   };
@@ -97,6 +100,8 @@ export default function DocumentationV2Sala() {
   for (const p of partes || []) duplas.set(p.pair_index, [...(duplas.get(p.pair_index) || []), p]);
   const enviou = (i: number) => !!(respostas || []).find((r: any) => r.pair_index === i)?.submitted_at;
   const semReferencia = (casos || []).filter((c) => !(refs[c.id] || []).length).length;
+  // Com o paciente virtual, todo caso precisa de persona válida antes de ativar (o salvo, não o que está na tela).
+  const semPersona = sala.usa_paciente ? (casos || []).filter((c) => validarPersona((privados || []).find((p: any) => p.case_id === c.id)?.gabarito?.paciente_virtual).some((a) => a.nivel === "erro")).length : 0;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
@@ -109,16 +114,20 @@ export default function DocumentationV2Sala() {
           </div>
         </div>
         <div className="flex gap-2">
-          {sala.status !== "active" && <Button onClick={() => mudarStatus("active")} disabled={semReferencia > 0 || !(casos || []).length} title={semReferencia > 0 ? "Cadastre a conciliação de todos os casos antes de ativar" : undefined}>Ativar sala</Button>}
+          {sala.status !== "active" && <Button onClick={() => mudarStatus("active")} disabled={semReferencia > 0 || semPersona > 0 || !(casos || []).length} title={semReferencia > 0 ? "Cadastre a conciliação de todos os casos antes de ativar" : semPersona > 0 ? "Complete a persona do paciente em todos os casos antes de ativar" : undefined}>Ativar sala</Button>}
           {sala.status === "active" && <Button variant="outline" onClick={() => mudarStatus("finished")}>Encerrar</Button>}
         </div>
       </div>
 
+      {semPersona > 0 && <p className="rounded border border-warning/40 bg-warning/10 p-3 text-sm">{semPersona} caso(s) sem persona completa do paciente virtual. Complete abaixo (barreiras e mensagens-chave) antes de ativar.</p>}
       {semReferencia > 0 && <p className="rounded border border-warning/40 bg-warning/10 p-3 text-sm">{semReferencia} caso(s) sem conciliação de referência. O aluno precisa dela como base; preencha abaixo antes de ativar.</p>}
 
       <Card>
         <CardHeader><CardTitle className="font-heading text-base font-medium">Configuração</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-3">
+        <CardContent className="grid gap-3 sm:grid-cols-4">
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" checked={usa} onChange={(e) => setUsa(e.target.checked)} />Usar paciente virtual de aconselhamento</label>
+          </div>
           <div>
             <Label htmlFor="base">Base dos documentos</Label>
             <select id="base" value={base} onChange={(e) => setBase(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
@@ -154,6 +163,10 @@ export default function DocumentationV2Sala() {
                 <Button type="button" variant="outline" size="sm" onClick={() => setRefs((a) => ({ ...a, [c.id]: [...(a[c.id] || []), { medicamento: "", conduta: "mantido", frequencia: "" }] }))}><Plus className="mr-1 h-3.5 w-3.5" />Adicionar</Button>
                 <Button type="button" size="sm" onClick={() => salvarReferencia(c.id)}><Save className="mr-1 h-3.5 w-3.5" />Salvar este caso</Button>
               </div>
+              {usa && (privados || []).some((p: any) => p.case_id === c.id) && (
+                <DocV2PersonaEditor caseId={c.id} gabarito={(privados || []).find((p: any) => p.case_id === c.id)?.gabarito} onSaved={() => qc.invalidateQueries({ queryKey: ["doc-v2-privados", roomId] })} />
+              )}
+              {usa && !(privados || []).some((p: any) => p.case_id === c.id) && <p className="text-xs text-muted-foreground">Salve a conciliação deste caso para criar a persona do paciente.</p>}
             </CardContent>
           </Card>
         ))}
@@ -174,13 +187,15 @@ export default function DocumentationV2Sala() {
                       <span><b>Dupla {i + 1}</b>: {g.map((p) => p.student_name).join(" e ")}</span>
                       <span className="flex items-center gap-2">
                         {av?.confirmada && <Badge variant="secondary">{Number(av.nota).toFixed(2).replace(".", ",")}/10{av.liberada ? " · liberada" : ""}</Badge>}
+                        {resp && sala.usa_paciente && !resp.aconselhamento_concluido_at && <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Aconselhamento pendente</Badge>}
                         {resp ? <Badge className="gap-1"><CheckCircle2 className="h-3 w-3" />Enviada</Badge> : <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Pendente</Badge>}
                         {resp && <Button size="sm" variant="outline" onClick={() => setAberta(aberta === i ? null : i)}>{aberta === i ? "Fechar" : "Corrigir"}</Button>}
                       </span>
                     </div>
                     {resp && aberta === i && (
-                      <DocV2Correcao roomId={roomId!} usaPaciente={false} response={{ id: resp.id, respostas: resp.respostas }}
+                      <DocV2Correcao roomId={roomId!} usaPaciente={!!sala.usa_paciente} response={{ id: resp.id, respostas: resp.respostas }}
                         referencia={(refs[casoDaDupla?.id || ""] || []) as ItemReferencia[]}
+                        totalBarreiras={((privados || []).find((p: any) => p.case_id === casoDaDupla?.id)?.gabarito?.paciente_virtual?.barreiras || []).length}
                         onSaved={() => qc.invalidateQueries({ queryKey: ["doc-v2-avaliacoes", roomId] })} />
                     )}
                   </li>

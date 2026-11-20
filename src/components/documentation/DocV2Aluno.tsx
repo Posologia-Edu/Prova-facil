@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
 import DocV2Devolutiva from "@/components/documentation/DocV2Devolutiva";
+import DocV2Paciente from "@/components/documentation/DocV2Paciente";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { ROTULO_FONTE, ROTULO_TRANSICAO, type CasoV2 } from "@/lib/recon-v2";
 import {
@@ -25,6 +26,8 @@ type Estado = {
   referencia: ItemReferencia[];
   enviada: boolean;
   respostas: any;
+  usa_paciente?: boolean;
+  aconselhamento_concluido?: boolean;
 };
 
 async function chamar(body: Record<string, unknown>) {
@@ -56,6 +59,7 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
   const [confirmar, setConfirmar] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [finalizada, setFinalizada] = useState(false);
+  const [conselhoFeito, setConselhoFeito] = useState(false);
 
   const carregar = useCallback(async () => {
     setCarregando(true); setErro(null);
@@ -63,6 +67,7 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
       const est: Estado = await chamar({ action: "estado", access_code: accessCode, email });
       setEstado(est);
       if (est.enviada) { setFinalizada(true); setR(normalizarRespostas(est.respostas)); }
+      setConselhoFeito(!!est.aconselhamento_concluido);
     } catch (e: any) {
       setErro(e?.message || "Não foi possível carregar o caso.");
     } finally { setCarregando(false); }
@@ -298,7 +303,9 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
           </Card>
 
           {finalizada ? (
-            <DocV2Devolutiva accessCode={accessCode} email={email} />
+            estado.usa_paciente && !conselhoFeito
+              ? <DocV2Paciente accessCode={accessCode} email={email} nomePaciente={p.nome} onConcluida={() => setConselhoFeito(true)} />
+              : <DocV2Devolutiva accessCode={accessCode} email={email} />
           ) : (
             <>
               <div className="flex justify-end"><DraftStatusBadge status={draftStatus} lastSavedAt={lastSavedAt} /></div>

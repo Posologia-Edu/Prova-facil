@@ -19,6 +19,7 @@ Você recebe: (1) o DOSSIÊ do caso; (2) a CONCILIAÇÃO DE REFERÊNCIA (o que o
 Regras:
 - Pontue cada critério de 0 a 4 inteiros, seguindo as âncoras. Seja criterioso: 4 só quando cumpre tudo.
 - Compare o cartão e o encaminhamento com a conciliação de referência e com a ação esperada de cada discrepância. Medicamento suspenso que aparece na grade como se fosse para tomar, dose trocada, horário incoerente com a frequência ou medicamento omitido são erros de fidelidade.
+- Se houver ACONSELHAMENTO AO PACIENTE VIRTUAL e os critérios de aconselhamento e teach-back estiverem na lista, pontue-os pela conversa: abrir com pergunta aberta, descobrir as barreiras escondidas (a medida de compreensão e as barreiras reveladas são fatos do servidor: não as altere), adaptar a linguagem ao paciente e fazer teach-back das mensagens-chave, corrigindo o que o paciente repetiu errado. O paciente repete o que realmente entendeu: explicação confusa gera repetição errada, e isso é falha do farmacêutico. Se a dupla não conversou, esses critérios valem 0.
 - Julgue a linguagem do cartão pelo leitor (o paciente leigo) e a do encaminhamento pelo seu leitor (o prescritor). A conferência automática traz índice de legibilidade e termos técnicos: use-a como apoio, não como sentença.
 - "alertas": erros nos documentos que poderiam causar dano ao paciente se fossem usados como estão (até 5, uma frase cada). Vazio se não houver.
 - Cada justificativa tem no máximo 2 frases, em português, citando o que no documento levou à nota.
@@ -80,7 +81,7 @@ serve(async (req) => {
     if (!(await ownsRoom("documentation_rooms", resp.room_id, userId))) return forbidden(corsHeaders);
     if (!resp.submitted_at) return json({ error: "A dupla ainda não enviou a documentação." }, 400);
 
-    const { data: room } = await db.from("documentation_rooms").select("schema_version").eq("id", resp.room_id).maybeSingle();
+    const { data: room } = await db.from("documentation_rooms").select("schema_version, usa_paciente").eq("id", resp.room_id).maybeSingle();
     if (!room || room.schema_version !== 2) return json({ error: "Esta sala não é da Documentação v2" }, 400);
 
     const { data: anterior } = await db.from("documentation_v2_avaliacoes").select("confirmada").eq("response_id", response_id).maybeSingle();
@@ -93,6 +94,25 @@ serve(async (req) => {
     const referencia: any[] = Array.isArray(priv.referencia) ? priv.referencia : [];
     if (!referencia.length) return json({ error: "O caso não tem conciliação de referência. Cadastre na tela da sala." }, 400);
     const discrepancias: any[] = Array.isArray((priv.gabarito as any)?.discrepancias) ? (priv.gabarito as any).discrepancias : [];
+
+    // Aconselhamento ao paciente virtual: a conversa e a medida de compreensão são fatos registrados pelo servidor.
+    let aconselhamento = "(a sala não usa o paciente virtual)";
+    if (room.usa_paciente) {
+      const { data: conv } = await db.from("documentation_v2_paciente").select("dados").eq("response_id", response_id).maybeSingle();
+      const cd: any = conv?.dados;
+      const persona: any = (priv.gabarito as any)?.paciente_virtual || {};
+      const transcricao: any[] = Array.isArray(cd?.transcript) ? cd.transcript : [];
+      if (!transcricao.length) aconselhamento = "(a dupla não conversou com o paciente: critérios de aconselhamento e teach-back valem 0)";
+      else {
+        const ent: any[] = Array.isArray(cd.entendimento) ? cd.entendimento : [];
+        const ck = cd.checklist?.respostas || {};
+        aconselhamento = `${transcricao.map((t) => `${t.role === "aluno" ? "FARMACÊUTICO" : "PACIENTE"}: ${t.texto}`).join("\n")}
+Medida de compreensão registrada pelo servidor (não altere):
+${(persona.mensagens_chave || []).map((m: any) => { const e = ent.find((x) => x.id === m.id); return `- "${m.texto}": ${e?.abordada ? "abordada" : "NÃO abordada"}; teach-back: ${e?.entendida ?? "não feito"}`; }).join("\n")}
+Barreiras escondidas reveladas: ${(cd.barreiras_reveladas || []).length} de ${(persona.barreiras || []).length} (${(persona.barreiras || []).map((b: any) => `${b.descricao}: ${(cd.barreiras_reveladas || []).includes(b.id) ? "revelada" : "não revelada"}`).join("; ")}).
+Checklist do observador (a outra pessoa da dupla): ${Object.entries(ck).map(([k, v]) => `${k}=${v}`).join(", ") || "não enviado"}${cd.checklist?.comentario ? `. Comentário: ${clip(cd.checklist.comentario, 500)}` : ""}`;
+      }
+    }
 
     const dossie = [
       `Título: ${cj.titulo}`, `Transição: ${cj.transicao}`, `Resumo: ${cj.resumo}`, `Paciente: ${JSON.stringify(cj.paciente)}`,
@@ -110,6 +130,9 @@ ${discrepancias.map((d) => `- ${d.medicamento} (${d.tipo}, risco ${d.risco}${d.c
 
 [DOCUMENTOS DA DUPLA]
 ${clip(documentosTexto(resp.respostas), 20000)}
+
+[ACONSELHAMENTO AO PACIENTE VIRTUAL]
+${clip(aconselhamento, 12000)}
 
 [CONFERÊNCIA AUTOMÁTICA (em código)]
 ${(Array.isArray(avisos) ? avisos : []).slice(0, 40).map((a: unknown) => `- ${clip(a, 300)}`).join("\n") || "Nenhum aviso."}
