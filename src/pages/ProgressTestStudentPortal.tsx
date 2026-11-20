@@ -68,30 +68,11 @@ export default function ProgressTestStudentPortal() {
   }, [testId]);
 
   const loadTest = async () => {
-    const { data: t } = await supabase.from("progress_tests" as any).select("*").eq("id", testId).single();
-    if (!t) { toast({ title: "Teste não encontrado", variant: "destructive" }); setLoading(false); return; }
-    setTest(t);
-
-    const { data: tqs } = await supabase.from("progress_test_questions" as any).select("*").eq("test_id", testId).order("position");
-    if (tqs && tqs.length > 0) {
-      const questionIds = (tqs as any[]).map((q: any) => q.question_id);
-      const { data: qData, error: qError } = await supabase.from("question_bank").select("id, content_json, type").in("id", questionIds);
-      if (qError) {
-        console.error("Erro ao carregar questões:", qError);
-        toast({ title: "Erro ao carregar conteúdo das questões. Verifique se o teste está publicado.", variant: "destructive" });
-      }
-      const enriched = (tqs as any[]).map((tq: any) => {
-        const qd = (qData || []).find((q: any) => q.id === tq.question_id);
-        if (qd) {
-          // Safely parse content_json if it's a string
-          if (typeof qd.content_json === "string") {
-            try { qd.content_json = JSON.parse(qd.content_json); } catch {}
-          }
-        }
-        return { ...tq, questionData: qd };
-      });
-      setQuestions(enriched);
-    }
+    // O teste vem da função progress-aluno, sem a resposta certa (a correção é feita no servidor)
+    const { data } = await supabase.functions.invoke("progress-aluno", { body: { action: "exame", test_id: testId } });
+    if (!data?.ok) { toast({ title: "Teste não encontrado", variant: "destructive" }); setLoading(false); return; }
+    setTest(data.teste);
+    setQuestions((data.questoes || []) as Question[]);
     setLoading(false);
   };
 
@@ -104,11 +85,11 @@ export default function ProgressTestStudentPortal() {
       toast({ title: "Conteúdo das questões não foi carregado. Tente recarregar a página.", variant: "destructive" });
       return;
     }
-    const { data, error } = await supabase.from("progress_test_sessions" as any).insert({
-      test_id: testId, student_name: name, student_email: email || null, student_year: Number(studentYear),
-    } as any).select().single();
-    if (error) { toast({ title: "Erro ao iniciar", variant: "destructive" }); return; }
-    setSessionId((data as any).id);
+    const { data, error } = await supabase.functions.invoke("progress-aluno", {
+      body: { action: "iniciar", test_id: testId, name, email: email || null, year: Number(studentYear) },
+    });
+    if (error || !data?.ok) { toast({ title: "Erro ao iniciar", variant: "destructive" }); return; }
+    setSessionId(data.session_id);
     setStep("exam");
   };
 
@@ -121,41 +102,15 @@ export default function ProgressTestStudentPortal() {
   };
 
   const handleFinish = async () => {
-    let correct = 0;
-    let incorrect = 0;
-    let annulled = 0;
-
-    for (const q of questions) {
-      const ans = answers[q.id];
-      const responseType = ans?.responseType || "blank";
-      let isCorrect = false;
-
-      if (responseType === "answered" && ans?.answer && q.questionData) {
-        const content = q.questionData.content_json as any;
-        const correctKey = content?.correct_answer ?? content?.correctAnswer;
-        if (correctKey !== undefined) {
-          isCorrect = String(ans.answer).toLowerCase() === String(correctKey).toLowerCase();
-        }
-      }
-      if (responseType === "annulled") annulled++;
-      else if (responseType === "answered") { if (isCorrect) correct++; else incorrect++; }
-
-      await supabase.from("progress_test_answers" as any).insert({
-        session_id: sessionId,
-        question_id: q.id,
-        answer_json: { answer: ans?.answer || null },
-        is_correct: isCorrect,
-        response_type: responseType,
-      } as any);
+    // O servidor corrige pelas respostas enviadas e devolve só o resultado
+    const { data, error } = await supabase.functions.invoke("progress-aluno", {
+      body: { action: "enviar", session_id: sessionId, answers },
+    });
+    if (error || !data?.ok) {
+      toast({ title: data?.motivo === "ja_enviada" ? "Estas respostas já foram enviadas." : "Não foi possível enviar. Tente novamente.", variant: "destructive" });
+      return;
     }
-
-    const finalScore = Math.max(0, correct - incorrect);
-
-    await supabase.from("progress_test_sessions" as any).update({
-      status: "finished", total_score: finalScore, max_score: questions.length, finished_at: new Date().toISOString(),
-    } as any).eq("id", sessionId);
-
-    setScore({ total: finalScore, max: questions.length });
+    setScore({ total: data.total, max: data.max });
     setStep("finished");
   };
 
