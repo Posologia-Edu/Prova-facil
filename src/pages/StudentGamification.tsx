@@ -12,11 +12,12 @@ const ICON_MAP: Record<string, React.ElementType> = {
 
 interface PointRow { id: string; points: number; source: string; created_at: string; }
 interface AchievementRow { id: string; unlocked_at: string; achievement_definitions: { key: string; title: string; description: string; icon: string; category: string; points_reward: number; } | null; }
-interface RankingEntry { student_email: string; total_points: number; }
+interface RankingEntry { eu: boolean; rotulo: string; total_points: number; }
 
 export default function StudentGamification() {
   const navigate = useNavigate();
   const studentEmail = sessionStorage.getItem("student_email");
+  const studentSessionId = sessionStorage.getItem("student_session_id");
   const [loading, setLoading] = useState(true);
   const [points, setPoints] = useState<PointRow[]>([]);
   const [achievements, setAchievements] = useState<AchievementRow[]>([]);
@@ -24,35 +25,29 @@ export default function StudentGamification() {
   const [totalPoints, setTotalPoints] = useState(0);
 
   useEffect(() => {
-    if (!studentEmail) { navigate("/student/auth"); return; }
+    if (!studentEmail || !studentSessionId) { navigate("/student/auth"); return; }
     loadData();
   }, [studentEmail]);
 
   const loadData = async () => {
-    const [pointsRes, achievementsRes, rankingsRes] = await Promise.all([
-      supabase.from("student_points").select("*").eq("student_email", studentEmail!).order("created_at", { ascending: false }),
-      supabase.from("student_achievements").select("*, achievement_definitions(*)").eq("student_email", studentEmail!),
-      supabase.from("student_points").select("student_email, points"),
-    ]);
+    // Tudo vem da função gamificacao-aluno, que confere a sessão de prova do aluno e só entrega os dados dele
+    // (o ranking chega com os nomes dos outros alunos mascarados)
+    const { data, error } = await supabase.functions.invoke("gamificacao-aluno", {
+      body: { action: "gamificacao", email: studentEmail, session_id: studentSessionId },
+    });
+    if (error || !data?.ok) { navigate("/student/auth"); return; }
 
-    const pts = (pointsRes.data || []) as PointRow[];
+    const pts = (data.pontos || []) as PointRow[];
     setPoints(pts);
     setTotalPoints(pts.reduce((s, p) => s + p.points, 0));
-    setAchievements((achievementsRes.data || []) as unknown as AchievementRow[]);
-
-    // Build rankings
-    const rankMap: Record<string, number> = {};
-    (rankingsRes.data || []).forEach((r: any) => {
-      rankMap[r.student_email] = (rankMap[r.student_email] || 0) + r.points;
-    });
-    const sorted = Object.entries(rankMap).map(([email, total]) => ({ student_email: email, total_points: total })).sort((a, b) => b.total_points - a.total_points);
-    setRankings(sorted.slice(0, 10));
+    setAchievements((data.conquistas || []) as unknown as AchievementRow[]);
+    setRankings((data.ranking || []) as RankingEntry[]);
     setLoading(false);
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
-  const myRank = rankings.findIndex(r => r.student_email === studentEmail) + 1;
+  const myRank = rankings.findIndex(r => r.eu) + 1;
 
   return (
     <div className="min-h-screen bg-background">
@@ -128,10 +123,10 @@ export default function StudentGamification() {
             ) : (
               <div className="space-y-2">
                 {rankings.map((r, i) => (
-                  <div key={r.student_email} className={`flex items-center justify-between p-3 rounded-lg ${r.student_email === studentEmail ? "bg-primary/10 border border-primary/30" : "bg-muted/30"}`}>
+                  <div key={i} className={`flex items-center justify-between p-3 rounded-lg ${r.eu ? "bg-primary/10 border border-primary/30" : "bg-muted/30"}`}>
                     <div className="flex items-center gap-3">
                       <span className={`text-lg font-bold w-8 ${i < 3 ? "text-primary" : "text-muted-foreground"}`}>#{i + 1}</span>
-                      <span className="text-sm">{r.student_email === studentEmail ? "Você" : r.student_email.replace(/@.*/, "")}</span>
+                      <span className="text-sm">{r.rotulo}</span>
                     </div>
                     <Badge variant="outline">{r.total_points} pts</Badge>
                   </div>

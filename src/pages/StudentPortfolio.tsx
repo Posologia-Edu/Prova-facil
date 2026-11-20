@@ -18,6 +18,7 @@ export default function StudentPortfolio() {
   const navigate = useNavigate();
   const { studentEmail: paramEmail } = useParams();
   const sessionEmail = sessionStorage.getItem("student_email");
+  const sessionId = sessionStorage.getItem("student_session_id");
   const email = paramEmail || sessionEmail;
   const isTeacherView = !!paramEmail;
 
@@ -27,11 +28,24 @@ export default function StudentPortfolio() {
   const [achievements, setAchievements] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!email) { navigate("/student/auth"); return; }
+    if (!email || (!isTeacherView && !sessionId)) { navigate("/student/auth"); return; }
     loadPortfolio();
   }, [email]);
 
   const loadPortfolio = async () => {
+    // Aluno: tudo vem da função gamificacao-aluno (confere a sessão de prova e só entrega os dados dele).
+    // Professor (rota /portfolio/:studentEmail, logado): segue lendo com a própria conta.
+    if (!isTeacherView) {
+      const { data, error } = await supabase.functions.invoke("gamificacao-aluno", {
+        body: { action: "portfolio", email, session_id: sessionId },
+      });
+      if (error || !data?.ok) { navigate("/student/auth"); return; }
+      setEntries((data.entradas || []) as PortfolioEntry[]);
+      setFeedbacks(data.feedbacks || []);
+      setAchievements(data.conquistas || []);
+      setLoading(false);
+      return;
+    }
     // Get or create portfolio
     let { data: portfolio } = await supabase.from("student_portfolios").select("id").eq("student_email", email!).maybeSingle();
     if (!portfolio) {
