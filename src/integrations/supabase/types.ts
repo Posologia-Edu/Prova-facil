@@ -1952,6 +1952,7 @@ export type Database = {
       }
       documentation_clinical_cases: {
         Row: {
+          caso_json: Json | null
           content: string | null
           created_at: string
           id: string
@@ -1961,6 +1962,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          caso_json?: Json | null
           content?: string | null
           created_at?: string
           id?: string
@@ -1970,6 +1972,7 @@ export type Database = {
           title?: string
         }
         Update: {
+          caso_json?: Json | null
           content?: string | null
           created_at?: string
           id?: string
@@ -2154,6 +2157,7 @@ export type Database = {
       documentation_rooms: {
         Row: {
           access_code: string
+          base_conciliacao: string
           competency_ids: string[] | null
           created_at: string
           deleted_at: string | null
@@ -2161,13 +2165,16 @@ export type Database = {
           id: string
           is_archived: boolean
           reconciliation_room_id: string | null
+          schema_version: number
           status: string
+          tempo_sugerido_min: number | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
           access_code?: string
+          base_conciliacao?: string
           competency_ids?: string[] | null
           created_at?: string
           deleted_at?: string | null
@@ -2175,13 +2182,16 @@ export type Database = {
           id?: string
           is_archived?: boolean
           reconciliation_room_id?: string | null
+          schema_version?: number
           status?: string
+          tempo_sugerido_min?: number | null
           title?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           access_code?: string
+          base_conciliacao?: string
           competency_ids?: string[] | null
           created_at?: string
           deleted_at?: string | null
@@ -2189,7 +2199,9 @@ export type Database = {
           id?: string
           is_archived?: boolean
           reconciliation_room_id?: string | null
+          schema_version?: number
           status?: string
+          tempo_sugerido_min?: number | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -2200,6 +2212,96 @@ export type Database = {
             columns: ["reconciliation_room_id"]
             isOneToOne: false
             referencedRelation: "reconciliation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_v2_privado: {
+        Row: {
+          case_id: string
+          created_at: string
+          gabarito: Json
+          referencia: Json
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          gabarito?: Json
+          referencia?: Json
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          gabarito?: Json
+          referencia?: Json
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_v2_privado_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "documentation_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_v2_privado_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_v2_respostas: {
+        Row: {
+          clinical_case_id: string | null
+          created_at: string
+          id: string
+          pair_index: number
+          respostas: Json
+          room_id: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinical_case_id?: string | null
+          created_at?: string
+          id?: string
+          pair_index: number
+          respostas?: Json
+          room_id: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinical_case_id?: string | null
+          created_at?: string
+          id?: string
+          pair_index?: number
+          respostas?: Json
+          room_id?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_v2_respostas_clinical_case_id_fkey"
+            columns: ["clinical_case_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_clinical_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_v2_respostas_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_rooms"
             referencedColumns: ["id"]
           },
         ]
