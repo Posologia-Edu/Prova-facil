@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# dados de teste do acesso por PIN (gerados por scripts/dados-teste-pin.mjs)
+scripts/testes-pin.local.json
+scripts/testes-pin.dados.json

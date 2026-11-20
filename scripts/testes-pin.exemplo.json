@@ -1,0 +1,21 @@
+{
+  "_como_usar": "Copie para scripts/testes-pin.local.json e preencha só o que tiver. O que faltar aparece como PULADO. Use dados de TESTE: nada aqui é secreto, mas o B5 grava uma resposta.",
+  "documentacao": { "codigo": "CODIGO_DA_SALA_DE_DOCUMENTACAO" },
+  "area": { "modulo": "nursing", "codigo": "CODIGO_DA_SALA_DO_MODULO" },
+  "reconciliacao": { "codigo": "CODIGO_DA_SALA_DE_RECONCILIACAO" },
+  "juri": {
+    "codigo": "CODIGO_DO_JURI",
+    "emailGrupoA": "email de um aluno do grupo 1",
+    "emailGrupoB": "email de um aluno do grupo 2",
+    "formId": "id de um formulario do papel do grupo A (so para --escrever)",
+    "sessionId": "id de uma sessao ABERTA de um caso de que o grupo A participa (so para --escrever)"
+  },
+  "pacienteVirtual": {
+    "sessaoAbertaId": "id de uma sessao NAO concluida",
+    "pacienteDaSessao": "patient_id dessa sessao",
+    "sessaoConcluidaId": "id de uma sessao concluida",
+    "pacienteDaSessaoConcluida": "patient_id dessa sessao"
+  },
+  "osce": { "estacaoId": "id de uma estacao com paciente virtual de um circuito em andamento" },
+  "gamificacao": { "sessionId": "id de uma exam_sessions de um aluno de teste", "email": "email desse aluno" }
+}
