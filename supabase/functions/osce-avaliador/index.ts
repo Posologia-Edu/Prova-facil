@@ -112,7 +112,7 @@ serve(async (req) => {
 
     // ---------- iniciar ----------
     if (action === "iniciar") {
-      if (!aluno) return json({ ok: false, motivo: "sem_aluno" }, 409);
+      if (!aluno) return json({ ok: false, motivo: "sem_aluno" });
       const { data: abertas } = await db.from("osce_evaluations").select("id")
         .eq("circuit_id", circuito.id).eq("station_id", estacaoId).eq("student_email", aluno.student_email)
         .eq("rotation", aluno.current_rotation || 0).is("finished_at", null).limit(1);
@@ -133,7 +133,7 @@ serve(async (req) => {
       if (!av || av.circuit_id !== circuito.id || av.station_id !== estacaoId) return json({ ok: false, motivo: "avaliacao" }, 403);
 
       if (action === "item") {
-        if (av.finished_at) return json({ ok: false, motivo: "finalizada" }, 409);
+        if (av.finished_at) return json({ ok: false, motivo: "finalizada" });
         const { checklist_item_id, value, notes } = b;
         if (typeof checklist_item_id !== "string" || !UUID.test(checklist_item_id)) return json({ error: "Dados inválidos" }, 400);
         const { data: it } = await db.from("osce_checklist_items").select("id, type, likert_max, max_points")

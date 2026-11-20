@@ -37,11 +37,11 @@ export default function SctExpertPortal() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data: exam } = await supabase.from("sct_exams").select("title").eq("id", examId!).single();
-      if (exam) setExamTitle(exam.title);
-
-      const { data: sc } = await supabase.from("sct_scenarios").select("*").eq("sct_exam_id", examId!).order("position");
-      setScenarios((sc || []) as Scenario[]);
+      const { data } = await supabase.functions.invoke("sct-aluno", { body: { action: "especialista_exame", exam_id: examId } });
+      if (data?.ok) {
+        setExamTitle(data.titulo);
+        setScenarios((data.cenarios || []) as Scenario[]);
+      }
       setLoading(false);
     };
     fetch();
@@ -59,16 +59,15 @@ export default function SctExpertPortal() {
     }
 
     setSubmitting(true);
-    const inserts = scenarios.map(s => ({
-      scenario_id: s.id,
-      expert_email: expertEmail.trim(),
-      expert_name: expertName.trim(),
-      likert_value: answers[s.id],
-    }));
-
-    const { error } = await supabase.from("sct_expert_responses").insert(inserts);
-    if (error) {
-      toast.error("Erro ao enviar respostas");
+    const { data, error } = await supabase.functions.invoke("sct-aluno", {
+      body: { action: "especialista_enviar", exam_id: examId, name: expertName.trim(), email: expertEmail.trim(), answers },
+    });
+    if (error || !data?.ok) {
+      toast.error(
+        data?.motivo === "painel_fechado" ? "O painel de especialistas deste exame já está fechado."
+        : data?.motivo === "ja_respondeu" ? "Este e-mail já enviou as respostas deste painel."
+        : "Erro ao enviar respostas",
+      );
       setSubmitting(false);
       return;
     }

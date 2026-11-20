@@ -97,7 +97,9 @@ export default function OsceEvaluator() {
   const createEvaluation = useMutation({
     mutationFn: async () => {
       if (!circuit || !selectedStationId || !currentStudent) throw new Error("Dados incompletos");
-      return await chamar({ action: "iniciar" });
+      const r = await chamar({ action: "iniciar" });
+      if (!r?.ok) throw new Error("Nenhum aluno está na estação agora.");
+      return r;
     },
     onSuccess: (data) => {
       setEvaluationId(data.avaliacao_id);
@@ -111,7 +113,8 @@ export default function OsceEvaluator() {
   const saveObservations = useMutation({
     mutationFn: async () => {
       if (!evaluationId) return;
-      await chamar({ action: "finalizar", evaluation_id: evaluationId, observations });
+      const r = await chamar({ action: "finalizar", evaluation_id: evaluationId, observations });
+      if (!r?.ok) throw new Error("Esta avaliação não pôde ser finalizada.");
     },
     onSuccess: () => {
       toast.success("Avaliação finalizada! Aguardando próximo aluno.");

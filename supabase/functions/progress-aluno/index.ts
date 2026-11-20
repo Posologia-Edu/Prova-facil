@@ -44,7 +44,7 @@ serve(async (req) => {
       const respostas = b.answers && typeof b.answers === "object" && !Array.isArray(b.answers) ? b.answers : {};
       const { data: sessao } = await db.from("progress_test_sessions").select("id, test_id, status").eq("id", b.session_id).maybeSingle();
       if (!sessao) return json({ ok: false, motivo: "sessao" }, 404);
-      if (sessao.status !== "in_progress") return json({ ok: false, motivo: "ja_enviada" }, 409);
+      if (sessao.status !== "in_progress") return json({ ok: false, motivo: "ja_enviada" });
 
       const { data: ptqs } = await db.from("progress_test_questions").select("id, question_id").eq("test_id", sessao.test_id).order("position");
       const ids = (ptqs || []).map((q: any) => q.question_id);
@@ -101,7 +101,7 @@ serve(async (req) => {
     }
 
     // iniciar
-    if (teste.status !== "published") return json({ ok: false, motivo: "fechado" }, 409);
+    if (teste.status !== "published") return json({ ok: false, motivo: "fechado" });
     const nome = typeof b.name === "string" ? b.name.trim().slice(0, 200) : "";
     if (!nome) return json({ error: "Informe seu nome" }, 400);
     const email = typeof b.email === "string" && b.email.trim() ? b.email.trim().slice(0, 200) : null;

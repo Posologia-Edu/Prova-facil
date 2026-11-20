@@ -28,7 +28,7 @@ serve(async (req) => {
       if (!b.rankings || typeof b.rankings !== "object" || Array.isArray(b.rankings)) return json({ error: "Dados inválidos" }, 400);
       const { data: sessao } = await db.from("sjt_sessions").select("id, sjt_exam_id, status").eq("id", b.session_id).maybeSingle();
       if (!sessao) return json({ ok: false, motivo: "sessao" }, 404);
-      if (sessao.status !== "in_progress") return json({ ok: false, motivo: "ja_enviada" }, 409);
+      if (sessao.status !== "in_progress") return json({ ok: false, motivo: "ja_enviada" });
 
       const { data: cenarios } = await db.from("sjt_scenarios").select("id, actions_json, correct_ranking_json")
         .eq("sjt_exam_id", sessao.sjt_exam_id).order("position");
@@ -76,7 +76,7 @@ serve(async (req) => {
     }
 
     // iniciar
-    if (prova.status !== "active") return json({ ok: false, motivo: "fechada" }, 409);
+    if (prova.status !== "active") return json({ ok: false, motivo: "fechada" });
     const nome = typeof b.name === "string" ? b.name.trim().slice(0, 200) : "";
     const email = typeof b.email === "string" ? b.email.trim().slice(0, 200) : "";
     if (!nome || !email) return json({ error: "Preencha nome e e-mail" }, 400);

@@ -40,14 +40,14 @@ export default function SctStudentPortal() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // A prova vem da função sct-aluno; o painel de especialistas (gabarito) nunca sai do servidor
     const fetch = async () => {
-      const { data: exam } = await supabase.from("sct_exams").select("title, status").eq("id", examId!).single();
-      if (exam) {
-        setExamTitle(exam.title);
-        setExamStatus(exam.status);
+      const { data } = await supabase.functions.invoke("sct-aluno", { body: { action: "exame", exam_id: examId } });
+      if (data?.ok) {
+        setExamTitle(data.titulo);
+        setExamStatus(data.status);
+        setScenarios((data.cenarios || []) as Scenario[]);
       }
-      const { data: sc } = await supabase.from("sct_scenarios").select("*").eq("sct_exam_id", examId!).order("position");
-      setScenarios((sc || []) as Scenario[]);
       setLoading(false);
     };
     fetch();
@@ -59,14 +59,12 @@ export default function SctStudentPortal() {
       return;
     }
 
-    const { data, error } = await supabase.from("sct_student_sessions").insert({
-      sct_exam_id: examId!,
-      student_name: studentName.trim(),
-      student_email: studentEmail.trim(),
-    }).select().single();
+    const { data, error } = await supabase.functions.invoke("sct-aluno", {
+      body: { action: "iniciar", exam_id: examId, name: studentName.trim(), email: studentEmail.trim() },
+    });
 
-    if (error) { toast.error("Erro ao iniciar sessão"); return; }
-    setSessionId(data.id);
+    if (error || !data?.ok) { toast.error(data?.error || "Erro ao iniciar sessão"); return; }
+    setSessionId(data.session_id);
     setPhase("exam");
   };
 
@@ -79,47 +77,16 @@ export default function SctStudentPortal() {
 
     setSubmitting(true);
 
-    // Get expert responses for scoring
-    const scenarioIds = scenarios.map(s => s.id);
-    const { data: expertResp } = await supabase.from("sct_expert_responses").select("*").in("scenario_id", scenarioIds);
-
-    let totalScore = 0;
-    let maxScore = 0;
-
-    const answerInserts = scenarios.map(s => {
-      const responses = (expertResp || []).filter((r: any) => r.scenario_id === s.id);
-      const totalExperts = responses.length;
-      let scenarioScore = 0;
-
-      if (totalExperts > 0) {
-        // Partial credit: score = count of experts who chose same answer / max count
-        const dist: Record<number, number> = {};
-        responses.forEach((r: any) => { dist[r.likert_value] = (dist[r.likert_value] || 0) + 1; });
-        const maxFreq = Math.max(...Object.values(dist));
-        const studentFreq = dist[answers[s.id]] || 0;
-        scenarioScore = maxFreq > 0 ? studentFreq / maxFreq : 0;
-      }
-
-      totalScore += scenarioScore;
-      maxScore += 1;
-
-      return {
-        session_id: sessionId!,
-        scenario_id: s.id,
-        likert_value: answers[s.id],
-        score: parseFloat(scenarioScore.toFixed(3)),
-      };
+    // O servidor calcula a nota com o painel de especialistas e devolve só o resultado
+    const { data, error } = await supabase.functions.invoke("sct-aluno", {
+      body: { action: "enviar", session_id: sessionId, answers },
     });
-
-    await supabase.from("sct_student_answers").insert(answerInserts);
-    await supabase.from("sct_student_sessions").update({
-      status: "submitted",
-      finished_at: new Date().toISOString(),
-      total_score: parseFloat(totalScore.toFixed(3)),
-      max_score: maxScore,
-    }).eq("id", sessionId!);
-
-    setScore({ total: totalScore, max: maxScore });
+    if (error || !data?.ok) {
+      toast.error(data?.motivo === "ja_enviada" ? "Estas respostas já foram enviadas." : "Não foi possível enviar. Tente novamente.");
+      setSubmitting(false);
+      return;
+    }
+    setScore({ total: data.total, max: data.max });
     setPhase("result");
     setSubmitting(false);
   };
