@@ -285,3 +285,24 @@ export function verificarTudo(r: RespostasV2, referencia: ItemReferencia[]): Avi
     ...verificarPlano(r.plano),
   ];
 }
+
+/** Os quatro documentos em texto corrido, para o professor ler na correção. */
+export function resumoDocumentos(r: RespostasV2): string {
+  const t = (v: unknown) => String(v ?? "").trim() || "—";
+  const e = r.encaminhamento, c = r.cartao, p = r.plano;
+  const l: string[] = [];
+  l.push("ENCAMINHAMENTO", `Para: ${t(e.destinatario)} (${t(e.cargo)}, ${t(e.servico)}) · prioridade ${t(e.prioridade)} · prazo ${t(e.prazo)}`);
+  l.push(`S: ${t(e.s)}`, `B: ${t(e.b)}`, `A: ${t(e.a)}`, `R: ${t(e.r)}`);
+  for (const x of e.problemas) if (x.problema.trim() || x.sugestao.trim()) l.push(`  • [${t(x.prioridade)}] ${t(x.problema)} | evidência: ${t(x.evidencia)} | sugestão: ${t(x.sugestao)}`);
+  l.push(`Assinado: ${t(e.farmaceutico)} ${t(e.crf)}, ${t(e.data)}`, "", "REGISTRO DE INTERVENÇÃO");
+  for (const x of r.intervencao.linhas) if (Object.values(x).some((v) => String(v).trim())) l.push(`  • ${t(x.medicamento)} | problema: ${t(x.problema)} | causa: ${t(x.causa)} | intervenção: ${t(x.intervencao)} | a quem: ${t(x.alvo)} | aceitação: ${t(x.aceitacao)} | desfecho: ${t(x.desfecho)}`);
+  l.push("", "CARTÃO DE MEDICAMENTOS");
+  for (const x of c.linhas) if (preenchida(x)) {
+    const grade = [x.manha && "manhã", x.tarde && "tarde", x.noite && "noite", x.deitar && "deitar"].filter(Boolean).join(", ") || "sem horário";
+    l.push(`  • ${t(x.medicamento)} | ${t(x.para_que)} | ${t(x.como_tomar)} | ${t(x.frequencia)} → ${grade} | mudou: ${t(x.mudou)}${x.cuidado.trim() ? ` | cuidado: ${x.cuidado}` : ""}`);
+  }
+  l.push(`Pare de usar: ${c.pare.filter((x) => x.medicamento.trim()).map((x) => `${x.medicamento} (${t(x.motivo)})`).join("; ") || "—"}`);
+  l.push(`Se esquecer: ${t(c.se_esquecer)}`, `Procure atendimento: ${t(c.procure_atendimento)}`, `Onde conseguir: ${t(c.onde_conseguir)}`);
+  l.push("", "PLANO DE CUIDADO", `Metas: ${t(p.metas)}`, `Ações: ${t(p.acoes)}`, `Monitorização: ${t(p.monitorizacao)}`, `Retorno: ${t(p.retorno)}`);
+  return l.join("\n");
+}

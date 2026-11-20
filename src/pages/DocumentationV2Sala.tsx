@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import type { ItemReferencia } from "@/lib/doc-v2";
+import DocV2Correcao from "@/components/documentation/DocV2Correcao";
 
 type Conduta = ItemReferencia["conduta"];
 const CONDUTAS: { v: Conduta; r: string }[] = [{ v: "mantido", r: "Mantido" }, { v: "alterado", r: "Alterado" }, { v: "novo", r: "Novo" }, { v: "suspenso", r: "Suspenso" }];
@@ -42,10 +43,16 @@ export default function DocumentationV2Sala() {
   });
   const { data: respostas } = useQuery({
     queryKey: ["doc-v2-respostas", roomId],
-    queryFn: async () => (await supabase.from("documentation_v2_respostas" as any).select("pair_index, submitted_at").eq("room_id", roomId!)).data as any[] || [],
+    queryFn: async () => (await supabase.from("documentation_v2_respostas" as any).select("id, pair_index, clinical_case_id, respostas, submitted_at").eq("room_id", roomId!)).data as any[] || [],
     enabled: !!roomId,
     refetchInterval: 15000,
   });
+  const { data: avaliacoes } = useQuery({
+    queryKey: ["doc-v2-avaliacoes", roomId],
+    queryFn: async () => (await supabase.from("documentation_v2_avaliacoes" as any).select("response_id, nota, confirmada, liberada").eq("room_id", roomId!)).data as any[] || [],
+    enabled: !!roomId,
+  });
+  const [aberta, setAberta] = useState<number | null>(null);
 
   const [tempo, setTempo] = useState("");
   const [base, setBase] = useState("validada");
@@ -153,16 +160,32 @@ export default function DocumentationV2Sala() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="font-heading text-base font-medium">Duplas e entregas</CardTitle><p className="text-xs text-muted-foreground">Só entraram as duplas completas da Reconciliação. A correção chega na etapa seguinte.</p></CardHeader>
+        <CardHeader><CardTitle className="font-heading text-base font-medium">Duplas e entregas</CardTitle><p className="text-xs text-muted-foreground">Só entraram as duplas completas da Reconciliação. A IA sugere a nota; você confirma e libera a devolutiva.</p></CardHeader>
         <CardContent>
           {duplas.size === 0 ? <p className="text-sm text-muted-foreground">Nenhuma dupla.</p> : (
             <ul className="divide-y text-sm">
-              {[...duplas.entries()].map(([i, g]) => (
-                <li key={i} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                  <span><b>Dupla {i + 1}</b>: {g.map((p) => p.student_name).join(" e ")}</span>
-                  {enviou(i) ? <Badge className="gap-1"><CheckCircle2 className="h-3 w-3" />Enviada</Badge> : <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Pendente</Badge>}
-                </li>
-              ))}
+              {[...duplas.entries()].map(([i, g]) => {
+                const resp = (respostas || []).find((r: any) => r.pair_index === i && r.submitted_at);
+                const av = resp ? (avaliacoes || []).find((a: any) => a.response_id === resp.id) : null;
+                const casoDaDupla = resp ? (casos || []).find((c) => c.id === resp.clinical_case_id) : null;
+                return (
+                  <li key={i} className="space-y-2 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span><b>Dupla {i + 1}</b>: {g.map((p) => p.student_name).join(" e ")}</span>
+                      <span className="flex items-center gap-2">
+                        {av?.confirmada && <Badge variant="secondary">{Number(av.nota).toFixed(2).replace(".", ",")}/10{av.liberada ? " · liberada" : ""}</Badge>}
+                        {resp ? <Badge className="gap-1"><CheckCircle2 className="h-3 w-3" />Enviada</Badge> : <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Pendente</Badge>}
+                        {resp && <Button size="sm" variant="outline" onClick={() => setAberta(aberta === i ? null : i)}>{aberta === i ? "Fechar" : "Corrigir"}</Button>}
+                      </span>
+                    </div>
+                    {resp && aberta === i && (
+                      <DocV2Correcao roomId={roomId!} usaPaciente={false} response={{ id: resp.id, respostas: resp.respostas }}
+                        referencia={(refs[casoDaDupla?.id || ""] || []) as ItemReferencia[]}
+                        onSaved={() => qc.invalidateQueries({ queryKey: ["doc-v2-avaliacoes", roomId] })} />
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>

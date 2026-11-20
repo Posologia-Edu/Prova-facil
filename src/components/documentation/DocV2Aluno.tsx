@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+import DocV2Devolutiva from "@/components/documentation/DocV2Devolutiva";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { ROTULO_FONTE, ROTULO_TRANSICAO, type CasoV2 } from "@/lib/recon-v2";
 import {
@@ -297,7 +298,7 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
           </Card>
 
           {finalizada ? (
-            <Card><CardContent className="py-8 text-center"><CheckCircle2 className="mx-auto mb-2 h-10 w-10 text-success" /><p className="font-medium">Documentação enviada.</p><p className="text-sm text-muted-foreground">Aguarde a avaliação do professor.</p></CardContent></Card>
+            <DocV2Devolutiva accessCode={accessCode} email={email} />
           ) : (
             <>
               <div className="flex justify-end"><DraftStatusBadge status={draftStatus} lastSavedAt={lastSavedAt} /></div>
