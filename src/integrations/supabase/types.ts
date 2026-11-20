@@ -2170,6 +2170,7 @@ export type Database = {
           tempo_sugerido_min: number | null
           title: string
           updated_at: string
+          usa_paciente: boolean
           user_id: string
         }
         Insert: {
@@ -2187,6 +2188,7 @@ export type Database = {
           tempo_sugerido_min?: number | null
           title?: string
           updated_at?: string
+          usa_paciente?: boolean
           user_id: string
         }
         Update: {
@@ -2204,6 +2206,7 @@ export type Database = {
           tempo_sugerido_min?: number | null
           title?: string
           updated_at?: string
+          usa_paciente?: boolean
           user_id?: string
         }
         Relationships: [
@@ -2264,6 +2267,45 @@ export type Database = {
           },
         ]
       }
+      documentation_v2_paciente: {
+        Row: {
+          created_at: string
+          dados: Json
+          response_id: string
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dados?: Json
+          response_id: string
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dados?: Json
+          response_id?: string
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_v2_paciente_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: true
+            referencedRelation: "documentation_v2_respostas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_v2_paciente_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documentation_v2_privado: {
         Row: {
           case_id: string
@@ -2308,6 +2350,7 @@ export type Database = {
       }
       documentation_v2_respostas: {
         Row: {
+          aconselhamento_concluido_at: string | null
           clinical_case_id: string | null
           created_at: string
           id: string
@@ -2318,6 +2361,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aconselhamento_concluido_at?: string | null
           clinical_case_id?: string | null
           created_at?: string
           id?: string
@@ -2328,6 +2372,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aconselhamento_concluido_at?: string | null
           clinical_case_id?: string | null
           created_at?: string
           id?: string
