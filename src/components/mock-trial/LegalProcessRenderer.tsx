@@ -9,6 +9,8 @@ interface Props {
   caseNumber?: string;
   title?: string;
   caseId?: string;
+  /** Imagens já carregadas por quem chama (portal do aluno, via função). Se vier, não lê o banco nem escuta o realtime. */
+  images?: CaseImage[];
 }
 
 interface CaseImage {
@@ -89,11 +91,12 @@ function PlaceholderRenderer({ children, images }: { children: string; images: C
   return <>{nodes}</>;
 }
 
-export function LegalProcessRenderer({ content, caseNumber, title, caseId }: Props) {
-  const [images, setImages] = useState<CaseImage[]>([]);
+export function LegalProcessRenderer({ content, caseNumber, title, caseId, images: imagesProp }: Props) {
+  const [loadedImages, setImages] = useState<CaseImage[]>([]);
+  const images = imagesProp ?? loadedImages;
 
   useEffect(() => {
-    if (!caseId) return;
+    if (!caseId || imagesProp) return;
     let active = true;
     const load = async () => {
       const { data } = await (supabase as any)
@@ -115,7 +118,7 @@ export function LegalProcessRenderer({ content, caseNumber, title, caseId }: Pro
       active = false;
       supabase.removeChannel(ch);
     };
-  }, [caseId]);
+  }, [caseId, !!imagesProp]);
 
   const resolved = resolveAnchors(content, images);
 

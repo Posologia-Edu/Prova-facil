@@ -104,79 +104,45 @@ export default function MockTrialStudent() {
     }
   }, []);
 
+  const [pollKey, setPollKey] = useState("");
+  const [caseImages, setCaseImages] = useState<any[]>([]);
+  const prevStatusRef = useRef<Record<string, string>>({});
+
+  // Aplica o que a função devolve. Na primeira vez escolhe o caso inicial; nas seguintes só atualiza os dados.
+  const applyState = (d: any, first: boolean) => {
+    setTrial(d.juri);
+    setMyStudent({ student_name: d.participante.name, student_email: d.participante.email });
+    setStudentName(d.participante.name);
+    setMyGroup(d.grupo);
+    setGroupMembers(d.integrantes || []);
+    setCases(d.casos || []);
+    setAssignments(d.atribuicoes || []);
+    setSessions(d.sessoes || []);
+    setForms(d.formularios || []);
+    setCaseImages(d.imagens || []);
+    setSubmittedFormKeys(new Set<string>(d.enviados || []));
+    if (first) for (const s of d.sessoes || []) prevStatusRef.current[s.id] = s.status;
+    if (first && d.casos?.length) setSelectedCaseId(d.casos[0].id);
+  };
+
   const authenticateWithEmail = async (email: string) => {
     if (!email.trim()) {
       toast.error("Informe seu email");
       return;
     }
-
-    // Find trial by access code
-    const { data: trialData } = await supabase
-      .from("mock_trials")
-      .select("*")
-      .eq("access_code", accessCode!)
-      .single();
-    if (!trialData) { toast.error("Júri não encontrado"); return; }
-    setTrial(trialData);
-
-    const { data: grps } = await supabase.from("mock_trial_groups").select("*").eq("mock_trial_id", trialData.id).order("group_number");
-    setGroups(grps || []);
-
-    if (!grps || grps.length === 0) { toast.error("Nenhum grupo encontrado"); return; }
-
-    const groupIds = grps.map(g => g.id);
-    const { data: studs } = await supabase.from("mock_trial_students").select("*").in("group_id", groupIds);
-
-    const normalizeEmail = (e: string) => e.trim().toLowerCase();
-    const found = studs?.find(s => normalizeEmail(s.student_email || "") === normalizeEmail(email));
-
-    if (!found) {
-      toast.error("Email não encontrado neste júri simulado");
+    const { data, error } = await supabase.functions.invoke("juri-aluno", {
+      body: { action: "entrar", access_code: accessCode, email: email.trim() },
+    });
+    if (error || data?.error) { toast.error("Não foi possível entrar. Tente de novo."); return; }
+    if (!data?.ok) {
+      if (data?.motivo === "juri") toast.error("Júri não encontrado");
+      else if (data?.motivo === "grupos") toast.error("Nenhum grupo encontrado");
+      else toast.error("Email não encontrado neste júri simulado");
       return;
     }
-
-    setMyStudent(found);
-    setStudentName(found.student_name);
-    const group = grps.find(g => g.id === found.group_id);
-    setMyGroup(group);
-
-    // Load ALL members of the same group so the room shows the entire team
-    const allGroupStudents = (studs || []).filter(s => s.group_id === found.group_id);
-    setGroupMembers(
-      allGroupStudents.map(s => ({
-        email: s.student_email || "",
-        name: s.student_name || "",
-      })),
-    );
-
-    // Load cases, assignments, sessions, forms
-    const { data: cs } = await supabase.from("mock_trial_cases").select("*").eq("mock_trial_id", trialData.id).order("position");
-    setCases(cs || []);
-    if (cs && cs.length > 0) setSelectedCaseId(cs[0].id);
-
-    const caseIds = (cs || []).map(c => c.id);
-    if (caseIds.length > 0) {
-      const { data: assigns } = await supabase.from("mock_trial_assignments").select("*").in("case_id", caseIds);
-      setAssignments(assigns || []);
-
-      const { data: sess } = await supabase.from("mock_trial_sessions").select("*").in("case_id", caseIds);
-      setSessions(sess || []);
-    }
-
-    const { data: frms } = await supabase.from("mock_trial_forms").select("*").eq("mock_trial_id", trialData.id);
-    setForms(frms || []);
-
-    // Load existing responses from this group to block re-submission
-    if (group?.id) {
-      const { data: resps } = await supabase
-        .from("mock_trial_responses")
-        .select("form_id, session_id, group_id")
-        .eq("group_id", group.id);
-      setSubmittedFormKeys(
-        new Set((resps || []).map((r: any) => `${r.session_id}:${r.form_id}`)),
-      );
-    }
-
+    setStudentEmail(email.trim());
+    setPollKey(email.trim());
+    applyState(data, true);
     setAuthenticated(true);
   };
 
@@ -184,33 +150,27 @@ export default function MockTrialStudent() {
     await authenticateWithEmail(studentEmail);
   };
 
-  // Realtime for sessions
+  // Acompanha a sessão (substitui o realtime): consulta a função a cada 4 segundos
   useEffect(() => {
-    if (!authenticated || cases.length === 0) return;
-    const caseIds = cases.map(c => c.id);
-    const channel = supabase
-      .channel("student-sessions")
-      .on("postgres_changes", { event: "*", schema: "public", table: "mock_trial_sessions" }, (payload) => {
-        const newRow = payload.new as any;
-        if (caseIds.includes(newRow?.case_id)) {
-          setSessions(prev => {
-            const existing = prev.findIndex(s => s.id === newRow.id);
-            if (existing >= 0) {
-              const updated = [...prev];
-              updated[existing] = newRow;
-              return updated;
-            }
-            return [...prev, newRow];
-          });
-          // Auto-advance: when a different case becomes active, jump to it
-          if (ACTIVE_STATUSES.has(newRow.status) && newRow.case_id !== selectedCaseId) {
-            setSelectedCaseId(newRow.case_id);
-          }
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [authenticated, cases, selectedCaseId]);
+    if (!authenticated || !pollKey) return;
+    let ativo = true;
+    const tick = async () => {
+      if (document.hidden) return;
+      const { data } = await supabase.functions.invoke("juri-aluno", {
+        body: { action: "estado", access_code: accessCode, email: pollKey },
+      });
+      if (!ativo || !data?.ok) return;
+      applyState(data, false);
+      // Auto-advance: quando um caso passa a ficar ativo, vai para ele (só na transição, para não brigar com a escolha do aluno)
+      for (const s of data.sessoes || []) {
+        const antes = prevStatusRef.current[s.id];
+        prevStatusRef.current[s.id] = s.status;
+        if (antes !== undefined && !ACTIVE_STATUSES.has(antes) && ACTIVE_STATUSES.has(s.status)) setSelectedCaseId(s.case_id);
+      }
+    };
+    const id = setInterval(tick, 4000);
+    return () => { ativo = false; clearInterval(id); };
+  }, [authenticated, pollKey, accessCode]);
 
   // Get my role for a specific case
   const getMyRole = (caseId: string) => {
@@ -238,39 +198,19 @@ export default function MockTrialStudent() {
       toast.error("Este formulário já foi enviado pelo seu grupo");
       return false;
     }
-    // Double-check on the server in case another member submitted
-    const { data: existing } = await supabase
-      .from("mock_trial_responses")
-      .select("id")
-      .eq("group_id", myGroup.id)
-      .eq("session_id", selectedSession.id)
-      .eq("form_id", formId)
-      .limit(1);
-    if (existing && existing.length > 0) {
+    const { data, error } = await supabase.functions.invoke("juri-aluno", {
+      body: { action: "enviar", access_code: accessCode, email: pollKey || studentEmail, form_id: formId, session_id: selectedSession.id, answers },
+    });
+    if (data?.ok === false && data?.motivo === "ja_enviado") {
       setSubmittedFormKeys(prev => new Set(prev).add(key));
       toast.error("Este formulário já foi enviado pelo seu grupo");
       return false;
     }
-
-    const membersInRoom = groupMembers.length > 0
-      ? groupMembers
-      : [{ email: myStudent?.student_email || studentEmail, name: myStudent?.student_name || studentName }];
-    const enrichedAnswers = {
-      ...answers,
-      __group_members__: membersInRoom,
-    };
-    const { error } = await supabase.from("mock_trial_responses").insert({
-      form_id: formId,
-      session_id: selectedSession.id,
-      group_id: myGroup.id,
-      student_email: myStudent?.student_email || studentEmail,
-      student_name: myStudent?.student_name || studentName,
-      response_json: enrichedAnswers,
-    });
-    if (error) {
-      toast.error("Erro ao enviar resposta");
+    if (error || data?.error || !data?.ok) {
+      toast.error(data?.error || "Erro ao enviar resposta");
       return false;
     }
+    const membersInRoom = { length: data.integrantes ?? groupMembers.length };
     setSubmittedFormKeys(prev => new Set(prev).add(key));
     toast.success(`Resposta enviada — ${membersInRoom.length} integrante(s) do grupo pontuados`);
     return true;
@@ -417,6 +357,7 @@ export default function MockTrialStudent() {
                 caseNumber={selectedCase?.case_number}
                 title={selectedCase?.title}
                 caseId={selectedCase?.id}
+                images={caseImages.filter(i => i.case_id === selectedCase?.id)}
               />
             </div>
           );
@@ -437,6 +378,7 @@ export default function MockTrialStudent() {
                 caseNumber={selectedCase?.case_number}
                 title={selectedCase?.title}
                 caseId={selectedCase?.id}
+                images={caseImages.filter(i => i.case_id === selectedCase?.id)}
               />
             </TabsContent>
 
