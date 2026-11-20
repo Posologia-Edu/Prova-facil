@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoriaNaranjo, diasEntre, escoreNaranjo, ESQUEMAS_EXTRA, extrasValidos, NARANJO_PERGUNTAS, termosAcusatoriosEncontrados } from "@/lib/doc-v2-extras";
+import { categoriaNaranjo, diasEntre, escoreNaranjo, ESQUEMAS_EXTRA, ETAPAS_DISPOSITIVO, extrasValidos, NARANJO_PERGUNTAS, posicoesEtapas, referenciaCompleta, termosAcusatoriosEncontrados, tipoFonteDe } from "@/lib/doc-v2-extras";
 import { normalizarRespostas, resumoDocumentos, respostasEmBranco, verificarTudo } from "@/lib/doc-v2";
 import { criteriosAplicaveis, notaRubricaDoc, todosCriterios } from "@/lib/doc-v2-rubrica";
 import { itensRevisao, notaRevisao } from "@/lib/doc-v2-nota";
@@ -131,5 +131,103 @@ describe("verificador da notificação de incidente", () => {
     expect(criteriosAplicaveis(false, ["ram", "incidente"]).length).toBe(criteriosAplicaveis(false).length + 2);
     expect(itensRevisao(["incidente"]).some((i) => i.id === "rv-incidente")).toBe(true);
     expect(extrasValidos(["incidente", "ram", "x"])).toEqual(["ram", "incidente"]);
+  });
+});
+
+describe("verificador da resposta a consulta de informação", () => {
+  const completa = () => ({
+    solicitante: "Dra. Lúcia, médica assistente", urgencia: "prioritaria", data_recebimento: "2026-11-10", data_resposta: "2026-11-11",
+    pergunta_original: "Posso triturar o comprimido de liberação prolongada da paciente que está com sonda?",
+    pergunta_reformulada: "Mulher de 76 anos com sonda nasoenteral: o comprimido de metoprolol succinato 50 mg pode ser triturado sem perda de efeito ou risco?",
+    tipo_pergunta: "dose", estrategia: "Consulta à monografia do medicamento e busca no PubMed com os termos metoprolol succinate e crushing.",
+    fontes: [
+      { referencia: "Micromedex. Metoprolol succinate: drug monograph. Merative; 2026.", tipo: "terciária", achado: "Não triturar: liberação prolongada." },
+      { referencia: "Silva A, Souza B. Administração de medicamentos por sonda enteral. Rev Farm Hosp. 2022;46:101-9.", tipo: "Secundaria", achado: "Formas de liberação prolongada não devem ser trituradas." },
+    ],
+    resposta: "Não. O comprimido de liberação prolongada não deve ser triturado; pedir troca para a forma de liberação imediata em doses divididas.",
+    grau_certeza: "alto", ressalvas: "Depende da dose total diária e da tolerância da paciente.", responsavel: "A. Aluno, farmacêutico(a)",
+  });
+  const verificar = (r: any) => ESQUEMAS_EXTRA.consulta.verificar(r).map((a) => a.id);
+
+  it("não avisa quando está completa e coerente", () => { expect(verificar(completa())).toEqual([]); });
+  it("avisa de pergunta reformulada igual à original e de poucas fontes", () => {
+    const c = completa();
+    expect(verificar({ ...c, pergunta_reformulada: c.pergunta_original })).toContain("cons-reformulada-igual");
+    expect(verificar({ ...c, fontes: [c.fontes[0]] })).toContain("cons-fontes");
+  });
+  it("avisa de referência incompleta e de fonte sem tipo reconhecido", () => {
+    const c = completa();
+    expect(verificar({ ...c, fontes: [{ ...c.fontes[0], referencia: "Micromedex" }, c.fontes[1]] })).toContain("cons-fonte-incompleta-0");
+    expect(verificar({ ...c, fontes: [{ ...c.fontes[0], tipo: "internet" }, c.fontes[1]] })).toContain("cons-fonte-tipo-0");
+  });
+  it("certeza alta só com fontes terciárias é incoerente", () => {
+    const c = completa();
+    const ids = verificar({ ...c, fontes: c.fontes.map((f) => ({ ...f, tipo: "Terciaria" })) });
+    expect(ids).toContain("cons-so-terciarias");
+    expect(ids).toContain("cons-certeza-sem-fonte");
+  });
+  it("prazo por urgência, data em ordem e resposta longa demais", () => {
+    const c = completa();
+    expect(verificar({ ...c, urgencia: "urgente" })).toContain("cons-prazo");
+    expect(verificar({ ...c, urgencia: "rotina", data_resposta: "2026-11-20" })).toContain("cons-prazo");
+    expect(verificar({ ...c, data_resposta: "2026-11-01" })).toContain("cons-data-ordem");
+    expect(verificar({ ...c, resposta: "x ".repeat(800) })).toContain("cons-resposta-longa");
+  });
+  it("tipo de fonte aceita acento e maiúscula; referência completa exige ano", () => {
+    expect([tipoFonteDe("terciária"), tipoFonteDe("Secundaria"), tipoFonteDe("PRIMÁRIA"), tipoFonteDe("web")]).toEqual(["terciaria", "secundaria", "primaria", null]);
+    expect(referenciaCompleta("Silva A. Administração de medicamentos por sonda. Rev Farm. 2022;46:1-9")).toBe(true);
+    expect(referenciaCompleta("Silva 2022")).toBe(false);
+    expect(referenciaCompleta("Silva A. Administração de medicamentos por sonda enteral e seus problemas")).toBe(false);
+  });
+});
+
+describe("verificador da orientação de dispositivo", () => {
+  const passosCaneta = [
+    "Lave as mãos com água e sabão", "Confira o nome da insulina, a validade e se está transparente", "Coloque uma agulha nova na caneta",
+    "Faça o teste de segurança: gire 2 unidades e veja a gota na ponta da agulha", "Gire o seletor até a dose que o médico indicou",
+    "Insira a agulha na pele e aperte o botão até o fim", "Conte até 10 antes de tirar a agulha", "Tire a agulha e jogue no recipiente para perfurocortante", "Guarde a caneta longe do sol",
+  ];
+  const completa = () => ({
+    tipo_dispositivo: "caneta_insulina", medicamento: "Insulina NPH 10 unidades", passos: passosCaneta.map((p) => ({ passo: p, observacao: "" })),
+    se_errar: "Se a dose falhar, não repita: meça a glicemia e ligue para o serviço.", limpeza_guarda: "Limpe a caneta com pano seco; guarde na geladeira a que está fechada.",
+    quando_procurar: "Glicemia abaixo de 70 ou acima de 300.", ajuda: "Farmácia da unidade, telefone fictício 0000-0000",
+  });
+  const verificar = (r: any) => ESQUEMAS_EXTRA.dispositivo.verificar(r).map((a) => a.id);
+
+  it("não avisa quando está completa, na ordem e com as etapas críticas", () => { expect(verificar(completa())).toEqual([]); });
+  it("avisa de etapa crítica faltando", () => {
+    const c = completa(); c.passos = c.passos.filter((p) => !/perfurocortante/.test(p.passo));
+    expect(verificar(c)).toContain("disp-falta-descartar");
+    const d = completa(); d.passos = d.passos.filter((p) => !/teste de seguran/.test(p.passo));
+    expect(verificar(d)).toContain("disp-falta-purga");
+  });
+  it("avisa quando a ordem está trocada", () => {
+    const c = completa();
+    const i = c.passos.findIndex((p) => /perfurocortante/.test(p.passo));
+    const j = c.passos.findIndex((p) => /Insira a agulha/.test(p.passo));
+    [c.passos[i], c.passos[j]] = [c.passos[j], c.passos[i]];
+    expect(verificar(c).some((x) => x.startsWith("disp-ordem"))).toBe(true);
+  });
+  it("avisa de poucos passos, passo longo e campos de segurança em branco", () => {
+    expect(verificar({ ...completa(), passos: [{ passo: "Use o inalador" }] })).toContain("disp-poucos");
+    const c = completa(); c.passos[0].passo = "Lave bem as mãos com água e sabão, seque com toalha limpa, confira se não há nada na mesa, separe o material e só depois comece o procedimento todo com calma";
+    expect(verificar(c)).toContain("disp-longo-0");
+    expect(verificar({ ...completa(), se_errar: "", ajuda: "" })).toEqual(expect.arrayContaining(["disp-se-errar", "disp-ajuda"]));
+  });
+  it("cada dispositivo tem sua sequência: inalador com espaçador exige prender a respiração e enxaguar a boca", () => {
+    const passos = ["Agite o inalador", "Encaixe no espaçador", "Aperte uma vez", "Respire fundo pelo espaçador"].map((p) => ({ passo: p }));
+    const ids = verificar({ ...completa(), tipo_dispositivo: "inalador_espacador", passos });
+    expect(ids).toContain("disp-falta-prender");
+    expect(ids).toContain("disp-falta-enxaguar");
+    expect(ids).not.toContain("disp-falta-agitar");
+  });
+  it("posicoesEtapas devolve a posição do primeiro passo que menciona cada etapa", () => {
+    const pos = posicoesEtapas(passosCaneta, ETAPAS_DISPOSITIVO.caneta_insulina);
+    expect(pos[ETAPAS_DISPOSITIVO.caneta_insulina.findIndex((e) => e.id === "agulha")]).toBe(2);
+  });
+  it("os dois entram na rubrica e na revisão como extras", () => {
+    expect(criteriosAplicaveis(false, ["consulta", "dispositivo"]).length).toBe(criteriosAplicaveis(false).length + 2);
+    expect(itensRevisao(["consulta", "dispositivo"]).map((i) => i.id).slice(-2)).toEqual(["rv-consulta", "rv-dispositivo"]);
+    expect(extrasValidos(["dispositivo", "ram", "consulta", "incidente"])).toEqual(["ram", "incidente", "consulta", "dispositivo"]);
   });
 });

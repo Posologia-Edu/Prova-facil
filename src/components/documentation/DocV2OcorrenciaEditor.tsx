@@ -7,14 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  categoriaNaranjo, escoreNaranjo, ESQUEMAS_EXTRA, NARANJO_PERGUNTAS, ROTULO_DANO, ROTULO_NARANJO, ROTULO_TIPO_INCIDENTE,
-  type ExtraId, type GrauDano, type TipoIncidente,
+  categoriaNaranjo, escoreNaranjo, ESQUEMAS_EXTRA, NARANJO_PERGUNTAS, ROTULO_DANO, ROTULO_DISPOSITIVO, ROTULO_NARANJO, ROTULO_TIPO_INCIDENTE, ROTULO_URGENCIA,
+  type ExtraId, type GrauDano, type TipoDispositivo, type TipoIncidente, type UrgenciaConsulta,
 } from "@/lib/doc-v2-extras";
 
 type Props = { caseId: string; extra: ExtraId; casoJson: any; gabarito: any; onSaved: () => void };
 
 const SELECT = "h-9 w-full rounded-md border border-input bg-background px-2 text-sm";
 const ETAPAS: [string, string][] = [["prescricao", "Prescrição"], ["transcricao", "Transcrição"], ["dispensacao", "Dispensação"], ["preparo", "Preparo"], ["administracao", "Administração"], ["monitorizacao", "Monitorização"]];
+/** Campos do gabarito que são listas (um item por linha na tela). */
+const CAMPOS_LISTA = ["fatores_esperados", "fontes_sugeridas", "etapas_criticas", "erros_comuns"];
+const juntar = (v: unknown) => (Array.isArray(v) ? v.join("\n") : "");
 
 /**
  * Ocorrência de um documento extra para um caso (o que o aluno lê) e o gabarito dele (só o servidor lê).
@@ -25,18 +28,24 @@ export default function DocV2OcorrenciaEditor({ caseId, extra, casoJson, gabarit
   const esq = ESQUEMAS_EXTRA[extra];
   const [ocorrencia, setOcorrencia] = useState("");
   const [gab, setGab] = useState<Record<string, any>>({});
+  const [raw, setRaw] = useState<Record<string, string>>({});
   const [gerando, setGerando] = useState(false);
-  const [fatoresRaw, setFatoresRaw] = useState("");
-  const juntar = (v: unknown) => (Array.isArray(v) ? v.join("\n") : "");
 
+  const carregarGab = (g: Record<string, any>) => {
+    setGab(g);
+    setRaw(Object.fromEntries(CAMPOS_LISTA.map((c) => [c, juntar(g[c])])));
+  };
   useEffect(() => {
     setOcorrencia(casoJson?.ocorrencias?.[extra] || "");
-    const g = gabarito?.extras?.[extra] || {};
-    setGab(g);
-    setFatoresRaw(juntar(g.fatores_esperados));
+    carregarGab(gabarito?.extras?.[extra] || {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [casoJson, gabarito, extra]);
   const mudar = (patch: Record<string, any>) => setGab((g) => ({ ...g, ...patch }));
+  /** Campo de lista: guarda o texto como o professor digitou e o array limpo no gabarito. */
+  const lista = (campo: string, rotulo: string, linhas = 3) => (
+    <div className="space-y-1"><Label className="text-xs">{rotulo}</Label>
+      <Textarea rows={linhas} value={raw[campo] ?? ""} onChange={(e) => { setRaw((r) => ({ ...r, [campo]: e.target.value })); mudar({ [campo]: e.target.value.split("\n").map((x) => x.trim()).filter(Boolean) }); }} /></div>
+  );
 
   const nar: Record<string, string> = gab.naranjo || {};
   const { escore, respondidas } = escoreNaranjo(nar);
@@ -47,7 +56,7 @@ export default function DocV2OcorrenciaEditor({ caseId, extra, casoJson, gabarit
     try {
       const { data, error } = await supabase.functions.invoke("doc-v2-extras", { body: { action: "gerar_ocorrencia", case_id: caseId, extra } });
       if (error || data?.error) throw new Error(data?.error || error?.message || "Falha ao chamar a IA");
-      setOcorrencia(data.ocorrencia); setGab(data.gabarito || {}); setFatoresRaw(juntar(data.gabarito?.fatores_esperados));
+      setOcorrencia(data.ocorrencia); carregarGab(data.gabarito || {});
       toast({ title: "Rascunho pronto", description: "Leia a ocorrência, confira o gabarito e salve." });
     } catch (e) {
       toast({ title: "Não foi possível gerar", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
@@ -58,6 +67,8 @@ export default function DocV2OcorrenciaEditor({ caseId, extra, casoJson, gabarit
     if (!ocorrencia.trim()) { toast({ title: "Escreva a ocorrência", variant: "destructive" }); return; }
     if (extra === "ram" && respondidas < NARANJO_PERGUNTAS.length) { toast({ title: "Responda as 10 perguntas de Naranjo do gabarito", variant: "destructive" }); return; }
     if (extra === "incidente" && (!gab.tipo_esperado || !gab.dano_esperado)) { toast({ title: "Marque o tipo e o dano esperados", variant: "destructive" }); return; }
+    if (extra === "consulta" && !String(gab.resposta_esperada || "").trim()) { toast({ title: "Escreva os pontos que a resposta esperada precisa ter", variant: "destructive" }); return; }
+    if (extra === "dispositivo" && (!gab.dispositivo_esperado || !(gab.etapas_criticas || []).length)) { toast({ title: "Marque o dispositivo e as etapas críticas", variant: "destructive" }); return; }
     const novoCaso = { ...(casoJson || {}), ocorrencias: { ...(casoJson?.ocorrencias || {}), [extra]: ocorrencia.trim() } };
     const novoGab = { ...(gabarito || {}), extras: { ...(gabarito?.extras || {}), [extra]: gab } };
     const r1 = await supabase.from("documentation_clinical_cases").update({ caso_json: novoCaso } as any).eq("id", caseId);
@@ -116,8 +127,35 @@ export default function DocV2OcorrenciaEditor({ caseId, extra, casoJson, gabarit
                 <option value="">Escolha</option><option value="sim">Sim</option><option value="nao">Não, chegou ao paciente</option>
               </select></label>
           </div>
-          <div className="space-y-1"><Label className="text-xs">Fatores contribuintes esperados (um por linha, começando pela categoria)</Label>
-            <Textarea rows={3} value={fatoresRaw} onChange={(e) => { setFatoresRaw(e.target.value); mudar({ fatores_esperados: e.target.value.split("\n").map((x) => x.trim()).filter(Boolean) }); }} /></div>
+          {lista("fatores_esperados", "Fatores contribuintes esperados (um por linha, começando pela categoria)")}
+        </div>
+      )}
+
+      {extra === "consulta" && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium">Gabarito da consulta (o aluno não vê)</p>
+          <label className="block space-y-1 text-xs">Urgência
+            <select aria-label="Urgência esperada" value={gab.urgencia || ""} onChange={(e) => mudar({ urgencia: e.target.value })} className={SELECT}>
+              <option value="">Escolha</option>{(Object.keys(ROTULO_URGENCIA) as UrgenciaConsulta[]).map((k) => <option key={k} value={k}>{ROTULO_URGENCIA[k]}</option>)}
+            </select></label>
+          <div className="space-y-1"><Label className="text-xs">Pergunta reformulada (modelo)</Label><Textarea rows={2} value={gab.pergunta_chave || ""} onChange={(e) => mudar({ pergunta_chave: e.target.value })} /></div>
+          <div className="space-y-1"><Label className="text-xs">Resposta esperada (os pontos que uma boa resposta contém)</Label><Textarea rows={3} value={gab.resposta_esperada || ""} onChange={(e) => mudar({ resposta_esperada: e.target.value })} /></div>
+          {lista("fontes_sugeridas", "Tipos de fonte que respondem bem (um por linha, sem inventar referências)")}
+        </div>
+      )}
+
+      {extra === "dispositivo" && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium">Gabarito do dispositivo (o aluno não vê)</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="space-y-1 text-xs">Dispositivo esperado
+              <select aria-label="Dispositivo esperado" value={gab.dispositivo_esperado || ""} onChange={(e) => mudar({ dispositivo_esperado: e.target.value })} className={SELECT}>
+                <option value="">Escolha</option>{(Object.keys(ROTULO_DISPOSITIVO) as TipoDispositivo[]).map((k) => <option key={k} value={k}>{ROTULO_DISPOSITIVO[k]}</option>)}
+              </select></label>
+            <label className="space-y-1 text-xs">Medicamento<Input value={gab.medicamento || ""} onChange={(e) => mudar({ medicamento: e.target.value })} /></label>
+          </div>
+          {lista("etapas_criticas", "Etapas críticas, na ordem (uma por linha)", 4)}
+          {lista("erros_comuns", "Erros comuns de técnica (um por linha)")}
         </div>
       )}
 
