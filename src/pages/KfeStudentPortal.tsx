@@ -24,9 +24,14 @@ interface KeyFeature {
   question_text: string;
   question_type: string;
   options_json: any[];
-  correct_answer_json: any;
   max_score: number;
-  explanation: string;
+}
+
+// Resultado de um ponto-chave, devolvido pelo servidor só depois que o aluno confirma a resposta
+interface Reveal {
+  correto: boolean;
+  alternativa_certa: string | null;
+  explicacao: string;
 }
 
 export default function KfeStudentPortal() {
@@ -42,22 +47,21 @@ export default function KfeStudentPortal() {
   const [currentCaseIndex, setCurrentCaseIndex] = useState(0);
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
-  const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [revealed, setRevealed] = useState<Record<string, Reveal>>({});
+  const [confirming, setConfirming] = useState(false);
   const [score, setScore] = useState<{ total: number; max: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // A prova vem da função kfe-aluno, sem resposta certa nem explicação (o servidor revela cada ponto-chave ao confirmar)
     const fetch = async () => {
-      const { data: exam } = await supabase.from("kfe_exams").select("title, status").eq("id", examId!).single();
-      if (exam) { setExamTitle(exam.title); setExamStatus(exam.status); }
-
-      const { data: cs } = await supabase.from("kfe_cases").select("*").eq("kfe_exam_id", examId!).order("position");
-      setCases((cs || []) as KfCase[]);
-
-      if (cs && cs.length > 0) {
-        const { data: kf } = await supabase.from("kfe_key_features").select("*").in("case_id", cs.map(c => c.id)).order("position");
-        setFeatures((kf || []) as KeyFeature[]);
+      const { data } = await supabase.functions.invoke("kfe-aluno", { body: { action: "exame", exam_id: examId } });
+      if (data?.ok) {
+        setExamTitle(data.titulo);
+        setExamStatus(data.status);
+        setCases((data.casos || []) as KfCase[]);
+        setFeatures((data.pontos || []) as KeyFeature[]);
       }
       setLoading(false);
     };
@@ -66,9 +70,11 @@ export default function KfeStudentPortal() {
 
   const handleStart = async () => {
     if (!studentName.trim() || !studentEmail.trim()) { toast.error("Preencha nome e e-mail"); return; }
-    const { data, error } = await supabase.from("kfe_sessions").insert({ kfe_exam_id: examId!, student_name: studentName.trim(), student_email: studentEmail.trim() }).select().single();
-    if (error) { toast.error("Erro ao iniciar"); return; }
-    setSessionId(data.id);
+    const { data, error } = await supabase.functions.invoke("kfe-aluno", {
+      body: { action: "iniciar", exam_id: examId, name: studentName.trim(), email: studentEmail.trim() },
+    });
+    if (error || !data?.ok) { toast.error(data?.error || "Erro ao iniciar"); return; }
+    setSessionId(data.session_id);
     setPhase("exam");
   };
 
@@ -80,12 +86,20 @@ export default function KfeStudentPortal() {
     setAnswers({ ...answers, [featureId]: answer });
   };
 
-  const handleRevealAndNext = () => {
+  const handleRevealAndNext = async () => {
     if (!currentFeature || answers[currentFeature.id] === undefined) {
       toast.error("Selecione uma resposta");
       return;
     }
-    setRevealed(new Set([...revealed, currentFeature.id]));
+    if (confirming) return;
+    setConfirming(true);
+    // O servidor grava a resposta (uma única vez) e devolve se acertou e a explicação
+    const { data, error } = await supabase.functions.invoke("kfe-aluno", {
+      body: { action: "confirmar", session_id: sessionId, key_feature_id: currentFeature.id, answer: answers[currentFeature.id] },
+    });
+    setConfirming(false);
+    if (error || !data?.ok) { toast.error("Não foi possível confirmar a resposta. Tente novamente."); return; }
+    setRevealed({ ...revealed, [currentFeature.id]: { correto: data.correto, alternativa_certa: data.alternativa_certa, explicacao: data.explicacao } });
   };
 
   const handleNext = () => {
@@ -101,31 +115,13 @@ export default function KfeStudentPortal() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    let totalScore = 0;
-    let maxScore = 0;
-
-    const inserts = features.map(kf => {
-      const answer = answers[kf.id];
-      let featureScore = 0;
-
-      if (kf.question_type === "multiple_choice") {
-        if (answer === kf.correct_answer_json?.selected) featureScore = kf.max_score;
-      } else if (kf.question_type === "short_answer") {
-        const correct = (kf.correct_answer_json?.text || "").trim().toLowerCase();
-        const student = (answer || "").trim().toLowerCase();
-        if (student === correct) featureScore = kf.max_score;
-      }
-
-      totalScore += featureScore;
-      maxScore += kf.max_score;
-
-      return { session_id: sessionId!, key_feature_id: kf.id, answer_json: { value: answer }, score: featureScore };
-    });
-
-    await supabase.from("kfe_answers").insert(inserts);
-    await supabase.from("kfe_sessions").update({ status: "submitted", finished_at: new Date().toISOString(), total_score: totalScore, max_score: maxScore }).eq("id", sessionId!);
-
-    setScore({ total: totalScore, max: maxScore });
+    const { data, error } = await supabase.functions.invoke("kfe-aluno", { body: { action: "enviar", session_id: sessionId } });
+    if (error || !data?.ok) {
+      toast.error("Não foi possível finalizar. Tente novamente.");
+      setSubmitting(false);
+      return;
+    }
+    setScore({ total: data.total, max: data.max });
     setPhase("result");
     setSubmitting(false);
   };
@@ -185,12 +181,9 @@ export default function KfeStudentPortal() {
   }
 
   // Exam phase - progressive disclosure
-  const isRevealed = currentFeature ? revealed.has(currentFeature.id) : false;
-  const isCorrect = currentFeature && isRevealed ? (
-    currentFeature.question_type === "multiple_choice"
-      ? answers[currentFeature.id] === currentFeature.correct_answer_json?.selected
-      : (answers[currentFeature.id] || "").trim().toLowerCase() === (currentFeature.correct_answer_json?.text || "").trim().toLowerCase()
-  ) : false;
+  const reveal = currentFeature ? revealed[currentFeature.id] : undefined;
+  const isRevealed = !!reveal;
+  const isCorrect = !!reveal?.correto;
 
   const totalFeatures = features.length;
   const answeredCount = Object.keys(answers).length;
@@ -236,7 +229,7 @@ export default function KfeStudentPortal() {
                 <div className="space-y-2">
                   {(currentFeature.options_json || []).map((opt: any) => {
                     const isSelected = answers[currentFeature.id] === opt.id;
-                    const isCorrectOpt = isRevealed && opt.id === currentFeature.correct_answer_json?.selected;
+                    const isCorrectOpt = isRevealed && opt.id === reveal?.alternativa_certa;
                     const isWrongSelected = isRevealed && isSelected && !isCorrectOpt;
 
                     return (
@@ -270,16 +263,16 @@ export default function KfeStudentPortal() {
                 />
               )}
 
-              {isRevealed && currentFeature.explanation && (
+              {isRevealed && reveal?.explicacao && (
                 <div className="bg-muted/50 rounded-lg p-4 border-l-4 border-primary">
                   <p className="text-xs font-medium mb-1">Explicação:</p>
-                  <p className="text-sm whitespace-pre-wrap">{currentFeature.explanation}</p>
+                  <p className="text-sm whitespace-pre-wrap">{reveal?.explicacao}</p>
                 </div>
               )}
 
               <div className="flex justify-end gap-2">
                 {!isRevealed ? (
-                  <Button onClick={handleRevealAndNext} disabled={answers[currentFeature.id] === undefined}>
+                  <Button onClick={handleRevealAndNext} disabled={answers[currentFeature.id] === undefined || confirming}>
                     Confirmar Resposta
                   </Button>
                 ) : (
