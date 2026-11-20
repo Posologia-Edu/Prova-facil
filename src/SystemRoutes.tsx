@@ -69,6 +69,7 @@ import ReconciliationJoin from "./pages/ReconciliationJoin";
 import ReconciliationControl from "./pages/ReconciliationControl";
 import DocumentationRooms from "./pages/DocumentationRooms";
 import DocumentationEditor from "./pages/DocumentationEditor";
+import DocumentationV2Sala from "./pages/DocumentationV2Sala";
 import DocumentationJoin from "./pages/DocumentationJoin";
 import DocumentationControl from "./pages/DocumentationControl";
 import SimulationAggregator from "./pages/SimulationAggregator";
@@ -406,6 +407,14 @@ export default function SystemRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout><ClinicalGate feature="Simulações clínicas"><DocumentationEditor /></ClinicalGate></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations/documentation/v2/:roomId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ClinicalGate feature="Simulações clínicas"><DocumentationV2Sala /></ClinicalGate></AppLayout>
           </ProtectedRoute>
         }
       />

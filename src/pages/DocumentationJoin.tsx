@@ -10,6 +10,7 @@ import FormRenderer from "@/components/forms/FormRenderer";
 import type { FormField } from "@/components/forms/types";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
+import DocV2Aluno from "@/components/documentation/DocV2Aluno";
 
 
 // FormField type imported from @/components/forms/types
@@ -31,6 +32,7 @@ export default function DocumentationJoin() {
   const [referralAnswers, setReferralAnswers] = useState<Record<string, any>>({});
   const [medRows, setMedRows] = useState<Record<string, string>[]>([]);
   const [submitted, setSubmitted] = useState(false);
+  const [v2, setV2] = useState(false);
 
   async function chamarDoc(body: Record<string, unknown>) {
     const { data, error } = await supabase.functions.invoke("doc-aluno", { body });
@@ -64,6 +66,14 @@ export default function DocumentationJoin() {
 
     setRoom(r.sala);
     setParticipant(r.participante);
+    if (r.sala?.schema_version === 2) {
+      // Documentação v2: a tela e as funções são outras (DocV2Aluno / doc-v2-aluno).
+      setV2(true);
+      setPhase("active");
+      sessionStorage.setItem("doc_pin", pin.trim().toLowerCase());
+      sessionStorage.setItem("doc_email", email.trim().toLowerCase());
+      return;
+    }
     if (r.parceiro) setPartner(r.parceiro);
     if (r.formularioEncaminhamento) setReferralForm(r.formularioEncaminhamento);
     if (r.formularioMedicamentos) setMedForm(r.formularioMedicamentos);
@@ -88,7 +98,7 @@ export default function DocumentationJoin() {
 
   // Autosave: one combined draft per (room, participant) covering both forms
   const draftKey =
-    room && participant
+    room && participant && !v2
       ? `documentation:${room.id}:${participant.id}`
       : null;
   const {
@@ -182,6 +192,10 @@ export default function DocumentationJoin() {
         </Card>
       </div>
     );
+  }
+
+  if (v2 && room && participant) {
+    return <DocV2Aluno room={room} participant={participant} accessCode={room.access_code} email={participant.student_email || email} />;
   }
 
   if (phase === "done") {

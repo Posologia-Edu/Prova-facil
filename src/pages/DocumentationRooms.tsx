@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Users, Settings, Play, Trash2, GraduationCap, FileText, Copy, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { derivarReferencia } from "@/lib/doc-v2";
 import ShareRoomDialog from "@/components/ShareRoomDialog";
 import EditableRoomTitle from "@/components/EditableRoomTitle";
 import SimulationRoomCard from "@/components/SimulationRoomCard";
@@ -26,6 +27,7 @@ export default function DocumentationRooms() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [reconRoomId, setReconRoomId] = useState<string>("");
+  const [versao, setVersao] = useState<"1" | "2">("1");
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["documentation-rooms"],
@@ -50,7 +52,7 @@ export default function DocumentationRooms() {
       if (!session) return [];
       const { data } = await supabase
         .from("reconciliation_rooms")
-        .select("id, title, access_code")
+        .select("id, title, access_code, schema_version")
         .eq("user_id", session.user.id)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
@@ -82,12 +84,54 @@ export default function DocumentationRooms() {
     },
   });
 
+  /**
+   * Documentação v2: traz da Reconciliação v2 só as duplas completas (individuais também), os casos com dossiê v2 e,
+   * para cada caso, a conciliação de referência derivada (rascunho que o professor revisa na tela da sala).
+   */
+  async function importarDaReconV2(docRoomId: string, reconRoomId: string) {
+    const { data: partes } = await supabase.from("reconciliation_participants").select("*").eq("room_id", reconRoomId).eq("participant_role", "student");
+    const porDupla = new Map<number, any[]>();
+    for (const p of partes || []) if (p.pair_index >= 0) porDupla.set(p.pair_index, [...(porDupla.get(p.pair_index) || []), p]);
+    const completas = [...porDupla.values()].filter((g) => g.length === 2 || (g.length === 1 && g[0].pair_position === "S")).flat();
+    if (completas.length) {
+      const { error } = await supabase.from("documentation_participants").insert(completas.map((rp: any) => ({
+        room_id: docRoomId, student_name: rp.student_name, student_email: rp.student_email, pair_index: rp.pair_index,
+        pair_position: rp.pair_position, reconciliation_participant_id: rp.id, participant_role: "student",
+      })));
+      if (error) throw error;
+    }
+
+    const { data: casos } = await supabase.from("reconciliation_clinical_cases").select("*").eq("room_id", reconRoomId).order("position", { ascending: true });
+    const v2 = (casos || []).filter((c: any) => c.caso_json);
+    if (!v2.length) return;
+    const { data: novos, error } = await supabase.from("documentation_clinical_cases").insert(v2.map((rc: any, i: number) => ({
+      room_id: docRoomId, reconciliation_case_id: rc.id, title: rc.title, content: "", position: i, caso_json: rc.caso_json,
+    })) as any).select("id, reconciliation_case_id");
+    if (error) throw error;
+    const { data: privados } = await supabase.from("reconciliation_v2_privado" as any).select("case_id, prescricao, gabarito").eq("room_id", reconRoomId);
+    const porCaso = new Map<string, any>(((privados as any[]) || []).map((p) => [p.case_id, p]));
+    const linhas = (novos || []).map((n: any) => {
+      const pv = porCaso.get(n.reconciliation_case_id);
+      const referencia = pv ? derivarReferencia(Array.isArray(pv.prescricao) ? pv.prescricao : [], Array.isArray(pv.gabarito?.discrepancias) ? pv.gabarito.discrepancias : []) : [];
+      return { case_id: n.id, room_id: docRoomId, referencia, gabarito: { discrepancias: pv?.gabarito?.discrepancias || [] } };
+    });
+    if (linhas.length) {
+      const { error: e2 } = await supabase.from("documentation_v2_privado" as any).insert(linhas as any);
+      if (e2) throw e2;
+    }
+  }
+
   const createRoom = useMutation({
     mutationFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
       const selectedReconId = reconRoomId && reconRoomId !== "none" ? reconRoomId : null;
+      const ehV2 = versao === "2";
+      if (ehV2) {
+        const origem = (reconRooms || []).find((r: any) => r.id === selectedReconId) as any;
+        if (!origem || origem.schema_version !== 2) throw new Error("A Documentação v2 parte de uma sala de Reconciliação v2. Escolha uma.");
+      }
 
       const { data, error } = await supabase
         .from("documentation_rooms")
@@ -96,10 +140,17 @@ export default function DocumentationRooms() {
           title,
           description,
           reconciliation_room_id: selectedReconId,
-        })
+          // Só a v2 grava a versão: criar sala v1 não depende da coluna nova existir no banco.
+          ...(ehV2 ? { schema_version: 2 } : {}),
+        } as any)
         .select()
         .single();
       if (error) throw error;
+
+      if (ehV2 && selectedReconId) {
+        await importarDaReconV2(data.id, selectedReconId);
+        return data;
+      }
 
       // Auto-import participants and clinical cases from reconciliation
       if (selectedReconId) {
@@ -150,10 +201,10 @@ export default function DocumentationRooms() {
       setTitle("");
       setDescription("");
       setReconRoomId("");
-      navigate(`/simulations/documentation/editor/${data.id}`);
+      navigate(versao === "2" ? `/simulations/documentation/v2/${data.id}` : `/simulations/documentation/editor/${data.id}`);
     },
-    onError: () => {
-      toast({ title: "Erro", description: "Erro ao criar sala de documentação.", variant: "destructive" });
+    onError: (e: any) => {
+      toast({ title: "Erro", description: e?.message?.startsWith("A Documentação v2") ? e.message : "Erro ao criar sala de documentação.", variant: "destructive" });
     },
   });
 
@@ -262,12 +313,23 @@ export default function DocumentationRooms() {
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
               </div>
               <div>
-                <Label>Sala de Reconciliação de origem (opcional)</Label>
+                <Label>Versão</Label>
+                <Select value={versao} onValueChange={(v) => setVersao(v as "1" | "2")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">v1 (encaminhamento e quadro resumo)</SelectItem>
+                    <SelectItem value="2">v2 (4 documentos, parte da Reconciliação v2)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {versao === "2" && <p className="mt-1 text-xs text-muted-foreground">Escolha abaixo uma sala de Reconciliação v2: os casos e as duplas completas vêm dela.</p>}
+              </div>
+              <div>
+                <Label>Sala de Reconciliação de origem{versao === "2" ? "" : " (opcional)"}</Label>
                 <Select value={reconRoomId} onValueChange={setReconRoomId}>
                   <SelectTrigger><SelectValue placeholder="Vincular a uma sala de Reconciliação" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhuma (modo independente)</SelectItem>
-                    {reconRooms?.map((r) => (
+                    {reconRooms?.filter((r: any) => versao === "1" || r.schema_version === 2).map((r) => (
                       <SelectItem key={r.id} value={r.id}>{r.title} (PIN: {r.access_code})</SelectItem>
                     ))}
                   </SelectContent>
@@ -278,7 +340,7 @@ export default function DocumentationRooms() {
                   </p>
                 )}
               </div>
-              <Button onClick={() => createRoom.mutate()} disabled={!title || createRoom.isPending} className="w-full">
+              <Button onClick={() => createRoom.mutate()} disabled={!title || createRoom.isPending || (versao === "2" && (!reconRoomId || reconRoomId === "none"))} className="w-full">
                 Criar
               </Button>
             </div>
@@ -313,14 +375,16 @@ export default function DocumentationRooms() {
                     <span>{teacherName}</span>
                   </>
                 }
-                onEdit={() => navigate(`/simulations/documentation/editor/${room.id}`)}
+                onEdit={() => navigate((room as any).schema_version === 2 ? `/simulations/documentation/v2/${room.id}` : `/simulations/documentation/editor/${room.id}`)}
                 onActivate={async () => {
                   await supabase.from("documentation_rooms").update({ status: "active" }).eq("id", room.id);
                   queryClient.invalidateQueries({ queryKey: ["documentation-rooms"] });
                   toast({ title: "Sala ativada!" });
                 }}
-                onControl={() => navigate(`/simulations/documentation/control/${room.id}`)}
-                onDuplicate={() => duplicateRoom.mutate(room.id)}
+                onControl={() => navigate((room as any).schema_version === 2 ? `/simulations/documentation/v2/${room.id}` : `/simulations/documentation/control/${room.id}`)}
+                onDuplicate={() => ((room as any).schema_version === 2
+                  ? toast({ title: "Ainda não disponível", description: "Duplicar sala v2 vem em uma próxima etapa. Crie uma nova a partir da Reconciliação." })
+                  : duplicateRoom.mutate(room.id))}
                 onShare={() => { setShareRoomId(room.id); setShareRoomTitle(room.title); }}
                 onArchive={async () => {
                   await supabase.from("documentation_rooms").update({ is_archived: true } as any).eq("id", room.id);

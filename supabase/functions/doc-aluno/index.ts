@@ -28,7 +28,7 @@ serve(async (req) => {
 
     const db = adminClient();
     const { data: salas } = await db.from("documentation_rooms")
-      .select("id, access_code, title, status")
+      .select("id, access_code, title, status, schema_version")
       .eq("access_code", access_code.trim().toLowerCase()).eq("status", "active").limit(1);
     const sala = salas?.[0];
     if (!sala) return json({ ok: false, motivo: "sala" });
@@ -39,12 +39,15 @@ serve(async (req) => {
     const eu = (todos || []).find((p: any) => (p.student_email || "").trim().toLowerCase() === alvo);
     if (!eu) return json({ ok: false, motivo: "email" });
 
-    const salaPublica = { id: sala.id, access_code: sala.access_code, title: sala.title };
+    // schema_version 2: a tela passa a usar a função doc-v2-aluno; esta função só identifica a sala e o aluno.
+    const salaPublica = { id: sala.id, access_code: sala.access_code, title: sala.title, schema_version: sala.schema_version ?? 1 };
     const euPublico = { id: eu.id, student_name: eu.student_name, student_email: eu.student_email, pair_index: eu.pair_index, pair_position: eu.pair_position, status: eu.status };
 
     const { data: forms } = await db.from("documentation_forms").select("id, form_type, title, content_json").eq("room_id", sala.id);
     const referral = (forms || []).find((f: any) => f.form_type === "referral") || null;
     const med = (forms || []).find((f: any) => f.form_type === "medication_summary") || null;
+
+    if (action === "enviar" && sala.schema_version === 2) return json({ error: "Esta sala usa a Documentação v2." }, 409);
 
     if (action === "entrar") {
       if (eu.status !== "done") await db.from("documentation_participants").update({ status: "ready" }).eq("id", eu.id);
