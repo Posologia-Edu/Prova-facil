@@ -11,6 +11,8 @@ import { toast } from "@/hooks/use-toast";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
 import DocV2Devolutiva from "@/components/documentation/DocV2Devolutiva";
 import DocV2Paciente from "@/components/documentation/DocV2Paciente";
+import DocV2Revisao from "@/components/documentation/DocV2Revisao";
+import DocV2Cronometro from "@/components/documentation/DocV2Cronometro";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { ROTULO_FONTE, ROTULO_TRANSICAO, type CasoV2 } from "@/lib/recon-v2";
 import {
@@ -127,6 +129,7 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
             <CardHeader>
               <CardTitle className="font-heading text-lg font-medium">Documentação — {estado.sala.titulo}</CardTitle>
               <p className="text-sm text-muted-foreground">{estado.parceiro ? `Dupla com ${estado.parceiro.nome}` : "Individual"}{estado.sala.tempo_sugerido_min ? ` · tempo sugerido: ${estado.sala.tempo_sugerido_min} min` : ""}</p>
+              {estado.sala.tempo_sugerido_min && !finalizada && <DocV2Cronometro minutos={estado.sala.tempo_sugerido_min} chave={`docv2-inicio:${room.id}:${participant.id}`} />}
             </CardHeader>
           </Card>
 
@@ -305,7 +308,7 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
           {finalizada ? (
             estado.usa_paciente && !conselhoFeito
               ? <DocV2Paciente accessCode={accessCode} email={email} nomePaciente={p.nome} onConcluida={() => setConselhoFeito(true)} />
-              : <DocV2Devolutiva accessCode={accessCode} email={email} />
+              : <><DocV2Revisao accessCode={accessCode} email={email} /><DocV2Devolutiva accessCode={accessCode} email={email} /></>
           ) : (
             <>
               <div className="flex justify-end"><DraftStatusBadge status={draftStatus} lastSavedAt={lastSavedAt} /></div>

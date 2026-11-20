@@ -69,6 +69,10 @@ export type AvaliacaoDoc = {
 export type DevolutivaDoc = {
   liberada: boolean;
   nota?: number | null;
+  /** Revisão cruzada recebida (0 a 10) e a nota final 80/20. */
+  revisao_nota?: number | null;
+  revisao_comentario?: string;
+  nota_final?: number | null;
   criterios?: Record<string, number | string>;
   justificativas?: Record<string, string>;
   comentario?: string;

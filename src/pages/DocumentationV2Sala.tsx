@@ -13,6 +13,9 @@ import type { ItemReferencia } from "@/lib/doc-v2";
 import DocV2Correcao from "@/components/documentation/DocV2Correcao";
 import DocV2PersonaEditor from "@/components/documentation/DocV2PersonaEditor";
 import { validarPersona } from "@/lib/doc-v2-paciente";
+import { notaFinalDocV2, notaRevisao } from "@/lib/doc-v2-nota";
+import DocV2Panorama from "@/components/documentation/DocV2Panorama";
+import DocV2Lote from "@/components/documentation/DocV2Lote";
 
 type Conduta = ItemReferencia["conduta"];
 const CONDUTAS: { v: Conduta; r: string }[] = [{ v: "mantido", r: "Mantido" }, { v: "alterado", r: "Alterado" }, { v: "novo", r: "Novo" }, { v: "suspenso", r: "Suspenso" }];
@@ -51,8 +54,14 @@ export default function DocumentationV2Sala() {
   });
   const { data: avaliacoes } = useQuery({
     queryKey: ["doc-v2-avaliacoes", roomId],
-    queryFn: async () => (await supabase.from("documentation_v2_avaliacoes" as any).select("response_id, nota, confirmada, liberada").eq("room_id", roomId!)).data as any[] || [],
+    queryFn: async () => (await supabase.from("documentation_v2_avaliacoes" as any).select("response_id, nota, confirmada, liberada, dados").eq("room_id", roomId!)).data as any[] || [],
     enabled: !!roomId,
+  });
+  const { data: revisoes } = useQuery({
+    queryKey: ["doc-v2-revisoes", roomId],
+    queryFn: async () => (await supabase.from("documentation_v2_revisoes" as any).select("reviewed_pair, answers_json, submitted_at").eq("room_id", roomId!).not("submitted_at", "is", null)).data as any[] || [],
+    enabled: !!roomId,
+    refetchInterval: 15000,
   });
   const [aberta, setAberta] = useState<number | null>(null);
 
@@ -98,6 +107,10 @@ export default function DocumentationV2Sala() {
 
   const duplas = new Map<number, any[]>();
   for (const p of partes || []) duplas.set(p.pair_index, [...(duplas.get(p.pair_index) || []), p]);
+  // Revisão cruzada que a dupla RECEBEU (0 a 10) e a nota final 80/20 (só existe depois da rubrica confirmada).
+  const revisaoRecebida = (i: number) => notaRevisao((revisoes || []).find((r: any) => r.reviewed_pair === i)?.answers_json);
+  const referenciaDe = (caseId: string | null) => (refs[caseId || ""] || []) as ItemReferencia[];
+  const nomeDupla = (i: number) => `Dupla ${i + 1}: ${(duplas.get(i) || []).map((p) => p.student_name).join(" e ")}`;
   const enviou = (i: number) => !!(respostas || []).find((r: any) => r.pair_index === i)?.submitted_at;
   const semReferencia = (casos || []).filter((c) => !(refs[c.id] || []).length).length;
   // Com o paciente virtual, todo caso precisa de persona válida antes de ativar (o salvo, não o que está na tela).
@@ -172,6 +185,11 @@ export default function DocumentationV2Sala() {
         ))}
       </div>
 
+      <DocV2Panorama totalDuplas={duplas.size} respostas={(respostas || []).filter((r: any) => r.submitted_at)} avaliacoes={avaliacoes || []} revisoesEnviadas={(revisoes || []).length} usaPaciente={!!sala.usa_paciente} />
+      <DocV2Lote respostas={(respostas || []).filter((r: any) => r.submitted_at)} corrigidas={new Set((avaliacoes || []).map((a: any) => a.response_id as string))}
+        usaPaciente={!!sala.usa_paciente} referenciaDe={referenciaDe} nomeDe={nomeDupla}
+        onFeito={() => qc.invalidateQueries({ queryKey: ["doc-v2-avaliacoes", roomId] })} />
+
       <Card>
         <CardHeader><CardTitle className="font-heading text-base font-medium">Duplas e entregas</CardTitle><p className="text-xs text-muted-foreground">Só entraram as duplas completas da Reconciliação. A IA sugere a nota; você confirma e libera a devolutiva.</p></CardHeader>
         <CardContent>
@@ -186,7 +204,7 @@ export default function DocumentationV2Sala() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span><b>Dupla {i + 1}</b>: {g.map((p) => p.student_name).join(" e ")}</span>
                       <span className="flex items-center gap-2">
-                        {av?.confirmada && <Badge variant="secondary">{Number(av.nota).toFixed(2).replace(".", ",")}/10{av.liberada ? " · liberada" : ""}</Badge>}
+                        {av?.confirmada && <Badge variant="secondary" title={`Rubrica ${Number(av.nota).toFixed(2)} · revisão recebida ${revisaoRecebida(i) == null ? "—" : revisaoRecebida(i)!.toFixed(2)}`}>Final {(notaFinalDocV2(Number(av.nota), revisaoRecebida(i)) ?? 0).toFixed(2).replace(".", ",")}/10{av.liberada ? " · liberada" : ""}</Badge>}
                         {resp && sala.usa_paciente && !resp.aconselhamento_concluido_at && <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Aconselhamento pendente</Badge>}
                         {resp ? <Badge className="gap-1"><CheckCircle2 className="h-3 w-3" />Enviada</Badge> : <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Pendente</Badge>}
                         {resp && <Button size="sm" variant="outline" onClick={() => setAberta(aberta === i ? null : i)}>{aberta === i ? "Fechar" : "Corrigir"}</Button>}

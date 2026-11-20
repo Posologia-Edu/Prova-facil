@@ -26,10 +26,12 @@ export default function DocV2Devolutiva({ accessCode, email }: { accessCode: str
     <Card>
       <CardHeader>
         <CardTitle className="font-heading text-lg font-medium">Devolutiva da sua dupla</CardTitle>
-        {dev.nota != null && <p className="text-sm">Nota da rubrica: <b>{dev.nota.toFixed(2).replace(".", ",")}</b> / 10</p>}
+        {dev.nota_final != null && <p className="text-sm">Nota final: <b>{dev.nota_final.toFixed(2).replace(".", ",")}</b> / 10 <span className="text-muted-foreground">(80% rubrica{dev.revisao_nota != null ? " + 20% revisão do colega" : "; sem revisão recebida, vale só a rubrica"})</span></p>}
+        {dev.nota != null && <p className="text-sm text-muted-foreground">Rubrica do professor: {dev.nota.toFixed(2).replace(".", ",")}{dev.revisao_nota != null ? ` · revisão do colega: ${dev.revisao_nota.toFixed(2).replace(".", ",")}` : ""}</p>}
       </CardHeader>
       <CardContent className="space-y-4">
         {dev.comentario && <p className="rounded-lg bg-muted/40 p-3 text-sm">{dev.comentario}</p>}
+        {dev.revisao_comentario && <p className="rounded-lg bg-muted/40 p-3 text-sm"><b>Comentário do colega que revisou:</b> {dev.revisao_comentario}</p>}
         {(dev.alertas || []).length > 0 && (
           <div className="space-y-1 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
             <p className="flex items-center gap-2 font-medium"><AlertTriangle className="h-4 w-4" />Riscos para o paciente nos seus documentos</p>

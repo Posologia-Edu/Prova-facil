@@ -34,9 +34,30 @@ serve(async (req) => {
     if (!av || !av.confirmada || !av.liberada) return json({ liberada: false });
 
     const d: any = av.dados || {};
+
+    // Revisão cruzada que a minha dupla RECEBEU (sem dizer quem revisou): 8 itens, sim=1, em parte=0,5, não=0, de 0 a 10.
+    // Mesma regra de src/lib/doc-v2-nota.ts (as funções não importam de src/).
+    const ITENS = ["rv-destino", "rv-sbar", "rv-cobertura", "rv-grade", "rv-linguagem", "rv-alertas", "rv-coerencia", "rv-usaria"];
+    const { data: rev } = await db.from("documentation_v2_revisoes").select("answers_json")
+      .eq("room_id", sala.id).eq("reviewed_pair", eu.pair_index).not("submitted_at", "is", null).maybeSingle();
+    let revisaoNota: number | null = null;
+    let revisaoComentario = "";
+    if (rev?.answers_json) {
+      const a: any = rev.answers_json;
+      let soma = 0, ok = true;
+      for (const id of ITENS) { if (a[id] === "sim") soma += 1; else if (a[id] === "parcial") soma += 0.5; else if (a[id] !== "nao") ok = false; }
+      if (ok) revisaoNota = Math.round((soma / ITENS.length) * 10 * 100) / 100;
+      revisaoComentario = typeof a.comentario === "string" ? a.comentario : "";
+    }
+    const rubrica = av.nota != null ? Number(av.nota) : null;
+    const notaFinal = rubrica == null ? null : revisaoNota == null ? rubrica : 0.8 * rubrica + 0.2 * revisaoNota;
+
     return json({
       liberada: true,
-      nota: av.nota != null ? Number(av.nota) : null,
+      nota: rubrica,
+      revisao_nota: revisaoNota,
+      revisao_comentario: revisaoComentario,
+      nota_final: notaFinal,
       criterios: d.respostas || {},
       justificativas: d.justificativas || {},
       comentario: d.comentario || "",
