@@ -23,6 +23,8 @@ interface Props {
   fields: FormField[];
   existing?: any | null;
   onSaved?: () => void;
+  /** Gravação alternativa (painel do juiz, sem login). Devolve o erro, ou null se gravou. */
+  onSave?: (payload: any) => Promise<unknown>;
 }
 
 export function MockTrialEvaluationForm({
@@ -36,6 +38,7 @@ export function MockTrialEvaluationForm({
   fields,
   existing,
   onSaved,
+  onSave,
 }: Props) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
@@ -67,9 +70,12 @@ export function MockTrialEvaluationForm({
       ai_generated: false,
       evaluator_name: evaluatorName || null,
     };
-    const { error } = await supabase
-      .from("mock_trial_evaluations")
-      .upsert(payload, { onConflict: "case_id,group_id,evaluator_type" });
+    // Se quem usa o componente passou onSave (ex.: painel do juiz, sem login), a gravação vai por ele
+    const { error } = onSave
+      ? { error: await onSave(payload) }
+      : await supabase
+          .from("mock_trial_evaluations")
+          .upsert(payload, { onConflict: "case_id,group_id,evaluator_type" });
     setSaving(false);
     if (error) {
       toast.error("Erro ao salvar avaliação");

@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import { Gavel, Play, Pause, SkipForward, Square, FileText, Users, CheckCircle2, Clock } from "lucide-react";
 import { LegalProcessRenderer } from "@/components/mock-trial/LegalProcessRenderer";
 import { MockTrialEvaluationForm } from "@/components/mock-trial/MockTrialEvaluationForm";
-import { ensureEvaluationForms } from "@/lib/mock-trial-evaluations";
 
 import { formatGroupLabel } from "@/lib/mock-trial-utils";
 
@@ -120,139 +119,78 @@ export default function MockTrialJudge() {
     }
   }, []);
 
+  const [caseImages, setCaseImages] = useState<any[]>([]);
+
+  // Chamada única à função do juiz
+  const chamar = async (body: Record<string, unknown>, name = judgeName) => {
+    const { data, error } = await supabase.functions.invoke("juri-juiz", {
+      body: { access_code: accessCode, judge_name: name, ...body },
+    });
+    if (error || data?.error) throw new Error(data?.error || error?.message || "Erro");
+    return data;
+  };
+
+  const aplicarEstado = (d: any, primeira: boolean) => {
+    setTrial(d.juri);
+    setCases(d.casos || []);
+    setGroups(d.grupos || []);
+    setStudents(d.alunos || []);
+    setAssignments(d.atribuicoes || []);
+    setForms(d.formularios || []);
+    setEvaluationForms(d.formulariosAvaliacao || []);
+    setResponses(d.respostas || []);
+    setEvaluations(d.avaliacoes || []);
+    setCaseImages(d.imagens || []);
+    if (d.sessao) setSession((prev: any) => (prev && prev.id === d.sessao.id && JSON.stringify(prev) === JSON.stringify(d.sessao) ? prev : d.sessao));
+    if (primeira && d.casos?.length) setSelectedCaseId(d.casos[0].id);
+  };
+
   const authenticateJudge = async (name: string) => {
     if (!name.trim()) {
       toast.error("Informe seu nome");
       return;
     }
-    const { data: t } = await supabase
-      .from("mock_trials")
-      .select("*")
-      .eq("access_code", accessCode!)
-      .single();
-    if (!t) { toast.error("Júri não encontrado"); return; }
-
-    // Verify judge name matches what the teacher configured (case/spacing-insensitive)
-    const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
-    const expected = (t.judge_name || "").trim();
-    if (!expected) {
-      toast.error("Este Júri Simulado ainda não tem um juiz cadastrado pelo professor.");
-      return;
-    }
-    if (normalize(expected) !== normalize(name)) {
-      toast.error("Nome não corresponde ao juiz cadastrado para este júri.");
-      return;
-    }
-
-    setTrial(t);
-
-    const { data: c } = await supabase.from("mock_trial_cases").select("*").eq("mock_trial_id", t.id).order("position");
-    setCases(c || []);
-    if (c && c.length > 0) setSelectedCaseId(c[0].id);
-
-    const { data: grps } = await supabase.from("mock_trial_groups").select("*").eq("mock_trial_id", t.id).order("group_number");
-    setGroups(grps || []);
-    const groupIds = (grps || []).map(g => g.id);
-    if (groupIds.length > 0) {
-      const { data: studs } = await supabase.from("mock_trial_students").select("*").in("group_id", groupIds);
-      setStudents(studs || []);
-    }
-    const caseIds = (c || []).map(x => x.id);
-    if (caseIds.length > 0) {
-      const { data: assigns } = await supabase.from("mock_trial_assignments").select("*").in("case_id", caseIds);
-      setAssignments(assigns || []);
-    }
-    const { data: frms } = await supabase.from("mock_trial_forms").select("*").eq("mock_trial_id", t.id);
-    setForms(frms || []);
-
-    // Garantir formulários de avaliação (juiz e professor)
-    const evalForms = await ensureEvaluationForms(t.id);
-    setEvaluationForms(evalForms);
-
-    setAuthenticated(true);
-  };
-
-  // Load responses for the current session + realtime updates
-  useEffect(() => {
-    if (!session?.id) { setResponses([]); return; }
-    let active = true;
-    (async () => {
-      const { data } = await supabase.from("mock_trial_responses").select("*").eq("session_id", session.id);
-      if (active) setResponses(data || []);
-    })();
-    const channel = supabase
-      .channel(`responses-${session.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mock_trial_responses", filter: `session_id=eq.${session.id}` }, (payload) => {
-        setResponses(prev => [...prev, payload.new]);
-      })
-      .subscribe();
-    return () => { active = false; supabase.removeChannel(channel); };
-  }, [session?.id]);
-
-  // Load evaluations for current session + realtime
-  useEffect(() => {
-    if (!session?.id) { setEvaluations([]); return; }
-    let active = true;
-    (async () => {
-      const { data } = await supabase
-        .from("mock_trial_evaluations")
-        .select("*")
-        .eq("session_id", session.id);
-      if (active) setEvaluations(data || []);
-    })();
-    const channel = supabase
-      .channel(`evals-${session.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "mock_trial_evaluations", filter: `session_id=eq.${session.id}` }, () => {
-        supabase.from("mock_trial_evaluations").select("*").eq("session_id", session.id).then(({ data }) => {
-          setEvaluations(data || []);
-        });
-      })
-      .subscribe();
-    return () => { active = false; supabase.removeChannel(channel); };
-  }, [session?.id]);
-  useEffect(() => {
-    const loadSession = async () => {
-      if (!selectedCaseId) return;
-      const { data, error } = await supabase
-        .from("mock_trial_sessions")
-        .select("*")
-        .eq("case_id", selectedCaseId)
-        .maybeSingle();
-      if (error) {
-        console.error("loadSession select error:", error);
-        toast.error("Erro ao carregar sessão: " + error.message);
+    try {
+      const d = await chamar({ action: "estado", case_id: null }, name);
+      if (!d.ok) {
+        if (d.motivo === "juri") toast.error("Júri não encontrado");
+        else if (d.motivo === "sem_juiz") toast.error("Este Júri Simulado ainda não tem um juiz cadastrado pelo professor.");
+        else if (d.motivo === "nome") toast.error("Nome não corresponde ao juiz cadastrado para este júri.");
+        else toast.error("O professor precisa abrir o editor deste júri uma vez antes de o juiz entrar.");
         return;
       }
-      if (data) {
-        setSession(data);
-      } else {
-        const { data: newSession, error: insErr } = await supabase
-          .from("mock_trial_sessions")
-          .insert({ case_id: selectedCaseId })
-          .select()
-          .single();
-        if (insErr) {
-          console.error("loadSession insert error:", insErr);
-          toast.error("Não foi possível criar a sessão: " + insErr.message);
-          return;
-        }
-        setSession(newSession);
-      }
-    };
-    if (authenticated) loadSession();
+      setJudgeName(name);
+      aplicarEstado(d, true);
+      setAuthenticated(true);
+    } catch {
+      toast.error("Não foi possível entrar. Tente de novo.");
+    }
+  };
+
+  // Ao trocar de processo, carrega (e cria, se preciso) a sessão dele
+  useEffect(() => {
+    if (!authenticated || !selectedCaseId) return;
+    let ativo = true;
+    setSession(null);
+    chamar({ action: "estado", case_id: selectedCaseId })
+      .then(d => { if (ativo && d.ok) aplicarEstado(d, false); })
+      .catch(e => toast.error("Erro ao carregar sessão: " + e.message));
+    return () => { ativo = false; };
   }, [selectedCaseId, authenticated]);
 
-  // Realtime subscription for session
+  // Acompanha respostas, avaliações e sessão (substitui o realtime): a cada 4 segundos
   useEffect(() => {
-    if (!session?.id) return;
-    const channel = supabase
-      .channel(`session-${session.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "mock_trial_sessions", filter: `id=eq.${session.id}` }, (payload) => {
-        setSession(payload.new);
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [session?.id]);
+    if (!authenticated || !selectedCaseId) return;
+    let ativo = true;
+    const id = setInterval(async () => {
+      if (document.hidden) return;
+      try {
+        const d = await chamar({ action: "estado", case_id: selectedCaseId });
+        if (ativo && d.ok) aplicarEstado(d, false);
+      } catch { /* tenta de novo no próximo ciclo */ }
+    }, 4000);
+    return () => { ativo = false; clearInterval(id); };
+  }, [selectedCaseId, authenticated, judgeName]);
 
   const currentPhaseIndex = PHASES.findIndex(p => p.key === session?.status);
   const currentPhase = currentPhaseIndex >= 0 ? PHASES[currentPhaseIndex] : null;
@@ -309,26 +247,16 @@ export default function MockTrialJudge() {
     }
     const phase = PHASES.find(p => p.key === phaseKey);
     alertPlayedRef.current = false;
-    const { data, error } = await supabase
-      .from("mock_trial_sessions")
-      .update({
-        status: phaseKey,
-        current_phase_started_at: new Date().toISOString(),
-        phase_duration_seconds: phase?.duration || 0,
-        is_paused: false,
-        paused_remaining_seconds: null,
-      } as any)
-      .eq("id", session.id)
-      .select()
-      .single();
-    if (error) {
-      console.error("startPhase error:", error);
-      toast.error("Não foi possível atualizar a fase: " + error.message);
+    try {
+      const d = await chamar({ action: "fase", op: "iniciar", case_id: selectedCaseId, phase_key: phaseKey, duration: phase?.duration || 0 });
+      if (d.sessao) setSession(d.sessao);
+    } catch (e: any) {
+      console.error("startPhase error:", e);
+      toast.error("Não foi possível atualizar a fase: " + e.message);
       return false;
     }
-    if (data) setSession(data);
     return true;
-  }, [session?.id]);
+  }, [session?.id, selectedCaseId, judgeName]);
 
   const startSession = async () => {
     const ok = await startPhase("announcement");
@@ -337,13 +265,13 @@ export default function MockTrialJudge() {
 
   const finishSession = async () => {
     if (!session?.id) return;
-    await supabase.from("mock_trial_sessions").update({
-      status: "finished",
-      current_phase_started_at: null,
-      phase_duration_seconds: null,
-      is_paused: false,
-      paused_remaining_seconds: null,
-    } as any).eq("id", session.id);
+    try {
+      const d = await chamar({ action: "fase", op: "finalizar", case_id: selectedCaseId });
+      if (d.sessao) setSession(d.sessao);
+    } catch (e: any) {
+      toast.error("Não foi possível finalizar: " + e.message);
+      return;
+    }
     setIsRunning(false);
     setTimeLeft(0);
 
@@ -368,33 +296,13 @@ export default function MockTrialJudge() {
 
   const togglePause = async () => {
     if (!session?.id) return;
-    if (session.is_paused) {
-      // Resume: shift current_phase_started_at so remaining = paused_remaining_seconds
-      const remaining = session.paused_remaining_seconds ?? timeLeft;
-      const total = session.phase_duration_seconds || 0;
-      const newStartedAt = new Date(Date.now() - (total - remaining) * 1000).toISOString();
-      const { data } = await supabase
-        .from("mock_trial_sessions")
-        .update({
-          is_paused: false,
-          paused_remaining_seconds: null,
-          current_phase_started_at: newStartedAt,
-        } as any)
-        .eq("id", session.id)
-        .select()
-        .single();
-      if (data) setSession(data);
-    } else {
-      const { data } = await supabase
-        .from("mock_trial_sessions")
-        .update({
-          is_paused: true,
-          paused_remaining_seconds: timeLeft,
-        } as any)
-        .eq("id", session.id)
-        .select()
-        .single();
-      if (data) setSession(data);
+    try {
+      const d = await chamar(session.is_paused
+        ? { action: "fase", op: "retomar", case_id: selectedCaseId, remaining: timeLeft }
+        : { action: "fase", op: "pausar", case_id: selectedCaseId, remaining: timeLeft });
+      if (d.sessao) setSession(d.sessao);
+    } catch (e: any) {
+      toast.error("Não foi possível pausar/retomar: " + e.message);
     }
   };
 
@@ -663,6 +571,12 @@ export default function MockTrialJudge() {
                     evaluatorName={judgeName}
                     fields={judgeForm.fields_json}
                     existing={existing}
+                    onSave={async (payload) => {
+                      try {
+                        await chamar({ action: "avaliar", case_id: selectedCase.id, group_id: a.group_id, score: payload.score, criteria_json: payload.criteria_json, feedback: payload.feedback });
+                        return null;
+                      } catch (e: any) { return e; }
+                    }}
                   />
                 );
               })}
@@ -685,6 +599,7 @@ export default function MockTrialJudge() {
               caseNumber={selectedCase.case_number}
               title={selectedCase.title}
               caseId={selectedCase.id}
+              images={caseImages.filter(i => i.case_id === selectedCase.id)}
             />
           </CardContent>
         </Card>
