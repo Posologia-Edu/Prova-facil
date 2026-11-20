@@ -26,7 +26,7 @@ serve(async (req) => {
 
     const db = adminClient();
     const { data: sala } = await db.from("documentation_rooms")
-      .select("id, title, status, schema_version, base_conciliacao, tempo_sugerido_min, usa_paciente")
+      .select("id, title, status, schema_version, base_conciliacao, tempo_sugerido_min, usa_paciente, documentos_extra")
       .eq("access_code", access_code.trim().toLowerCase()).eq("status", "active").maybeSingle();
     if (!sala || sala.schema_version !== 2) return forbidden(corsHeaders);
 
@@ -61,6 +61,8 @@ serve(async (req) => {
         respostas: resp?.submitted_at ? resp.respostas : null,
         // Com o paciente virtual, a atividade só termina depois do aconselhamento (conversa encerrada + checklist do observador).
         usa_paciente: !!sala.usa_paciente,
+        // Documentos extras ativos na sala (a ocorrência de cada um vem em caso.caso_json.ocorrencias).
+        extras: Array.isArray(sala.documentos_extra) ? sala.documentos_extra : [],
         aconselhamento_concluido: !!resp?.aconselhamento_concluido_at,
       });
     }
@@ -72,6 +74,16 @@ serve(async (req) => {
     // Guarda só os documentos conhecidos.
     const limpas: Record<string, unknown> = {};
     for (const d of DOCUMENTOS) if (d in respostas) limpas[d] = respostas[d];
+    // Documentos extras: só os que a sala ativou, e cada um como objeto.
+    if (respostas.extras && typeof respostas.extras === "object" && !Array.isArray(respostas.extras)) {
+      const ativos: string[] = Array.isArray(sala.documentos_extra) ? sala.documentos_extra : [];
+      const extras: Record<string, unknown> = {};
+      for (const id of ativos) {
+        const v = (respostas.extras as Record<string, unknown>)[id];
+        if (v && typeof v === "object" && !Array.isArray(v)) extras[id] = v;
+      }
+      limpas.extras = extras;
+    }
 
     const agora = new Date().toISOString();
     if (resp) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, BookOpen, CheckCircle2, ClipboardList, Eye, FileText, Pill, Plus, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, BookOpen, FilePlus2, CheckCircle2, ClipboardList, Eye, FileText, Pill, Plus, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,8 @@ import { toast } from "@/hooks/use-toast";
 import DraftStatusBadge from "@/components/forms/DraftStatusBadge";
 import DocV2Devolutiva from "@/components/documentation/DocV2Devolutiva";
 import DocV2Paciente from "@/components/documentation/DocV2Paciente";
+import DocV2ExtraForm from "@/components/documentation/DocV2ExtraForm";
+import { ESQUEMAS_EXTRA, extrasValidos, rotuloExtra, type ExtraId } from "@/lib/doc-v2-extras";
 import DocV2Revisao from "@/components/documentation/DocV2Revisao";
 import DocV2Cronometro from "@/components/documentation/DocV2Cronometro";
 import { useFormDraft } from "@/hooks/use-form-draft";
@@ -30,6 +32,7 @@ type Estado = {
   respostas: any;
   usa_paciente?: boolean;
   aconselhamento_concluido?: boolean;
+  extras?: string[];
 };
 
 async function chamar(body: Record<string, unknown>) {
@@ -56,7 +59,7 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
   const [erro, setErro] = useState<string | null>(null);
   const [estado, setEstado] = useState<Estado | null>(null);
   const [r, setR] = useState<RespostasV2>(() => normalizarRespostas(null));
-  const [aba, setAba] = useState<TipoDocumento>("encaminhamento");
+  const [aba, setAba] = useState<string>("encaminhamento");
   const [previa, setPrevia] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -94,7 +97,9 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
     saveDraft({ v2: r });
   }, [r, draftKey, draftLoaded, finalizada, saveDraft]);
 
-  const avisos = useMemo(() => verificarTudo(r, estado?.referencia || []), [r, estado]);
+  const extras = useMemo(() => extrasValidos(estado?.extras), [estado]);
+  const avisos = useMemo(() => verificarTudo(r, estado?.referencia || [], extras), [r, estado, extras]);
+  const rotuloDoc = (k: string) => (k.startsWith("extra:") ? rotuloExtra(k.slice(6)) : ROTULO_DOCUMENTO[k as TipoDocumento]);
   const pendencias = avisos.filter((a) => a.nivel === "aviso");
 
   const enviar = async () => {
@@ -139,6 +144,9 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
               <p>{caso.resumo}</p>
               <p className="text-muted-foreground">{p.nome}, {p.idade} anos, {p.sexo === "F" ? "feminino" : "masculino"}, {p.peso_kg} kg{p.creatinina_mg_dl ? `, creatinina ${p.creatinina_mg_dl} mg/dL` : ""}. Alergias: {p.alergias_registradas || "não registradas"}.</p>
               <p><Badge variant="secondary">{ROTULO_TRANSICAO[caso.transicao]}</Badge> {p.motivo}</p>
+              {extras.some((id) => caso.ocorrencias?.[id]) && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 text-xs"><p className="font-medium">O que aconteceu depois</p>{extras.filter((id) => caso.ocorrencias?.[id]).map((id) => <p key={id} className="mt-1">{caso.ocorrencias![id]}</p>)}</div>
+              )}
               <details className="rounded border p-2"><summary className="cursor-pointer text-xs font-medium">Fontes do dossiê ({caso.fontes.length})</summary>
                 <div className="mt-2 space-y-2">{caso.fontes.map((f) => <div key={f.id}><p className="text-xs font-medium">{f.titulo} <span className="text-muted-foreground">({ROTULO_FONTE[f.tipo]})</span></p><p className="whitespace-pre-wrap text-xs">{f.texto}</p></div>)}</div>
               </details>
@@ -163,10 +171,14 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
               const n = avisos.filter((a) => a.documento === t && a.nivel === "aviso").length;
               return <Button key={t} role="tab" aria-selected={aba === t} variant={aba === t ? "default" : "outline"} size="sm" onClick={() => { setAba(t); setPrevia(false); }}><Icone className="mr-1 h-3.5 w-3.5" />{ROTULO_DOCUMENTO[t].split(" ")[0]}{n > 0 && <Badge variant="secondary" className="ml-1">{n}</Badge>}</Button>;
             })}
+            {extras.map((id) => {
+              const n = avisos.filter((a) => a.documento === `extra:${id}` && a.nivel === "aviso").length;
+              return <Button key={id} role="tab" aria-selected={aba === `extra:${id}`} variant={aba === `extra:${id}` ? "default" : "outline"} size="sm" onClick={() => { setAba(`extra:${id}`); setPrevia(false); }}><FilePlus2 className="mr-1 h-3.5 w-3.5" />{rotuloExtra(id).split(" ").slice(0, 2).join(" ")}{n > 0 && <Badge variant="secondary" className="ml-1">{n}</Badge>}</Button>;
+            })}
           </div>
 
           <Card>
-            <CardHeader><CardTitle className="font-heading text-base font-medium">{ROTULO_DOCUMENTO[aba]}</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-heading text-base font-medium">{rotuloDoc(aba)}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <fieldset disabled={desabilitado} className="space-y-4">
                 {aba === "encaminhamento" && (
@@ -279,6 +291,18 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
                   </>
                 )}
 
+                {aba.startsWith("extra:") && extras.includes(aba.slice(6) as ExtraId) && (() => {
+                  const id = aba.slice(6) as ExtraId;
+                  const esq = ESQUEMAS_EXTRA[id];
+                  return (
+                    <>
+                      <p className="text-xs text-muted-foreground">{esq.descricao}</p>
+                      {caso.ocorrencias?.[id] && <p className="rounded-lg border bg-muted/30 p-3 text-sm"><b>Ocorrência:</b> {caso.ocorrencias[id]}</p>}
+                      <DocV2ExtraForm esquema={esq} valor={r.extras[id] || {}} onChange={(v) => setR((a) => ({ ...a, extras: { ...a.extras, [id]: v } }))} desabilitado={desabilitado} />
+                    </>
+                  );
+                })()}
+
                 {aba === "plano" && (
                   <>
                     <Campo id="plano-metas" rotulo="Metas do tratamento"><Textarea id="plano-metas" rows={3} value={r.plano.metas} onChange={(e) => set("plano", { metas: e.target.value })} /></Campo>
@@ -300,7 +324,7 @@ export default function DocV2Aluno({ room, participant, accessCode, email }: Pro
             <CardHeader><CardTitle className="font-heading text-base font-medium">Conferência automática</CardTitle><p className="text-xs text-muted-foreground">São só avisos: você decide se corrige. Nada bloqueia o envio.</p></CardHeader>
             <CardContent>
               {pendencias.length === 0 ? <p className="flex items-center gap-2 text-sm"><CheckCircle2 className="h-4 w-4 text-success" />Nenhum aviso.</p> : (
-                <ul className="space-y-1 text-sm">{pendencias.map((a) => <li key={a.id} className="flex gap-2"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" /><span><b>{ROTULO_DOCUMENTO[a.documento].split(" ")[0]}:</b> {a.texto}</span></li>)}</ul>
+                <ul className="space-y-1 text-sm">{pendencias.map((a) => <li key={a.id} className="flex gap-2"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" /><span><b>{rotuloDoc(a.documento).split(" ")[0]}:</b> {a.texto}</span></li>)}</ul>
               )}
             </CardContent>
           </Card>

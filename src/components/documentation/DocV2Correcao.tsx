@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/ui/status-badge";
+import type { ExtraId } from "@/lib/doc-v2-extras";
 import { normalizarRespostas, resumoDocumentos, verificarTudo, type ItemReferencia } from "@/lib/doc-v2";
 import { ITENS_CHECKLIST, resumoCompreensao } from "@/lib/doc-v2-paciente";
 import { criteriosAplicaveis, notaRubricaDoc, type AvaliacaoDoc } from "@/lib/doc-v2-rubrica";
@@ -17,6 +18,7 @@ type Props = {
   response: { id: string; respostas: any };
   referencia: ItemReferencia[];
   totalBarreiras?: number;
+  extras?: ExtraId[];
   onSaved: () => void;
 };
 
@@ -24,7 +26,7 @@ type Props = {
 const tabela = () => (supabase as any).from("documentation_v2_avaliacoes");
 
 /** Correção da Documentação v2 pelo professor: a IA sugere os critérios; o professor revisa, confirma e libera. */
-export default function DocV2Correcao({ roomId, usaPaciente, response, referencia, totalBarreiras = 0, onSaved }: Props) {
+export default function DocV2Correcao({ roomId, usaPaciente, response, referencia, totalBarreiras = 0, extras = [], onSaved }: Props) {
   // Conversa com o paciente virtual (privada): o professor lê tudo, inclusive a medida de compreensão e o checklist do observador.
   const [conversa, setConversa] = useState<any>(null);
   useEffect(() => {
@@ -45,9 +47,9 @@ export default function DocV2Correcao({ roomId, usaPaciente, response, referenci
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
-  const criterios = useMemo(() => criteriosAplicaveis(usaPaciente), [usaPaciente]);
+  const criterios = useMemo(() => criteriosAplicaveis(usaPaciente, extras), [usaPaciente, extras]);
   const docs = useMemo(() => normalizarRespostas(response.respostas), [response.respostas]);
-  const avisos = useMemo(() => verificarTudo(docs, referencia).filter((a) => a.nivel === "aviso"), [docs, referencia]);
+  const avisos = useMemo(() => verificarTudo(docs, referencia, extras).filter((a) => a.nivel === "aviso"), [docs, referencia]);
 
   useEffect(() => {
     let vivo = true;
@@ -63,7 +65,7 @@ export default function DocV2Correcao({ roomId, usaPaciente, response, referenci
     return () => { vivo = false; };
   }, [response.id]);
 
-  const notaAtual = notaRubricaDoc(respostas, usaPaciente);
+  const notaAtual = notaRubricaDoc(respostas, usaPaciente, extras);
 
   const corrigir = async () => {
     if (confirmada && !window.confirm("Esta resposta já tem nota confirmada. Corrigir de novo substitui a sugestão, tira a liberação à dupla e pede nova confirmação. Continuar?")) return;
@@ -126,7 +128,7 @@ export default function DocV2Correcao({ roomId, usaPaciente, response, referenci
       </div>
 
       <details className="rounded border bg-background p-2"><summary className="cursor-pointer text-sm font-medium">Ler os documentos da dupla</summary>
-        <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap text-xs">{resumoDocumentos(docs)}</pre>
+        <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap text-xs">{resumoDocumentos(docs, extras)}</pre>
       </details>
 
       {usaPaciente && (

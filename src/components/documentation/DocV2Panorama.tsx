@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ExtraId } from "@/lib/doc-v2-extras";
 import { criteriosAplicaveis } from "@/lib/doc-v2-rubrica";
 
 type Props = {
@@ -8,12 +9,13 @@ type Props = {
   avaliacoes: { response_id: string; nota: number | null; confirmada: boolean; liberada: boolean; dados: any }[];
   revisoesEnviadas: number;
   usaPaciente: boolean;
+  extras?: ExtraId[];
 };
 
 /** Panorama da turma: andamento, média por critério (só notas confirmadas) e os riscos mais citados. Só o professor vê. */
-export default function DocV2Panorama({ totalDuplas, respostas, avaliacoes, revisoesEnviadas, usaPaciente }: Props) {
+export default function DocV2Panorama({ totalDuplas, respostas, avaliacoes, revisoesEnviadas, usaPaciente, extras = [] }: Props) {
   const confirmadas = avaliacoes.filter((a) => a.confirmada);
-  const criterios = useMemo(() => criteriosAplicaveis(usaPaciente), [usaPaciente]);
+  const criterios = useMemo(() => criteriosAplicaveis(usaPaciente, extras), [usaPaciente, extras]);
 
   const medias = useMemo(() => criterios.map((c) => {
     const notas = confirmadas.map((a) => a.dados?.respostas?.[c.id]).filter((v) => typeof v === "number") as number[];

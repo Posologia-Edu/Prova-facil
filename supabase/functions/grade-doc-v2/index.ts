@@ -20,6 +20,7 @@ Regras:
 - Pontue cada critério de 0 a 4 inteiros, seguindo as âncoras. Seja criterioso: 4 só quando cumpre tudo.
 - Compare o cartão e o encaminhamento com a conciliação de referência e com a ação esperada de cada discrepância. Medicamento suspenso que aparece na grade como se fosse para tomar, dose trocada, horário incoerente com a frequência ou medicamento omitido são erros de fidelidade.
 - Se houver ACONSELHAMENTO AO PACIENTE VIRTUAL e os critérios de aconselhamento e teach-back estiverem na lista, pontue-os pela conversa: abrir com pergunta aberta, descobrir as barreiras escondidas (a medida de compreensão e as barreiras reveladas são fatos do servidor: não as altere), adaptar a linguagem ao paciente e fazer teach-back das mensagens-chave, corrigindo o que o paciente repetiu errado. O paciente repete o que realmente entendeu: explicação confusa gera repetição errada, e isso é falha do farmacêutico. Se a dupla não conversou, esses critérios valem 0.
+- Se houver DOCUMENTOS EXTRAS e o critério correspondente estiver na lista, pontue-o comparando a resposta da dupla com a ocorrência e o gabarito. Na notificação de reação adversa ("ram"): o paciente deve estar só por iniciais; o medicamento suspeito, as datas e o desfecho devem bater com a ocorrência; o escore e a categoria de Naranjo devem corresponder às respostas da própria dupla e, de preferência, às esperadas no gabarito (se divergirem, diga qual pergunta e por quê). Nome completo do paciente é falha grave de privacidade.
 - Julgue a linguagem do cartão pelo leitor (o paciente leigo) e a do encaminhamento pelo seu leitor (o prescritor). A conferência automática traz índice de legibilidade e termos técnicos: use-a como apoio, não como sentença.
 - "alertas": erros nos documentos que poderiam causar dano ao paciente se fossem usados como estão (até 5, uma frase cada). Vazio se não houver.
 - Cada justificativa tem no máximo 2 frases, em português, citando o que no documento levou à nota.
@@ -81,7 +82,7 @@ serve(async (req) => {
     if (!(await ownsRoom("documentation_rooms", resp.room_id, userId))) return forbidden(corsHeaders);
     if (!resp.submitted_at) return json({ error: "A dupla ainda não enviou a documentação." }, 400);
 
-    const { data: room } = await db.from("documentation_rooms").select("schema_version, usa_paciente").eq("id", resp.room_id).maybeSingle();
+    const { data: room } = await db.from("documentation_rooms").select("schema_version, usa_paciente, documentos_extra").eq("id", resp.room_id).maybeSingle();
     if (!room || room.schema_version !== 2) return json({ error: "Esta sala não é da Documentação v2" }, 400);
 
     const { data: anterior } = await db.from("documentation_v2_avaliacoes").select("confirmada").eq("response_id", response_id).maybeSingle();
@@ -94,6 +95,15 @@ serve(async (req) => {
     const referencia: any[] = Array.isArray(priv.referencia) ? priv.referencia : [];
     if (!referencia.length) return json({ error: "O caso não tem conciliação de referência. Cadastre na tela da sala." }, 400);
     const discrepancias: any[] = Array.isArray((priv.gabarito as any)?.discrepancias) ? (priv.gabarito as any).discrepancias : [];
+
+    // Documentos extras (fase 2): o que a dupla escreveu e o gabarito de cada um, que só passa por aqui.
+    const extrasAtivos: string[] = Array.isArray(room.documentos_extra) ? room.documentos_extra : [];
+    const gabExtras: any = (priv.gabarito as any)?.extras || {};
+    const ocorrencias: any = cj.ocorrencias || {};
+    const extrasTexto = extrasAtivos.map((id) => `## DOCUMENTO EXTRA "${id}"
+Ocorrência dada ao aluno: ${clip(ocorrencias[id], 1500) || "(não cadastrada)"}
+Respostas da dupla (JSON): ${clip(JSON.stringify((resp.respostas as any)?.extras?.[id] ?? {}), 6000)}
+Gabarito (só para você; não revele): ${clip(JSON.stringify(gabExtras[id] ?? {}), 2000)}`).join("\n\n") || "(a sala não usa documentos extras)";
 
     // Aconselhamento ao paciente virtual: a conversa e a medida de compreensão são fatos registrados pelo servidor.
     let aconselhamento = "(a sala não usa o paciente virtual)";
@@ -130,6 +140,9 @@ ${discrepancias.map((d) => `- ${d.medicamento} (${d.tipo}, risco ${d.risco}${d.c
 
 [DOCUMENTOS DA DUPLA]
 ${clip(documentosTexto(resp.respostas), 20000)}
+
+[DOCUMENTOS EXTRAS]
+${extrasTexto}
 
 [ACONSELHAMENTO AO PACIENTE VIRTUAL]
 ${clip(aconselhamento, 12000)}

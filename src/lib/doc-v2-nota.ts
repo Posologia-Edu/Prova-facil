@@ -1,3 +1,5 @@
+import { ESQUEMAS_EXTRA, type ExtraId } from "@/lib/doc-v2-extras";
+
 // Nota final da Documentação v2: 80% da rubrica confirmada pelo professor + 20% da revisão cruzada que a dupla RECEBEU.
 // Sem a nota do professor a nota final ainda não existe. Sem revisão recebida (o colega não revisou), vale só a rubrica:
 // a dupla não perde nota porque outra dupla não fez a revisão. Mesma regra do SOAP v2 e da Reconciliação v2.
@@ -33,19 +35,23 @@ export const ITENS_REVISAO: { id: string; texto: string }[] = [
 ];
 export type RevisaoDoc = { respostas: Record<string, RespostaRevisao>; comentario: string };
 
-export function revisaoCompleta(r: RevisaoDoc | null | undefined): boolean {
-  return !!r && ITENS_REVISAO.every((i) => ["sim", "parcial", "nao"].includes(r.respostas?.[i.id] as string));
+/** Itens do checklist: os 8 do núcleo mais um por documento extra ativo na sala. */
+export const itensRevisao = (extras: ExtraId[] = []): { id: string; texto: string }[] => [...ITENS_REVISAO, ...extras.map((id) => ESQUEMAS_EXTRA[id].itemRevisao)];
+
+export function revisaoCompleta(r: RevisaoDoc | null | undefined, extras: ExtraId[] = []): boolean {
+  return !!r && itensRevisao(extras).every((i) => ["sim", "parcial", "nao"].includes(r.respostas?.[i.id] as string));
 }
 
 /** Nota de 0 a 10 que a revisão representa para a dupla revisada: sim vale 1, em parte 0,5, não 0. */
-export function notaRevisao(respostas: Record<string, unknown> | null | undefined): number | null {
+export function notaRevisao(respostas: Record<string, unknown> | null | undefined, extras: ExtraId[] = []): number | null {
   if (!respostas) return null;
   let soma = 0;
-  for (const i of ITENS_REVISAO) {
+  const itens = itensRevisao(extras);
+  for (const i of itens) {
     const v = respostas[i.id];
     if (v === "sim") soma += 1;
     else if (v === "parcial") soma += 0.5;
     else if (v !== "nao") return null;
   }
-  return Math.round((soma / ITENS_REVISAO.length) * 10 * 100) / 100;
+  return Math.round((soma / itens.length) * 10 * 100) / 100;
 }

@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { ITENS_REVISAO, type RespostaRevisao } from "@/lib/doc-v2-nota";
+import { itensRevisao, type RespostaRevisao } from "@/lib/doc-v2-nota";
 import { normalizarRespostas, resumoDocumentos, type ItemReferencia } from "@/lib/doc-v2";
+import { extrasValidos } from "@/lib/doc-v2-extras";
 
 type Estado =
   | { estado: "aguardando_minha" | "aguardando_outra" | "sem_par" | "enviada" }
-  | { estado: "revisar"; alvo: { rotulo: string; caso: { titulo: string; caso_json: any }; referencia: ItemReferencia[]; respostas: any } };
+  | { estado: "revisar"; extras?: string[]; alvo: { rotulo: string; caso: { titulo: string; caso_json: any }; referencia: ItemReferencia[]; respostas: any; ocorrencias?: Record<string, string> } };
 
 async function chamar(body: Record<string, unknown>) {
   const { data, error } = await supabase.functions.invoke("doc-v2-revisao", { body });
@@ -38,7 +39,7 @@ export default function DocV2Revisao({ accessCode, email }: { accessCode: string
   }, [accessCode, email]);
   useEffect(() => { void carregar(); }, [carregar]);
 
-  const alvoTexto = useMemo(() => (est?.estado === "revisar" ? resumoDocumentos(normalizarRespostas(est.alvo.respostas)) : ""), [est]);
+  const alvoTexto = useMemo(() => (est?.estado === "revisar" ? resumoDocumentos(normalizarRespostas(est.alvo.respostas), extrasValidos(est.extras)) : ""), [est]);
 
   if (erro) return <Card><CardContent className="space-y-2 py-4 text-center text-sm"><p>{erro}</p><Button size="sm" onClick={() => void carregar()}>Tentar de novo</Button></CardContent></Card>;
   if (!est || est.estado === "aguardando_minha" || est.estado === "sem_par") return null;
@@ -50,7 +51,8 @@ export default function DocV2Revisao({ accessCode, email }: { accessCode: string
   }
 
   if (est.estado !== "revisar") return null;
-  const pronto = ITENS_REVISAO.every((i) => ck[i.id]);
+  const itens = itensRevisao(extrasValidos(est.extras));
+  const pronto = itens.every((i) => ck[i.id]);
   const enviar = async () => {
     setEnviando(true);
     try {
@@ -71,11 +73,12 @@ export default function DocV2Revisao({ accessCode, email }: { accessCode: string
       <CardContent className="space-y-3">
         <details className="rounded border p-2"><summary className="cursor-pointer text-sm font-medium">Caso: {alvo.caso.titulo}</summary>
           <p className="mt-2 text-xs">{alvo.caso.caso_json?.resumo}</p>
+          {Object.values(alvo.ocorrencias || {}).filter(Boolean).map((o, i) => <p key={i} className="mt-2 text-xs"><b>O que aconteceu depois:</b> {o}</p>)}
           <p className="mt-2 text-xs font-medium">Conciliação validada</p>
           <ul className="list-disc pl-5 text-xs">{alvo.referencia.map((m, i) => <li key={i}>{m.medicamento}: {m.conduta}{m.frequencia ? `, ${m.frequencia}` : ""}</li>)}</ul>
         </details>
         <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded border bg-background p-3 text-xs">{alvoTexto}</pre>
-        {ITENS_REVISAO.map((i) => (
+        {itens.map((i) => (
           <div key={i.id} className="space-y-1">
             <p className="text-sm">{i.texto}</p>
             <div className="flex gap-1">

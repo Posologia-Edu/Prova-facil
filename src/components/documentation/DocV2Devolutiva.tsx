@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DOC_V2_CRITERIOS, type DevolutivaDoc } from "@/lib/doc-v2-rubrica";
+import { todosCriterios, type DevolutivaDoc } from "@/lib/doc-v2-rubrica";
 
 /** Devolutiva da Documentação v2 ao aluno: aparece só depois que o professor confirma a nota e libera. */
 export default function DocV2Devolutiva({ accessCode, email }: { accessCode: string; email: string }) {
@@ -21,7 +21,7 @@ export default function DocV2Devolutiva({ accessCode, email }: { accessCode: str
   if (!dev?.liberada) {
     return <Card><CardContent className="py-8 text-center"><CheckCircle2 className="mx-auto mb-2 h-10 w-10 text-success" /><p className="font-medium">Documentação enviada.</p><p className="text-sm text-muted-foreground">A devolutiva aparece aqui quando o professor liberar. Volte a entrar com o mesmo PIN e e-mail.</p></CardContent></Card>;
   }
-  const criterios = DOC_V2_CRITERIOS.filter((c) => dev.criterios && c.id in dev.criterios);
+  const criterios = todosCriterios().filter((c) => dev.criterios && c.id in dev.criterios);
   return (
     <Card>
       <CardHeader>

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import type { ExtraId } from "@/lib/doc-v2-extras";
 import { criteriosAplicaveis } from "@/lib/doc-v2-rubrica";
 import { normalizarRespostas, verificarTudo, type ItemReferencia } from "@/lib/doc-v2";
 
@@ -13,6 +14,7 @@ type Props = {
   /** Ids das respostas que já têm avaliação (sugestão ou confirmada). */
   corrigidas: Set<string>;
   usaPaciente: boolean;
+  extras?: ExtraId[];
   referenciaDe: (caseId: string | null) => ItemReferencia[];
   nomeDe: (pairIndex: number) => string;
   onFeito: () => void;
@@ -23,7 +25,7 @@ type Resultado = { nome: string; ok: boolean; erro?: string };
  * Correção em lote da Documentação v2: corrige com a IA, uma dupla por vez, as respostas que ainda não têm sugestão.
  * Não mexe nas que já foram corrigidas ou confirmadas. Cada uma continua pedindo a confirmação do professor.
  */
-export default function DocV2Lote({ respostas, corrigidas, usaPaciente, referenciaDe, nomeDe, onFeito }: Props) {
+export default function DocV2Lote({ respostas, corrigidas, usaPaciente, extras = [], referenciaDe, nomeDe, onFeito }: Props) {
   const [rodando, setRodando] = useState(false);
   const [feitos, setFeitos] = useState(0);
   const [total, setTotal] = useState(0);
@@ -36,13 +38,13 @@ export default function DocV2Lote({ respostas, corrigidas, usaPaciente, referenc
     if (!fila.length) return;
     parar.current = false;
     setRodando(true); setFeitos(0); setTotal(fila.length); setResultados([]);
-    const criterios = criteriosAplicaveis(usaPaciente).map((c) => ({ id: c.id, criterio: c.label, peso: c.peso, ancoras: c.ancoras, allow_na: !!c.allowNa }));
+    const criterios = criteriosAplicaveis(usaPaciente, extras).map((c) => ({ id: c.id, criterio: c.label, peso: c.peso, ancoras: c.ancoras, allow_na: !!c.allowNa }));
     const out: Resultado[] = [];
     for (const r of fila) {
       if (parar.current) break;
       const nome = nomeDe(r.pair_index);
       try {
-        const avisos = verificarTudo(normalizarRespostas(r.respostas), referenciaDe(r.clinical_case_id)).filter((a) => a.nivel === "aviso").map((a) => a.texto);
+        const avisos = verificarTudo(normalizarRespostas(r.respostas), referenciaDe(r.clinical_case_id), extras).filter((a) => a.nivel === "aviso").map((a) => a.texto);
         const { data, error } = await supabase.functions.invoke("grade-doc-v2", { body: { response_id: r.id, criterios, avisos } });
         if (error || data?.error) throw new Error(data?.error || error?.message || "Falha ao chamar a IA");
         out.push({ nome, ok: true });

@@ -54,6 +54,8 @@ export type CasoV2 = {
     motivo: string;
   };
   fontes: Fonte[];
+  /** Documentação v2, fase 2: o que acontece depois da transição e gera cada documento extra (ex.: ocorrencias.ram). */
+  ocorrencias?: Record<string, string>;
 };
 
 /** Privado: só o servidor entrega, e só depois que a BPMH foi enviada. */

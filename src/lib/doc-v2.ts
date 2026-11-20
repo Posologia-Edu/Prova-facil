@@ -1,4 +1,5 @@
 import { chaveMedicamento } from "@/lib/recon-v2";
+import { ESQUEMAS_EXTRA, type CampoExtra, type ExtraId } from "@/lib/doc-v2-extras";
 
 // Documentação v2 (sem rede): modelo dos 4 documentos do núcleo e verificadores determinísticos (sem IA).
 // Os verificadores só avisam, nunca bloqueiam o envio. A conciliação de referência vem do servidor (privada).
@@ -42,7 +43,8 @@ export type Cartao = {
 
 export type Plano = { metas: string; acoes: string; monitorizacao: string; retorno: string };
 
-export type RespostasV2 = { encaminhamento: Encaminhamento; intervencao: Intervencao; cartao: Cartao; plano: Plano };
+/** `extras` guarda as respostas dos documentos extras da fase 2, por id (ex.: extras.ram). */
+export type RespostasV2 = { encaminhamento: Encaminhamento; intervencao: Intervencao; cartao: Cartao; plano: Plano; extras: Record<string, Record<string, any>> };
 
 export const linhaProblemaVazia = (): LinhaProblema => ({ problema: "", evidencia: "", sugestao: "", prioridade: "" });
 export const linhaIntervencaoVazia = (): LinhaIntervencao => ({ medicamento: "", problema: "", causa: "", intervencao: "", alvo: "", aceitacao: "", desfecho: "" });
@@ -57,6 +59,7 @@ export function respostasEmBranco(): RespostasV2 {
     intervencao: { linhas: [linhaIntervencaoVazia()] },
     cartao: { linhas: [linhaCartaoVazia()], pare: [], se_esquecer: "", procure_atendimento: "", onde_conseguir: "" },
     plano: { metas: "", acoes: "", monitorizacao: "", retorno: "" },
+    extras: {},
   };
 }
 
@@ -75,12 +78,14 @@ export function normalizarRespostas(bruto: any): RespostasV2 {
       pare: Array.isArray(o.cartao?.pare) ? o.cartao.pare.map((x: any) => ({ medicamento: String(x?.medicamento ?? ""), motivo: String(x?.motivo ?? "") })) : [],
     },
     plano: { ...base.plano, ...(o.plano || {}) },
+    extras: o.extras && typeof o.extras === "object" && !Array.isArray(o.extras) ? (Object.fromEntries(Object.entries(o.extras).filter(([, v]) => v && typeof v === "object" && !Array.isArray(v))) as Record<string, Record<string, any>>) : {},
   };
 }
 
 // ---------- verificadores ----------
 
-export type AvisoDoc = { id: string; documento: TipoDocumento; nivel: "aviso" | "ok"; texto: string };
+/** `documento` é um dos quatro do núcleo ou "extra:<id>" para os documentos extras. */
+export type AvisoDoc = { id: string; documento: TipoDocumento | `extra:${string}`; nivel: "aviso" | "ok"; texto: string };
 
 /** Conciliação de referência (privada): o que o paciente deve usar depois da transição. */
 export type ItemReferencia = { medicamento: string; conduta: "mantido" | "alterado" | "novo" | "suspenso"; frequencia?: string };
@@ -276,18 +281,19 @@ export function verificarLinguagemCartao(c: Cartao): AvisoDoc[] {
 }
 
 /** Todos os avisos, na ordem em que a tela mostra. */
-export function verificarTudo(r: RespostasV2, referencia: ItemReferencia[]): AvisoDoc[] {
+export function verificarTudo(r: RespostasV2, referencia: ItemReferencia[], extras: ExtraId[] = []): AvisoDoc[] {
   return [
     ...verificarEncaminhamento(r.encaminhamento),
     ...verificarIntervencao(r.intervencao),
     ...verificarCartao(r.cartao, referencia).filter((a) => a.nivel === "aviso" || !verificarLinguagemCartao(r.cartao).length),
     ...verificarLinguagemCartao(r.cartao),
     ...verificarPlano(r.plano),
+    ...extras.flatMap((id) => ESQUEMAS_EXTRA[id].verificar(r.extras?.[id] || {}).map((a) => ({ ...a, documento: `extra:${id}` as const }))),
   ];
 }
 
 /** Os quatro documentos em texto corrido, para o professor ler na correção. */
-export function resumoDocumentos(r: RespostasV2): string {
+export function resumoDocumentos(r: RespostasV2, extras: ExtraId[] = []): string {
   const t = (v: unknown) => String(v ?? "").trim() || "—";
   const e = r.encaminhamento, c = r.cartao, p = r.plano;
   const l: string[] = [];
@@ -304,5 +310,29 @@ export function resumoDocumentos(r: RespostasV2): string {
   l.push(`Pare de usar: ${c.pare.filter((x) => x.medicamento.trim()).map((x) => `${x.medicamento} (${t(x.motivo)})`).join("; ") || "—"}`);
   l.push(`Se esquecer: ${t(c.se_esquecer)}`, `Procure atendimento: ${t(c.procure_atendimento)}`, `Onde conseguir: ${t(c.onde_conseguir)}`);
   l.push("", "PLANO DE CUIDADO", `Metas: ${t(p.metas)}`, `Ações: ${t(p.acoes)}`, `Monitorização: ${t(p.monitorizacao)}`, `Retorno: ${t(p.retorno)}`);
+  for (const id of extras) {
+    const e = ESQUEMAS_EXTRA[id];
+    l.push("", e.titulo.toUpperCase(), ...textoExtra(e.campos, r.extras?.[id] || {}));
+  }
   return l.join("\n");
+}
+
+/** Os campos de um documento extra em linhas de texto (leitura do professor e do revisor). */
+export function textoExtra(campos: CampoExtra[], r: Record<string, any>): string[] {
+  const t = (v: unknown) => String(v ?? "").trim() || "—";
+  const out: string[] = [];
+  for (const c of campos) {
+    if (c.tipo === "secao") { out.push(`— ${c.rotulo}`); continue; }
+    const v = r[c.id];
+    if (c.tipo === "tabela") {
+      const linhas = (Array.isArray(v) ? v : []).filter((x: any) => x && c.colunas.some((k) => String(x[k.id] ?? "").trim()));
+      out.push(`${c.rotulo}: ${linhas.length ? "" : "—"}`);
+      for (const x of linhas) out.push("  • " + c.colunas.map((k) => `${k.rotulo}: ${t(x[k.id])}`).join(" | "));
+    } else if (c.tipo === "naranjo") {
+      out.push(`${c.rotulo}: ${Object.entries(v && typeof v === "object" ? v : {}).map(([k, x]) => `${k}=${x}`).join(", ") || "—"}`);
+    } else if (c.tipo === "select") {
+      out.push(`${c.rotulo}: ${c.opcoes.find((o) => o.v === v)?.r ?? t(v)}`);
+    } else out.push(`${c.rotulo}: ${t(v)}`);
+  }
+  return out;
 }

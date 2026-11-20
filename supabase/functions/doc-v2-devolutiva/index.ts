@@ -18,7 +18,7 @@ serve(async (req) => {
     if (typeof access_code !== "string" || access_code.trim().length < 4 || typeof email !== "string" || !email.trim()) return json({ error: "Dados incompletos" }, 400);
 
     const db = adminClient();
-    const { data: sala } = await db.from("documentation_rooms").select("id, schema_version").eq("access_code", access_code.trim().toLowerCase()).maybeSingle();
+    const { data: sala } = await db.from("documentation_rooms").select("id, schema_version, documentos_extra").eq("access_code", access_code.trim().toLowerCase()).maybeSingle();
     if (!sala || sala.schema_version !== 2) return forbidden(corsHeaders);
 
     const { data: partes } = await db.from("documentation_participants").select("pair_index")
@@ -37,7 +37,9 @@ serve(async (req) => {
 
     // Revisão cruzada que a minha dupla RECEBEU (sem dizer quem revisou): 8 itens, sim=1, em parte=0,5, não=0, de 0 a 10.
     // Mesma regra de src/lib/doc-v2-nota.ts (as funções não importam de src/).
-    const ITENS = ["rv-destino", "rv-sbar", "rv-cobertura", "rv-grade", "rv-linguagem", "rv-alertas", "rv-coerencia", "rv-usaria"];
+    const ITEM_EXTRA: Record<string, string> = { ram: "rv-ram" };
+    const ITENS = ["rv-destino", "rv-sbar", "rv-cobertura", "rv-grade", "rv-linguagem", "rv-alertas", "rv-coerencia", "rv-usaria",
+      ...(Array.isArray((sala as any).documentos_extra) ? (sala as any).documentos_extra : []).map((e: string) => ITEM_EXTRA[e]).filter(Boolean)];
     const { data: rev } = await db.from("documentation_v2_revisoes").select("answers_json")
       .eq("room_id", sala.id).eq("reviewed_pair", eu.pair_index).not("submitted_at", "is", null).maybeSingle();
     let revisaoNota: number | null = null;

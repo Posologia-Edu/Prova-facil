@@ -19,7 +19,10 @@ function parARevisar(pair: number, pares: number[]): number | null {
   if (lista.length < 2 || !lista.includes(pair)) return null;
   return lista[(lista.indexOf(pair) + 1) % lista.length];
 }
-const ITENS = ["rv-destino", "rv-sbar", "rv-cobertura", "rv-grade", "rv-linguagem", "rv-alertas", "rv-coerencia", "rv-usaria"];
+const ITENS_NUCLEO = ["rv-destino", "rv-sbar", "rv-cobertura", "rv-grade", "rv-linguagem", "rv-alertas", "rv-coerencia", "rv-usaria"];
+// Um item a mais por documento extra ativo (mesma regra de src/lib/doc-v2-nota.ts).
+const ITEM_EXTRA: Record<string, string> = { ram: "rv-ram" };
+const itensDe = (extras: unknown): string[] => [...ITENS_NUCLEO, ...(Array.isArray(extras) ? extras : []).map((e) => ITEM_EXTRA[String(e)]).filter(Boolean)];
 const clip = (s: unknown, n: number) => String(s ?? "").trim().slice(0, n);
 
 serve(async (req) => {
@@ -30,7 +33,7 @@ serve(async (req) => {
     if (typeof access_code !== "string" || access_code.trim().length < 4 || typeof email !== "string" || !email.trim()) return json({ error: "Dados incompletos" }, 400);
 
     const db = adminClient();
-    const { data: sala } = await db.from("documentation_rooms").select("id, schema_version")
+    const { data: sala } = await db.from("documentation_rooms").select("id, schema_version, documentos_extra")
       .eq("access_code", access_code.trim().toLowerCase()).eq("status", "active").maybeSingle();
     if (!sala || sala.schema_version !== 2) return forbidden(corsHeaders);
 
@@ -65,14 +68,16 @@ serve(async (req) => {
           caso: { titulo: caso.title, caso_json: caso.caso_json },
           referencia: Array.isArray(priv?.referencia) ? priv!.referencia : [],
           respostas: alvo.respostas || {},
+          ocorrencias: (caso.caso_json as any)?.ocorrencias || {},
         },
+        extras: Array.isArray(sala.documentos_extra) ? sala.documentos_extra : [],
       });
     }
 
     // enviar
     if (!respostas || typeof respostas !== "object" || Array.isArray(respostas)) return json({ error: "Respostas ausentes" }, 400);
     const limpo: Record<string, string> = {};
-    for (const id of ITENS) {
+    for (const id of itensDe(sala.documentos_extra)) {
       if (!["sim", "parcial", "nao"].includes((respostas as any)[id])) return json({ error: "Responda todos os itens do checklist." }, 400);
       limpo[id] = (respostas as any)[id];
     }

@@ -1,3 +1,5 @@
+import { ESQUEMAS_EXTRA, EXTRAS_DISPONIVEIS, type ExtraId } from "@/lib/doc-v2-extras";
+
 // Rubrica da Documentação v2: 10 critérios, escala 0–4 (0 vale 0%, 4 vale 100%), pesos somam 10. A IA sugere, o professor confirma.
 // Os dois critérios de aconselhamento dependem do paciente virtual (etapa 3): enquanto a sala não usa o paciente, ficam de fora e a
 // nota é recalculada só sobre os critérios que se aplicam (sempre de 0 a 10).
@@ -38,12 +40,19 @@ export const DOC_V2_CRITERIOS: CriterioDoc[] = [
 
 export const SOMA_PESOS_DOC_V2 = DOC_V2_CRITERIOS.reduce((s, c) => s + c.peso, 0);
 
-export const criteriosAplicaveis = (usaPaciente: boolean): CriterioDoc[] => DOC_V2_CRITERIOS.filter((c) => usaPaciente || !c.requerPaciente);
+/** Os critérios que se aplicam à sala: os do núcleo (menos os de paciente, se a sala não o usa) mais um por documento extra ativo. */
+export const criteriosAplicaveis = (usaPaciente: boolean, extras: ExtraId[] = []): CriterioDoc[] => [
+  ...DOC_V2_CRITERIOS.filter((c) => usaPaciente || !c.requerPaciente),
+  ...extras.map((id) => ESQUEMAS_EXTRA[id].criterio),
+];
+
+/** Todos os critérios que existem (núcleo e extras), para achar o texto de um critério pelo id. */
+export const todosCriterios = (): CriterioDoc[] => [...DOC_V2_CRITERIOS, ...EXTRAS_DISPONIVEIS.map((id) => ESQUEMAS_EXTRA[id].criterio)];
 
 /** Nota da rubrica de 0 a 10: soma ponderada dos critérios que se aplicam (nota "n/a" e critérios de fora saem do cálculo). */
-export function notaRubricaDoc(respostas: Record<string, number | string | null | undefined>, usaPaciente: boolean): number {
+export function notaRubricaDoc(respostas: Record<string, number | string | null | undefined>, usaPaciente: boolean, extras: ExtraId[] = []): number {
   let ganho = 0, maximo = 0;
-  for (const c of criteriosAplicaveis(usaPaciente)) {
+  for (const c of criteriosAplicaveis(usaPaciente, extras)) {
     const v = respostas?.[c.id];
     if (v === undefined || v === null || v === "__na__") continue;
     const n = Math.max(0, Math.min(4, Number(v)));
