@@ -274,7 +274,7 @@ export function verificarLinguagemCartao(c: Cartao): AvisoDoc[] {
   const out: AvisoDoc[] = [];
   const texto = textoDoCartao(c);
   const flesch = indiceFlesch(texto);
-  if (flesch !== null && flesch < 50) out.push({ id: "flesch", documento: "cartao", nivel: "aviso", texto: `O texto do cartão está difícil de ler (índice ${Math.round(flesch)}; acima de 50 é o desejável). Use frases mais curtas e palavras do dia a dia.` });
+  if (flesch !== null && flesch < 50) out.push({ id: "flesch", documento: "cartao", nivel: "aviso", texto: `Apoio à leitura: o índice de legibilidade do cartão (Flesch adaptado ao português) ficou em ${Math.round(flesch)}; valores mais altos indicam texto mais fácil. É só um indicador: frases mais curtas e palavras do dia a dia ajudam o paciente.` });
   const j = jargaoEncontrado(texto);
   if (j.length) out.push({ id: "jargao", documento: "cartao", nivel: "aviso", texto: `Termos técnicos que o paciente pode não entender: ${j.join(", ")}.` });
   return out;

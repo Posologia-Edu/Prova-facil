@@ -1,7 +1,7 @@
 // Documentos extras da Documentação v2 (fase 2), lado do PROFESSOR: gera o RASCUNHO da ocorrência que dá origem ao documento extra
 // (por exemplo, a reação adversa) a partir do caso e da conciliação. A IA só propõe; o professor revisa e salva na tela da sala.
 // A ocorrência é o que o aluno lê; o gabarito (medicamento suspeito, respostas esperadas de Naranjo) fica no gabarito privado do caso.
-// Ação: "gerar_ocorrencia" ({ case_id, extra }). Só o dono da sala.
+// Ação: "gerar_ocorrencia" ({ case_id, extra }), com extra "ram" (reação adversa) ou "incidente" (incidente de segurança). Só o dono da sala.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
 import { adminClient, forbidden, getUserId, ownsRoom, unauthorized } from "../_shared/auth-guard.ts";
@@ -27,6 +27,19 @@ Devolva EXCLUSIVAMENTE JSON válido, sem markdown:
  "naranjo": {"n1": "sim"|"nao"|"nsei", "n2": ..., "n3": ..., "n4": ..., "n5": ..., "n6": ..., "n7": ..., "n8": ..., "n9": ..., "n10": ...} (as respostas ESPERADAS, coerentes com a ocorrência que você escreveu),
  "observacoes": string (1 a 2 frases para o professor: o que o aluno precisa perceber)}`;
 
+const SISTEMA_INCIDENTE = `Você é um professor de Farmácia Clínica criando a OCORRÊNCIA que dará origem a uma notificação de incidente de segurança do paciente (NSP/Notivisa) feita por alunos.
+A partir do caso e da conciliação, escreva um erro de medicação realista que acontece no circuito do medicamento DEPOIS da transição: em qual etapa (prescrição, transcrição, dispensação, preparo, administração ou monitorização), com qual medicamento da conciliação, quem percebeu, se foi interceptado antes de chegar ao paciente ou chegou, e o que aconteceu com o paciente. Deixe pistas de mais de um fator contribuinte (pessoa, tarefa, comunicação, ambiente, organização) sem nomear o culpado e sem dar a classificação pronta.
+Use apenas medicamentos que existem na conciliação. Dados fictícios; não use o nome completo do paciente (use "o paciente" ou "a paciente").
+
+Devolva EXCLUSIVAMENTE JSON válido, sem markdown:
+{"ocorrencia": string (4 a 7 frases, em português, escrita para o aluno ler),
+ "tipo_esperado": "circunstancia"|"quase_erro"|"sem_dano"|"evento_adverso",
+ "dano_esperado": "nenhum"|"leve"|"moderado"|"grave"|"obito",
+ "etapa": "prescricao"|"transcricao"|"dispensacao"|"preparo"|"administracao"|"monitorizacao",
+ "interceptado": "sim"|"nao",
+ "fatores_esperados": string[] (2 a 4 fatores contribuintes, cada um começando pela categoria),
+ "observacoes": string (1 a 2 frases para o professor: o que o aluno precisa perceber)}`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -34,7 +47,7 @@ serve(async (req) => {
     if (!userId) return unauthorized(corsHeaders);
     const { action, case_id, extra } = await req.json();
     if (action !== "gerar_ocorrencia") return json({ error: "Ação inválida" }, 400);
-    if (!case_id || extra !== "ram") return json({ error: "Dados incompletos" }, 400);
+    if (!case_id || !["ram", "incidente"].includes(extra)) return json({ error: "Dados incompletos" }, 400);
 
     const db = adminClient();
     const { data: caso } = await db.from("documentation_clinical_cases").select("id, room_id, caso_json").eq("id", case_id).maybeSingle();
@@ -56,8 +69,8 @@ ${ref.map((m) => `- ${m.medicamento} | ${m.conduta}${m.frequencia ? ` | ${m.freq
     let response: Response | null = null;
     for (let t = 0; t <= 2; t++) {
       ({ response } = await callAiWithFallback(
-        { model: "google/gemini-2.5-flash", temperature: 0.7, messages: [{ role: "system", content: SISTEMA_RAM }, { role: "user", content: usr }] },
-        { userId, promptType: "doc-v2-extras-ram" },
+        { model: "google/gemini-2.5-flash", temperature: 0.7, messages: [{ role: "system", content: extra === "ram" ? SISTEMA_RAM : SISTEMA_INCIDENTE }, { role: "user", content: usr }] },
+        { userId, promptType: `doc-v2-extras-${extra}` },
       ));
       if (response.status !== 429 || t === 2) break;
       const ra = Number(response.headers.get("Retry-After"));
@@ -70,6 +83,23 @@ ${ref.map((m) => `- ${m.medicamento} | ${m.conduta}${m.frequencia ? ` | ${m.freq
     if (m) conteudo = m[1].trim();
     let g: any;
     try { g = JSON.parse(conteudo); } catch { return json({ error: "A IA devolveu uma resposta inválida. Tente de novo." }, 502); }
+
+    if (extra === "incidente") {
+      const ocorrenciaInc = clip(g?.ocorrencia, 1500);
+      if (!ocorrenciaInc) return json({ error: "A IA não escreveu a ocorrência. Tente de novo." }, 502);
+      const oneOf = (v: unknown, lista: string[], padrao: string) => (lista.includes(String(v)) ? String(v) : padrao);
+      return json({
+        ocorrencia: ocorrenciaInc,
+        gabarito: {
+          tipo_esperado: oneOf(g?.tipo_esperado, ["circunstancia", "quase_erro", "sem_dano", "evento_adverso"], "sem_dano"),
+          dano_esperado: oneOf(g?.dano_esperado, ["nenhum", "leve", "moderado", "grave", "obito"], "nenhum"),
+          etapa: oneOf(g?.etapa, ["prescricao", "transcricao", "dispensacao", "preparo", "administracao", "monitorizacao"], "administracao"),
+          interceptado: oneOf(g?.interceptado, ["sim", "nao"], "nao"),
+          fatores_esperados: (Array.isArray(g?.fatores_esperados) ? g.fatores_esperados : []).slice(0, 5).map((x: unknown) => clip(x, 200)).filter(Boolean),
+          observacoes: clip(g?.observacoes, 400),
+        },
+      });
+    }
 
     const naranjo: Record<string, string> = {};
     for (const id of NARANJO_IDS) naranjo[id] = ["sim", "nao", "nsei"].includes(g?.naranjo?.[id]) ? g.naranjo[id] : "nsei";

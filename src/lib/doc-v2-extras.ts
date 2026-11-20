@@ -3,10 +3,10 @@ import type { CriterioDoc } from "@/lib/doc-v2-rubrica";
 
 // Documentos extras da Documentação v2 (fase 2). Cada documento é um ESQUEMA (campos, verificadores, critério da rubrica e item da
 // revisão cruzada) lido por um componente único. Os quatro documentos do núcleo continuam como estão. Sem rede, com testes.
-// Hoje: "ram" (notificação de reação adversa, VigiMed + escala de Naranjo). Os próximos entram acrescentando um esquema.
+// Hoje: "ram" (notificação de reação adversa, VigiMed + escala de Naranjo) e "incidente" (notificação de incidente de segurança, NSP/Notivisa). Os próximos entram acrescentando um esquema.
 
-export type ExtraId = "ram";
-export const EXTRAS_DISPONIVEIS: ExtraId[] = ["ram"];
+export type ExtraId = "ram" | "incidente";
+export const EXTRAS_DISPONIVEIS: ExtraId[] = ["ram", "incidente"];
 
 export type CampoExtra =
   | { tipo: "secao"; id: string; rotulo: string }
@@ -64,6 +64,7 @@ export function categoriaNaranjo(escore: number): CategoriaNaranjo {
 // ---------- verificação ----------
 
 const txt = (v: unknown) => String(v ?? "").trim();
+const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 const linhasCom = (t: unknown, cols: string[]) => (Array.isArray(t) ? t : []).filter((l) => l && cols.some((c) => txt(l[c])));
 
 function verificarRam(r: Record<string, any>): Omit<AvisoDoc, "documento">[] {
@@ -115,6 +116,78 @@ function verificarRam(r: Record<string, any>): Omit<AvisoDoc, "documento">[] {
   return out;
 }
 
+
+// ---------- incidente de segurança (NSP / Notivisa) ----------
+
+export type TipoIncidente = "circunstancia" | "quase_erro" | "sem_dano" | "evento_adverso";
+export const ROTULO_TIPO_INCIDENTE: Record<TipoIncidente, string> = {
+  circunstancia: "Circunstância notificável (situação com potencial de dano, sem incidente)",
+  quase_erro: "Quase-erro (interceptado antes de chegar ao paciente)",
+  sem_dano: "Incidente sem dano (chegou ao paciente, sem dano)",
+  evento_adverso: "Evento adverso (incidente com dano)",
+};
+export type GrauDano = "nenhum" | "leve" | "moderado" | "grave" | "obito";
+export const ROTULO_DANO: Record<GrauDano, string> = { nenhum: "Nenhum", leve: "Leve", moderado: "Moderado", grave: "Grave", obito: "Óbito" };
+
+/** Palavras que atribuem culpa a uma pessoa. A notificação descreve fatos e fatores do sistema, não julga. */
+export const TERMOS_ACUSATORIOS = ["negligência", "negligente", "incompetência", "incompetente", "culpa", "culpado", "descuido", "descuidado", "irresponsável", "irresponsabilidade", "imprudência", "imperícia", "desleixo"];
+export const termosAcusatoriosEncontrados = (texto: string): string[] => {
+  const t = norm(texto);
+  return TERMOS_ACUSATORIOS.filter((x) => new RegExp("\\b" + norm(x) + "\\b").test(t));
+};
+
+/** Dias inteiros entre duas datas AAAA-MM-DD; null se alguma for inválida. */
+export function diasEntre(inicio: string, fim: string): number | null {
+  const a = Date.parse(inicio + "T00:00:00Z"), b = Date.parse(fim + "T00:00:00Z");
+  return Number.isFinite(a) && Number.isFinite(b) ? Math.round((b - a) / 86400000) : null;
+}
+
+function verificarIncidente(r: Record<string, any>): Omit<AvisoDoc, "documento">[] {
+  const out: Omit<AvisoDoc, "documento">[] = [];
+  const aviso = (id: string, texto: string) => out.push({ id: `inc-${id}`, nivel: "aviso", texto });
+
+  const ini = txt(r.iniciais);
+  if (!ini) aviso("iniciais", "Falta identificar o paciente pelas iniciais.");
+  else if (ini.replace(/[^A-Za-zÀ-ÿ]/g, "").length > 4) aviso("privacidade", "O paciente deve ser identificado só pelas iniciais, nunca pelo nome. Parece que o nome foi digitado.");
+  if (!txt(r.data_incidente)) aviso("data", "Falta a data do incidente.");
+  if (!txt(r.local)) aviso("local", "Falta o local ou setor onde ocorreu.");
+  if (!txt(r.descricao)) aviso("descricao", "Descreva o que aconteceu, em ordem, só com fatos.");
+  if (!txt(r.medicamento)) aviso("medicamento", "Informe o medicamento envolvido.");
+  if (!r.etapa) aviso("etapa", "Marque em que etapa do circuito do medicamento ocorreu (prescrição, dispensação, preparo, administração...).");
+  if (!r.tipo) aviso("tipo", "Classifique o tipo de incidente.");
+  if (!r.dano) aviso("dano", "Marque o grau de dano ao paciente.");
+  if (!r.interceptado) aviso("interceptado", "Informe se o incidente foi interceptado antes de chegar ao paciente.");
+
+  // Coerência entre o tipo, o dano e a interceptação (definições do ICPS/OMS usadas pela Anvisa).
+  if ((r.tipo === "quase_erro" || r.tipo === "circunstancia" || r.tipo === "sem_dano") && r.dano && r.dano !== "nenhum") {
+    aviso("tipo-dano", "Esse tipo de incidente não tem dano. Se houve dano, é um evento adverso; se não houve, o dano é \"nenhum\".");
+  }
+  if (r.tipo === "evento_adverso" && r.dano === "nenhum") aviso("evento-sem-dano", "Evento adverso é incidente COM dano. Sem dano, classifique como incidente sem dano.");
+  if (r.tipo === "quase_erro" && r.interceptado === "nao") aviso("quase-erro-interceptado", "Quase-erro é o que foi interceptado antes de chegar ao paciente. Se chegou, é incidente sem dano ou evento adverso.");
+  if ((r.tipo === "sem_dano" || r.tipo === "evento_adverso") && r.interceptado === "sim") aviso("chegou-interceptado", "Se foi interceptado antes de chegar ao paciente, é um quase-erro, não um incidente que atingiu o paciente.");
+
+  // Prazo: óbito relacionado a evento adverso é notificado em até 72 horas (RDC 36/2013, conforme notas técnicas da Anvisa).
+  if (r.dano === "obito") {
+    const d = txt(r.data_incidente) && txt(r.data_notificacao) ? diasEntre(txt(r.data_incidente), txt(r.data_notificacao)) : null;
+    if (d !== null && d > 3) aviso("prazo-obito", `Óbito relacionado a evento adverso é notificado em até 72 horas. Entre o incidente e a notificação passaram ${d} dias.`);
+  }
+  if (txt(r.data_incidente) && txt(r.data_notificacao) && txt(r.data_notificacao) < txt(r.data_incidente)) aviso("data-ordem", "A data da notificação é anterior à do incidente.");
+
+  // Fatores contribuintes: erro raramente tem causa única.
+  const fatores = linhasCom(r.fatores, ["categoria", "descricao"]);
+  if (fatores.length < 2) aviso("fatores", "Identifique ao menos dois fatores contribuintes (pessoa, tarefa, comunicação, ambiente, organização). Incidente raramente tem causa única.");
+  fatores.forEach((l: any, i: number) => { if (!txt(l.categoria) || !txt(l.descricao)) aviso(`fator-${i}`, `Fator ${i + 1}: preencha a categoria e a descrição.`); });
+  if (!txt(r.acao_imediata)) aviso("acao", "Descreva a ação imediata tomada.");
+  if (!txt(r.analise)) aviso("analise", "Falta a análise: por que o incidente ocorreu.");
+  if (!txt(r.prevencao)) aviso("prevencao", "Falta o plano de prevenção (o que muda no processo para não se repetir).");
+
+  const culpa = termosAcusatoriosEncontrados([r.descricao, r.analise, r.acao_imediata, r.prevencao].map(txt).join(" "));
+  if (culpa.length) aviso("culpa", `A notificação deve descrever fatos e fatores do sistema, sem culpar pessoas. Termos a rever: ${culpa.join(", ")}.`);
+  if (!txt(r.notificador)) aviso("notificador", "Falta a identificação de quem notifica.");
+  if (!txt(r.data_notificacao)) aviso("data-notificacao", "Falta a data da notificação.");
+  return out;
+}
+
 export const ESQUEMAS_EXTRA: Record<ExtraId, EsquemaExtra> = {
   ram: {
     id: "ram",
@@ -151,6 +224,42 @@ export const ESQUEMAS_EXTRA: Record<ExtraId, EsquemaExtra> = {
     },
     itemRevisao: { id: "rv-ram", texto: "A notificação de reação adversa identifica o paciente só por iniciais, traz o medicamento suspeito com datas coerentes e o Naranjo parece correto?" },
     verificar: verificarRam,
+  },
+
+  incidente: {
+    id: "incidente",
+    titulo: "Notificação de incidente de segurança",
+    descricao: "Notificação ao Núcleo de Segurança do Paciente (NSP), no modelo simplificado do Notivisa, módulo Assistência à Saúde. Descreva fatos, classifique o incidente e analise os fatores do sistema, sem culpar pessoas. Use dados fictícios do caso.",
+    dicaOcorrencia: "Descreva um erro de medicação no circuito do caso (prescrição, dispensação, preparo, administração ou monitorização): o que aconteceu, quem percebeu, se chegou ao paciente e o que ocorreu com ele.",
+    campos: [
+      { tipo: "secao", id: "s-id", rotulo: "Identificação" },
+      { tipo: "texto", id: "iniciais", rotulo: "Iniciais do paciente (nunca o nome)", placeholder: "Ex.: M.S." },
+      { tipo: "data", id: "data_incidente", rotulo: "Data do incidente" },
+      { tipo: "texto", id: "local", rotulo: "Local ou setor onde ocorreu" },
+      { tipo: "secao", id: "s-desc", rotulo: "O que aconteceu" },
+      { tipo: "area", id: "descricao", rotulo: "Descrição do incidente (fatos, em ordem)", placeholder: "O que aconteceu, quando, quem percebeu. Sem julgamento." },
+      { tipo: "texto", id: "medicamento", rotulo: "Medicamento envolvido (nome, dose e via)" },
+      { tipo: "select", id: "etapa", rotulo: "Etapa do circuito do medicamento", opcoes: [{ v: "prescricao", r: "Prescrição" }, { v: "transcricao", r: "Transcrição" }, { v: "dispensacao", r: "Dispensação" }, { v: "preparo", r: "Preparo" }, { v: "administracao", r: "Administração" }, { v: "monitorizacao", r: "Monitorização" }] },
+      { tipo: "select", id: "interceptado", rotulo: "Foi interceptado antes de chegar ao paciente?", opcoes: [{ v: "sim", r: "Sim" }, { v: "nao", r: "Não, chegou ao paciente" }] },
+      { tipo: "secao", id: "s-cls", rotulo: "Classificação" },
+      { tipo: "select", id: "tipo", rotulo: "Tipo de incidente", opcoes: (Object.keys(ROTULO_TIPO_INCIDENTE) as TipoIncidente[]).map((k) => ({ v: k, r: ROTULO_TIPO_INCIDENTE[k] })) },
+      { tipo: "select", id: "dano", rotulo: "Grau de dano ao paciente", opcoes: (Object.keys(ROTULO_DANO) as GrauDano[]).map((k) => ({ v: k, r: ROTULO_DANO[k] })) },
+      { tipo: "secao", id: "s-ana", rotulo: "Análise" },
+      { tipo: "tabela", id: "fatores", rotulo: "Fatores contribuintes", colunas: [{ id: "categoria", rotulo: "Categoria (pessoa, tarefa, comunicação, ambiente, organização)" }, { id: "descricao", rotulo: "Descrição do fator" }] },
+      { tipo: "area", id: "acao_imediata", rotulo: "Ação imediata tomada" },
+      { tipo: "area", id: "analise", rotulo: "Análise: por que o incidente ocorreu", placeholder: "Pergunte \"por quê?\" mais de uma vez, até chegar a fatores do processo." },
+      { tipo: "area", id: "prevencao", rotulo: "Plano de prevenção", placeholder: "O que muda no processo, quem faz e até quando." },
+      { tipo: "secao", id: "s-not", rotulo: "Notificador" },
+      { tipo: "texto", id: "notificador", rotulo: "Nome e profissão de quem notifica" },
+      { tipo: "data", id: "data_notificacao", rotulo: "Data da notificação" },
+    ],
+    criterio: {
+      id: "dx-incidente", peso: 1,
+      label: "A notificação de incidente classifica corretamente (tipo e dano), descreve fatos sem culpar pessoas, aponta fatores do sistema e propõe prevenção?",
+      ancoras: "0: sem notificação. 1: relato do que aconteceu, sem classificação nem análise. 2: classificação incoerente (por exemplo, quase-erro com dano) ou linguagem que culpa pessoas. 3: classificação correta e fatores apontados, faltando prevenção concreta ou um fator do sistema. 4: tipo e dano corretos e coerentes, fatos sem julgamento, mais de um fator do sistema e plano de prevenção que muda o processo.",
+    },
+    itemRevisao: { id: "rv-incidente", texto: "A notificação de incidente classifica bem o tipo e o dano, descreve só fatos e propõe uma prevenção que muda o processo?" },
+    verificar: verificarIncidente,
   },
 };
 

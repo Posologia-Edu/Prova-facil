@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoriaNaranjo, escoreNaranjo, ESQUEMAS_EXTRA, extrasValidos, NARANJO_PERGUNTAS } from "@/lib/doc-v2-extras";
+import { categoriaNaranjo, diasEntre, escoreNaranjo, ESQUEMAS_EXTRA, extrasValidos, NARANJO_PERGUNTAS, termosAcusatoriosEncontrados } from "@/lib/doc-v2-extras";
 import { normalizarRespostas, resumoDocumentos, respostasEmBranco, verificarTudo } from "@/lib/doc-v2";
 import { criteriosAplicaveis, notaRubricaDoc, todosCriterios } from "@/lib/doc-v2-rubrica";
 import { itensRevisao, notaRevisao } from "@/lib/doc-v2-nota";
@@ -91,5 +91,45 @@ describe("integração com o núcleo", () => {
   it("extrasValidos ignora ids desconhecidos", () => {
     expect(extrasValidos(["ram", "futuro", 3])).toEqual(["ram"]);
     expect(extrasValidos(null)).toEqual([]);
+  });
+});
+
+describe("verificador da notificação de incidente", () => {
+  const completa = () => ({
+    iniciais: "J.P.", data_incidente: "2026-11-10", local: "Enfermaria B", descricao: "A dose de heparina foi preparada com o frasco errado e a técnica percebeu antes de administrar.",
+    medicamento: "Heparina 5000 UI/mL, SC", etapa: "preparo", interceptado: "sim", tipo: "quase_erro", dano: "nenhum",
+    fatores: [{ categoria: "organização", descricao: "Frascos com rótulos parecidos lado a lado" }, { categoria: "tarefa", descricao: "Preparo feito sem dupla checagem" }],
+    acao_imediata: "Frasco recolhido e o paciente monitorado.", analise: "Rótulos parecidos e ausência de checagem favoreceram a troca.", prevencao: "Separar as concentrações e exigir dupla checagem no preparo.",
+    notificador: "A. Aluno, farmacêutico(a)", data_notificacao: "2026-11-11",
+  });
+  const verificar = (r: any) => ESQUEMAS_EXTRA.incidente.verificar(r).map((a) => a.id);
+
+  it("não avisa quando está completa e coerente", () => { expect(verificar(completa())).toEqual([]); });
+  it("avisa de tipo incoerente com o dano e com a interceptação", () => {
+    expect(verificar({ ...completa(), dano: "leve" })).toContain("inc-tipo-dano");
+    expect(verificar({ ...completa(), interceptado: "nao" })).toContain("inc-quase-erro-interceptado");
+    expect(verificar({ ...completa(), tipo: "evento_adverso", dano: "nenhum", interceptado: "nao" })).toContain("inc-evento-sem-dano");
+    expect(verificar({ ...completa(), tipo: "sem_dano", dano: "nenhum", interceptado: "sim" })).toContain("inc-chegou-interceptado");
+  });
+  it("exige prazo de 72 horas quando há óbito", () => {
+    const base = { ...completa(), tipo: "evento_adverso", dano: "obito", interceptado: "nao" };
+    expect(verificar({ ...base, data_notificacao: "2026-11-12" })).not.toContain("inc-prazo-obito");
+    expect(verificar({ ...base, data_notificacao: "2026-11-20" })).toContain("inc-prazo-obito");
+  });
+  it("pede mais de um fator contribuinte e acusa linguagem que culpa pessoas", () => {
+    expect(verificar({ ...completa(), fatores: [{ categoria: "pessoa", descricao: "Distração" }] })).toContain("inc-fatores");
+    expect(verificar({ ...completa(), analise: "Houve negligência da técnica." })).toContain("inc-culpa");
+    expect([...termosAcusatoriosEncontrados("Foi um descuido, culpa dele e negligência")].sort()).toEqual(["culpa", "descuido", "negligência"]);
+    expect(termosAcusatoriosEncontrados("Frascos com rótulos parecidos")).toEqual([]);
+  });
+  it("a data da notificação não pode ser anterior à do incidente, e dias entre datas", () => {
+    expect(verificar({ ...completa(), data_notificacao: "2026-11-01" })).toContain("inc-data-ordem");
+    expect(diasEntre("2026-11-10", "2026-11-13")).toBe(3);
+    expect(diasEntre("x", "2026-11-13")).toBeNull();
+  });
+  it("entra na rubrica e na revisão como extra", () => {
+    expect(criteriosAplicaveis(false, ["ram", "incidente"]).length).toBe(criteriosAplicaveis(false).length + 2);
+    expect(itensRevisao(["incidente"]).some((i) => i.id === "rv-incidente")).toBe(true);
+    expect(extrasValidos(["incidente", "ram", "x"])).toEqual(["ram", "incidente"]);
   });
 });

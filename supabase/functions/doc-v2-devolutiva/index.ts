@@ -37,7 +37,7 @@ serve(async (req) => {
 
     // Revisão cruzada que a minha dupla RECEBEU (sem dizer quem revisou): 8 itens, sim=1, em parte=0,5, não=0, de 0 a 10.
     // Mesma regra de src/lib/doc-v2-nota.ts (as funções não importam de src/).
-    const ITEM_EXTRA: Record<string, string> = { ram: "rv-ram" };
+    const ITEM_EXTRA: Record<string, string> = { ram: "rv-ram", incidente: "rv-incidente" };
     const ITENS = ["rv-destino", "rv-sbar", "rv-cobertura", "rv-grade", "rv-linguagem", "rv-alertas", "rv-coerencia", "rv-usaria",
       ...(Array.isArray((sala as any).documentos_extra) ? (sala as any).documentos_extra : []).map((e: string) => ITEM_EXTRA[e]).filter(Boolean)];
     const { data: rev } = await db.from("documentation_v2_revisoes").select("answers_json")

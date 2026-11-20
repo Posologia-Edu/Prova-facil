@@ -21,7 +21,7 @@ function parARevisar(pair: number, pares: number[]): number | null {
 }
 const ITENS_NUCLEO = ["rv-destino", "rv-sbar", "rv-cobertura", "rv-grade", "rv-linguagem", "rv-alertas", "rv-coerencia", "rv-usaria"];
 // Um item a mais por documento extra ativo (mesma regra de src/lib/doc-v2-nota.ts).
-const ITEM_EXTRA: Record<string, string> = { ram: "rv-ram" };
+const ITEM_EXTRA: Record<string, string> = { ram: "rv-ram", incidente: "rv-incidente" };
 const itensDe = (extras: unknown): string[] => [...ITENS_NUCLEO, ...(Array.isArray(extras) ? extras : []).map((e) => ITEM_EXTRA[String(e)]).filter(Boolean)];
 const clip = (s: unknown, n: number) => String(s ?? "").trim().slice(0, n);
 
