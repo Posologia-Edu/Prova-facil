@@ -30,10 +30,12 @@ interface Props {
   checklistItems: ChecklistItem[];
   evaluationId: string;
   initialValues?: EvalItemValue[];
+  /** Gravação alternativa (portal do avaliador, sem login): se vier, o componente não grava direto no banco. */
+  onSaveItem?: (itemId: string, value: number, notes: string) => Promise<void>;
   onScoreChange?: (total: number, max: number, passed: boolean) => void;
 }
 
-export function OsceEvaluatorChecklist({ checklistItems, evaluationId, initialValues, onScoreChange }: Props) {
+export function OsceEvaluatorChecklist({ checklistItems, evaluationId, initialValues, onScoreChange, onSaveItem }: Props) {
   const [values, setValues] = useState<Record<string, { value: number; notes: string }>>({});
 
   useEffect(() => {
@@ -47,6 +49,7 @@ export function OsceEvaluatorChecklist({ checklistItems, evaluationId, initialVa
 
   const saveItem = useMutation({
     mutationFn: async ({ itemId, value, notes }: { itemId: string; value: number; notes: string }) => {
+      if (onSaveItem) { await onSaveItem(itemId, value, notes); return; }
       const { data: existing } = await supabase
         .from("osce_evaluation_items")
         .select("id")

@@ -28,128 +28,45 @@ export default function OsceEvaluator() {
   const [isRecording, setIsRecording] = useState(false);
   const [activeTab, setActiveTab] = useState("checklist");
   const [scoreInfo, setScoreInfo] = useState({ total: 0, max: 0, passed: true });
-  const [chatMessages, setChatMessages] = useState<{ role: string; content: string; created_at: string }[]>([]);
+  const [initialItens, setInitialItens] = useState<{ checklist_item_id: string; value: number; notes: string }[] | undefined>(undefined);
   const [studentTimeUp, setStudentTimeUp] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch circuit by access code
-  const { data: circuit, isLoading: circuitLoading } = useQuery({
-    queryKey: ["osce-circuit-eval", accessCode],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("osce_circuits")
-        .select("*, osce_exams(*)")
-        .eq("access_code", accessCode!)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!accessCode && authenticated,
-  });
-
-  // Fetch evaluator's assigned station
-  const { data: assignedEvaluator, isLoading: assignmentLoading } = useQuery({
-    queryKey: ["osce-evaluator-assignment", circuit?.osce_exam_id, evaluatorEmail],
-    queryFn: async () => {
-      const { data: stationData, error: stError } = await supabase
-        .from("osce_stations")
-        .select("id")
-        .eq("osce_exam_id", circuit!.osce_exam_id);
-      if (stError) throw stError;
-      const stationIds = stationData.map(s => s.id);
-      if (stationIds.length === 0) return null;
-
-      const { data, error } = await supabase
-        .from("osce_station_evaluators")
-        .select("*")
-        .in("station_id", stationIds)
-        .ilike("evaluator_email", evaluatorEmail.trim());
-      if (error) throw error;
-      return data && data.length > 0 ? data[0] : null;
-    },
-    enabled: !!circuit?.osce_exam_id && !!evaluatorEmail && authenticated,
-  });
-
-  const selectedStationId = assignedEvaluator?.station_id || null;
-
-  // Fetch station details
-  const { data: currentStation } = useQuery({
-    queryKey: ["osce-station-eval", selectedStationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("osce_stations")
-        .select("*")
-        .eq("id", selectedStationId!)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedStationId,
-  });
-
-  // Fetch current student assigned to this station
-  const { data: currentStudent } = useQuery({
-    queryKey: ["osce-current-student", circuit?.id, selectedStationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("osce_circuit_students")
-        .select("*")
-        .eq("circuit_id", circuit!.id)
-        .eq("current_station_id", selectedStationId!)
-        .eq("status", "in_station")
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!circuit?.id && !!selectedStationId,
+  // Tudo vem da função osce-avaliador, consultada a cada 3 s no lugar do realtime: circuito, estação do avaliador
+  // (caso e roteiro, que só ele vê), checklist, materiais, aluno atual, chat dele e a avaliação em andamento.
+  const chamar = async (body: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("osce-avaliador", {
+      body: { access_code: accessCode, email: evaluatorEmail.trim(), ...body },
+    });
+    if (error || data?.error) throw new Error(data?.error || error?.message || "erro");
+    return data as any;
+  };
+  const { data: estado, isLoading } = useQuery({
+    queryKey: ["osce-avaliador", accessCode, evaluatorEmail.trim().toLowerCase()],
+    queryFn: () => chamar({ action: "estado" }),
+    enabled: !!accessCode && authenticated && !!evaluatorEmail.trim(),
     refetchInterval: 3000,
   });
+  const circuitLoading = isLoading;
+  const assignmentLoading = false;
+  // "circuito" = código inexistente; "avaliador" = o circuito existe, mas o e-mail não é de avaliador dele
+  const circuit: any = estado?.ok ? estado.circuito : estado?.motivo === "avaliador" ? {} : null;
+  const assignedEvaluator = estado?.ok ? { station_id: estado.estacao?.id } : null;
+  const selectedStationId: string | null = estado?.ok ? estado.estacao?.id || null : null;
+  const currentStation: any = estado?.ok ? estado.estacao : null;
+  const currentStudent: any = estado?.ok ? estado.aluno : null;
+  const checklistItems: any[] | undefined = estado?.ok ? estado.checklist : undefined;
+  const stationMaterials: any[] | undefined = estado?.ok ? estado.materiais : undefined;
+  const chatMessages: { role: string; content: string; created_at: string }[] = estado?.ok ? estado.mensagens || [] : [];
 
-  // Fetch all clinical stations for rotation logic
-  const { data: allClinicalStations } = useQuery({
-    queryKey: ["osce-all-stations", circuit?.osce_exam_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("osce_stations")
-        .select("id, position")
-        .eq("osce_exam_id", circuit!.osce_exam_id)
-        .eq("is_rest_station", false)
-        .order("position");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!circuit?.osce_exam_id,
-  });
-
-  // Fetch checklist items for assigned station
-  const { data: checklistItems } = useQuery({
-    queryKey: ["osce-checklist-eval", selectedStationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("osce_checklist_items")
-        .select("*")
-        .eq("station_id", selectedStationId!)
-        .order("position");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedStationId,
-  });
-
-  // Fetch materials for current station
-  const { data: stationMaterials } = useQuery({
-    queryKey: ["osce-eval-materials", selectedStationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("osce_station_materials")
-        .select("*")
-        .eq("station_id", selectedStationId!)
-        .order("position");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedStationId,
-  });
+  // Se a página foi recarregada no meio de uma avaliação, retoma a que já estava aberta no servidor
+  useEffect(() => {
+    if (estado?.ok && estado.avaliacao && !evaluationId) {
+      setEvaluationId(estado.avaliacao.id);
+      setObservations(estado.avaliacao.observations || "");
+      setInitialItens(estado.itens || []);
+    }
+  }, [estado?.avaliacao?.id]);
 
   // Audio hook
   const audioEnabled = !!evaluationId && !!circuit?.id && !!selectedStationId;
@@ -159,47 +76,6 @@ export default function OsceEvaluator() {
     role: "evaluator",
     enabled: audioEnabled,
   });
-
-  // Fetch existing chat messages for current student
-  useEffect(() => {
-    if (!circuit?.id || !selectedStationId || !currentStudent?.id) {
-      setChatMessages([]);
-      return;
-    }
-    const fetchMessages = async () => {
-      const { data } = await supabase
-        .from("osce_chat_messages" as any)
-        .select("*")
-        .eq("circuit_id", circuit.id)
-        .eq("station_id", selectedStationId)
-        .eq("student_id", currentStudent.id)
-        .order("created_at", { ascending: true });
-      if (data) setChatMessages(data as any[]);
-    };
-    fetchMessages();
-  }, [circuit?.id, selectedStationId, currentStudent?.id]);
-
-  // Realtime subscription for circuit updates + chat messages
-  useEffect(() => {
-    if (!circuit?.id) return;
-    const channel = supabase
-      .channel(`eval-circuit-${circuit.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "osce_circuits", filter: `id=eq.${circuit.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ["osce-circuit-eval", accessCode] });
-        queryClient.invalidateQueries({ queryKey: ["osce-current-student"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "osce_circuit_students", filter: `circuit_id=eq.${circuit.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ["osce-current-student"] });
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "osce_chat_messages", filter: `circuit_id=eq.${circuit.id}` }, (payload: any) => {
-        const msg = payload.new;
-        if (msg.station_id === selectedStationId && msg.student_id === currentStudent?.id) {
-          setChatMessages(prev => [...prev, { role: msg.role, content: msg.content, created_at: msg.created_at }]);
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [circuit?.id, selectedStationId, currentStudent?.id]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -217,101 +93,25 @@ export default function OsceEvaluator() {
     setStudentTimeUp(false);
   }, [currentStudent?.id]);
 
-  // Auto-create evaluation when student appears
+  // Inicia a avaliação do aluno que está na estação (a função devolve a mesma se já houver uma aberta)
   const createEvaluation = useMutation({
     mutationFn: async () => {
       if (!circuit || !selectedStationId || !currentStudent) throw new Error("Dados incompletos");
-      const { data, error } = await supabase
-        .from("osce_evaluations")
-        .insert([{
-          circuit_id: circuit.id,
-          station_id: selectedStationId,
-          student_name: currentStudent.student_name,
-          student_email: currentStudent.student_email,
-          rotation: currentStudent.current_rotation || 0,
-        }])
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      return await chamar({ action: "iniciar" });
     },
     onSuccess: (data) => {
-      setEvaluationId(data.id);
+      setEvaluationId(data.avaliacao_id);
+      setInitialItens(undefined);
       toast.success("Avaliação iniciada");
     },
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Finalize evaluation and handle rotation
+  // Finaliza a avaliação: a nota e a rotação dos alunos são feitas no servidor
   const saveObservations = useMutation({
     mutationFn: async () => {
-      if (!evaluationId || !circuit || !selectedStationId) return;
-
-      // Save evaluation
-      await supabase.from("osce_evaluations").update({
-        observations,
-        total_score: scoreInfo.total,
-        max_score: scoreInfo.max,
-        passed: scoreInfo.passed,
-        finished_at: new Date().toISOString(),
-      }).eq("id", evaluationId);
-
-      if (!currentStudent || !allClinicalStations) return;
-
-      const stationIds = allClinicalStations.map(s => s.id);
-      const numStations = stationIds.length;
-      const visitedStations: string[] = [
-        ...((currentStudent as any).visited_stations || []),
-        selectedStationId,
-      ];
-      // Deduplicate
-      const uniqueVisited = [...new Set(visitedStations)];
-
-      // Check if student completed all stations
-      if (uniqueVisited.length >= numStations) {
-        // Student is done with the OSCE
-        await supabase.from("osce_circuit_students").update({
-          status: "completed",
-          current_station_id: null,
-          visited_stations: uniqueVisited,
-        }).eq("id", currentStudent.id);
-      } else {
-        // Find unvisited stations
-        const unvisited = stationIds.filter(id => !uniqueVisited.includes(id));
-        
-        // Check which unvisited stations are free (no student in_station there)
-        const { data: occupiedStudents } = await supabase
-          .from("osce_circuit_students")
-          .select("current_station_id")
-          .eq("circuit_id", circuit.id)
-          .eq("status", "in_station")
-          .neq("id", currentStudent.id);
-        
-        const occupiedStationIds = new Set((occupiedStudents || []).map(s => s.current_station_id).filter(Boolean));
-        const freeUnvisited = unvisited.filter(id => !occupiedStationIds.has(id));
-
-        if (freeUnvisited.length > 0) {
-          // Assign student to first free unvisited station
-          const nextStationId = freeUnvisited[0];
-          await supabase.from("osce_circuit_students").update({
-            status: "in_station",
-            current_station_id: nextStationId,
-            station_entered_at: new Date().toISOString(),
-            visited_stations: uniqueVisited,
-            current_rotation: uniqueVisited.length + 1,
-          }).eq("id", currentStudent.id);
-        } else {
-          // All unvisited stations are occupied — student waits
-          await supabase.from("osce_circuit_students").update({
-            status: "waiting",
-            current_station_id: null,
-            visited_stations: uniqueVisited,
-          }).eq("id", currentStudent.id);
-        }
-      }
-
-      // Now this station is free — check if any waiting student needs it
-      await assignWaitingStudentToStation(selectedStationId, circuit.id, stationIds);
+      if (!evaluationId) return;
+      await chamar({ action: "finalizar", evaluation_id: evaluationId, observations });
     },
     onSuccess: () => {
       toast.success("Avaliação finalizada! Aguardando próximo aluno.");
@@ -319,36 +119,11 @@ export default function OsceEvaluator() {
       setObservations("");
       setScoreInfo({ total: 0, max: 0, passed: true });
       setStudentTimeUp(false);
-      setChatMessages([]);
-      queryClient.invalidateQueries({ queryKey: ["osce-current-student"] });
+      setInitialItens(undefined);
+      queryClient.invalidateQueries({ queryKey: ["osce-avaliador"] });
     },
+    onError: (e: any) => toast.error("Não foi possível finalizar: " + e.message),
   });
-
-  // Helper: assign a waiting student to a free station
-  const assignWaitingStudentToStation = async (stationId: string, circuitId: string, allStationIds: string[]) => {
-    const { data: waitingStudents } = await supabase
-      .from("osce_circuit_students")
-      .select("*")
-      .eq("circuit_id", circuitId)
-      .eq("status", "waiting")
-      .order("created_at");
-
-    if (!waitingStudents || waitingStudents.length === 0) return;
-
-    // Find first waiting student who hasn't visited this station
-    for (const student of waitingStudents) {
-      const visited: string[] = (student as any).visited_stations || [];
-      if (!visited.includes(stationId)) {
-        await supabase.from("osce_circuit_students").update({
-          status: "in_station",
-          current_station_id: stationId,
-          station_entered_at: new Date().toISOString(),
-          current_rotation: visited.length + 1,
-        }).eq("id", student.id);
-        return;
-      }
-    }
-  };
 
   // Voice-to-text
   const toggleVoice = () => {
@@ -562,6 +337,8 @@ export default function OsceEvaluator() {
               <OsceEvaluatorChecklist
                 checklistItems={checklistItems}
                 evaluationId={evaluationId}
+                initialValues={initialItens}
+                onSaveItem={async (itemId, value, notes) => { await chamar({ action: "item", evaluation_id: evaluationId, checklist_item_id: itemId, value, notes }); }}
                 onScoreChange={(total, max, passed) => setScoreInfo({ total, max, passed })}
               />
             )}
