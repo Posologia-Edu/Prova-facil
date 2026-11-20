@@ -2216,6 +2216,54 @@ export type Database = {
           },
         ]
       }
+      documentation_v2_avaliacoes: {
+        Row: {
+          confirmada: boolean
+          created_at: string
+          dados: Json
+          liberada: boolean
+          nota: number | null
+          response_id: string
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          confirmada?: boolean
+          created_at?: string
+          dados?: Json
+          liberada?: boolean
+          nota?: number | null
+          response_id: string
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          confirmada?: boolean
+          created_at?: string
+          dados?: Json
+          liberada?: boolean
+          nota?: number | null
+          response_id?: string
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_v2_avaliacoes_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: true
+            referencedRelation: "documentation_v2_respostas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_v2_avaliacoes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documentation_v2_privado: {
         Row: {
           case_id: string
