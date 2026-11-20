@@ -402,82 +402,43 @@ export default function StudentAuth() {
         }
       }
 
-      // Check if PIN belongs to a Mock Trial
-      const { data: mockTrialRoom } = await supabase
-        .from("mock_trials")
-        .select("id, access_code, status, judge_name")
-        .eq("access_code", normalizedPin)
-        .limit(1)
-        .maybeSingle();
+      // Check if PIN belongs to a Mock Trial (a conferência é feita pela função juri-aluno)
+      const { data: mt } = await supabase.functions.invoke("juri-aluno", {
+        body: { action: "verificar", access_code: normalizedPin, modo: assessmentType === "group" ? "group" : "individual", emails: validGroupEmails },
+      });
 
-      if (mockTrialRoom) {
-        if (mockTrialRoom.status === "draft") {
+      if (mt && (mt.ok || mt.motivo !== "juri")) {
+        if (mt.motivo === "rascunho") {
           toast({ title: "Atividade não disponível", description: "Este júri simulado ainda não foi ativado pelo professor.", variant: "destructive" });
           setLoading(false);
           return;
         }
+        if (mt.motivo === "grupo_nao_encontrado") {
+          toast({
+            title: "Grupo não encontrado",
+            description: "Nenhum dos e-mails informados está cadastrado em um grupo deste Júri Simulado.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        if (mt.motivo === "fora_do_grupo") {
+          toast({
+            title: "E-mail(s) fora do grupo",
+            description: `Os seguintes e-mails não fazem parte de "${mt.grupo || "do grupo identificado"}": ${(mt.fora || []).join(", ")}. Corrija e tente novamente.`,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
 
-        // In group mode, ALL provided e-mails must belong to the SAME group.
-        // If any e-mail does not belong to the identified group, block entry
-        // and list exactly which e-mail(s) are not part of it.
-        if (assessmentType === "group") {
-          const { data: trialGroups } = await supabase
-            .from("mock_trial_groups")
-            .select("id, name")
-            .eq("mock_trial_id", mockTrialRoom.id);
-          const groupIds = (trialGroups || []).map((g: any) => g.id);
-          if (groupIds.length > 0) {
-            const { data: studs } = await supabase
-              .from("mock_trial_students")
-              .select("group_id, student_email, student_name")
-              .in("group_id", groupIds);
-            const roster = (studs || []).map((s: any) => ({
-              ...s,
-              email_norm: (s.student_email || "").trim().toLowerCase(),
-            }));
-
-            // Find candidate group: first email that matches any roster entry
-            let foundGroupId: string | null = null;
-            for (const ge of validGroupEmails) {
-              const match = roster.find((s: any) => s.email_norm === ge);
-              if (match) { foundGroupId = match.group_id; break; }
-            }
-            if (!foundGroupId) {
-              toast({
-                title: "Grupo não encontrado",
-                description: "Nenhum dos e-mails informados está cadastrado em um grupo deste Júri Simulado.",
-                variant: "destructive",
-              });
-              setLoading(false);
-              return;
-            }
-
-            // Validate that EVERY provided e-mail belongs to that exact group
-            const groupRoster = roster.filter((s: any) => s.group_id === foundGroupId);
-            const groupEmailsSet = new Set(groupRoster.map((s: any) => s.email_norm));
-            const invalidEmails = validGroupEmails.filter(ge => !groupEmailsSet.has(ge));
-            if (invalidEmails.length > 0) {
-              const groupName = (trialGroups || []).find((g: any) => g.id === foundGroupId)?.name || "do grupo identificado";
-              toast({
-                title: "E-mail(s) fora do grupo",
-                description: `Os seguintes e-mails não fazem parte de "${groupName}": ${invalidEmails.join(", ")}. Corrija e tente novamente.`,
-                variant: "destructive",
-              });
-              setLoading(false);
-              return;
-            }
-
-            // All good — store the full validated member list
-            const memberEmails = groupRoster.map((s: any) => s.email_norm);
-            const memberNames = groupRoster.map((s: any) => s.student_name || "");
-            const primary = groupRoster[0]?.student_email || validGroupEmails[0];
-            sessionStorage.setItem("mt_pin", normalizedPin);
-            sessionStorage.setItem("mt_email", primary);
-            sessionStorage.setItem("mt_group_emails", JSON.stringify(memberEmails));
-            sessionStorage.setItem("mt_group_names", JSON.stringify(memberNames));
-            navigate(`/mock-trial/portal/${normalizedPin}`);
-            return;
-          }
+        if (mt.grupo) {
+          sessionStorage.setItem("mt_pin", normalizedPin);
+          sessionStorage.setItem("mt_email", mt.principal);
+          sessionStorage.setItem("mt_group_emails", JSON.stringify(mt.emails));
+          sessionStorage.setItem("mt_group_names", JSON.stringify(mt.nomes));
+          navigate(`/mock-trial/portal/${normalizedPin}`);
+          return;
         }
 
         // Individual mode: clear any previous group data

@@ -2,6 +2,7 @@
 // O aluno se identifica com o código de acesso do júri (PIN) e o próprio e-mail.
 // Ações:
 //  - "entrar" / "estado": devolve o que o grupo do aluno pode ver (a tela chama "estado" de tempos em tempos no lugar do realtime).
+//  - "verificar": usado na tela de entrada do aluno: diz se o código é de um júri e, no modo grupo, confere que todos os e-mails são do mesmo grupo.
 //  - "enviar": grava a resposta do grupo a um formulário do papel dele, uma vez por sessão e formulário.
 // Nunca devolve: guia do professor, objetivos de aprendizagem, anotações do juiz, e-mails de outros grupos,
 // processos de casos de que o grupo não participa, personagens do lado adversário, formulários de outros papéis.
@@ -21,20 +22,43 @@ const ATIVAS = new Set(["announcement", "prosecution", "defense", "jury_question
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const { action, access_code, email, form_id, session_id, answers } = await req.json();
-    if (!["entrar", "estado", "enviar"].includes(action)) return json({ error: "Ação inválida" }, 400);
-    if (typeof access_code !== "string" || access_code.trim().length < 4 || typeof email !== "string" || !email.trim()) return json({ error: "Dados incompletos" }, 400);
+    const { action, access_code, email, form_id, session_id, answers, emails, modo } = await req.json();
+    if (!["entrar", "estado", "enviar", "verificar"].includes(action)) return json({ error: "Ação inválida" }, 400);
+    if (typeof access_code !== "string" || access_code.trim().length < 4) return json({ error: "Dados incompletos" }, 400);
+    if (action !== "verificar" && (typeof email !== "string" || !email.trim())) return json({ error: "Dados incompletos" }, 400);
 
     const db = adminClient();
-    const { data: juris } = await db.from("mock_trials").select("id, title, access_code")
+    const { data: juris } = await db.from("mock_trials").select("id, title, access_code, status")
       .eq("access_code", access_code.trim()).limit(1);
     let juri = juris?.[0];
     if (!juri) {
       // o código pode ter sido digitado em outra caixa
-      const { data: alt } = await db.from("mock_trials").select("id, title, access_code").ilike("access_code", access_code.trim()).limit(1);
+      const { data: alt } = await db.from("mock_trials").select("id, title, access_code, status").ilike("access_code", access_code.trim()).limit(1);
       juri = alt?.[0];
     }
     if (!juri) return json({ ok: false, motivo: "juri" });
+
+    if (action === "verificar") {
+      if (juri.status === "draft") return json({ ok: false, motivo: "rascunho" });
+      if (modo !== "group") return json({ ok: true });
+      const lista: string[] = (Array.isArray(emails) ? emails : []).filter((e: unknown) => typeof e === "string").map((e: string) => e.trim().toLowerCase()).filter(Boolean).slice(0, 20);
+      const { data: gs } = await db.from("mock_trial_groups").select("id, name").eq("mock_trial_id", juri.id);
+      if (!gs?.length) return json({ ok: true }); // sem grupos: segue como individual
+      const { data: ss } = await db.from("mock_trial_students").select("group_id, student_email, student_name").in("group_id", gs.map((g: any) => g.id));
+      const roster = (ss || []).map((s: any) => ({ ...s, email_norm: (s.student_email || "").trim().toLowerCase() }));
+      const achado = lista.map((e) => roster.find((s: any) => s.email_norm === e)).find(Boolean);
+      if (!achado) return json({ ok: false, motivo: "grupo_nao_encontrado" });
+      const doGrupo = roster.filter((s: any) => s.group_id === achado.group_id);
+      const set = new Set(doGrupo.map((s: any) => s.email_norm));
+      const fora = lista.filter((e) => !set.has(e));
+      if (fora.length) return json({ ok: false, motivo: "fora_do_grupo", fora, grupo: gs.find((g: any) => g.id === achado.group_id)?.name || "" });
+      return json({
+        ok: true, grupo: true,
+        emails: doGrupo.map((s: any) => s.email_norm),
+        nomes: doGrupo.map((s: any) => s.student_name || ""),
+        principal: doGrupo[0]?.student_email || lista[0],
+      });
+    }
 
     const { data: grupos } = await db.from("mock_trial_groups").select("id, name, group_number")
       .eq("mock_trial_id", juri.id).order("group_number");
