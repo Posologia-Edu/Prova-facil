@@ -14,7 +14,6 @@ interface SjtScenario {
   position: number;
   scenario_text: string;
   actions_json: { id: string; text: string }[];
-  correct_ranking_json: string[];
 }
 
 export default function SjtStudentPortal() {
@@ -34,12 +33,12 @@ export default function SjtStudentPortal() {
   const [dragItem, setDragItem] = useState<number | null>(null);
 
   useEffect(() => {
+    // A prova vem da função sjt-aluno, sem o ranking ideal (a nota é calculada no servidor)
     const fetch = async () => {
-      const { data: exam } = await supabase.from("sjt_exams").select("title, status").eq("id", examId!).single();
-      if (exam) { setExamTitle(exam.title); setExamStatus(exam.status); }
+      const { data } = await supabase.functions.invoke("sjt-aluno", { body: { action: "exame", exam_id: examId } });
+      if (data?.ok) { setExamTitle(data.titulo); setExamStatus(data.status); }
 
-      const { data: sc } = await supabase.from("sjt_scenarios").select("*").eq("sjt_exam_id", examId!).order("position");
-      const scenarioData = (sc || []) as unknown as SjtScenario[];
+      const scenarioData = (data?.ok ? data.cenarios : []) as unknown as SjtScenario[];
       setScenarios(scenarioData);
 
       // Initialize rankings with shuffled actions
@@ -56,9 +55,11 @@ export default function SjtStudentPortal() {
 
   const handleStart = async () => {
     if (!studentName.trim() || !studentEmail.trim()) { toast.error("Preencha nome e e-mail"); return; }
-    const { data, error } = await supabase.from("sjt_sessions").insert({ sjt_exam_id: examId!, student_name: studentName.trim(), student_email: studentEmail.trim() }).select().single();
-    if (error) { toast.error("Erro ao iniciar"); return; }
-    setSessionId(data.id);
+    const { data, error } = await supabase.functions.invoke("sjt-aluno", {
+      body: { action: "iniciar", exam_id: examId, name: studentName.trim(), email: studentEmail.trim() },
+    });
+    if (error || !data?.ok) { toast.error(data?.error || "Erro ao iniciar"); return; }
+    setSessionId(data.session_id);
     setPhase("exam");
   };
 
@@ -73,49 +74,16 @@ export default function SjtStudentPortal() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    let totalScore = 0;
-    const maxPerScenario = 4; // max points per scenario (no distance penalty)
-
-    const inserts = scenarios.map(s => {
-      const studentRank = rankings[s.id] || [];
-      const correctRank = s.correct_ranking_json;
-
-      // Partial credit: sum of (max_distance - actual_distance) for each action
-      let scenarioScore = 0;
-      const n = correctRank.length;
-      const maxDistance = n - 1;
-
-      studentRank.forEach((actionId, studentPos) => {
-        const correctPos = correctRank.indexOf(actionId);
-        if (correctPos !== -1) {
-          const distance = Math.abs(studentPos - correctPos);
-          scenarioScore += maxDistance - distance;
-        }
-      });
-
-      const maxPossible = n * maxDistance;
-      const normalized = maxPossible > 0 ? (scenarioScore / maxPossible) * maxPerScenario : 0;
-      totalScore += normalized;
-
-      return {
-        session_id: sessionId!,
-        scenario_id: s.id,
-        student_ranking_json: studentRank,
-        score: parseFloat(normalized.toFixed(2)),
-      };
+    // O servidor calcula a nota pelo ranking enviado e devolve só o resultado
+    const { data, error } = await supabase.functions.invoke("sjt-aluno", {
+      body: { action: "enviar", session_id: sessionId, rankings },
     });
-
-    const maxScore = scenarios.length * maxPerScenario;
-
-    await supabase.from("sjt_answers").insert(inserts);
-    await supabase.from("sjt_sessions").update({
-      status: "submitted",
-      finished_at: new Date().toISOString(),
-      total_score: parseFloat(totalScore.toFixed(2)),
-      max_score: maxScore,
-    }).eq("id", sessionId!);
-
-    setScore({ total: totalScore, max: maxScore });
+    if (error || !data?.ok) {
+      toast.error(data?.motivo === "ja_enviada" ? "Estas respostas já foram enviadas." : "Não foi possível enviar. Tente novamente.");
+      setSubmitting(false);
+      return;
+    }
+    setScore({ total: data.total, max: data.max });
     setPhase("result");
     setSubmitting(false);
   };
