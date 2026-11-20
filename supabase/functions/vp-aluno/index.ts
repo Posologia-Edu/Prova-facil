@@ -12,6 +12,7 @@
 //  funcoes_salvar  grava quem registra a ficha em um encontro
 //  ficha_ler / ficha_salvar   seções da ficha eletrônica
 //  mai             grava o MAI e conclui a sessão
+//  concluir        conclui a sessão sem MAI (Enfermagem, Medicina e casos sem MAI); a correção só roda em sessão concluída
 //  espelhar_nota   copia a nota da sessão primária para as demais do grupo
 //  feedback        nota liberada, MAI e conversa para a tela de feedback
 // O grupo é decidido aqui: as sessões do aluno e o group_id gravado nelas; a lista de e-mails enviada pelo navegador só vale se todos
@@ -28,7 +29,7 @@ const json = (body: unknown, status = 200) =>
 
 const norm = (s: unknown) => (typeof s === "string" ? s.trim().toLowerCase() : "");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ACOES = ["verificar", "sala", "entrar", "estado", "mensagem", "avancar", "consentimento", "funcoes_salvar", "ficha_ler", "ficha_salvar", "mai", "espelhar_nota", "feedback"];
+const ACOES = ["verificar", "sala", "concluir", "entrar", "estado", "mensagem", "avancar", "consentimento", "funcoes_salvar", "ficha_ler", "ficha_salvar", "mai", "espelhar_nota", "feedback"];
 const MSG_COLS = "id, role, content, encounter, author_name, author_email, created_at";
 
 // deno-lint-ignore no-explicit-any
@@ -381,6 +382,12 @@ serve(async (req) => {
         session_id: sid, encounter, section_key, content,
         updated_by_email: c.email, updated_by_name: c.eu.name || c.email, updated_at: new Date().toISOString(),
       }, { onConflict: "session_id,encounter,section_key" });
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
+    if (action === "concluir") {
+      const { error } = await db.from("virtual_patient_sessions").update({ status: "completed" }).eq("id", sid);
       if (error) return json({ error: error.message }, 500);
       return json({ ok: true });
     }

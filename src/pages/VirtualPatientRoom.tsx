@@ -437,7 +437,7 @@ export default function VirtualPatientRoom() {
     try {
       const transcript = messages.map((m) => ({ role: m.role, content: m.content, encounter: m.encounter }));
       const { data, error } = await supabase.functions.invoke("measure-virtual-patient-vitals", {
-        body: { patientId, encounter, transcript },
+        body: { patientId, encounter, transcript, sessionId },
       });
       if (error) throw error;
       const content: string = data?.message || "Não foi possível aferir os sinais vitais.";
@@ -475,6 +475,8 @@ export default function VirtualPatientRoom() {
   const handleMAIComplete = async () => {
     setShowMAI(false);
     setSessionCompleted(true);
+    // O servidor só corrige sessões concluídas; o MAI já conclui, e sem MAI a conclusão é registrada aqui
+    try { await vpAluno(cvpId!, { action: "concluir", session_id: sessionId }); } catch { /* a correção avisa se faltar */ }
 
     // Treino individual: o aluno vai direto à tela de feedback, que aguarda a correção terminar (ela segue rodando aqui).
     if (isTreinoRef.current && !(isGroupSession && groupSessionIds.length > 1)) {

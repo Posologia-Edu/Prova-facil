@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
 import { loadVpCase } from "../_shared/vp-cases.ts";
+import { getUserId, getVpSession, unauthorized, forbidden } from "../_shared/auth-guard.ts";
 
 // Cadastro único de casos (inclui os 10 legados). BASELINES abaixo fica só como reserva.
 async function loadRegisteredBaseline(patientId: string) {
@@ -108,7 +109,15 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { patientId, encounter = 1, transcript = [] } = await req.json();
+    const { patientId, encounter = 1, transcript = [], sessionId } = await req.json();
+
+    // AuthZ: usuário logado, ou participante anônimo ligado a uma sessão real DESTE paciente e ainda não concluída
+    if (!(await getUserId(req))) {
+      const sess = await getVpSession(sessionId);
+      if (!sess) return unauthorized(corsHeaders);
+      if (typeof patientId !== "string" || sess.patient_id !== patientId) return forbidden(corsHeaders);
+      if (sess.status === "completed") return forbidden(corsHeaders, "Sessão concluída");
+    }
 
     const info = (await loadRegisteredBaseline(patientId)) || BASELINES[patientId];
     if (!patientId || !info) {

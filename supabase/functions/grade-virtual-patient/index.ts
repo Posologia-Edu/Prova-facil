@@ -264,11 +264,19 @@ serve(async (req) => {
     if (!userId) {
       const { data: sess } = await adminClient()
         .from("virtual_patient_sessions")
-        .select("id, class_virtual_patient_id")
+        .select("id, class_virtual_patient_id, status")
         .eq("id", session_id)
         .maybeSingle();
       if (!sess || sess.class_virtual_patient_id !== class_virtual_patient_id) {
         return forbidden(corsHeaders);
+      }
+      // Sem login só se corrige uma sessão que o aluno concluiu e que ainda não tem nota; recorrigir é com o docente.
+      if (sess.status !== "completed") return forbidden(corsHeaders, "Sessão ainda não concluída");
+      const { data: jaTem } = await adminClient().from("virtual_patient_grades").select("id").eq("session_id", session_id).maybeSingle();
+      if (jaTem) {
+        return new Response(JSON.stringify({ skipped: true, reason: "already_graded" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 

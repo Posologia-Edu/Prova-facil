@@ -55,6 +55,19 @@ export async function roomCodeMatches(table: string, roomId: string, code: unkno
   return !!data && String((data as any).access_code || "").trim() === code.trim();
 }
 
+/**
+ * Sessão de paciente virtual para quem chama sem login: devolve a linha (id, paciente, status, vínculo com a sala) ou null.
+ * Quem chama deve conferir que o paciente do pedido é o da sessão e, se for o caso, que ela ainda não foi concluída.
+ */
+export async function getVpSession(id: unknown): Promise<
+  { id: string; patient_id: string; status: string | null; class_virtual_patient_id: string | null } | null
+> {
+  if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const { data } = await adminClient().from("virtual_patient_sessions")
+    .select("id, patient_id, status, class_virtual_patient_id").eq("id", id).maybeSingle();
+  return (data as any) || null;
+}
+
 /** True when a row with the given id exists in `table` (used to bind anonymous callers to a real session). */
 export async function rowExists(table: string, id: unknown): Promise<boolean> {
   if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) return false;

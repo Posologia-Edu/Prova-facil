@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { callAiWithFallback } from "../_shared/ai-caller.ts";
-import { getUserId, rowExists, unauthorized } from "../_shared/auth-guard.ts";
+import { getUserId, getVpSession, unauthorized, forbidden } from "../_shared/auth-guard.ts";
 import { loadVpCase } from "../_shared/vp-cases.ts";
 import {
   adaptTratamento,
@@ -654,8 +654,13 @@ serve(async (req) => {
 
     // AuthZ: signed-in caller, or an anonymous participant bound to a real session.
     const authedUserId = await getUserId(req);
-    if (!authedUserId && !(await rowExists("virtual_patient_sessions", sessionId))) {
-      return unauthorized(corsHeaders);
+    if (!authedUserId) {
+      // Sem login: a sessão precisa existir E ser do paciente pedido (não dá para usar uma sessão para conversar com outro caso),
+      // e depois de concluída ela só serve para o cartão do encontro, não para novas conversas.
+      const sess = await getVpSession(sessionId);
+      if (!sess) return unauthorized(corsHeaders);
+      if (typeof patientId !== "string" || sess.patient_id !== patientId) return forbidden(corsHeaders);
+      if (action !== "encounter_brief" && sess.status === "completed") return forbidden(corsHeaders, "Sessão concluída");
     }
 
     let registered = await loadRegisteredPatient(patientId);
