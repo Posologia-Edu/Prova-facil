@@ -2162,6 +2162,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          documentos_extra: string[]
           id: string
           is_archived: boolean
           reconciliation_room_id: string | null
@@ -2180,6 +2181,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          documentos_extra?: string[]
           id?: string
           is_archived?: boolean
           reconciliation_room_id?: string | null
@@ -2198,6 +2200,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          documentos_extra?: string[]
           id?: string
           is_archived?: boolean
           reconciliation_room_id?: string | null
