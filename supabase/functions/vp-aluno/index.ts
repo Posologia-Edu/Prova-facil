@@ -2,6 +2,7 @@
 // Substitui as leituras e gravações diretas que as telas VirtualPatientRoom, RecordPanel, VirtualPatientMAI e VirtualPatientFeedback
 // faziam nas tabelas virtual_patient_* e class_virtual_patients.
 // Ações:
+//  verificar       usada na tela de login: diz se o PIN é de um paciente virtual e para onde o aluno vai (sala, feedback ou um aviso)
 //  sala            dados da sala (paciente, modo, funções do grupo), sem criar sessão
 //  entrar          abre a sala: acha ou cria a(s) sessão(ões), devolve mensagens, encontro, consentimento e dados da sala
 //  estado          consulta periódica (no lugar do realtime): mensagens novas, encontro, status e funções do grupo
@@ -27,7 +28,7 @@ const json = (body: unknown, status = 200) =>
 
 const norm = (s: unknown) => (typeof s === "string" ? s.trim().toLowerCase() : "");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ACOES = ["sala", "entrar", "estado", "mensagem", "avancar", "consentimento", "funcoes_salvar", "ficha_ler", "ficha_salvar", "mai", "espelhar_nota", "feedback"];
+const ACOES = ["verificar", "sala", "entrar", "estado", "mensagem", "avancar", "consentimento", "funcoes_salvar", "ficha_ler", "ficha_salvar", "mai", "espelhar_nota", "feedback"];
 const MSG_COLS = "id, role, content, encounter, author_name, author_email, created_at";
 
 // deno-lint-ignore no-explicit-any
@@ -68,6 +69,110 @@ async function autoriza(c: any, sessionId: unknown) {
   return { propria, alvo, irmas };
 }
 
+// Decide a entrada do aluno a partir do PIN (tela de login). Devolve { encontrado:false } se o PIN não é de paciente virtual.
+async function verificar(db: Db, b: any) {
+  const pin = norm(b.pin);
+  if (pin.length < 4) return { encontrado: false };
+  const { data: cvp } = await db.from("class_virtual_patients")
+    .select("id, class_id, status, mode").eq("access_code", pin).limit(1).maybeSingle();
+  if (!cvp) return { encontrado: false };
+
+  const modo = b.modo === "group" ? "group" : "individual";
+  const lista: string[] = [...new Set((Array.isArray(b.group_emails) ? b.group_emails : []).map(norm).filter(Boolean))].slice(0, 12) as string[];
+  const principal = modo === "individual" ? norm(b.email) : lista[0] || "";
+  if (!principal) return { encontrado: true, erro: { title: "Erro", description: "Informe seu e-mail." } };
+  const erro = (title: string, description: string) => ({ encontrado: true, erro: { title, description } });
+
+  // Feedback já liberado: vai direto para a tela de feedback, mesmo com a sala encerrada
+  const { data: minha } = await db.from("virtual_patient_sessions").select("id, group_id")
+    .eq("class_virtual_patient_id", cvp.id).eq("student_email", principal).limit(1).maybeSingle();
+  if (minha) {
+    let ids = [minha.id];
+    if (minha.group_id) {
+      const { data: irm } = await db.from("virtual_patient_sessions").select("id").eq("group_id", minha.group_id);
+      ids = (irm || []).map((s: any) => s.id);
+    }
+    const { data: lib } = await db.from("virtual_patient_grades").select("id").in("session_id", ids).eq("feedback_released", true).limit(1).maybeSingle();
+    if (lib) return { encontrado: true, destino: "feedback", cvp_id: cvp.id, email: principal };
+  }
+
+  const treino = cvp.mode === "treino";
+  if (treino && modo !== "individual") return erro("Paciente de treino", "Este paciente é de treino e deve ser atendido individualmente. Escolha a opção individual.");
+  if (cvp.status !== "active") return erro("Sala não disponível", "Este paciente virtual ainda não foi ativado pelo professor.");
+
+  const { data: turma } = await db.from("classes").select("name").eq("id", cvp.class_id).maybeSingle();
+  const className = turma?.name || "esta turma";
+  const { data: atribRaw } = await db.from("class_vp_assignments").select("class_virtual_patient_id, student_email, student_name").eq("class_id", cvp.class_id);
+  const atribs = (atribRaw || []).map((a: any) => ({ cvp: a.class_virtual_patient_id, email: norm(a.student_email), name: a.student_name || "" }));
+  const { data: treinoRows } = await db.from("class_virtual_patients").select("id").eq("class_id", cvp.class_id).eq("mode", "treino");
+  const treinoIds = new Set<string>((treinoRows || []).map((r: any) => r.id));
+
+  const daqui = atribs.filter((a: any) => a.cvp === cvp.id);
+  const temAtribuicao = daqui.length > 0;
+  const grupoAtribuido = !treino && daqui.length > 1;
+  const emOutro = (em: string) => treino ? undefined : atribs.find((a: any) => a.email === em && a.cvp !== cvp.id && !treinoIds.has(a.cvp));
+  const noAtribuido = (em: string) => daqui.find((a: any) => a.email === em);
+  const sessaoDe = async (em: string) => {
+    const { data } = await db.from("virtual_patient_sessions").select("id, group_id").eq("class_virtual_patient_id", cvp.id).eq("student_email", em).limit(1).maybeSingle();
+    return data as { id: string; group_id: string | null } | null;
+  };
+  const { data: alunosTurma } = await db.from("class_students").select("student_name, student_email").eq("class_id", cvp.class_id);
+  const roster = (alunosTurma || []).map((s: any) => ({ email: norm(s.student_email), name: s.student_name || "" }));
+
+  const sala = (email: string, nome: string, grupo: { emails: string[]; nomes: string[] } | null) =>
+    ({ encontrado: true, destino: "room", cvp_id: cvp.id, email, nome, grupo });
+
+  if (modo === "group") {
+    const membros: { email: string; name: string }[] = [];
+    const invalidos: string[] = [];
+    for (const ge of lista) {
+      const m = roster.find((s: any) => s.email === ge);
+      if (m) membros.push({ email: ge, name: m.name }); else invalidos.push(ge);
+    }
+    if (invalidos.length) return erro("E-mails não cadastrados", `Os seguintes e-mails não estão na turma: ${invalidos.join(", ")}`);
+    if (!membros.length) return erro("Erro", "Nenhum e-mail válido do grupo.");
+
+    if (temAtribuicao) {
+      for (const m of membros) {
+        if (emOutro(m.email)) return erro("Aluno em outro paciente", `${m.name} já está atribuído a outro paciente virtual na turma "${className}". Não pode entrar nesta sala.`);
+        if (!noAtribuido(m.email)) return erro("Aluno não atribuído", `${m.name} não foi atribuído a este paciente virtual pelo professor.`);
+      }
+      if (!grupoAtribuido) return erro("Atendimento individual", `Este paciente está configurado como atendimento individual na turma "${className}". Acesse no modo Individual.`);
+    }
+    for (const m of membros) {
+      const ex = await sessaoDe(m.email);
+      if (ex && !ex.group_id && membros.length > 1) return erro("Acesso já registrado", `${m.name} já entrou nesta sala individualmente na turma "${className}". Não é possível entrar agora como grupo.`);
+    }
+    return sala(membros[0].email, membros.map((m) => m.name).join(", "), { emails: membros.map((m) => m.email), nomes: membros.map((m) => m.name) });
+  }
+
+  // individual
+  const eu = roster.find((s: any) => s.email === principal);
+  if (!eu) return erro("Acesso negado", "Seu e-mail não está cadastrado na turma vinculada a este paciente virtual.");
+
+  if (temAtribuicao) {
+    if (emOutro(principal)) return erro("Aluno em outro paciente", `Você já está atribuído a outro paciente virtual na turma "${className}". Não pode acessar esta sala.`);
+    if (!noAtribuido(principal)) return erro("Não atribuído", `Você não foi atribuído a este paciente virtual na turma "${className}".`);
+    if (grupoAtribuido) {
+      const colegas = daqui.filter((a: any) => a.email !== principal).map((a: any) => a.name).join(", ");
+      const todos = daqui.map((a: any) => ({ email: a.email, name: a.name }));
+      return { ...sala(principal, todos.map((m: any) => m.name).join(", "), { emails: todos.map((m: any) => m.email), nomes: todos.map((m: any) => m.name) }),
+        aviso: { title: "Você está em um grupo", description: `Você já está nesta sala como parte de um grupo na turma "${className}" (com: ${colegas}). Entrando como grupo...` } };
+    }
+  }
+
+  const ex = await sessaoDe(principal);
+  if (ex?.group_id) {
+    const { data: irm } = await db.from("virtual_patient_sessions").select("student_email, student_name")
+      .eq("class_virtual_patient_id", cvp.id).eq("group_id", ex.group_id);
+    const sibs = (irm || []).map((s: any) => ({ email: norm(s.student_email), name: s.student_name || "" }));
+    return { ...sala(principal, sibs.map((s: any) => s.name).join(", "), { emails: sibs.map((s: any) => s.email), nomes: sibs.map((s: any) => s.name) }),
+      aviso: { title: "Você já está em um grupo", description: `Você já está participando desta sala como parte de um grupo na turma "${className}". Redirecionando...` } };
+  }
+  return sala(principal, eu.name, null);
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -75,6 +180,7 @@ serve(async (req) => {
     const action = b.action;
     if (!ACOES.includes(action)) return json({ error: "Ação inválida" }, 400);
     const db = adminClient();
+    if (action === "verificar") return json(await verificar(db, b));
     const c: any = await contexto(db, b);
     if (c.erro) return json({ error: c.erro }, 400);
     if (c.semAcesso) return json({ ok: false, motivo: c.semAcesso });
