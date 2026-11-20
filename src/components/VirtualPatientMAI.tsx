@@ -11,12 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Pill, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { vpAluno } from "@/lib/vp-aluno";
 import { toast } from "sonner";
 
 interface VirtualPatientMAIProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sessionId: string;
+  /** sala onde o aluno está (a gravação passa pela função vp-aluno); sem ele, grava direto (usuário logado) */
+  cvpId?: string;
   onComplete: () => void;
 }
 
@@ -45,7 +48,7 @@ interface MedicationMAI {
   expanded: boolean;
 }
 
-export function VirtualPatientMAI({ open, onOpenChange, sessionId, onComplete }: VirtualPatientMAIProps) {
+export function VirtualPatientMAI({ open, onOpenChange, sessionId, cvpId, onComplete }: VirtualPatientMAIProps) {
   const [medications, setMedications] = useState<MedicationMAI[]>([
     { name: "", answers: {}, expanded: true },
   ]);
@@ -133,21 +136,25 @@ export function VirtualPatientMAI({ open, onOpenChange, sessionId, onComplete }:
     maiJson._medication_count = medications.length;
     maiJson._total_score = totalScore;
 
-    const { error } = await supabase.from("virtual_patient_mai_scores").insert({
-      session_id: sessionId,
-      mai_json: maiJson,
-      total_score: totalScore,
-    });
-
-    if (error) {
-      toast.error("Erro ao salvar MAI.");
-      console.error(error);
-    } else {
-      await supabase.from("virtual_patient_sessions")
-        .update({ status: "completed", mai_answers_json: maiJson })
-        .eq("id", sessionId);
+    try {
+      if (cvpId) {
+        await vpAluno(cvpId, { action: "mai", session_id: sessionId, mai_json: maiJson, total_score: totalScore });
+      } else {
+        const { error } = await supabase.from("virtual_patient_mai_scores").insert({
+          session_id: sessionId,
+          mai_json: maiJson,
+          total_score: totalScore,
+        });
+        if (error) throw error;
+        await supabase.from("virtual_patient_sessions")
+          .update({ status: "completed", mai_answers_json: maiJson })
+          .eq("id", sessionId);
+      }
       toast.success("MAI salvo com sucesso!");
       onComplete();
+    } catch (error) {
+      toast.error("Erro ao salvar MAI.");
+      console.error(error);
     }
     setSubmitting(false);
   };

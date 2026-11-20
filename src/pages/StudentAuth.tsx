@@ -145,6 +145,7 @@ export default function StudentAuth() {
 
           if (released) {
             sessionStorage.setItem("vp_email", checkEmail);
+            sessionStorage.setItem("vp_pin", normalizedPin);
             navigate(`/virtual-patients/feedback/${vpRoom.id}`);
             return;
           }
@@ -305,6 +306,8 @@ export default function StudentAuth() {
           }
 
           sessionStorage.setItem("vp_email", validatedMembers[0].email);
+
+          sessionStorage.setItem("vp_pin", normalizedPin);
           sessionStorage.setItem("vp_student_name", validatedMembers.map(m => m.name).join(", "));
           sessionStorage.setItem("vp_group_emails", JSON.stringify(validatedMembers.map(m => m.email)));
           sessionStorage.setItem("vp_group_names", JSON.stringify(validatedMembers.map(m => m.name)));
@@ -363,6 +366,7 @@ export default function StudentAuth() {
                 name: a.student_name,
               }));
               sessionStorage.setItem("vp_email", primaryEmail);
+              sessionStorage.setItem("vp_pin", normalizedPin);
               sessionStorage.setItem("vp_student_name", allMembers.map(m => m.name).join(", "));
               sessionStorage.setItem("vp_group_emails", JSON.stringify(allMembers.map(m => m.email)));
               sessionStorage.setItem("vp_group_names", JSON.stringify(allMembers.map(m => m.name)));
@@ -386,6 +390,7 @@ export default function StudentAuth() {
               .eq("group_id", existing.group_id);
             const sibs = (siblings || []) as Array<{ student_email: string; student_name: string }>;
             sessionStorage.setItem("vp_email", primaryEmail);
+            sessionStorage.setItem("vp_pin", normalizedPin);
             sessionStorage.setItem("vp_student_name", sibs.map(s => s.student_name).join(", "));
             sessionStorage.setItem("vp_group_emails", JSON.stringify(sibs.map(s => (s.student_email || "").trim().toLowerCase())));
             sessionStorage.setItem("vp_group_names", JSON.stringify(sibs.map(s => s.student_name)));
@@ -394,6 +399,8 @@ export default function StudentAuth() {
           }
 
           sessionStorage.setItem("vp_email", primaryEmail);
+
+          sessionStorage.setItem("vp_pin", normalizedPin);
           sessionStorage.setItem("vp_student_name", studentInClass.student_name || "");
           sessionStorage.removeItem("vp_group_emails");
           sessionStorage.removeItem("vp_group_names");

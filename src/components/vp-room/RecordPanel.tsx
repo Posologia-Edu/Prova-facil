@@ -6,8 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { fichaSchema, type FichaVersao } from "@/lib/vp-ficha";
+import { vpAluno } from "@/lib/vp-aluno";
 
 interface Props {
+  /** sala (class_virtual_patients) onde o aluno está */
+  cvpId: string;
   /** sessão primária (a mesma que guarda o chat do grupo) */
   sessionId: string;
   encounter: number;
@@ -28,7 +31,7 @@ const k = (enc: number, key: string) => `${enc}:${key}`;
 
 // Ficha do atendimento: uma linha por seção no banco, para dois integrantes do grupo
 // editarem seções diferentes sem sobrescrever um ao outro.
-export function RecordPanel({ sessionId, encounter, versao, studentEmail, studentName, isGroup, locked, roleLockedReason, onClose }: Props) {
+export function RecordPanel({ cvpId, sessionId, encounter, versao, studentEmail, studentName, isGroup, locked, roleLockedReason, onClose }: Props) {
   const [tab, setTab] = useState(encounter);
   const [values, setValues] = useState<Record<string, string>>({});
   const [editors, setEditors] = useState<Record<string, string>>({});
@@ -42,25 +45,13 @@ export function RecordPanel({ sessionId, encounter, versao, studentEmail, studen
 
   useEffect(() => { setTab(encounter); }, [encounter]);
 
-  const table = () => (supabase as any).from("virtual_patient_record_sections");
-
   const saveKey = useCallback(async (storeKey: string) => {
     const [encStr, ...rest] = storeKey.split(":");
     const sectionKey = rest.join(":");
     const content = latest.current[storeKey] ?? "";
-    const { error: err } = await table().upsert(
-      {
-        session_id: sessionId,
-        encounter: Number(encStr),
-        section_key: sectionKey,
-        content,
-        updated_by_email: studentEmail || null,
-        updated_by_name: studentName || studentEmail || null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "session_id,encounter,section_key" },
-    );
-    if (err) {
+    try {
+      await vpAluno(cvpId, { action: "ficha_salvar", session_id: sessionId, encounter: Number(encStr), section_key: sectionKey, content });
+    } catch (err) {
       console.error("ficha: falha ao salvar", err);
       setError(true);
       return;
@@ -71,7 +62,7 @@ export function RecordPanel({ sessionId, encounter, versao, studentEmail, studen
       dirty.current.delete(storeKey);
       setPendingCount(dirty.current.size);
     }
-  }, [sessionId, studentEmail, studentName]);
+  }, [cvpId, sessionId]);
 
   const flush = useCallback(() => {
     Object.keys(timers.current).forEach((key) => { window.clearTimeout(timers.current[key]); });
@@ -81,10 +72,11 @@ export function RecordPanel({ sessionId, encounter, versao, studentEmail, studen
 
   const pull = useCallback(async () => {
     if (!sessionId) return;
-    const { data, error: err } = await table()
-      .select("encounter, section_key, content, updated_by_name, updated_by_email")
-      .eq("session_id", sessionId);
-    if (err || !data) return;
+    let data: any[];
+    try {
+      const r = await vpAluno(cvpId, { action: "ficha_ler", session_id: sessionId });
+      data = r?.secoes || [];
+    } catch { return; }
     const nextValues: Record<string, string> = {};
     const nextEditors: Record<string, string> = {};
     for (const r of data as any[]) {
@@ -104,7 +96,7 @@ export function RecordPanel({ sessionId, encounter, versao, studentEmail, studen
       return merged;
     });
     setLoaded(true);
-  }, [sessionId, studentEmail]);
+  }, [cvpId, sessionId, studentEmail]);
 
   useEffect(() => {
     void pull();

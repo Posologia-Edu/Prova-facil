@@ -7,6 +7,7 @@ import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { ArrowLeft, Loader2, Award, MessageSquare, Stethoscope, ShieldAlert, Pill, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { vpAluno } from "@/lib/vp-aluno";
 import { toast } from "sonner";
 import { simpleMarkdownToHtml } from "@/lib/simple-markdown";
 import { PEER_EVAL_MAX_ADJUST } from "@/lib/vp-peer-eval";
@@ -121,27 +122,22 @@ export default function VirtualPatientFeedback() {
     }
     if (!quiet) setLoading(true);
 
-    // Tipo da atividade (treino ou avaliativo). Consulta tolerante a erro.
-    const { data: modeData, error: modeErr } = await (supabase as any)
-      .from("class_virtual_patients")
-      .select("mode, dificuldade")
-      .eq("id", cvpId)
-      .maybeSingle();
-    if (!modeErr && modeData) setModo({ mode: modeData.mode || "avaliativo", dificuldade: modeData.dificuldade ?? null });
-
-    // Buscar a sessão do aluno neste paciente virtual
-    const { data: session } = await supabase
-      .from("virtual_patient_sessions")
-      .select("id, student_name, group_id, patient_id")
-      .eq("class_virtual_patient_id", cvpId)
-      .ilike("student_email", email)
-      .maybeSingle();
-
-    if (!session) {
+    // Tudo vem da função vp-aluno: tipo da atividade, sessão do aluno, nota liberada, MAI e conversa.
+    let d: any;
+    try {
+      d = await vpAluno(cvpId, { action: "feedback" });
+    } catch {
+      toast.error("Sessão expirada. Acesse novamente com seu PIN e e-mail.");
+      navigate("/student/auth");
+      return;
+    }
+    if (!d?.ok) {
       toast.error("Você não tem registro de atendimento neste paciente virtual.");
       navigate("/student/auth");
       return;
     }
+    if (d.modo) setModo({ mode: d.modo.mode || "avaliativo", dificuldade: d.modo.dificuldade ?? null });
+    const session = d.sessao;
     setStudentName(session.student_name || "");
     setPatientName(session.patient_id || "");
 
@@ -152,62 +148,15 @@ export default function VirtualPatientFeedback() {
       if (summary && !summary.error) setPeerSummary(summary as PeerEvalSummary);
     }
 
-    // Buscar a nota — pode estar na própria sessão OU em qualquer membro do grupo
-    let { data: gradeData } = await supabase
-      .from("virtual_patient_grades")
-      .select("id, session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, feedback_released")
-      .eq("session_id", session.id)
-      .maybeSingle();
-
-    let primarySessionId = session.id;
-
-    if ((!gradeData || !gradeData.feedback_released) && session.group_id) {
-      const { data: siblings } = await supabase
-        .from("virtual_patient_sessions")
-        .select("id, created_at")
-        .eq("group_id", session.group_id)
-        .order("created_at", { ascending: true });
-      const sibIds = (siblings || []).map((s: any) => s.id);
-      if (sibIds.length > 0) {
-        const { data: groupGrades } = await supabase
-          .from("virtual_patient_grades")
-          .select("id, session_id, subscores, bonus_penalidades, nota_final, nota_microlearning, feedback_resumido, orientacoes_melhoria, flags_seguranca, feedback_released")
-          .in("session_id", sibIds);
-        const released = (groupGrades || []).find((g: any) => g.feedback_released);
-        if (released) gradeData = released as any;
-        // Encontrar a sessão primária com mensagens
-        primarySessionId = (siblings && siblings[0]?.id) || session.id;
-      }
-    }
-
-    if (!gradeData) {
+    // Nota ainda não liberada (ou inexistente): o servidor não devolve nada dela
+    if (!d.grade) {
       setGrade(null);
       setLoading(false);
       return;
     }
-    if (!gradeData.feedback_released) {
-      setGrade({ ...(gradeData as any), feedback_released: false });
-      setLoading(false);
-      return;
-    }
-    setGrade(gradeData as any);
-
-    // MAI
-    const { data: maiRow } = await supabase
-      .from("virtual_patient_mai_scores")
-      .select("mai_json")
-      .eq("session_id", gradeData.session_id)
-      .maybeSingle();
-    setMai(maiRow?.mai_json || null);
-
-    // Conversa: buscar mensagens da sessão primária do grupo (ou da sessão)
-    const sourceId = session.group_id ? primarySessionId : session.id;
-    const { data: msgs } = await supabase
-      .from("virtual_patient_messages")
-      .select("role, content, encounter")
-      .eq("session_id", sourceId)
-      .order("created_at", { ascending: true });
-    setTranscript((msgs as Msg[]) || []);
+    setGrade(d.grade);
+    setMai(d.mai || null);
+    setTranscript((d.transcript as Msg[]) || []);
 
     setLoading(false);
   };
