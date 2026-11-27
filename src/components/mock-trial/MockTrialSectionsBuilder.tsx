@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
+// Seções que o aluno NÃO vê: são o gabarito do professor (as equipes montam as próprias alegações).
+const TEACHER_ONLY_KEYS = ["alegacoes_mp", "alegacoes_defesa"];
+
 interface Section {
   id: string;
   key: string;
@@ -81,7 +84,7 @@ export function MockTrialSectionsBuilder({ caseId, sections, onChange }: Props) 
     onChange(updated);
     // Reassemble process_content
     const assembled = updated
-      .filter((s) => s.status === "ready" && s.content)
+      .filter((s) => s.status === "ready" && s.content && !TEACHER_ONLY_KEYS.includes(s.key))
       .map((s) => `## ${s.title}\n\n${s.content}`)
       .join("\n\n---\n\n");
     await (supabase as any)
@@ -146,6 +149,9 @@ export function MockTrialSectionsBuilder({ caseId, sections, onChange }: Props) 
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold">{sec.title}</p>
                     <StatusBadge status={sec.status} />
+                    {TEACHER_ONLY_KEYS.includes(sec.key) && (
+                      <Badge variant="outline" className="text-[10px]">Só professor (oculta dos alunos)</Badge>
+                    )}
                   </div>
                   {sec.summary && (
                     <p className="text-xs text-muted-foreground mt-1 leading-snug">{sec.summary}</p>

@@ -14,6 +14,9 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+// Seções que o aluno NÃO vê (gabarito do professor): ficam em sections_json, mas fora do process_content.
+const TEACHER_ONLY_KEYS = ["alegacoes_mp", "alegacoes_defesa"];
+
 // Per-section length and style instructions
 const SECTION_INSTRUCTIONS: Record<string, { minWords: number; instructions: string }> = {
   capa: {
@@ -37,7 +40,8 @@ const SECTION_INSTRUCTIONS: Record<string, { minWords: number; instructions: str
      * Biomédico → Código de Ética do Profissional Biomédico (Resolução CFBM 198/2011).
    - **Lei do exercício profissional** correspondente (ex: Lei 12.842/2013 — Ato Médico; Lei 13.021/2014 — Farmácia; Lei 7.498/1986 — Enfermagem; Lei 5.081/1966 — Odontologia etc.).
    - **Legislação sanitária/clínica específica** quando pertinente (ex: RDC ANVISA sobre antimicrobianos, Portarias do MS, Diretrizes da SBI/SBU/SBN/SBD etc.).
-   Para cada artigo, traga uma frase com o teor resumido contextualizado ao caso (NÃO apenas o número). Exemplo: "Art. 11 do CEM — O médico tem o dever de usar todos os meios disponíveis de diagnóstico e tratamento cientificamente reconhecidos em favor do paciente, dispositivo invocado pela acusação ao questionar a escolha de fosfomicina como monoterapia em pielonefrite complicada."`,
+   Para cada artigo, traga uma frase com o teor resumido do dispositivo (NÃO apenas o número). Exemplo: "Art. 11 do CEM — O médico tem o dever de usar todos os meios disponíveis de diagnóstico e tratamento cientificamente reconhecidos em favor do paciente."
+   REGRA DE NEUTRALIDADE (obrigatória): a capa é lida pelos alunos, que devem construir os próprios argumentos. Liste os dispositivos e o seu teor de forma NEUTRA. É PROIBIDO dizer qual lado invoca, usa ou questiona cada artigo, e proibido ligar o artigo à tese da acusação ou da defesa, aos fatos específicos do caso ou ao mérito. O "Objeto da ação" descreve só o que o Ministério Público imputa, sem avaliar. Todo artigo de lei, resolução ou RDC que você citar de memória deve vir seguido de [CONFERIR].`,
   },
   relato_fatos: {
     minWords: 350,
@@ -49,7 +53,7 @@ const SECTION_INSTRUCTIONS: Record<string, { minWords: number; instructions: str
   },
   laudo_iml: {
     minWords: 350,
-    instructions: `LAUDO IML/NECROPSIA OU PERÍCIA TÉCNICA. Cabeçalho com perito responsável e nº do laudo. Identificação do periciado, descrição externa (se aplicável), descrição interna por sistemas (cardiovascular, respiratório, digestivo, urinário, neurológico), achados macroscópicos e microscópicos, exames complementares solicitados pelo perito (toxicologia, histopatologia), CONCLUSÃO técnica com causa mortis ou natureza das lesões. Use terminologia médico-legal precisa. Adicione DOIS achados escondidos de peso igual: um que a ACUSAÇÃO possa usar (ex.: dado que confirma o desvio ou o dano) e um que a DEFESA possa usar (ex.: dado que sugere causa alternativa). Se o desfecho não foi óbito, produza laudo pericial de lesão ou parecer técnico em vez de necropsia. Não conclua a favor de nenhum lado além do que os fatos permitem.`,
+    instructions: `LAUDO IML/NECROPSIA OU PERÍCIA TÉCNICA. Cabeçalho com perito responsável e nº do laudo. Identificação do periciado, descrição externa (se aplicável), descrição interna por sistemas (cardiovascular, respiratório, digestivo, urinário, neurológico), achados macroscópicos e microscópicos, exames complementares solicitados pelo perito (toxicologia, histopatologia), CONCLUSÃO técnica com causa mortis ou natureza das lesões. Use terminologia médico-legal precisa. Adicione DOIS achados escondidos de peso igual: um que a ACUSAÇÃO possa usar (ex.: dado que confirma o desvio ou o dano) e um que a DEFESA possa usar (ex.: dado que sugere causa alternativa). Se o desfecho não foi óbito, produza laudo pericial de lesão ou parecer técnico em vez de necropsia. O perito DESCREVE achados e responde aos quesitos; NÃO inclua seção de "Discussão" nem síntese que resuma o caso, e NÃO rotule os achados escondidos como "achado 1/2" nem diga que são concorrentes ou independentes. Se os objetivos listarem fatos AMBÍGUOS, o laudo NÃO PODE resolvê-los: registre apenas o que consta nos documentos, com a incerteza (ex.: "a paciente refere X; o diário indica Y"). Rigor técnico: resistência adquirida de E. coli a quinolonas NÃO é "intrínseca"; não chame sinais de "patognomônicos" sem necessidade.`,
   },
   prontuario: {
     minWords: 600,
@@ -208,6 +212,9 @@ ${target.summary}
 ## Instruções específicas desta seção
 ${cfg.instructions}
 
+## REGRA DE NÃO ENTREGAR A SOLUÇÃO
+Os alunos leem este processo e precisam construir os próprios argumentos. Nenhuma seção (exceto as alegações finais, que são gabarito oculto do professor) pode resumir a tese de um lado, dizer como os fatos "deveriam" ser lidos ou resolver os fatos ambíguos. Apresente fatos, documentos e falas; deixe a interpretação para as equipes. Artigos de lei, RDCs, resoluções e diretrizes citados de memória levam [CONFERIR]. Receita de antimicrobiano: retenção da receita (RDC 20/2011), não é controle especial.
+
 ## REGRA DE EQUILÍBRIO (vale para esta seção)
 O processo é um júri educativo e deve ser genuinamente disputável: nenhuma seção pode tornar a condenação ou a absolvição óbvia. Respeite o placar de fatos dos objetivos (se houver "FATOS-ÂNCORA", distribua-os fielmente: cada lado com seus fatos fortes, e os ambíguos sem resolução). Se o réu for o responsável por um processo de trabalho, descreva o fluxo com precisão. Não use óbito se os objetivos não o indicarem.
 
@@ -260,7 +267,7 @@ O processo é um júri educativo e deve ser genuinamente disputável: nenhuma se
 
     sections[targetIdx] = { ...target, status: "ready", content, error: null };
     const reassembled = sections
-      .filter((s: any) => s.status === "ready" && s.content)
+      .filter((s: any) => s.status === "ready" && s.content && !TEACHER_ONLY_KEYS.includes(s.key))
       .map((s: any) => `## ${s.title}\n\n${s.content}`)
       .join("\n\n---\n\n");
 
