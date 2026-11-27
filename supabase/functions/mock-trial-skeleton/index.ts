@@ -91,6 +91,14 @@ REGRAS INVIOLÁVEIS:
   * Erro em conduta nutricional/dietoterápica → Nutricionista
   * Erro em exame laboratorial/diagnóstico → Biomédico
 - O DESENHO do processo (tipificação penal, conselho de classe citado, código de ética aplicável, lex artis, testemunhas técnicas) DEVE refletir a profissão escolhida. Ex: farmacêutico → CFF/CRF + Código de Ética Farmacêutica; enfermeiro → COFEN/COREN + Código de Ética dos Profissionais de Enfermagem; dentista → CFO/CRO + Código de Ética Odontológica; médico → CFM/CRM + Código de Ética Médica.
+- RÉU QUE É UM PROCESSO DE TRABALHO: quando os objetivos indicarem um fluxo, protocolo, rotina ou procedimento como alvo do julgamento, o réu continua sendo uma PESSOA: o responsável por criar, manter ou alterar esse processo (coordenador(a), responsável técnico, chefe de serviço, gestor(a)). O fluxo/protocolo deve ser descrito com precisão (quem fazia o quê, quando e por que foi alterado) e aparecer como objeto da denúncia e da defesa.
+- Se os objetivos já definirem réu, cenário, desfecho ou tipificação, OBEDEÇA e não substitua por outra escolha.
+- EQUILÍBRIO ENTRE ACUSAÇÃO E DEFESA (obrigatório): o caso deve ser genuinamente disputável. Planeje, ANTES de escrever os resumos: 3 fatos fortes para a acusação, 3 fatos fortes para a defesa e 2 fatos ambíguos que qualquer lado pode usar. Regras:
+  * A acusação tem dano documentado e uma norma/diretriz citável; a defesa tem contexto concreto (barreira real de insumo, sistema, informação omitida, carga de trabalho) e uma causa alternativa plausível para o desfecho.
+  * Os alunos conhecem a conduta ideal pela aula: dê ao réu uma barreira realista para tê-la seguido, ou uma divergência real entre diretrizes. NÃO monte um caso em que "bastava seguir a aula".
+  * Prefira desfechos SEM óbito (internação, sequela, intervenção). Só use óbito se os objetivos pedirem.
+  * O réu é humano: admite uma falha pequena e mantém uma decisão defensável. Nem vilão, nem santo.
+  * Os resumos das seções devem distribuir esses fatos entre os dois lados; nenhuma seção pode favorecer um lado de forma conclusiva.
 - NÃO use exemplos genéricos, NÃO copie temas anteriores, NÃO use mineração/meio-ambiente a menos que o objetivo cite isso.
 - Cada resumo de seção deve mencionar elementos concretos do tema (medicamentos, exames, achados clínicos relevantes).
 - CENÁRIO FÍSICO (obrigatório variar): NÃO ambiente todos os processos em hospital. Escolha o cenário MAIS COERENTE com o ato profissional questionado e com a profissão do réu. Possibilidades incluem (mas não se limitam a):

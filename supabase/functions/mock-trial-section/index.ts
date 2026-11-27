@@ -49,7 +49,7 @@ const SECTION_INSTRUCTIONS: Record<string, { minWords: number; instructions: str
   },
   laudo_iml: {
     minWords: 350,
-    instructions: `LAUDO IML/NECROPSIA OU PERÍCIA TÉCNICA. Cabeçalho com perito responsável e nº do laudo. Identificação do periciado, descrição externa (se aplicável), descrição interna por sistemas (cardiovascular, respiratório, digestivo, urinário, neurológico), achados macroscópicos e microscópicos, exames complementares solicitados pelo perito (toxicologia, histopatologia), CONCLUSÃO técnica com causa mortis ou natureza das lesões. Use terminologia médico-legal precisa. Adicione um POLO TWIST: um achado inesperado que abre margem para interpretação alternativa.`,
+    instructions: `LAUDO IML/NECROPSIA OU PERÍCIA TÉCNICA. Cabeçalho com perito responsável e nº do laudo. Identificação do periciado, descrição externa (se aplicável), descrição interna por sistemas (cardiovascular, respiratório, digestivo, urinário, neurológico), achados macroscópicos e microscópicos, exames complementares solicitados pelo perito (toxicologia, histopatologia), CONCLUSÃO técnica com causa mortis ou natureza das lesões. Use terminologia médico-legal precisa. Adicione DOIS achados escondidos de peso igual: um que a ACUSAÇÃO possa usar (ex.: dado que confirma o desvio ou o dano) e um que a DEFESA possa usar (ex.: dado que sugere causa alternativa). Se o desfecho não foi óbito, produza laudo pericial de lesão ou parecer técnico em vez de necropsia. Não conclua a favor de nenhum lado além do que os fatos permitem.`,
   },
   prontuario: {
     minWords: 600,
@@ -108,17 +108,17 @@ REGRAS DE IMAGENS COMPLEMENTARES (CRÍTICO):
     instructions: `DEPOIMENTOS DE 4 TESTEMUNHAS (mínimo) em formato transcrição. Para cada uma: qualificação completa (nome, idade, profissão, vínculo com o caso), advertência legal, depoimento longo (mínimo 15 trocas de fala). Inclua:
 - 1 testemunha técnica de acusação (médico assistente/parecerista que critica a conduta)
 - 1 testemunha técnica de defesa (especialista que defende a conduta)
-- 1 familiar da vítima (relato emocional)
-- 1 colega de trabalho do réu (caráter)
-Cada depoimento deve trazer informação NOVA e às vezes contraditória entre si. Inclua mais EASTER EGGS.`,
+- 1 familiar ou a própria paciente/vítima (relato emocional que TAMBÉM revela um fato favorável à defesa, ex.: adesão parcial, informação omitida)
+- 1 colega de trabalho do réu (caráter, que TAMBÉM revela um fato desfavorável ao réu, ex.: rotina falha, sobrecarga ignorada, atalho habitual)
+As duas testemunhas técnicas devem ter titulação e credibilidade equivalentes. Cada depoimento deve trazer informação NOVA e às vezes contraditória entre si. Inclua EASTER EGGS para os dois lados.`,
   },
   alegacoes_mp: {
     minWords: 600,
-    instructions: `ALEGAÇÕES FINAIS DO MINISTÉRIO PÚBLICO. Linguagem jurídica formal, estrutura: I - Síntese fática; II - Materialidade (citando exames, laudo, prontuário); III - Autoria; IV - Tipicidade (citação de artigos do CP e da Lei 12.842/2013 - Ato Médico, ou equivalente da profissão); V - Análise da conduta culposa (negligência/imprudência/imperícia) com base na literatura médica; VI - Pedido de condenação. Cite jurisprudência fictícia mas plausível (STJ, TJ).`,
+    instructions: `ALEGAÇÕES FINAIS DO MINISTÉRIO PÚBLICO. Linguagem jurídica formal, estrutura: I - Síntese fática; II - Materialidade (citando exames, laudo, prontuário); III - Autoria; IV - Tipicidade (citação de artigos do CP e da Lei 12.842/2013 - Ato Médico, ou equivalente da profissão); V - Análise da conduta culposa (negligência/imprudência/imperícia) com base na literatura; VI - Pedido de condenação. Cite jurisprudência fictícia mas plausível (STJ, TJ). Use o achado escondido do laudo favorável à acusação como argumento central. Mesmo tamanho e mesmo número de argumentos das alegações da defesa; reconheça ao menos um ponto fraco da própria tese, sem encerrar com golpe final.`,
   },
   alegacoes_defesa: {
     minWords: 600,
-    instructions: `ALEGAÇÕES FINAIS DA DEFESA. Estrutura: I - Preliminar (se houver); II - Mérito - inexistência de nexo causal; III - Conduta dentro da lex artis (citar diretrizes da especialidade, ex: SBI, SBU, SBN); IV - Risco inerente ao procedimento/doença; V - Princípio do in dubio pro reo; VI - Pedido de absolvição. Use o POLO TWIST do laudo IML como argumento central. Cite jurisprudência fictícia.`,
+    instructions: `ALEGAÇÕES FINAIS DA DEFESA. Estrutura: I - Preliminar (se houver); II - Mérito - inexistência de nexo causal; III - Conduta dentro da lex artis (citar diretrizes da especialidade, ex: SBI, SBU, SBN); IV - Risco inerente ao procedimento/doença; V - Princípio do in dubio pro reo; VI - Pedido de absolvição. Use o achado escondido do laudo favorável à defesa e o contexto/barreira concreta como argumento central. Mesmo tamanho e mesmo número de argumentos das alegações do MP; reconheça ao menos um ponto fraco da própria tese, sem encerrar com golpe final. Cite jurisprudência fictícia.`,
   },
 };
 
@@ -207,6 +207,9 @@ ${target.summary}
 
 ## Instruções específicas desta seção
 ${cfg.instructions}
+
+## REGRA DE EQUILÍBRIO (vale para esta seção)
+O processo é um júri educativo e deve ser genuinamente disputável: nenhuma seção pode tornar a condenação ou a absolvição óbvia. Respeite o placar de fatos dos objetivos (se houver "FATOS-ÂNCORA", distribua-os fielmente: cada lado com seus fatos fortes, e os ambíguos sem resolução). Se o réu for o responsável por um processo de trabalho, descreva o fluxo com precisão. Não use óbito se os objetivos não o indicarem.
 
 ## REGRAS DE QUALIDADE OBRIGATÓRIAS
 - Mínimo de ${cfg.minWords} palavras, em português brasileiro
