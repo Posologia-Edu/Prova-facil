@@ -26,7 +26,7 @@ const SECTION_INSTRUCTIONS: Record<string, { minWords: number; instructions: str
 1) **Cabeçalho do tribunal**: nome completo do tribunal, comarca, vara competente, número do processo, classe ("Ação Penal Pública"), órgão julgador (Tribunal do Júri).
 2) **Partes**: Autor (Ministério Público do Estado de XXX) e Réu (nome completo, qualificação, profissão, registro no conselho de classe correspondente — CRM/CRF/COREN/CRO/CREFITO/CRN/CRBM conforme a profissão do réu).
 3) **Vítima**: nome e qualificação.
-4) **Data de distribuição** e **juiz responsável** (nome fictício).
+4) **Data de distribuição** e **juiz responsável** (nome fictício). A data de distribuição é POSTERIOR à denúncia e a todos os fatos e laudos do caso (no mínimo 30 dias após a alta hospitalar). A comarca e a vara devem ser as MESMAS usadas no cenário e no resumo das demais seções; use um nome de comarca fictício único e coerente (não misture cidades reais com fictícias). Use nomes próprios (juiz, delegado, perito, médicos) que NÃO repitam os de outros processos do mesmo júri.
 5) **Objeto da ação** em uma linha.
 6) **FUNDAMENTAÇÃO JURÍDICA** (seção OBRIGATÓRIA e DETALHADA) — liste os dispositivos legais aplicáveis ao caso específico, com o texto resumido de cada artigo, agrupados em subtítulos. Sempre inclua quando aplicável:
    - **Código Penal**: artigos pertinentes (ex: art. 121 — Matar alguém; art. 121 §3º — homicídio culposo; art. 132 — perigo para a vida ou saúde de outrem; art. 129 — lesão corporal; art. 18 II — crime culposo). Cite SOMENTE os que se aplicam ao desfecho do caso.
@@ -54,7 +54,7 @@ DENÚNCIA do Ministério Público em linguagem jurídica formal. Estrutura: cabe
   },
   laudo_iml: {
     minWords: 350,
-    instructions: `LAUDO IML/NECROPSIA OU PERÍCIA TÉCNICA. Cabeçalho com perito responsável e nº do laudo. Identificação do periciado, descrição externa (se aplicável), descrição interna por sistemas (cardiovascular, respiratório, digestivo, urinário, neurológico), achados macroscópicos e microscópicos, exames complementares solicitados pelo perito (toxicologia, histopatologia), CONCLUSÃO técnica com causa mortis ou natureza das lesões. Use terminologia médico-legal precisa. Adicione DOIS achados escondidos de peso igual: um que a ACUSAÇÃO possa usar (ex.: dado que confirma o desvio ou o dano) e um que a DEFESA possa usar (ex.: dado que sugere causa alternativa). Se o desfecho não foi óbito, produza laudo pericial de lesão ou parecer técnico em vez de necropsia. O perito NÃO data o início do processo infeccioso e NÃO infere o que "já estava em curso" em consulta anterior a partir de achados de imagem (se disser algo, é que o exame não permite datar). O perito DESCREVE achados e responde aos quesitos; NÃO inclua seção de "Discussão" nem síntese que resuma o caso, e NÃO rotule os achados escondidos como "achado 1/2" nem diga que são concorrentes ou independentes. Se os objetivos listarem fatos AMBÍGUOS, o laudo NÃO PODE resolvê-los: registre apenas o que consta nos documentos, com a incerteza (ex.: "a paciente refere X; o diário indica Y"). No quesito sobre o meio/causa, o perito NÃO declara "comprovado" nenhum fator causal em disputa: descreve o mecanismo descrito na literatura, relata o achado documental e afirma que o exame indireto não permite quantificar a contribuição de cada fator, deixando a valoração às partes. Rigor técnico: resistência adquirida de E. coli a quinolonas NÃO é "intrínseca"; não chame sinais de "patognomônicos" sem necessidade.`,
+    instructions: `LAUDO IML/NECROPSIA OU PERÍCIA TÉCNICA. Cabeçalho com perito responsável e nº do laudo. Identificação do periciado, descrição externa (se aplicável), descrição interna por sistemas (cardiovascular, respiratório, digestivo, urinário, neurológico), achados macroscópicos e microscópicos, exames complementares solicitados pelo perito (toxicologia, histopatologia), CONCLUSÃO técnica com causa mortis ou natureza das lesões. Use terminologia médico-legal precisa. Adicione DOIS achados escondidos de peso igual: um que a ACUSAÇÃO possa usar (ex.: dado que confirma o desvio ou o dano) e um que a DEFESA possa usar (ex.: dado que sugere causa alternativa). Se o desfecho não foi óbito, produza laudo pericial de lesão ou parecer técnico em vez de necropsia. O perito NÃO data o início do processo infeccioso e NÃO infere o que "já estava em curso" em consulta anterior a partir de achados de imagem (se disser algo, é que o exame não permite datar). O perito DESCREVE achados e responde aos quesitos; NÃO inclua seção de "Discussão" nem síntese que resuma o caso, e NÃO rotule os achados escondidos como "achado 1/2" nem diga que são concorrentes ou independentes. Se os objetivos listarem fatos AMBÍGUOS, o laudo NÃO PODE resolvê-los: registre apenas o que consta nos documentos, com a incerteza (ex.: "a paciente refere X; o diário indica Y"). No quesito sobre o meio/causa, o perito NÃO declara "comprovado" nenhum fator causal em disputa: descreve o mecanismo descrito na literatura, relata o achado documental e afirma que o exame indireto não permite quantificar a contribuição de cada fator, deixando a valoração às partes. Rigor técnico: resistência adquirida de E. coli a quinolonas NÃO é "intrínseca"; não chame sinais de "patognomônicos" sem necessidade. Nos quesitos sobre PERIGO DE VIDA e INCAPACIDADE PARA OCUPAÇÕES HABITUAIS (mais de 30 dias), o perito só responde "Sim" se houver documento no caso que o sustente (sepse, choque, UTI, afastamento registrado); sem esse documento responde que os registros não permitem afirmar. NÃO classifique a lesão como grave/gravíssima e NÃO enquadre juridicamente: a classificação jurídica compete ao juízo. As datas do laudo devem ser POSTERIORES à alta e a todos os documentos analisados.`,
   },
   prontuario: {
     minWords: 600,
@@ -116,7 +116,9 @@ REGRAS DE IMAGENS COMPLEMENTARES (CRÍTICO):
 - 1 testemunha técnica de defesa (especialista que defende a conduta)
 - 1 familiar ou a própria paciente/vítima (relato emocional que TAMBÉM revela um fato favorável à defesa, ex.: adesão parcial, informação omitida)
 - 1 colega de trabalho do réu (caráter, que TAMBÉM revela um fato desfavorável ao réu, ex.: rotina falha, sobrecarga ignorada, atalho habitual)
-As duas testemunhas técnicas devem ter titulação e credibilidade equivalentes. Cada depoimento deve trazer informação NOVA e às vezes contraditória entre si. Inclua EASTER EGGS para os dois lados.`,
+As duas testemunhas técnicas devem ter titulação e credibilidade equivalentes. Cada depoimento deve trazer informação NOVA e às vezes contraditória entre si. Inclua EASTER EGGS para os dois lados.
+
+AO FINAL, depois do último depoimento, acrescente UM bloco de código \`\`\`characters-manifest com um array JSON de EXATAMENTE 4 objetos, um por testemunha, cada um com: "side" ("prosecution" ou "defense": o lado que arrolou a testemunha; técnica de acusação e familiar/vítima = "prosecution"; técnica de defesa e colega = "defense"), "name", "profession" (cargo e vínculo em poucas palavras) e "instructions" (4 perguntas socráticas numeradas, em uma string com \\n, para os alunos do lado que arrolou preparem o exame dessa testemunha). As perguntas devem ser ABERTAS e NEUTRAS: apontam o que explorar (percepção, registros, rotina, limites do conhecimento), mas NÃO revelam fatos do depoimento, NÃO dizem qual resposta ajuda a tese e NÃO resumem argumentos. Este bloco não faz parte do texto do processo.`,
   },
   alegacoes_mp: {
     minWords: 600,
@@ -265,9 +267,36 @@ O processo é um júri educativo e deve ser genuinamente disputável: nenhuma se
         console.warn("Failed to parse image-manifest JSON:", (e as Error).message);
       }
     }
-    const content = rawContent.replace(/```image-manifest[\s\S]*?```/gi, "").trim();
+    // Cartões de personagem (testemunhas por lado) para a aba "Personagens" dos alunos
+    let newWitnesses: Array<{ side: string; name: string; profession: string; instructions: string }> = [];
+    const charsMatch = rawContent.match(/```characters-manifest\s*([\s\S]*?)```/i);
+    if (charsMatch) {
+      try {
+        const parsed = JSON.parse(charsMatch[1].trim());
+        if (Array.isArray(parsed)) {
+          newWitnesses = parsed
+            .filter((x) => x && typeof x.name === "string" && (x.side === "prosecution" || x.side === "defense"))
+            .map((x) => ({
+              side: x.side,
+              name: String(x.name),
+              profession: String(x.profession || ""),
+              instructions: String(x.instructions || ""),
+            }));
+        }
+      } catch (e) {
+        console.warn("Failed to parse characters-manifest JSON:", (e as Error).message);
+      }
+    }
+    const content = rawContent
+      .replace(/```image-manifest[\s\S]*?```/gi, "")
+      .replace(/```characters-manifest[\s\S]*?```/gi, "")
+      .trim();
 
     sections[targetIdx] = { ...target, status: "ready", content, error: null };
+    if (sectionKey === "depoimentos_testemunhas" && newWitnesses.length > 0) {
+      const kept = ((caseRow.characters_json as any[]) || []).filter((c) => c?.side !== "prosecution" && c?.side !== "defense");
+      await admin.from("mock_trial_cases").update({ characters_json: [...kept, ...newWitnesses] }).eq("id", caseId);
+    }
     const reassembled = sections
       .filter((s: any) => s.status === "ready" && s.content && !TEACHER_ONLY_KEYS.includes(s.key))
       .map((s: any) => `## ${s.title}\n\n${s.content}`)

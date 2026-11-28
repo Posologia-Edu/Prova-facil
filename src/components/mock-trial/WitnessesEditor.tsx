@@ -90,11 +90,14 @@ export function WitnessesEditor({ caseId, characters, onChange }: Props) {
           </Button>
         </div>
       </div>
-      {characters.length === 0 && (
+      {!characters.some((c) => c.side === "prosecution" || c.side === "defense") && (
         <p className="text-xs text-muted-foreground italic">Nenhuma testemunha cadastrada.</p>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {characters.map((char, idx) => (
+        {characters.map((char, idx) => {
+          // Cenário, réu e vítima (sem lado) ficam gravados para o roteiro, mas não são testemunhas
+          if (char.side !== "prosecution" && char.side !== "defense") return null;
+          return (
           <Card key={idx} className="p-3 bg-muted/30">
             {editingIdx === idx && draft ? (
               <div className="space-y-2">
@@ -175,7 +178,8 @@ export function WitnessesEditor({ caseId, characters, onChange }: Props) {
               </>
             )}
           </Card>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
